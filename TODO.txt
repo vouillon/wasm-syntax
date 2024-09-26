@@ -1,0 +1,4 @@
+- syntax errors
+- typing
+- output wasm code
+- parse wasm code and output to this format
