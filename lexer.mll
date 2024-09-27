@@ -46,6 +46,10 @@ rule read =
   | "else" { ELSE }
   | "let" { LET }
   | "as" { AS }
+  | "br" { BR }
+  | "br_if" { BR_IF }
+  | "br_table" { BR_TABLE }
+  | "return" { RETURN }
   | ident { IDENT (Lexing.lexeme lexbuf) }
   | int { INT (Lexing.lexeme lexbuf) }
   | string { STRING (Lexing.lexeme lexbuf) }

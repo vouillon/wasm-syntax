@@ -34,7 +34,7 @@
 %token NOP UNREACHABLE
 %token LOOP IF ELSE
 %token LET AS
-%token BR BR_TABLE
+%token BR BR_IF BR_TABLE RETURN
 
 %nonassoc LET
 %nonassoc br IDENT
@@ -207,8 +207,10 @@ plaininstr:
 | LET x = IDENT t = option(":" t = valtype {t}) i = option("=" i = instr {i})
   { with_loc $sloc (Local (x, t, i)) }
 | BR l = IDENT i = ioption(instr) { with_loc $sloc (Br (l, i)) } %prec br
-| BR_TABLE "{" l = nonempty_list(IDENT) "}" i = ioption(instr)
+| BR_IF l = IDENT i = instr { with_loc $sloc (Br_if (l, i)) } %prec br
+| BR_TABLE "{" l = nonempty_list(IDENT) "}" i = instr
   { with_loc $sloc (Br_table (l, i)) } %prec br
+| RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec br
 
 instr:
 | i = blockinstr { i }

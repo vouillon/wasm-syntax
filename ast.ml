@@ -56,7 +56,9 @@ type instr_descr =
   | BinOp of binop * instr * instr
   | Local of string * valtype option * instr option
   | Br of string * instr option
-  | Br_table of string list * instr option
+  | Br_if of string * instr
+  | Br_table of string list * instr
+  | Return of instr option
   | Sequence of instr list
 
 and instr = instr_descr with_loc
