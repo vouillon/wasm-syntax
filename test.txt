@@ -54,7 +54,7 @@ fn int32_serialize (s : &eq, v : &eq) -> (i32, i32) {
 }
 
 fn int32_deserialize (s : &eq) -> (&eq, i32) {
-  (int32 {ops:int32_ops, value:caml_deserialize_int_4(s)}, 4);
+  (int32 {ops:int32_ops, value:caml_deserialize_int_4(s)}, 4)
 }
 
 fn int32_dup (v : &eq) -> &eq {

@@ -192,9 +192,9 @@ plaininstr:
 | s = STRING { [String s] }
 | i = INT { [Int i] }
 | x = IDENT "{" l = separated_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
-  { [Struct (x, l)] }
+  { [Struct (Some x, l)] }
 | "{" l = separated_nonempty_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
-  { [Struct ("x", l)] }
+  { [Struct (None, l)] }
 | i = instr AS t = reftype { [Cast(i, t)] }
 | i = instr "." x = IDENT { [StructGet(i, x)] }
 | i = instr "." x = IDENT "=" j = instr { [StructSet(i, x, j)] }

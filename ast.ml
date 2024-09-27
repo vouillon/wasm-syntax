@@ -45,7 +45,7 @@ type instr =
   | Set of idx * instr list
   | Call of idx * instr list list
   | RefFunc of idx
-  | Struct of string * (string * instr list) list
+  | Struct of string option * (string * instr list) list
   | String of string
   | Int of string
   | Cast of instr list * reftype
