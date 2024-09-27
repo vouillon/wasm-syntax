@@ -59,6 +59,5 @@
 
 (executable
  (name main)
- (link_deps parser_messages.check)
  (libraries menhirLib)
 )

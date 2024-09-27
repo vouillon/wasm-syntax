@@ -1,7 +1,10 @@
 
-fn parse_int (_ : &eq, _ : i32, _ : &string) -> i32
+fn foo : i32 -> i32
+fn bar : dup
 
-fn format_int (_ : &eq, _ : i32, _ : i32) -> &eq
+fn parse_int : (&eq, i32, &string) -> i32
+
+fn format_int : (&eq, i32, i32) -> &eq
 type string = [mut i8]
 
 type compare = fn(&eq, &eq, i32)->i32
@@ -45,6 +48,7 @@ fn int32_cmp (v1 : &eq, v2 : &eq, _ : &eq) -> i32 {
 }
 
 fn int32_hash (v : &eq) -> i32 {
+()
   (v as &int32).value
 }
 

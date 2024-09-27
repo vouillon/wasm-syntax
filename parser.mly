@@ -141,15 +141,18 @@ funcparams:
 
 fundecl:
 | FN name = IDENT
-  t = option(":" t = IDENT { t } )
-  "(" params = funcparams ")"
-  "->" rt = resulttype
-  { (name, t, params, rt) }
+  t = ioption(":" t = IDENT { t } )
+  sign = option ("(" named_params = funcparams ")"
+  "->" result = resulttype { {named_params; result} })
+  { (name, t, sign) }
+| FN name = IDENT
+  ":" params = resulttype "->" result = resulttype
+  { (name, None, Some {named_params = List.map (fun x -> (None, x)) params; result}) }
 
 func:
 | f = fundecl body = block
-  { let (name, typ, params, result) = f in
-    Func {name; typ; params; result; body} }
+  { let (name, typ, sign) = f in
+    Func {name; typ; sign; body} }
 
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
@@ -202,7 +205,7 @@ global:
 modulefield:
 | r = rectype { Type r }
 | f = fundecl
-  { let (name, typ, params, result) = f in Fundecl {name; typ; params; result} }
+  { let (name, typ, sign) = f in Fundecl {name; typ; sign} }
 | f = func { f }
 | g = global { g }
 

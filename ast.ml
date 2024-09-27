@@ -59,19 +59,18 @@ type instr_descr =
 
 and instr = instr_descr with_loc
 
+type funsig = {
+  named_params : (string option * valtype) list;
+  result : valtype list;
+}
+
 type modulefield =
   | Type of subtype list
-  | Fundecl of {
-      name : string;
-      typ : string option;
-      params : (string option * valtype) list;
-      result : valtype list;
-    }
+  | Fundecl of { name : string; typ : string option; sign : funsig option }
   | Func of {
       name : string;
       typ : string option;
-      params : (string option * valtype) list;
-      result : valtype list;
+      sign : funsig option;
       body : string option * instr list;
     }
   | Global of { name : string; typ : valtype muttype option; def : instr }
