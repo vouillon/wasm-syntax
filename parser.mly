@@ -73,31 +73,12 @@ let storagetype_tbl =
      "v128", Value V128]
 
 let with_loc (loc_start, loc_end) descr = {descr; loc = { loc_start; loc_end }}
+
 %}
 
 %start <modulefield list> module_
 
 %%
-
-(*
-numtype:
-| I32 {I32} | I64 {I64} | F32 {F32} | F64 {F64}
-
-vectype:
-| V128 {V128}
-
-absheaptype:
-| FUNC { Func }
-| NOFUNC { NoFunc }
-| EXTERN { Extern }
-| NOEXTERN { NoExtern }
-| ANY { Any }
-| EQ { Eq }
-| I31 { I31 }
-| STRUCT { Struct }
-| ARRAY { Array}
-| NONE { None_ }
-*)
 
 heaptype:
 | t = IDENT { try Hashtbl.find absheaptype_tbl t with Not_found -> Type t }
@@ -107,7 +88,9 @@ reftype:
   { { nullable; typ } }
 
 valtype:
-| t = IDENT {Hashtbl.find valtype_tbl t}
+| t = IDENT
+   { try Hashtbl.find valtype_tbl t with Not_found ->
+       raise (Misc.Syntax_error ($sloc, Printf.sprintf "Identifier '%s' is not a value type.\n" t )) }
 | t = reftype { Ref t }
 
 resulttype:
@@ -118,12 +101,10 @@ resulttype:
 functype:
 | FN params = resulttype "->" result = resulttype { {params; result} }
 
-(*
-packedtype: | I8 { I8 } | I16 { I16 }
-*)
-
 storagetype:
-| t = IDENT {Hashtbl.find storagetype_tbl t}
+| t = IDENT
+   { try Hashtbl.find storagetype_tbl t with Not_found ->
+       raise (Misc.Syntax_error ($sloc, Printf.sprintf "Identifier '%s' is not a storage type.\n" t )) }
 | t = reftype { Value (Ref t) }
 
 fieldtype:
@@ -213,7 +194,9 @@ instr:
 | i = plaininstr { i }
 
 global:
-| LET name = IDENT typ = option(":" t = valtype {t}) "=" def = instr
+| LET name = IDENT
+  typ = option(":" mut = boption(MUT) typ = valtype { {mut; typ} })
+  "=" def = instr
   { Global {name; typ; def} }
 
 modulefield:

@@ -74,4 +74,4 @@ type modulefield =
       result : valtype list;
       body : string option * instr list;
     }
-  | Global of { name : string; typ : valtype option; def : instr }
+  | Global of { name : string; typ : valtype muttype option; def : instr }

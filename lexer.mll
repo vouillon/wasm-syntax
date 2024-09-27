@@ -1,6 +1,5 @@
 {
 open Parser
-exception Error of string
 }
 
 let white = [' ' '\t']+
@@ -50,8 +49,7 @@ rule read =
   | string { STRING (Lexing.lexeme lexbuf) }
   | eof { EOF }
   | _
-      { let location =
-          MenhirLib.LexerUtil.range
-            (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
-        raise (Error (Printf.sprintf "%sUnexpected character '%s'.\n"
-                        location (Lexing.lexeme lexbuf))) }
+      { raise (Misc.Syntax_error
+                 ((Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf),
+                  Printf.sprintf "Unexpected character '%s'.\n"
+                    (Lexing.lexeme lexbuf))) }

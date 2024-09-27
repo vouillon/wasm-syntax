@@ -65,8 +65,9 @@ let parse filename =
   try
     Parser.MenhirInterpreter.loop_handle succeed (fail text buffer) supplier
       checkpoint
-  with Lexer.Error msg ->
-    Format.eprintf "%s%!" msg;
+  with Misc.Syntax_error (loc, msg) ->
+    let location = MenhirLib.LexerUtil.range loc in
+    Format.eprintf "%s%s%!" location msg;
     exit 1
 
 let _ = parse "test.txt"
