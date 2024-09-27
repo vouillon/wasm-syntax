@@ -1,3 +1,6 @@
+- how to deal with functions returning multiple values?
+  (in generated binary code)
+  ==> maybe just have a destructuring let?
 - syntax errors
 - typing
 - output wasm code

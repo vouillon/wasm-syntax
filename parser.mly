@@ -50,10 +50,7 @@
 open Ast
 %}
 
-%start <[`Type of subtype list
- | `Fundecl of string * string option * (string option * valtype) list * valtype list option
- | `Funct of (string * string option * (string option * valtype) list * valtype list option) * (string option * instr list)
- | `Global of string * valtype * instr list] list> module_
+%start <modulefield list> module_
 
 %%
 
@@ -73,7 +70,7 @@ absheaptype:
 | I31 { I31 }
 | STRUCT { Struct }
 | ARRAY { Array}
-| NONE { None }
+| NONE { None_ }
 
 heaptype:
 | t = absheaptype { t }
@@ -123,7 +120,7 @@ typedef:
     { {name; typ; supertype; final = not op} }
 
 rectype:
-| REC LBRACE l = list(typedef) RBRACE { l }
+| REC "{" l = list(typedef) "}" { l }
 | t = typedef { [t] }
 
 funcparams:
@@ -134,15 +131,17 @@ fundecl:
 | FN name = IDENT
   t = option(":" t = IDENT { t } )
   "(" params = funcparams ")"
-  rt = option("->" t = resulttype { t })
+  "->" rt = resulttype
   { (name, t, params, rt) }
 
-funct:
-| d = fundecl b = block { d, b }
+func:
+| f = fundecl body = block
+  { let (name, typ, params, result) = f in
+    Func {name; typ; params; result; body} }
 
-label: x = option("'" x = IDENT ":" { x }) { x }
+%inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
-block:
+%inline block:
 | label = label "{" l = list(instr) "}" { (label, List.flatten l) }
 
 blockinstr:
@@ -164,6 +163,8 @@ plaininstr:
 | i = INT { [Int i] }
 | x = IDENT "{" l = separated_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
   { [Struct (x, l)] }
+| "{" l = separated_nonempty_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
+  { [Struct ("x", l)] }
 | i = instr AS t = reftype { [Cast(i, t)] }
 | i = instr "." x = IDENT { [StructGet(i, x)] }
 | i = instr "." x = IDENT "=" j = instr { [StructSet(i, x, j)] }
@@ -172,19 +173,21 @@ plaininstr:
 | i = instr "<u" j = instr { [BinOp(Ltu, i, j)] }
 | i = instr ">u" j = instr { [BinOp(Gtu, i, j)] }
 | LET x = IDENT t = option(":" t = valtype {t}) i = option("=" i = instr {i})
-   { [Local (x, t, i)] }
+  { [Local (x, t, i)] }
 
 instr:
 | i = blockinstr { i }
 | i = plaininstr { i }
 
 global:
-| LET x = IDENT ":" t = valtype "=" i = instr { (x, t, i) }
+| LET name = IDENT typ = option(":" t = valtype {t}) "=" def = instr
+  { Global {name; typ; def} }
 
 modulefield:
-| r = rectype { `Type r }
-| f = fundecl { `Fundecl f }
-| f = funct { `Funct f }
-| g = global { `Global g }
+| r = rectype { Type r }
+| f = fundecl
+  { let (name, typ, params, result) = f in Fundecl {name; typ; params; result} }
+| f = func { f }
+| g = global { g }
 
 module_: l = list(modulefield) EOF { l }

@@ -38,13 +38,13 @@ let int32_ops : &custom_operations =
 
 type int32 : custom = {ops:  &custom_operations, value:i32}
 
-fn int32_cmp (v1 : &eq, v2 : &eq, &eq) {
+fn int32_cmp (v1 : &eq, v2 : &eq, &eq) -> i32 {
   let i1 = (v1 as &int32).value
   let i2 = (v2 as &int32).value
   (i1 >u i2) - (i1 <u i2)
 }
 
-fn int32_hash (v : &eq) {
+fn int32_hash (v : &eq) -> i32 {
   (v as &int32).value
 }
 
