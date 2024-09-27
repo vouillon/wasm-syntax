@@ -37,6 +37,8 @@
 %token BR BR_TABLE
 
 %nonassoc LET
+%nonassoc br IDENT
+%nonassoc LBRACE
 %right EQUAL
 %nonassoc LTU GTU
 %left PIPE
@@ -44,11 +46,14 @@
 %left MINUS PLUS
 %left AS
 %left DOT
-%nonassoc IDENT
-%nonassoc LBRACE
 
-(* LBRACE stronger then IDENT so that this does not define a struct:
-   if foo { ... } *)
+(* BR foo 1 + 2 understood as BR foo (1 + 2)
+   BR_TABLE { ...} 1 + 2 understood as BR_TABLE { ...} (1 + 2)
+   BR foo { ... } understood as a single instruction
+   LET x = br foo LET --> LET x = (br foo) LET  (LET < br)
+   IF BR_TABLE {...} { ... } --> IF (BR_TABLE {...}) { ... } (br < LBRACE)
+   IF foo { ... } --> IF (foo) { ... }    (not a struct)  (IDENT < LBRACE)
+*)
 
 %{
 open Ast
@@ -201,8 +206,8 @@ plaininstr:
 | i = instr "|" j = instr { with_loc $sloc (BinOp(Or, i, j)) }
 | LET x = IDENT t = option(":" t = valtype {t}) i = option("=" i = instr {i})
   { with_loc $sloc (Local (x, t, i)) }
-| BR IDENT ioption(instr) { assert false }
-| BR_TABLE IDENT ioption(instr) { assert false }
+| BR IDENT ioption(instr) { assert false } %prec br
+| BR_TABLE "{" l = nonempty_list(IDENT) "}" ioption(instr) { ignore l; assert false } %prec br
 
 instr:
 | i = blockinstr { i }
