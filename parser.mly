@@ -206,8 +206,9 @@ plaininstr:
 | i = instr "|" j = instr { with_loc $sloc (BinOp(Or, i, j)) }
 | LET x = IDENT t = option(":" t = valtype {t}) i = option("=" i = instr {i})
   { with_loc $sloc (Local (x, t, i)) }
-| BR IDENT ioption(instr) { assert false } %prec br
-| BR_TABLE "{" l = nonempty_list(IDENT) "}" ioption(instr) { ignore l; assert false } %prec br
+| BR l = IDENT i = ioption(instr) { with_loc $sloc (Br (l, i)) } %prec br
+| BR_TABLE "{" l = nonempty_list(IDENT) "}" i = ioption(instr)
+  { with_loc $sloc (Br_table (l, i)) } %prec br
 
 instr:
 | i = blockinstr { i }
