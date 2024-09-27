@@ -42,6 +42,11 @@
 %left MINUS PLUS
 %left AS
 %left DOT
+%nonassoc IDENT
+%nonassoc LBRACE
+
+(* LBRACE stronger then IDENT so that this does not define a struct:
+   if foo { ... } *)
 
 %{
 open Ast
@@ -165,7 +170,7 @@ blockinstr:
 | b = block { let (label, l) = b in with_loc $sloc (Block(label, l)) }
 | label = label LOOP "{" l = list(delimited_instr) "}"
   { with_loc $sloc (Loop(label, l)) }
-| label = label IF "(" e = instr ")" "{" l1 = list(delimited_instr) "}"
+| label = label IF e = instr "{" l1 = list(delimited_instr) "}"
   l2 = option(ELSE  "{" l = list(delimited_instr) "}" { l })
   { with_loc $sloc (If(label, e, l1, l2)) }
 
