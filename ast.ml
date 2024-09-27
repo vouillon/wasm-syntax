@@ -1,7 +1,7 @@
 type idx = string
 
 type heaptype =
-  | Func
+  | Func_
   | NoFunc
   | Extern
   | NoExtern

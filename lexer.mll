@@ -1,5 +1,6 @@
 {
 open Parser
+exception Error of string
 }
 
 let white = [' ' '\t']+
@@ -12,7 +13,7 @@ let int = ['0' - '9'] +
 rule read =
   parse
   | white { read lexbuf }
-  | newline { read lexbuf }
+  | newline { MenhirLib.LexerUtil.newline lexbuf; read lexbuf }
   | '&' { AMPERSAND }
   | '?' { QUESTIONMARK }
   | '(' { LPAREN }
@@ -29,28 +30,9 @@ rule read =
   | "." { DOT }
   | "+" { PLUS }
   | "-" { MINUS }
+  | "_" { UNDERSCORE }
   | "<u" { LTU }
   | ">u" { GTU }
-(*
-  | ';' { SEMI }
-*)
-  | "i32" { I32 }
-  | "i64" { I64 }
-  | "f32" { F32 }
-  | "f64" { F64 }
-  | "v128" { V128 }
-  | "i8" { I8 }
-  | "i16" { I16 }
-  | "func" { FUNC }
-  | "nofunc" { NOFUNC }
-  | "extern" { EXTERN }
-  | "noextern" { NOEXTERN }
-  | "any" { ANY }
-  | "eq" { EQ }
-  | "i31" { I31 }
-  | "struct" { STRUCT }
-  | "array" { ARRAY }
-  | "none" { NONE }
   | "fn" { FN }
   | "mut" { MUT }
   | "type" { TYPE }
@@ -67,3 +49,9 @@ rule read =
   | int { INT (Lexing.lexeme lexbuf) }
   | string { STRING (Lexing.lexeme lexbuf) }
   | eof { EOF }
+  | _
+      { let location =
+          MenhirLib.LexerUtil.range
+            (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
+        raise (Error (Printf.sprintf "%sUnexpected character '%s'.\n"
+                        location (Lexing.lexeme lexbuf))) }

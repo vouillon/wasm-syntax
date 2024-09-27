@@ -22,12 +22,7 @@
 %token PLUS "+"
 %token LTU "<u"
 %token GTU ">u"
-(*
-%token SEMI ";"
-*)
-
-%token I32 I64 F32 F64 V128 I8 I16
-%token FUNC NOFUNC EXTERN NOEXTERN ANY EQ I31 STRUCT ARRAY NONE
+%token UNDERSCORE
 
 %token FN
 %token MUT
@@ -48,12 +43,42 @@
 
 %{
 open Ast
+
+let tbl_from_list l =
+ let h = Hashtbl.create (2 * List.length l) in
+ List.iter (fun (k, v) -> Hashtbl.add h k v) l;
+ h
+
+let absheaptype_tbl =
+  tbl_from_list
+    ["func", Func_;
+     "nofunc", NoFunc;
+     "extern", Extern;
+     "noextern", NoExtern;
+     "any", Any;
+     "eq", Eq;
+     "i31", I31;
+     "struct", Struct;
+     "array", Array;
+     "none", None_]
+
+let valtype_tbl =
+  tbl_from_list
+    ["i32", I32; "i64", I64; "f32", F32; "f64", F64; "v128", V128]
+
+let storagetype_tbl =
+  tbl_from_list
+    ["i8", Packed I8; "i16", Packed I16;
+     "i32", Value I32; "i64", Value I64; "f32", Value F32; "f64", Value F64;
+     "v128", Value V128]
+
 %}
 
 %start <modulefield list> module_
 
 %%
 
+(*
 numtype:
 | I32 {I32} | I64 {I64} | F32 {F32} | F64 {F64}
 
@@ -71,18 +96,17 @@ absheaptype:
 | STRUCT { Struct }
 | ARRAY { Array}
 | NONE { None_ }
+*)
 
 heaptype:
-| t = absheaptype { t }
-| t = IDENT { Type t }
+| t = IDENT { try Hashtbl.find absheaptype_tbl t with Not_found -> Type t }
 
 reftype:
 | "&" nullable = boption("?") typ = heaptype
   { { nullable; typ } }
 
 valtype:
-| t = numtype {t}
-| t = vectype {t}
+| t = IDENT {Hashtbl.find valtype_tbl t}
 | t = reftype { Ref t }
 
 resulttype:
@@ -93,11 +117,13 @@ resulttype:
 functype:
 | FN params = resulttype "->" result = resulttype { {params; result} }
 
+(*
 packedtype: | I8 { I8 } | I16 { I16 }
+*)
 
 storagetype:
-| t = valtype { Value t }
-| t = packedtype { Packed t }
+| t = IDENT {Hashtbl.find storagetype_tbl t}
+| t = reftype { Value (Ref t) }
 
 fieldtype:
 | mut = boption(MUT) typ = storagetype { {mut; typ } }
@@ -123,8 +149,12 @@ rectype:
 | REC "{" l = list(typedef) "}" { l }
 | t = typedef { [t] }
 
+simple_pat:
+| x = IDENT { Some x }
+| UNDERSCORE { None }
+
 funcparams:
-| l = separated_list(",", x = option(x = IDENT ":" { x }) t = valtype { x, t })
+| l = separated_list(",", x = simple_pat ":" t = valtype { x, t })
   { l }
 
 fundecl:

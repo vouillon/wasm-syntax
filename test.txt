@@ -1,7 +1,7 @@
 
-fn parse_int (&eq, i32, &string) -> i32
+fn parse_int (_ : &eq, _ : i32, _ : &string) -> i32
 
-fn format_int (&eq, i32, i32) -> &eq
+fn format_int (_ : &eq, _ : i32, _ : i32) -> &eq
 type string = [mut i8]
 
 type compare = fn(&eq, &eq, i32)->i32
@@ -38,7 +38,7 @@ let int32_ops : &custom_operations =
 
 type int32 : custom = {ops:  &custom_operations, value:i32}
 
-fn int32_cmp (v1 : &eq, v2 : &eq, &eq) -> i32 {
+fn int32_cmp (v1 : &eq, v2 : &eq, _ : &eq) -> i32 {
   let i1 = (v1 as &int32).value
   let i2 = (v2 as &int32).value
   (i1 >u i2) - (i1 <u i2)
@@ -54,7 +54,7 @@ fn int32_serialize (s : &eq, v : &eq) -> (i32, i32) {
 }
 
 fn int32_deserialize (s : &eq) -> (&eq, i32) {
-  (int32 {ops:int32_ops, value:caml_deserialize_int_4(s)}, 4)
+  (int32 {ops:int32_ops, value:caml_deserialize_int_4(s)}, 4);
 }
 
 fn int32_dup (v : &eq) -> &eq {
