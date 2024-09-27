@@ -58,6 +58,10 @@ type instr_descr =
   | Br of string * instr option
   | Br_if of string * instr
   | Br_table of string list * instr
+  | Br_on_null of string * instr
+  | Br_on_non_null of string * instr
+  | Br_on_cast of string * reftype * instr
+  | Br_on_cast_fail of string * reftype * instr
   | Return of instr option
   | Sequence of instr list
 

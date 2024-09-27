@@ -35,6 +35,8 @@
 %token LOOP IF ELSE
 %token LET AS
 %token BR BR_IF BR_TABLE RETURN
+%token BR_ON_CAST BR_ON_CAST_FAIL
+%token BR_ON_NULL BR_ON_NON_NULL
 
 %nonassoc LET
 %nonassoc br IDENT
@@ -210,6 +212,10 @@ plaininstr:
 | BR_IF l = IDENT i = instr { with_loc $sloc (Br_if (l, i)) } %prec br
 | BR_TABLE "{" l = nonempty_list(IDENT) "}" i = instr
   { with_loc $sloc (Br_table (l, i)) } %prec br
+| BR_ON_NULL l = IDENT i = instr { with_loc $sloc (Br_on_null (l, i)) } %prec br
+| BR_ON_NON_NULL l = IDENT i = instr { with_loc $sloc (Br_on_non_null (l, i)) } %prec br
+| BR_ON_CAST l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
+| BR_ON_CAST_FAIL l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec br
 
 instr:
