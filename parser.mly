@@ -34,9 +34,8 @@
 %token NOP UNREACHABLE
 %token LOOP IF ELSE
 %token LET AS
-%token BR
+%token BR BR_TABLE
 
-%nonassoc BR
 %nonassoc LET
 %right EQUAL
 %nonassoc LTU GTU
@@ -202,7 +201,8 @@ plaininstr:
 | i = instr "|" j = instr { with_loc $sloc (BinOp(Or, i, j)) }
 | LET x = IDENT t = option(":" t = valtype {t}) i = option("=" i = instr {i})
   { with_loc $sloc (Local (x, t, i)) }
-| BR IDENT ioption(instr) { assert false } %prec BR
+| BR IDENT ioption(instr) { assert false }
+| BR_TABLE IDENT ioption(instr) { assert false }
 
 instr:
 | i = blockinstr { i }
