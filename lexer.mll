@@ -7,13 +7,15 @@ let newline = '\r' | '\n' | "\r\n"
 
 let ident = ['a' - 'z' 'A' - 'Z'] ['a' - 'z' 'A' - 'Z' '_' '0' - '9']*
 let string = '"' [^ '"']* '"'
-let int = ['0' - '9'] +
+let int = ['0' - '9'] + | "0x" ['0'- '9' 'a' - 'f' 'A' - 'F'] +
 
 rule read =
   parse
   | white { read lexbuf }
   | newline { MenhirLib.LexerUtil.newline lexbuf; read lexbuf }
+  | ';' { SEMI }
   | '&' { AMPERSAND }
+  | '|' { PIPE }
   | '?' { QUESTIONMARK }
   | '(' { LPAREN }
   | ')' { RPAREN }

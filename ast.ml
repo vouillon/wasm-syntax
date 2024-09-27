@@ -33,7 +33,7 @@ type subtype = {
   final : bool;
 }
 
-type binop = Plus | Minus | Gtu | Ltu
+type binop = Plus | Minus | Gtu | Ltu | Or | And
 type location = { loc_start : Lexing.position; loc_end : Lexing.position }
 type 'a with_loc = { descr : 'a; loc : location }
 

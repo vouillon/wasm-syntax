@@ -4,7 +4,9 @@
 
 %token EOF
 
+%token SEMI
 %token AMPERSAND "&"
+%token PIPE "|"
 %token QUESTIONMARK "?"
 %token LPAREN "("
 %token RPAREN ")"
@@ -35,11 +37,11 @@
 
 %right EQUAL
 %nonassoc LTU GTU
+%left PIPE
+%left AMPERSAND
 %left MINUS PLUS
 %left AS
 %left DOT
-%nonassoc IDENT
-%nonassoc LPAREN LBRACE
 
 %{
 open Ast
@@ -124,7 +126,7 @@ comptype:
 typedef:
 | TYPE name = IDENT op = boption(OPEN)
   supertype = option(":" s = IDENT { s })
-  "=" typ = comptype
+  "=" typ = comptype option(SEMI)
     { {name; typ; supertype; final = not op} }
 
 rectype:
@@ -157,14 +159,14 @@ func:
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
 %inline block:
-| label = label "{" l = list(instr) "}" { (label, l) }
+| label = label "{" l = list(delimited_instr) "}" { (label, l) }
 
 blockinstr:
 | b = block { let (label, l) = b in with_loc $sloc (Block(label, l)) }
-| label = label LOOP "{" l = list(instr) "}"
+| label = label LOOP "{" l = list(delimited_instr) "}"
   { with_loc $sloc (Loop(label, l)) }
-| label = label IF "(" e = instr ")" "{" l1 = list(instr) "}"
-  l2 = option(ELSE  "{" l = list(instr) "}" { l })
+| label = label IF "(" e = instr ")" "{" l1 = list(delimited_instr) "}"
+  l2 = option(ELSE  "{" l = list(delimited_instr) "}" { l })
   { with_loc $sloc (If(label, e, l1, l2)) }
 
 plaininstr:
@@ -175,7 +177,6 @@ plaininstr:
 | "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
 | x = IDENT "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (Call(x, l)) }
-| "&" x = IDENT { with_loc $sloc (RefFunc x) }
 | s = STRING { with_loc $sloc (String s) }
 | i = INT { with_loc $sloc (Int i) }
 | x = IDENT "{" l = separated_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
@@ -189,6 +190,8 @@ plaininstr:
 | i = instr "-" j = instr { with_loc $sloc (BinOp(Minus, i, j)) }
 | i = instr "<u" j = instr { with_loc $sloc (BinOp(Ltu, i, j)) }
 | i = instr ">u" j = instr { with_loc $sloc (BinOp(Gtu, i, j)) }
+| i = instr "&" j = instr { with_loc $sloc (BinOp(And, i, j)) }
+| i = instr "|" j = instr { with_loc $sloc (BinOp(Or, i, j)) }
 | LET x = IDENT t = option(":" t = valtype {t}) i = option("=" i = instr {i})
   { with_loc $sloc (Local (x, t, i)) }
 
@@ -196,15 +199,19 @@ instr:
 | i = blockinstr { i }
 | i = plaininstr { i }
 
+delimited_instr:
+| i = blockinstr { i }
+| i = plaininstr SEMI { i }
+
 global:
 | LET name = IDENT
   typ = option(":" mut = boption(MUT) typ = valtype { {mut; typ} })
-  "=" def = instr
+  "=" def = instr option(SEMI)
   { Global {name; typ; def} }
 
 modulefield:
 | r = rectype { Type r }
-| f = fundecl
+| f = fundecl option(SEMI)
   { let (name, typ, sign) = f in Fundecl {name; typ; sign} }
 | f = func { f }
 | g = global { g }
