@@ -379,9 +379,9 @@ module_: LET IDENT EQUAL QUOTE UNREACHABLE
 ##
 ## Ends in an error in state: 66.
 ##
-## blockinstr -> QUOTE . IDENT COLON LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
-## blockinstr -> QUOTE . IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
-## blockinstr -> QUOTE . IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> QUOTE . IDENT COLON LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
+## blockinstr -> QUOTE . IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
+## blockinstr -> QUOTE . IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE
@@ -393,9 +393,9 @@ module_: LET IDENT EQUAL QUOTE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 67.
 ##
-## blockinstr -> QUOTE IDENT . COLON LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
-## blockinstr -> QUOTE IDENT . COLON LOOP LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
-## blockinstr -> QUOTE IDENT . COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT . COLON LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT . COLON LOOP LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT . COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT
@@ -407,9 +407,9 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 68.
 ##
-## blockinstr -> QUOTE IDENT COLON . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
-## blockinstr -> QUOTE IDENT COLON . LOOP LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
-## blockinstr -> QUOTE IDENT COLON . IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT COLON . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT COLON . LOOP LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT COLON . IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON
@@ -421,7 +421,7 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON LOOP UNREACHABLE
 ##
 ## Ends in an error in state: 69.
 ##
-## blockinstr -> QUOTE IDENT COLON LOOP . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT COLON LOOP . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LOOP
@@ -433,7 +433,7 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON LOOP LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 70.
 ##
-## blockinstr -> QUOTE IDENT COLON LOOP LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT COLON LOOP LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LOOP LBRACE
@@ -457,7 +457,7 @@ module_: LET IDENT EQUAL LOOP UNREACHABLE
 ##
 ## Ends in an error in state: 73.
 ##
-## blockinstr -> LOOP . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> LOOP . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LOOP
@@ -469,7 +469,7 @@ module_: LET IDENT EQUAL LOOP LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 74.
 ##
-## blockinstr -> LOOP LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> LOOP LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LOOP LBRACE
@@ -541,7 +541,7 @@ module_: LET IDENT EQUAL LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 81.
 ##
-## blockinstr -> LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ## plaininstr -> LBRACE . separated_nonempty_list(COMMA,__anonymous_8) RBRACE [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
@@ -552,7 +552,7 @@ Expecting an instruction
 
 module_: FN IDENT LPAREN IDENT COLON IDENT COMMA UNREACHABLE
 ##
-## Ends in an error in state: 175.
+## Ends in an error in state: 178.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON valtype COMMA . separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
 ##
@@ -564,7 +564,7 @@ Expecting a parameter name or an underscore '_'.
 
 module_: FN IDENT LPAREN RPAREN UNREACHABLE
 ##
-## Ends in an error in state: 180.
+## Ends in an error in state: 183.
 ##
 ## option(__anonymous_4) -> LPAREN funcparams RPAREN . ARROW resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -588,7 +588,7 @@ Expecting a value type.
 
 module_: LET IDENT EQUAL IDENT MINUS UNDERSCORE
 ##
-## Ends in an error in state: 99.
+## Ends in an error in state: 98.
 ##
 ## plaininstr -> instr MINUS . instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
@@ -600,7 +600,7 @@ Expecting an instruction.
 
 module_: LET IDENT EQUAL IDENT AS UNREACHABLE
 ##
-## Ends in an error in state: 101.
+## Ends in an error in state: 100.
 ##
 ## plaininstr -> instr AS . reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
@@ -612,7 +612,7 @@ Expecting a refernce type.
 
 module_: LET IDENT EQUAL IDENT LTU UNDERSCORE
 ##
-## Ends in an error in state: 106.
+## Ends in an error in state: 105.
 ##
 ## plaininstr -> instr LTU . instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
@@ -624,7 +624,7 @@ Expecting an instruction.
 
 module_: LET IDENT EQUAL IDENT GTU UNDERSCORE
 ##
-## Ends in an error in state: 108.
+## Ends in an error in state: 107.
 ##
 ## plaininstr -> instr GTU . instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
@@ -636,7 +636,7 @@ Expecting an instruction.
 
 module_: LET IDENT EQUAL LPAREN IDENT COMMA UNDERSCORE
 ##
-## Ends in an error in state: 110.
+## Ends in an error in state: 113.
 ##
 ## separated_nonempty_list(COMMA,instr) -> instr COMMA . separated_nonempty_list(COMMA,instr) [ RPAREN ]
 ##
@@ -648,7 +648,7 @@ Expecting an instruction, or a closing parenthesis '('.
 
 module_: LET IDENT EQUAL IDENT LBRACE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 113.
+## Ends in an error in state: 116.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT . COLON instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT . COLON instr COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
@@ -661,7 +661,7 @@ Expecting a colon ':' after the field name of a structure.
 
 module_: LET IDENT EQUAL IDENT LBRACE IDENT COLON UNDERSCORE
 ##
-## Ends in an error in state: 114.
+## Ends in an error in state: 117.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON . instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON . instr COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
@@ -674,7 +674,7 @@ Expecting an instruction.
 
 module_: LET IDENT EQUAL IDENT LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 ##
-## Ends in an error in state: 116.
+## Ends in an error in state: 119.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON instr COMMA . separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
 ##
@@ -686,7 +686,7 @@ Expecting a field definition, or a character '}'.
 
 module_: LET IDENT EQUAL IDENT EQUAL UNDERSCORE
 ##
-## Ends in an error in state: 121.
+## Ends in an error in state: 124.
 ##
 ## plaininstr -> IDENT EQUAL . instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
@@ -698,7 +698,7 @@ Expecting an instruction.
 
 module_: LET IDENT EQUAL LBRACE IDENT COLON UNDERSCORE
 ##
-## Ends in an error in state: 139.
+## Ends in an error in state: 142.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON . instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON . instr COMMA separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
@@ -711,7 +711,7 @@ Expecting an instruction.
 
 module_: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 ##
-## Ends in an error in state: 141.
+## Ends in an error in state: 144.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON instr COMMA . separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
 ##
@@ -723,7 +723,7 @@ Expecting a field definition, or a character '}'.
 
 module_: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA IDENT UNREACHABLE
 ##
-## Ends in an error in state: 142.
+## Ends in an error in state: 145.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT . COLON instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT . COLON instr COMMA separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
@@ -736,9 +736,9 @@ Expecting a colon ':'.
 
 module_: LET IDENT EQUAL QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 156.
+## Ends in an error in state: 159.
 ##
-## blockinstr -> QUOTE IDENT COLON LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT COLON LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LBRACE
@@ -748,7 +748,7 @@ Expecting an instruction, or a character '}'.
 
 module_: FN IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 184.
+## Ends in an error in state: 187.
 ##
 ## fundecl -> FN IDENT COLON IDENT . option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ## valtype -> IDENT . [ ARROW ]
@@ -761,7 +761,7 @@ Expecting a list of function parameters.
 
 module_: FN IDENT LPAREN UNREACHABLE
 ##
-## Ends in an error in state: 169.
+## Ends in an error in state: 172.
 ##
 ## option(__anonymous_4) -> LPAREN . funcparams RPAREN ARROW resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -773,7 +773,7 @@ Expecting a list of function parameters.
 
 module_: FN IDENT LPAREN IDENT UNREACHABLE
 ##
-## Ends in an error in state: 172.
+## Ends in an error in state: 175.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat . COLON valtype [ RPAREN ]
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat . COLON valtype COMMA separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
@@ -786,7 +786,7 @@ Expecting a colon ':' followed by a value type.
 
 module_: FN IDENT LPAREN IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 173.
+## Ends in an error in state: 176.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON . valtype [ RPAREN ]
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON . valtype COMMA separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
@@ -799,7 +799,7 @@ Expecting a value type.
 
 module_: FN IDENT LPAREN IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 174.
+## Ends in an error in state: 177.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON valtype . [ RPAREN ]
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON valtype . COMMA separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
@@ -812,7 +812,7 @@ Expecting a comma ',' followed by a parameter declaration, or a closing parenthe
 
 module_: FN IDENT LPAREN RPAREN ARROW UNREACHABLE
 ##
-## Ends in an error in state: 181.
+## Ends in an error in state: 184.
 ##
 ## option(__anonymous_4) -> LPAREN funcparams RPAREN ARROW . resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -824,7 +824,7 @@ Expecting a result type.
 
 module_: REC LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 192.
+## Ends in an error in state: 195.
 ##
 ## list(modulefield) -> modulefield . list(modulefield) [ EOF ]
 ##
@@ -836,7 +836,7 @@ Expecting a module field.
 
 module_: FN IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 ##
-## Ends in an error in state: 195.
+## Ends in an error in state: 198.
 ##
 ## func -> fundecl . LBRACE list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ## func -> fundecl . QUOTE IDENT COLON LBRACE list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
@@ -850,7 +850,7 @@ Expecting a label, the start of the function body, or another module field.
 
 module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE UNREACHABLE
 ##
-## Ends in an error in state: 196.
+## Ends in an error in state: 199.
 ##
 ## func -> fundecl QUOTE . IDENT COLON LBRACE list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ##
@@ -862,7 +862,7 @@ Expecting a label name.
 
 module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 197.
+## Ends in an error in state: 200.
 ##
 ## func -> fundecl QUOTE IDENT . COLON LBRACE list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ##
@@ -874,7 +874,7 @@ Expecting a colon ':' after the label name.
 
 module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 198.
+## Ends in an error in state: 201.
 ##
 ## func -> fundecl QUOTE IDENT COLON . LBRACE list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ##
@@ -886,7 +886,7 @@ Expecting a block starting with character '{'.
 
 module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 199.
+## Ends in an error in state: 202.
 ##
 ## func -> fundecl QUOTE IDENT COLON LBRACE . list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ##
@@ -898,7 +898,7 @@ Expecting an instruction, or a character '}'.
 
 module_: FN IDENT LPAREN RPAREN ARROW IDENT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 202.
+## Ends in an error in state: 205.
 ##
 ## func -> fundecl LBRACE . list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ##
@@ -923,7 +923,7 @@ Expecting an instruction.
 
 module_: FN IDENT LBRACE IDENT PLUS UNDERSCORE
 ##
-## Ends in an error in state: 91.
+## Ends in an error in state: 90.
 ##
 ## plaininstr -> instr PLUS . instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
@@ -935,7 +935,7 @@ Expecting an instruction
 
 module_: FN IDENT LBRACE IDENT DOT UNREACHABLE
 ##
-## Ends in an error in state: 93.
+## Ends in an error in state: 92.
 ##
 ## plaininstr -> instr DOT . IDENT [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr DOT . IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -948,7 +948,7 @@ Expecting a field name.
 
 module_: FN IDENT LBRACE IDENT DOT IDENT UNDERSCORE
 ##
-## Ends in an error in state: 94.
+## Ends in an error in state: 93.
 ##
 ## plaininstr -> instr DOT IDENT . [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr DOT IDENT . EQUAL instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -961,7 +961,7 @@ Missing semicolon ';'.
 
 module_: FN IDENT LBRACE IDENT DOT IDENT EQUAL UNDERSCORE
 ##
-## Ends in an error in state: 95.
+## Ends in an error in state: 94.
 ##
 ## plaininstr -> instr DOT IDENT EQUAL . instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
@@ -973,7 +973,7 @@ Expecting an instruction.
 
 module_: FN IDENT LBRACE IDENT LBRACE UNREACHABLE
 ##
-## Ends in an error in state: 112.
+## Ends in an error in state: 115.
 ##
 ## plaininstr -> IDENT LBRACE . loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
@@ -985,9 +985,9 @@ Expecting a field definition, or a character '}'.
 
 module_: FN IDENT LBRACE IDENT TYPE
 ##
-## Ends in an error in state: 125.
+## Ends in an error in state: 128.
 ##
-## delimited_instr -> plaininstr . SEMI [ UNREACHABLE STRING RBRACE QUOTE NOP LPAREN LOOP LET LBRACE INT IF IDENT ]
+## delimited_instr -> plaininstr . SEMI [ UNREACHABLE STRING RBRACE QUOTE NOP LPAREN LOOP LET LBRACE INT IF IDENT BR ]
 ## instr -> plaininstr . [ PLUS PIPE MINUS LTU GTU DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
@@ -1025,7 +1025,7 @@ module_: FN IDENT LBRACE IF UNDERSCORE
 ##
 ## Ends in an error in state: 83.
 ##
-## blockinstr -> IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF
@@ -1048,38 +1048,56 @@ module_: FN IDENT LBRACE IDENT UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LPAREN IDENT TYPE
+module_: FN IDENT LBRACE BR UNREACHABLE
 ##
-## Ends in an error in state: 90.
+## Ends in an error in state: 86.
 ##
-## plaininstr -> instr . AS reftype [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
-## separated_nonempty_list(COMMA,instr) -> instr . [ RPAREN ]
-## separated_nonempty_list(COMMA,instr) -> instr . COMMA separated_nonempty_list(COMMA,instr) [ RPAREN ]
+## plaininstr -> BR . IDENT [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR . IDENT instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
-## instr
+## BR
 ##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 84, spurious reduction of production plaininstr -> IDENT
-## In state 87, spurious reduction of production instr -> plaininstr
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+module_: FN IDENT LBRACE BR IDENT UNDERSCORE
+##
+## Ends in an error in state: 87.
+##
+## plaininstr -> BR IDENT . [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR IDENT . instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## BR IDENT
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+module_: FN IDENT LBRACE BR IDENT INT UNDERSCORE
+##
+## Ends in an error in state: 89.
+##
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR IDENT instr . [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## BR IDENT instr
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 module_: FN IDENT LBRACE IDENT PLUS INT UNDERSCORE
 ##
-## Ends in an error in state: 92.
+## Ends in an error in state: 91.
 ##
 ## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -1100,7 +1118,7 @@ module_: FN IDENT LBRACE IDENT PLUS INT UNDERSCORE
 
 module_: FN IDENT LBRACE IDENT DOT IDENT EQUAL INT UNDERSCORE
 ##
-## Ends in an error in state: 96.
+## Ends in an error in state: 95.
 ##
 ## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -1121,7 +1139,7 @@ module_: FN IDENT LBRACE IDENT DOT IDENT EQUAL INT UNDERSCORE
 
 module_: FN IDENT LBRACE IDENT PIPE UNDERSCORE
 ##
-## Ends in an error in state: 97.
+## Ends in an error in state: 96.
 ##
 ## plaininstr -> instr PIPE . instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
@@ -1133,7 +1151,7 @@ module_: FN IDENT LBRACE IDENT PIPE UNDERSCORE
 
 module_: FN IDENT LBRACE IDENT PIPE INT UNDERSCORE
 ##
-## Ends in an error in state: 98.
+## Ends in an error in state: 97.
 ##
 ## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -1154,7 +1172,7 @@ module_: FN IDENT LBRACE IDENT PIPE INT UNDERSCORE
 
 module_: FN IDENT LBRACE IDENT MINUS INT UNDERSCORE
 ##
-## Ends in an error in state: 100.
+## Ends in an error in state: 99.
 ##
 ## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -1175,7 +1193,7 @@ module_: FN IDENT LBRACE IDENT MINUS INT UNDERSCORE
 
 module_: FN IDENT LBRACE IDENT AMPERSAND UNDERSCORE
 ##
-## Ends in an error in state: 104.
+## Ends in an error in state: 103.
 ##
 ## plaininstr -> instr AMPERSAND . instr [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ##
@@ -1187,7 +1205,7 @@ module_: FN IDENT LBRACE IDENT AMPERSAND UNDERSCORE
 
 module_: FN IDENT LBRACE IDENT AMPERSAND INT UNDERSCORE
 ##
-## Ends in an error in state: 105.
+## Ends in an error in state: 104.
 ##
 ## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -1208,7 +1226,7 @@ module_: FN IDENT LBRACE IDENT AMPERSAND INT UNDERSCORE
 
 module_: FN IDENT LBRACE IDENT LTU INT UNDERSCORE
 ##
-## Ends in an error in state: 107.
+## Ends in an error in state: 106.
 ##
 ## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -1229,7 +1247,7 @@ module_: FN IDENT LBRACE IDENT LTU INT UNDERSCORE
 
 module_: FN IDENT LBRACE IDENT GTU INT UNDERSCORE
 ##
-## Ends in an error in state: 109.
+## Ends in an error in state: 108.
 ##
 ## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -1248,9 +1266,31 @@ module_: FN IDENT LBRACE IDENT GTU INT UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT LBRACE IDENT COLON IDENT TYPE
+module_: FN IDENT LBRACE LPAREN INT UNREACHABLE
 ##
-## Ends in an error in state: 115.
+## Ends in an error in state: 112.
+##
+## plaininstr -> instr . AS reftype [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ RPAREN PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
+## separated_nonempty_list(COMMA,instr) -> instr . [ RPAREN ]
+## separated_nonempty_list(COMMA,instr) -> instr . COMMA separated_nonempty_list(COMMA,instr) [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## instr
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+module_: FN IDENT LBRACE IDENT LBRACE IDENT COLON INT UNREACHABLE
+##
+## Ends in an error in state: 118.
 ##
 ## plaininstr -> instr . AS reftype [ RBRACE PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ RBRACE PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
@@ -1267,19 +1307,12 @@ module_: FN IDENT LBRACE IDENT LBRACE IDENT COLON IDENT TYPE
 ## The known suffix of the stack is as follows:
 ## IDENT COLON instr
 ##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 84, spurious reduction of production plaininstr -> IDENT
-## In state 87, spurious reduction of production instr -> plaininstr
-##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 module_: FN IDENT LBRACE IDENT EQUAL INT UNDERSCORE
 ##
-## Ends in an error in state: 122.
+## Ends in an error in state: 125.
 ##
 ## plaininstr -> IDENT EQUAL instr . [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -1298,11 +1331,11 @@ module_: FN IDENT LBRACE IDENT EQUAL INT UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IF IDENT TYPE
+module_: FN IDENT LBRACE IF INT UNREACHABLE
 ##
-## Ends in an error in state: 123.
+## Ends in an error in state: 126.
 ##
-## blockinstr -> IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ## plaininstr -> instr . AS reftype [ PLUS PIPE MINUS LTU LBRACE GTU DOT AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ PLUS PIPE MINUS LTU LBRACE GTU DOT AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT EQUAL instr [ PLUS PIPE MINUS LTU LBRACE GTU DOT AS AMPERSAND ]
@@ -1316,21 +1349,14 @@ module_: FN IDENT LBRACE IF IDENT TYPE
 ## The known suffix of the stack is as follows:
 ## IF instr
 ##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 84, spurious reduction of production plaininstr -> IDENT
-## In state 87, spurious reduction of production instr -> plaininstr
-##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 module_: FN IDENT LBRACE IF INT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 124.
+## Ends in an error in state: 127.
 ##
-## blockinstr -> IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF instr LBRACE
@@ -1340,9 +1366,9 @@ module_: FN IDENT LBRACE IF INT LBRACE UNDERSCORE
 
 module_: FN IDENT LBRACE IF INT LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 128.
+## Ends in an error in state: 131.
 ##
-## blockinstr -> IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF instr LBRACE list(delimited_instr) RBRACE
@@ -1352,9 +1378,9 @@ module_: FN IDENT LBRACE IF INT LBRACE RBRACE UNDERSCORE
 
 module_: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE UNREACHABLE
 ##
-## Ends in an error in state: 129.
+## Ends in an error in state: 132.
 ##
-## option(__anonymous_6) -> ELSE . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## option(__anonymous_6) -> ELSE . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## ELSE
@@ -1364,9 +1390,9 @@ module_: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE UNREACHABLE
 
 module_: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 130.
+## Ends in an error in state: 133.
 ##
-## option(__anonymous_6) -> ELSE LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## option(__anonymous_6) -> ELSE LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## ELSE LBRACE
@@ -1376,7 +1402,7 @@ module_: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE UNDERSCORE
 
 module_: FN IDENT LBRACE IDENT SEMI UNDERSCORE
 ##
-## Ends in an error in state: 134.
+## Ends in an error in state: 137.
 ##
 ## list(delimited_instr) -> delimited_instr . list(delimited_instr) [ RBRACE ]
 ##
@@ -1388,9 +1414,9 @@ module_: FN IDENT LBRACE IDENT SEMI UNDERSCORE
 
 module_: FN IDENT LBRACE LBRACE RBRACE TYPE
 ##
-## Ends in an error in state: 136.
+## Ends in an error in state: 139.
 ##
-## delimited_instr -> blockinstr . [ UNREACHABLE STRING RBRACE QUOTE NOP LPAREN LOOP LET LBRACE INT IF IDENT ]
+## delimited_instr -> blockinstr . [ UNREACHABLE STRING RBRACE QUOTE NOP LPAREN LOOP LET LBRACE INT IF IDENT BR ]
 ## instr -> blockinstr . [ PLUS PIPE MINUS LTU GTU DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
@@ -1401,7 +1427,7 @@ module_: FN IDENT LBRACE LBRACE RBRACE TYPE
 
 module_: FN IDENT LBRACE LBRACE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 138.
+## Ends in an error in state: 141.
 ##
 ## plaininstr -> IDENT . [ SEMI PLUS PIPE MINUS LTU GTU DOT AS AMPERSAND ]
 ## plaininstr -> IDENT . EQUAL instr [ SEMI PLUS PIPE MINUS LTU GTU DOT AS AMPERSAND ]
@@ -1416,9 +1442,9 @@ module_: FN IDENT LBRACE LBRACE IDENT UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LBRACE IDENT COLON IDENT TYPE
+module_: FN IDENT LBRACE LBRACE IDENT COLON INT UNREACHABLE
 ##
-## Ends in an error in state: 140.
+## Ends in an error in state: 143.
 ##
 ## plaininstr -> instr . AS reftype [ RBRACE PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ RBRACE PLUS PIPE MINUS LTU GTU DOT COMMA AS AMPERSAND ]
@@ -1435,19 +1461,12 @@ module_: FN IDENT LBRACE LBRACE IDENT COLON IDENT TYPE
 ## The known suffix of the stack is as follows:
 ## IDENT COLON instr
 ##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 84, spurious reduction of production plaininstr -> IDENT
-## In state 87, spurious reduction of production instr -> plaininstr
-##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 module_: FN IDENT LBRACE LET IDENT EQUAL INT UNDERSCORE
 ##
-## Ends in an error in state: 148.
+## Ends in an error in state: 151.
 ##
 ## option(__anonymous_10) -> EQUAL instr . [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
 ## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACE PLUS PIPE MINUS LTU LET LBRACE GTU FN EOF DOT COMMA AS AMPERSAND ]
@@ -1468,9 +1487,9 @@ module_: FN IDENT LBRACE LET IDENT EQUAL INT UNDERSCORE
 
 module_: FN IDENT LBRACE QUOTE IDENT COLON IF UNDERSCORE
 ##
-## Ends in an error in state: 159.
+## Ends in an error in state: 162.
 ##
-## blockinstr -> QUOTE IDENT COLON IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT COLON IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF
@@ -1478,11 +1497,11 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON IF UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON IF IDENT TYPE
+module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT UNREACHABLE
 ##
-## Ends in an error in state: 160.
+## Ends in an error in state: 163.
 ##
-## blockinstr -> QUOTE IDENT COLON IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT COLON IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ## plaininstr -> instr . AS reftype [ PLUS PIPE MINUS LTU LBRACE GTU DOT AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT [ PLUS PIPE MINUS LTU LBRACE GTU DOT AS AMPERSAND ]
 ## plaininstr -> instr . DOT IDENT EQUAL instr [ PLUS PIPE MINUS LTU LBRACE GTU DOT AS AMPERSAND ]
@@ -1496,21 +1515,14 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON IF IDENT TYPE
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF instr
 ##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 84, spurious reduction of production plaininstr -> IDENT
-## In state 87, spurious reduction of production instr -> plaininstr
-##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 161.
+## Ends in an error in state: 164.
 ##
-## blockinstr -> QUOTE IDENT COLON IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT COLON IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF instr LBRACE
@@ -1520,9 +1532,9 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
 
 module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 163.
+## Ends in an error in state: 166.
 ##
-## blockinstr -> QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA AS AMPERSAND ]
+## blockinstr -> QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ UNREACHABLE TYPE STRING SEMI RPAREN REC RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACE INT IF IDENT GTU FN EOF DOT COMMA BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE
@@ -1530,9 +1542,9 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LET IDENT EQUAL IDENT RPAREN
+module_: LET IDENT EQUAL INT UNREACHABLE
 ##
-## Ends in an error in state: 165.
+## Ends in an error in state: 168.
 ##
 ## global -> LET IDENT option(__anonymous_11) EQUAL instr . option(SEMI) [ TYPE REC LET FN EOF ]
 ## plaininstr -> instr . AS reftype [ TYPE SEMI REC PLUS PIPE MINUS LTU LET GTU FN EOF DOT AS AMPERSAND ]
@@ -1548,19 +1560,12 @@ module_: LET IDENT EQUAL IDENT RPAREN
 ## The known suffix of the stack is as follows:
 ## LET IDENT option(__anonymous_11) EQUAL instr
 ##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 84, spurious reduction of production plaininstr -> IDENT
-## In state 87, spurious reduction of production instr -> plaininstr
-##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 module_: FN UNREACHABLE
 ##
-## Ends in an error in state: 167.
+## Ends in an error in state: 170.
 ##
 ## fundecl -> FN . IDENT option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ## fundecl -> FN . IDENT COLON IDENT option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
@@ -1574,7 +1579,7 @@ module_: FN UNREACHABLE
 
 module_: FN IDENT UNREACHABLE
 ##
-## Ends in an error in state: 168.
+## Ends in an error in state: 171.
 ##
 ## fundecl -> FN IDENT . option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ## fundecl -> FN IDENT . COLON IDENT option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
@@ -1588,7 +1593,7 @@ module_: FN IDENT UNREACHABLE
 
 module_: FN IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 183.
+## Ends in an error in state: 186.
 ##
 ## fundecl -> FN IDENT COLON . IDENT option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ## fundecl -> FN IDENT COLON . resulttype ARROW resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
@@ -1601,7 +1606,7 @@ module_: FN IDENT COLON UNREACHABLE
 
 module_: FN IDENT COLON AMPERSAND IDENT UNREACHABLE
 ##
-## Ends in an error in state: 186.
+## Ends in an error in state: 189.
 ##
 ## fundecl -> FN IDENT COLON resulttype . ARROW resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -1613,7 +1618,7 @@ module_: FN IDENT COLON AMPERSAND IDENT UNREACHABLE
 
 module_: FN IDENT COLON IDENT ARROW UNREACHABLE
 ##
-## Ends in an error in state: 187.
+## Ends in an error in state: 190.
 ##
 ## fundecl -> FN IDENT COLON resulttype ARROW . resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
