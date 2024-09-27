@@ -72,6 +72,7 @@ let storagetype_tbl =
      "i32", Value I32; "i64", Value I64; "f32", Value F32; "f64", Value F64;
      "v128", Value V128]
 
+let with_loc (loc_start, loc_end) descr = {descr; loc = { loc_start; loc_end }}
 %}
 
 %start <modulefield list> module_
@@ -172,38 +173,40 @@ func:
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
 %inline block:
-| label = label "{" l = list(instr) "}" { (label, List.flatten l) }
+| label = label "{" l = list(instr) "}" { (label, l) }
 
 blockinstr:
-| b = block { let (label, l) = b in [Block(label, l)] }
-| label = label LOOP "{" l = list(instr) "}" { [Loop(label, List.flatten l)] }
+| b = block { let (label, l) = b in with_loc $sloc (Block(label, l)) }
+| label = label LOOP "{" l = list(instr) "}"
+  { with_loc $sloc (Loop(label, l)) }
 | label = label IF "(" e = instr ")" "{" l1 = list(instr) "}"
   l2 = option(ELSE  "{" l = list(instr) "}" { l })
-  { [If(label, e, List.flatten l1, Option.map List.flatten l2)] }
+  { with_loc $sloc (If(label, e, l1, l2)) }
 
 plaininstr:
-| NOP { [Nop] }
-| UNREACHABLE { [Unreachable] }
-| x = IDENT { [Get x] }
-| x = IDENT "=" i = instr { [Set (x, i)] }
-| "(" l = separated_list(",", instr) ")" { List.flatten l }
-| x = IDENT "(" l = separated_list(",", instr) ")" { [Call(x, l)] }
-| "&" x = IDENT { [RefFunc x] }
-| s = STRING { [String s] }
-| i = INT { [Int i] }
+| NOP { with_loc $sloc Nop }
+| UNREACHABLE { with_loc $sloc Unreachable }
+| x = IDENT { with_loc $sloc (Get x) }
+| x = IDENT "=" i = instr { with_loc $sloc (Set (x, i)) }
+| "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
+| x = IDENT "(" l = separated_list(",", instr) ")"
+   { with_loc $sloc (Call(x, l)) }
+| "&" x = IDENT { with_loc $sloc (RefFunc x) }
+| s = STRING { with_loc $sloc (String s) }
+| i = INT { with_loc $sloc (Int i) }
 | x = IDENT "{" l = separated_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
-  { [Struct (Some x, l)] }
+  { with_loc $sloc (Struct (Some x, l)) }
 | "{" l = separated_nonempty_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
-  { [Struct (None, l)] }
-| i = instr AS t = reftype { [Cast(i, t)] }
-| i = instr "." x = IDENT { [StructGet(i, x)] }
-| i = instr "." x = IDENT "=" j = instr { [StructSet(i, x, j)] }
-| i = instr "+" j = instr { [BinOp(Plus, i, j)] }
-| i = instr "-" j = instr { [BinOp(Minus, i, j)] }
-| i = instr "<u" j = instr { [BinOp(Ltu, i, j)] }
-| i = instr ">u" j = instr { [BinOp(Gtu, i, j)] }
+  { with_loc $sloc (Struct (None, l)) }
+| i = instr AS t = reftype { with_loc $sloc (Cast(i, t)) }
+| i = instr "." x = IDENT { with_loc $sloc (StructGet(i, x)) }
+| i = instr "." x = IDENT "=" j = instr { with_loc $sloc (StructSet(i, x, j)) }
+| i = instr "+" j = instr { with_loc $sloc (BinOp(Plus, i, j)) }
+| i = instr "-" j = instr { with_loc $sloc (BinOp(Minus, i, j)) }
+| i = instr "<u" j = instr { with_loc $sloc (BinOp(Ltu, i, j)) }
+| i = instr ">u" j = instr { with_loc $sloc (BinOp(Gtu, i, j)) }
 | LET x = IDENT t = option(":" t = valtype {t}) i = option("=" i = instr {i})
-  { [Local (x, t, i)] }
+  { with_loc $sloc (Local (x, t, i)) }
 
 instr:
 | i = blockinstr { i }
