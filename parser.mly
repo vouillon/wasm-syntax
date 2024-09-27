@@ -4,7 +4,7 @@
 
 %token EOF
 
-%token SEMI
+%token SEMI ";"
 %token AMPERSAND "&"
 %token PIPE "|"
 %token QUESTIONMARK "?"
@@ -24,7 +24,7 @@
 %token PLUS "+"
 %token LTU "<u"
 %token GTU ">u"
-%token UNDERSCORE
+%token UNDERSCORE "_"
 
 %token FN
 %token MUT
@@ -33,20 +33,20 @@
 %token OPEN
 %token NOP UNREACHABLE
 %token LOOP IF ELSE
-%token LET AS
+%token LET AS IS
 %token BR BR_IF BR_TABLE RETURN
 %token BR_ON_CAST BR_ON_CAST_FAIL
 %token BR_ON_NULL BR_ON_NON_NULL
 
 %nonassoc LET
-%nonassoc br IDENT
-%nonassoc LBRACE
+%nonassoc br IDENT plain
+%nonassoc LBRACE LBRACKET
 %right EQUAL
 %nonassoc LTU GTU
 %left PIPE
 %left AMPERSAND
 %left MINUS PLUS
-%left AS
+%left AS IS
 %left DOT
 
 (* BR foo 1 + 2 understood as BR foo (1 + 2)
@@ -140,7 +140,7 @@ comptype:
 typedef:
 | TYPE name = IDENT op = boption(OPEN)
   supertype = option(":" s = IDENT { s })
-  "=" typ = comptype option(SEMI)
+  "=" typ = comptype option(";")
     { {name; typ; supertype; final = not op} }
 
 rectype:
@@ -149,7 +149,7 @@ rectype:
 
 simple_pat:
 | x = IDENT { Some x }
-| UNDERSCORE { None }
+| "_" { None }
 
 funcparams:
 | l = separated_list(",", x = simple_pat ":" t = valtype { x, t })
@@ -175,7 +175,7 @@ func:
 %inline block:
 | label = label "{" l = list(delimited_instr) "}" { (label, l) }
 
-blockinstr:
+%inline blockinstr:
 | b = block { let (label, l) = b in with_loc $sloc (Block(label, l)) }
 | label = label LOOP "{" l = list(delimited_instr) "}"
   { with_loc $sloc (Loop(label, l)) }
@@ -198,6 +198,7 @@ plaininstr:
 | "{" l = separated_nonempty_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
   { with_loc $sloc (Struct (None, l)) }
 | i = instr AS t = reftype { with_loc $sloc (Cast(i, t)) }
+| i = instr IS t = reftype { with_loc $sloc (Test(i, t)) }
 | i = instr "." x = IDENT { with_loc $sloc (StructGet(i, x)) }
 | i = instr "." x = IDENT "=" j = instr { with_loc $sloc (StructSet(i, x, j)) }
 | i = instr "+" j = instr { with_loc $sloc (BinOp(Plus, i, j)) }
@@ -217,24 +218,28 @@ plaininstr:
 | BR_ON_CAST l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
 | BR_ON_CAST_FAIL l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec br
+| "[" separated_list(",", instr) "]" { assert false } (* array.new *)
+| "[" instr ";" instr "]" { assert false } (* array.new_fixed *)
+| plaininstr "[" instr "]" { assert false } (* array.get *)
+| plaininstr "[" instr "]" "=" instr { assert false } (* array.set *)
 
 instr:
 | i = blockinstr { i }
-| i = plaininstr { i }
+| i = plaininstr { i } %prec plain
 
 delimited_instr:
 | i = blockinstr { i }
-| i = plaininstr SEMI { i }
+| i = plaininstr ";" { i }
 
 global:
 | LET name = IDENT
   typ = option(":" mut = boption(MUT) typ = valtype { {mut; typ} })
-  "=" def = instr option(SEMI)
+  "=" def = instr option(";")
   { Global {name; typ; def} }
 
 modulefield:
 | r = rectype { Type r }
-| f = fundecl option(SEMI)
+| f = fundecl option(";")
   { let (name, typ, sign) = f in Fundecl {name; typ; sign} }
 | f = func { f }
 | g = global { g }

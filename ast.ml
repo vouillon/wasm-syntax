@@ -51,6 +51,7 @@ type instr_descr =
   | String of string
   | Int of string
   | Cast of instr * reftype
+  | Test of instr * reftype
   | StructGet of instr * string
   | StructSet of instr * string * instr
   | BinOp of binop * instr * instr
