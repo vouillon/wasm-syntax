@@ -1,0 +1,10 @@
+;(menhir
+; (modules parser)
+; (flags --table --explain --dump)
+;; (flags --compile-errors %{dep:parser.messages}})
+;)
+
+(library (name wasm)
+  (preprocess (pps sedlex.ppx))
+  (libraries sedlex)
+)
