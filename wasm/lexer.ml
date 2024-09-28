@@ -33,15 +33,6 @@ let format = [%sedlex.regexp? '\n' | 9]
 let space = [%sedlex.regexp? ' ' | format | comment]
 *)
 
-type token =
-  | NAT of string
-  | INT of string
-  | FLOAT of string
-  | STRING of string
-  | ID of string
-  | LPAREN
-  | RPAREN
-
 let rec comment lexbuf =
   match%sedlex lexbuf with
   | ";)" -> ()
@@ -105,6 +96,7 @@ let rec string lexbuf =
 (* ZZZ names should be well-formed utf strings... *)
 
 let rec token lexbuf =
+  let open Parser in
   match%sedlex lexbuf with
   | '(' -> LPAREN
   | ')' -> RPAREN
@@ -112,7 +104,7 @@ let rec token lexbuf =
   | sN -> INT (Sedlexing.Utf8.lexeme lexbuf)
   | float -> FLOAT (Sedlexing.Utf8.lexeme lexbuf)
   | '"' -> STRING (string lexbuf)
-  | newline | linecomment -> (*ZZZ new line *) token lexbuf
+  | newline | linecomment -> token lexbuf
   | Plus (' ' | '\t') -> token lexbuf
   | "(;" ->
       comment lexbuf;
@@ -121,4 +113,44 @@ let rec token lexbuf =
       ID
         (Sedlexing.Utf8.sub_lexeme lexbuf 1
            (Sedlexing.lexeme_length lexbuf - 1))
-  | _ -> assert false
+  | eof -> EOF
+  | "i32" -> VALTYPE I32
+  | "i64" -> VALTYPE I64
+  | "f32" -> VALTYPE F32
+  | "f64" -> VALTYPE F64
+  | "v128" -> VALTYPE V128
+  | "i8" -> PACKEDTYPE I8
+  | "i6" -> PACKEDTYPE I16
+  | "any" -> ANY
+  | "eq" -> EQ
+  | "i31" -> I31
+  | "struct" -> STRUCT
+  | "array" -> ARRAY
+  | "none" -> NONE
+  | "func" -> FUNC
+  | "nofunc" -> NOFUNC
+  | "extern" -> EXTERN
+  | "noextern" -> NOEXTERN
+  | "ref" -> REF
+  | "null" -> NULL
+  | "param" -> PARAM
+  | "result" -> RESULT
+  | "mut" -> MUT
+  | "field" -> FIELD
+  | "module" -> MODULE
+  | "rec" -> REC
+  | "type" -> TYPE
+  | "sub" -> SUB
+  | "final" -> FINAL
+  | "import" -> IMPORT
+  | "export" -> EXPORT
+  | "global" -> GLOBAL
+  | "struct.new" -> STRUCT_NEW
+  | "array.new_fixed" -> ARRAY_NEW_FIXED
+  | "ref.func" -> REF_FUNC
+  | "ref.null" -> REF_NULL
+  | "i32.const" -> I32_CONST
+  | _ ->
+      raise
+        (Misc.Syntax_error
+           (Sedlexing.lexing_positions lexbuf, Printf.sprintf "Syntax error.\n"))

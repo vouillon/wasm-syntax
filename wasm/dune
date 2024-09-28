@@ -1,10 +1,62 @@
-;(menhir
-; (modules parser)
-; (flags --table --explain --dump)
-;; (flags --compile-errors %{dep:parser.messages}})
-;)
+(menhir
+ (modules parser)
+ (flags --table --explain --dump)
+; (flags --compile-errors %{dep:parser.messages}})
+)
 
-(library (name wasm)
+
+(rule
+  (deps parser_messages.check)
+  (action (with-stdout-to parser_messages.ml
+    (run menhir
+      %{dep:parser.mly}
+      --compile-errors %{dep:parser_messages.messages}
+    )
+  ))
+)
+
+(rule
+  (with-stdout-to parser_messages.auto.messages
+    (run menhir
+       %{dep:parser.mly}
+       --list-errors
+    )
+  )
+)
+
+(rule
+  (with-stdout-to parser_messages.updated1.messages
+    (run menhir
+       %{dep:parser.mly}
+       --update-errors %{dep:parser_messages.messages}
+    )
+  )
+)
+
+(rule
+  (with-stdout-to parser_messages.updated.messages
+    (run menhir
+       %{dep:parser.mly}
+       --merge-errors %{dep:parser_messages.auto.messages}
+       --merge-errors %{dep:parser_messages.updated1.messages}
+    )
+  )
+)
+
+(rule
+  (alias runtest)
+  (action (diff %{dep:parser_messages.messages} %{dep:parser_messages.updated.messages})))
+
+(rule
+  (with-stdout-to parser_messages.check
+  (run menhir
+    %{dep:parser.mly}
+    --compare-errors %{dep:parser_messages.auto.messages}
+    --compare-errors %{dep:parser_messages.messages}
+  ))
+)
+
+(executable (name main)
   (preprocess (pps sedlex.ppx))
-  (libraries sedlex)
+  (libraries sedlex menhirLib)
 )
