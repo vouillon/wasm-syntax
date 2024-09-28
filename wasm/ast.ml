@@ -44,7 +44,7 @@ type instr =
   | StructNew of idx
   | ArrayNewFixed of idx * Int32.t
   | RefFunc of idx
-  | RefNull of idx
+  | RefNull of heaptype
   | I32Const of Int32.t
   | Folded of instr * instr list
 

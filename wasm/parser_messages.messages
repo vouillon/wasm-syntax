@@ -1,15 +1,3 @@
-module_: VALTYPE
-##
-## Ends in an error in state: 0.
-##
-## module_' -> . module_ [ # ]
-##
-## The known suffix of the stack is as follows:
-##
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 module_: LPAREN VALTYPE
 ##
 ## Ends in an error in state: 1.
@@ -22,6 +10,669 @@ module_: LPAREN VALTYPE
 ##
 ## The known suffix of the stack is as follows:
 ## LPAREN
+##
+
+Expecting a module field.
+
+module_: LPAREN TYPE LPAREN VALTYPE
+##
+## Ends in an error in state: 5.
+##
+## comptype -> LPAREN . ARRAY fieldtype RPAREN [ RPAREN ]
+## comptype -> LPAREN . STRUCT list(field) RPAREN [ RPAREN ]
+## functype -> LPAREN . FUNC params_and_results RPAREN [ RPAREN ]
+## subtype -> LPAREN . SUB boption(FINAL) option(idx) comptype RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+Expecting a subtype or directly a composite type declaration.
+
+module_: LPAREN TYPE LPAREN SUB LPAREN VALTYPE
+##
+## Ends in an error in state: 13.
+##
+## comptype -> LPAREN . ARRAY fieldtype RPAREN [ RPAREN ]
+## comptype -> LPAREN . STRUCT list(field) RPAREN [ RPAREN ]
+## functype -> LPAREN . FUNC params_and_results RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+Expecting a composite type declaration.
+
+module_: LPAREN TYPE LPAREN STRUCT VALTYPE
+##
+## Ends in an error in state: 14.
+##
+## comptype -> LPAREN STRUCT . list(field) RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN STRUCT
+##
+
+Expecting a sequence of field declarations.
+
+module_: LPAREN TYPE LPAREN STRUCT LPAREN VALTYPE
+##
+## Ends in an error in state: 15.
+##
+## field -> LPAREN . FIELD ID fieldtype RPAREN [ RPAREN LPAREN ]
+## field -> LPAREN . FIELD list(fieldtype) RPAREN [ RPAREN LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+Expecting 'field'.
+
+module_: LPAREN TYPE LPAREN STRUCT LPAREN FIELD TYPE
+##
+## Ends in an error in state: 16.
+##
+## field -> LPAREN FIELD . ID fieldtype RPAREN [ RPAREN LPAREN ]
+## field -> LPAREN FIELD . list(fieldtype) RPAREN [ RPAREN LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN FIELD
+##
+
+Expecting a field identifier or a field type.
+
+module_: LPAREN TYPE LPAREN ARRAY LPAREN MUT TYPE
+##
+## Ends in an error in state: 36.
+##
+## fieldtype -> LPAREN MUT . storagetype RPAREN [ VALTYPE RPAREN PACKEDTYPE LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN MUT
+##
+
+Expecting a storage type.
+
+module_: LPAREN GLOBAL LPAREN MUT LPAREN VALTYPE
+##
+## Ends in an error in state: 37.
+##
+## reftype -> LPAREN . REF boption(NULL) heaptype RPAREN [ VALTYPE RPAREN LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+Expecting 'ref'.
+
+module_: LPAREN TYPE LPAREN ARRAY LPAREN MUT VALTYPE VALTYPE
+##
+## Ends in an error in state: 39.
+##
+## fieldtype -> LPAREN MUT storagetype . RPAREN [ VALTYPE RPAREN PACKEDTYPE LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN MUT storagetype
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN TYPE LPAREN STRUCT LPAREN FIELD ID TYPE
+##
+## Ends in an error in state: 42.
+##
+## field -> LPAREN FIELD ID . fieldtype RPAREN [ RPAREN LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN FIELD ID
+##
+
+Expecting a field type.
+
+module_: LPAREN TYPE LPAREN STRUCT LPAREN FIELD ID VALTYPE VALTYPE
+##
+## Ends in an error in state: 44.
+##
+## field -> LPAREN FIELD ID fieldtype . RPAREN [ RPAREN LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN FIELD ID fieldtype
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN TYPE LPAREN STRUCT LPAREN FIELD VALTYPE TYPE
+##
+## Ends in an error in state: 48.
+##
+## list(fieldtype) -> fieldtype . list(fieldtype) [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## fieldtype
+##
+
+Expecting a list of field types followed by a closing parenthesis.
+
+module_: LPAREN TYPE LPAREN STRUCT LPAREN FIELD RPAREN VALTYPE
+##
+## Ends in an error in state: 52.
+##
+## list(field) -> field . list(field) [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## field
+##
+
+Expecting a list of fields followed by closing parenthesis.
+
+module_: LPAREN TYPE LPAREN FUNC LPAREN VALTYPE
+##
+## Ends in an error in state: 55.
+##
+## params_and_results -> LPAREN . PARAM ID valtype RPAREN params_and_results [ RPAREN ]
+## params_and_results -> LPAREN . PARAM list(valtype) RPAREN params_and_results [ RPAREN ]
+## result -> LPAREN . RESULT list(valtype) RPAREN [ RPAREN LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+Expecting 'param' or 'result'.
+
+module_: LPAREN TYPE LPAREN FUNC LPAREN RESULT TYPE
+##
+## Ends in an error in state: 56.
+##
+## result -> LPAREN RESULT . list(valtype) RPAREN [ RPAREN LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN RESULT
+##
+
+Expecting a list of value types followed by a closing parenthesis.
+
+module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM VALTYPE TYPE
+##
+## Ends in an error in state: 57.
+##
+## list(valtype) -> valtype . list(valtype) [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## valtype
+##
+
+Expecting a list of value types followed by a closing parenthesis.
+
+module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM TYPE
+##
+## Ends in an error in state: 61.
+##
+## params_and_results -> LPAREN PARAM . ID valtype RPAREN params_and_results [ RPAREN ]
+## params_and_results -> LPAREN PARAM . list(valtype) RPAREN params_and_results [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN PARAM
+##
+
+Expecting a parameter identifier or a value type.
+
+module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM ID TYPE
+##
+## Ends in an error in state: 62.
+##
+## params_and_results -> LPAREN PARAM ID . valtype RPAREN params_and_results [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN PARAM ID
+##
+
+Expecting a value type.
+
+module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM ID VALTYPE VALTYPE
+##
+## Ends in an error in state: 63.
+##
+## params_and_results -> LPAREN PARAM ID valtype . RPAREN params_and_results [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN PARAM ID valtype
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN TYPE LPAREN FUNC LPAREN RESULT RPAREN VALTYPE
+##
+## Ends in an error in state: 65.
+##
+## list(result) -> result . list(result) [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## result
+##
+
+Expecting a list of result types followed by a closing parenthesis.
+
+module_: LPAREN TYPE LPAREN FUNC LPAREN RESULT RPAREN LPAREN VALTYPE
+##
+## Ends in an error in state: 66.
+##
+## result -> LPAREN . RESULT list(valtype) RPAREN [ RPAREN LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+Expecting 'result'.
+
+module_: LPAREN TYPE LPAREN ARRAY TYPE
+##
+## Ends in an error in state: 75.
+##
+## comptype -> LPAREN ARRAY . fieldtype RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN ARRAY
+##
+
+Expecing a field type.
+
+module_: LPAREN TYPE LPAREN ARRAY VALTYPE VALTYPE
+##
+## Ends in an error in state: 76.
+##
+## comptype -> LPAREN ARRAY fieldtype . RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN ARRAY fieldtype
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN TYPE LPAREN SUB LPAREN FUNC RPAREN VALTYPE
+##
+## Ends in an error in state: 79.
+##
+## subtype -> LPAREN SUB boption(FINAL) option(idx) comptype . RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN SUB boption(FINAL) option(idx) comptype
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN TYPE LPAREN FUNC RPAREN VALTYPE
+##
+## Ends in an error in state: 82.
+##
+## typedef -> LPAREN TYPE option(ID) subtype . RPAREN [ RPAREN LPAREN EOF ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN TYPE option(ID) subtype
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN REC VALTYPE
+##
+## Ends in an error in state: 85.
+##
+## rectype -> LPAREN REC . list(typedef) RPAREN [ RPAREN LPAREN EOF ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN REC
+##
+
+Expecting a list of type definitions.
+
+module_: LPAREN REC LPAREN VALTYPE
+##
+## Ends in an error in state: 86.
+##
+## typedef -> LPAREN . TYPE option(ID) subtype RPAREN [ RPAREN LPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+Expecting 'type'.
+
+module_: LPAREN REC LPAREN TYPE LPAREN FUNC RPAREN RPAREN VALTYPE
+##
+## Ends in an error in state: 87.
+##
+## list(typedef) -> typedef . list(typedef) [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## typedef
+##
+
+Expecting a list of type definitions followed by a closing parenthesis.
+
+module_: LPAREN MODULE VALTYPE
+##
+## Ends in an error in state: 91.
+##
+## module_ -> LPAREN MODULE . option(ID) list(modulefield) RPAREN EOF [ # ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN MODULE
+##
+
+Expecting a module identifier or a module field.
+
+module_: LPAREN MODULE ID VALTYPE
+##
+## Ends in an error in state: 92.
+##
+## module_ -> LPAREN MODULE option(ID) . list(modulefield) RPAREN EOF [ # ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN MODULE option(ID)
+##
+
+Expecting a module field, or a closing parenthesis.
+
+module_: LPAREN MODULE LPAREN VALTYPE
+##
+## Ends in an error in state: 93.
+##
+## global -> LPAREN . GLOBAL option(ID) globaldesc RPAREN [ RPAREN LPAREN EOF ]
+## import -> LPAREN . IMPORT name name importdesc RPAREN [ RPAREN LPAREN EOF ]
+## rectype -> LPAREN . REC list(typedef) RPAREN [ RPAREN LPAREN EOF ]
+## typedef -> LPAREN . TYPE option(ID) subtype RPAREN [ RPAREN LPAREN EOF ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+Expecting a module field.
+
+module_: LPAREN IMPORT VALTYPE
+##
+## Ends in an error in state: 94.
+##
+## import -> LPAREN IMPORT . name name importdesc RPAREN [ RPAREN LPAREN EOF ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN IMPORT
+##
+
+Expecting an imported module name.
+
+module_: LPAREN IMPORT STRING VALTYPE
+##
+## Ends in an error in state: 96.
+##
+## import -> LPAREN IMPORT name . name importdesc RPAREN [ RPAREN LPAREN EOF ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN IMPORT name
+##
+
+Expecting an imported name.
+
+module_: LPAREN IMPORT STRING STRING VALTYPE
+##
+## Ends in an error in state: 97.
+##
+## import -> LPAREN IMPORT name name . importdesc RPAREN [ RPAREN LPAREN EOF ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN IMPORT name name
+##
+
+Expecting an import descriptor.
+
+module_: LPAREN GLOBAL LPAREN MUT TYPE
+##
+## Ends in an error in state: 102.
+##
+## globaltype -> LPAREN MUT . valtype RPAREN [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN MUT
+##
+
+Expecting a value type.
+
+module_: LPAREN GLOBAL LPAREN MUT VALTYPE VALTYPE
+##
+## Ends in an error in state: 103.
+##
+## globaltype -> LPAREN MUT valtype . RPAREN [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN MUT valtype
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN GLOBAL LPAREN IMPORT VALTYPE
+##
+## Ends in an error in state: 123.
+##
+## globaldesc -> LPAREN IMPORT . name name RPAREN globaltype [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN IMPORT
+##
+
+Expecting an import module name.
+
+module_: LPAREN GLOBAL LPAREN IMPORT STRING VALTYPE
+##
+## Ends in an error in state: 124.
+##
+## globaldesc -> LPAREN IMPORT name . name RPAREN globaltype [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN IMPORT name
+##
+
+Expecting an import name.
+
+module_: LPAREN GLOBAL LPAREN IMPORT STRING STRING VALTYPE
+##
+## Ends in an error in state: 125.
+##
+## globaldesc -> LPAREN IMPORT name name . RPAREN globaltype [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN IMPORT name name
+##
+
+Expecting an opening parenthesis.
+
+module_: LPAREN GLOBAL LPAREN IMPORT STRING STRING RPAREN TYPE
+##
+## Ends in an error in state: 126.
+##
+## globaldesc -> LPAREN IMPORT name name RPAREN . globaltype [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN IMPORT name name RPAREN
+##
+
+Expecting a global type.
+
+module_: LPAREN GLOBAL LPAREN IMPORT STRING STRING RPAREN LPAREN VALTYPE
+##
+## Ends in an error in state: 101.
+##
+## globaltype -> LPAREN . MUT valtype RPAREN [ RPAREN ]
+## reftype -> LPAREN . REF boption(NULL) heaptype RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+Expecting 'mut' for a global type or 'ref' for a reference type.
+
+module_: LPAREN GLOBAL LPAREN EXPORT VALTYPE
+##
+## Ends in an error in state: 128.
+##
+## globaldesc -> LPAREN EXPORT . name RPAREN globaldesc [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN EXPORT
+##
+
+Expecting an export name.
+
+module_: LPAREN GLOBAL LPAREN EXPORT STRING VALTYPE
+##
+## Ends in an error in state: 129.
+##
+## globaldesc -> LPAREN EXPORT name . RPAREN globaldesc [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN EXPORT name
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN IMPORT STRING STRING LPAREN VALTYPE
+##
+## Ends in an error in state: 98.
+##
+## importdesc -> LPAREN . FUNC option(ID) typeuse RPAREN [ RPAREN ]
+## importdesc -> LPAREN . GLOBAL option(ID) globaltype RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+Expecting an import descriptor.
+
+module_: LPAREN IMPORT STRING STRING LPAREN GLOBAL TYPE
+##
+## Ends in an error in state: 99.
+##
+## importdesc -> LPAREN GLOBAL . option(ID) globaltype RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN GLOBAL
+##
+
+Expecting a global identifier or a global type.
+
+module_: LPAREN IMPORT STRING STRING LPAREN GLOBAL ID TYPE
+##
+## Ends in an error in state: 100.
+##
+## importdesc -> LPAREN GLOBAL option(ID) . globaltype RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN GLOBAL option(ID)
+##
+
+Expecting a global type.
+
+module_: LPAREN IMPORT STRING STRING LPAREN GLOBAL VALTYPE VALTYPE
+##
+## Ends in an error in state: 106.
+##
+## importdesc -> LPAREN GLOBAL option(ID) globaltype . RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN GLOBAL option(ID) globaltype
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN IMPORT STRING STRING LPAREN FUNC VALTYPE
+##
+## Ends in an error in state: 108.
+##
+## importdesc -> LPAREN FUNC . option(ID) typeuse RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN FUNC
+##
+
+Expecting a function identifier or a type use.
+
+module_: LPAREN IMPORT STRING STRING LPAREN FUNC ID VALTYPE
+##
+## Ends in an error in state: 109.
+##
+## importdesc -> LPAREN FUNC option(ID) . typeuse RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN FUNC option(ID)
+##
+
+Expecting a type use.
+
+module_: LPAREN IMPORT STRING STRING LPAREN FUNC LPAREN TYPE VALTYPE
+##
+## Ends in an error in state: 111.
+##
+## typeuse -> LPAREN TYPE . idx RPAREN params_and_results [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN TYPE
+##
+
+Expecting a type index.
+
+module_: LPAREN IMPORT STRING STRING LPAREN FUNC LPAREN TYPE NAT VALTYPE
+##
+## Ends in an error in state: 112.
+##
+## typeuse -> LPAREN TYPE idx . RPAREN params_and_results [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN TYPE idx
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN IMPORT STRING STRING LPAREN FUNC RPAREN VALTYPE
+##
+## Ends in an error in state: 118.
+##
+## import -> LPAREN IMPORT name name importdesc . RPAREN [ RPAREN LPAREN EOF ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN IMPORT name name importdesc
+##
+
+Expecting a closing parenthesis.
+
+module_: LPAREN GLOBAL VALTYPE VALTYPE
+##
+## Ends in an error in state: 131.
+##
+## globaldesc -> globaltype . expr [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## globaltype
+##
+
+Expecting an expression.
+
+module_: LPAREN GLOBAL VALTYPE STRUCT_NEW VALTYPE
+##
+## Ends in an error in state: 132.
+##
+## plaininstr -> STRUCT_NEW . idx [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
+##
+## The known suffix of the stack is as follows:
+## STRUCT_NEW
+##
+
+Expecting a type index.
+
+module_: VALTYPE
+##
+## Ends in an error in state: 0.
+##
+## module_' -> . module_ [ # ]
+##
+## The known suffix of the stack is as follows:
+##
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
@@ -46,21 +697,6 @@ module_: LPAREN TYPE ID VALTYPE
 ##
 ## The known suffix of the stack is as follows:
 ## LPAREN TYPE option(ID)
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN VALTYPE
-##
-## Ends in an error in state: 5.
-##
-## comptype -> LPAREN . ARRAY fieldtype RPAREN [ RPAREN ]
-## comptype -> LPAREN . STRUCT list(field) RPAREN [ RPAREN ]
-## functype -> LPAREN . FUNC params_and_results RPAREN [ RPAREN ]
-## subtype -> LPAREN . SUB boption(FINAL) option(idx) comptype RPAREN [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
@@ -97,58 +733,6 @@ module_: LPAREN TYPE LPAREN SUB NAT VALTYPE
 ##
 ## The known suffix of the stack is as follows:
 ## LPAREN SUB boption(FINAL) option(idx)
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN SUB LPAREN VALTYPE
-##
-## Ends in an error in state: 13.
-##
-## comptype -> LPAREN . ARRAY fieldtype RPAREN [ RPAREN ]
-## comptype -> LPAREN . STRUCT list(field) RPAREN [ RPAREN ]
-## functype -> LPAREN . FUNC params_and_results RPAREN [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN STRUCT VALTYPE
-##
-## Ends in an error in state: 14.
-##
-## comptype -> LPAREN STRUCT . list(field) RPAREN [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN STRUCT
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN STRUCT LPAREN VALTYPE
-##
-## Ends in an error in state: 15.
-##
-## field -> LPAREN . FIELD ID fieldtype RPAREN [ RPAREN LPAREN ]
-## field -> LPAREN . FIELD list(fieldtype) RPAREN [ RPAREN LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN STRUCT LPAREN FIELD TYPE
-##
-## Ends in an error in state: 16.
-##
-## field -> LPAREN FIELD . ID fieldtype RPAREN [ RPAREN LPAREN ]
-## field -> LPAREN FIELD . list(fieldtype) RPAREN [ RPAREN LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN FIELD
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
@@ -202,90 +786,6 @@ module_: LPAREN GLOBAL LPAREN REF NAT VALTYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LPAREN TYPE LPAREN ARRAY LPAREN MUT TYPE
-##
-## Ends in an error in state: 36.
-##
-## fieldtype -> LPAREN MUT . storagetype RPAREN [ VALTYPE RPAREN PACKEDTYPE LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN MUT
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN GLOBAL LPAREN MUT LPAREN VALTYPE
-##
-## Ends in an error in state: 37.
-##
-## reftype -> LPAREN . REF boption(NULL) heaptype RPAREN [ VALTYPE RPAREN LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN ARRAY LPAREN MUT VALTYPE VALTYPE
-##
-## Ends in an error in state: 39.
-##
-## fieldtype -> LPAREN MUT storagetype . RPAREN [ VALTYPE RPAREN PACKEDTYPE LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN MUT storagetype
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN STRUCT LPAREN FIELD ID TYPE
-##
-## Ends in an error in state: 42.
-##
-## field -> LPAREN FIELD ID . fieldtype RPAREN [ RPAREN LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN FIELD ID
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN STRUCT LPAREN FIELD ID VALTYPE VALTYPE
-##
-## Ends in an error in state: 44.
-##
-## field -> LPAREN FIELD ID fieldtype . RPAREN [ RPAREN LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN FIELD ID fieldtype
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN STRUCT LPAREN FIELD VALTYPE TYPE
-##
-## Ends in an error in state: 48.
-##
-## list(fieldtype) -> fieldtype . list(fieldtype) [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## fieldtype
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN STRUCT LPAREN FIELD RPAREN VALTYPE
-##
-## Ends in an error in state: 52.
-##
-## list(field) -> field . list(field) [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## field
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 module_: LPAREN TYPE LPAREN FUNC VALTYPE
 ##
 ## Ends in an error in state: 54.
@@ -294,81 +794,6 @@ module_: LPAREN TYPE LPAREN FUNC VALTYPE
 ##
 ## The known suffix of the stack is as follows:
 ## LPAREN FUNC
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN FUNC LPAREN VALTYPE
-##
-## Ends in an error in state: 55.
-##
-## params_and_results -> LPAREN . PARAM ID valtype RPAREN params_and_results [ RPAREN ]
-## params_and_results -> LPAREN . PARAM list(valtype) RPAREN params_and_results [ RPAREN ]
-## result -> LPAREN . RESULT list(valtype) RPAREN [ RPAREN LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN FUNC LPAREN RESULT TYPE
-##
-## Ends in an error in state: 56.
-##
-## result -> LPAREN RESULT . list(valtype) RPAREN [ RPAREN LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN RESULT
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM VALTYPE TYPE
-##
-## Ends in an error in state: 57.
-##
-## list(valtype) -> valtype . list(valtype) [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## valtype
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM TYPE
-##
-## Ends in an error in state: 61.
-##
-## params_and_results -> LPAREN PARAM . ID valtype RPAREN params_and_results [ RPAREN ]
-## params_and_results -> LPAREN PARAM . list(valtype) RPAREN params_and_results [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN PARAM
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM ID TYPE
-##
-## Ends in an error in state: 62.
-##
-## params_and_results -> LPAREN PARAM ID . valtype RPAREN params_and_results [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN PARAM ID
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM ID VALTYPE VALTYPE
-##
-## Ends in an error in state: 63.
-##
-## params_and_results -> LPAREN PARAM ID valtype . RPAREN params_and_results [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN PARAM ID valtype
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
@@ -385,30 +810,6 @@ module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM ID VALTYPE RPAREN VALTYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LPAREN TYPE LPAREN FUNC LPAREN RESULT RPAREN VALTYPE
-##
-## Ends in an error in state: 65.
-##
-## list(result) -> result . list(result) [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## result
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN FUNC LPAREN RESULT RPAREN LPAREN VALTYPE
-##
-## Ends in an error in state: 66.
-##
-## result -> LPAREN . RESULT list(valtype) RPAREN [ RPAREN LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM RPAREN VALTYPE
 ##
 ## Ends in an error in state: 71.
@@ -421,204 +822,9 @@ module_: LPAREN TYPE LPAREN FUNC LPAREN PARAM RPAREN VALTYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LPAREN TYPE LPAREN ARRAY TYPE
-##
-## Ends in an error in state: 75.
-##
-## comptype -> LPAREN ARRAY . fieldtype RPAREN [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN ARRAY
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN ARRAY VALTYPE VALTYPE
-##
-## Ends in an error in state: 76.
-##
-## comptype -> LPAREN ARRAY fieldtype . RPAREN [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN ARRAY fieldtype
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN SUB LPAREN FUNC RPAREN VALTYPE
-##
-## Ends in an error in state: 79.
-##
-## subtype -> LPAREN SUB boption(FINAL) option(idx) comptype . RPAREN [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN SUB boption(FINAL) option(idx) comptype
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN TYPE LPAREN FUNC RPAREN VALTYPE
-##
-## Ends in an error in state: 82.
-##
-## typedef -> LPAREN TYPE option(ID) subtype . RPAREN [ RPAREN LPAREN EOF ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN TYPE option(ID) subtype
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN REC VALTYPE
-##
-## Ends in an error in state: 85.
-##
-## rectype -> LPAREN REC . list(typedef) RPAREN [ RPAREN LPAREN EOF ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN REC
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN REC LPAREN VALTYPE
-##
-## Ends in an error in state: 86.
-##
-## typedef -> LPAREN . TYPE option(ID) subtype RPAREN [ RPAREN LPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN REC LPAREN TYPE LPAREN FUNC RPAREN RPAREN VALTYPE
-##
-## Ends in an error in state: 87.
-##
-## list(typedef) -> typedef . list(typedef) [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## typedef
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN MODULE VALTYPE
-##
-## Ends in an error in state: 91.
-##
-## module_ -> LPAREN MODULE . option(ID) list(modulefield) RPAREN EOF [ # ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN MODULE
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN MODULE ID VALTYPE
-##
-## Ends in an error in state: 92.
-##
-## module_ -> LPAREN MODULE option(ID) . list(modulefield) RPAREN EOF [ # ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN MODULE option(ID)
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN MODULE LPAREN VALTYPE
-##
-## Ends in an error in state: 93.
-##
-## global -> LPAREN . GLOBAL option(ID) globaldesc RPAREN [ RPAREN LPAREN EOF ]
-## import -> LPAREN . IMPORT name name importdesc RPAREN [ RPAREN LPAREN EOF ]
-## rectype -> LPAREN . REC list(typedef) RPAREN [ RPAREN LPAREN EOF ]
-## typedef -> LPAREN . TYPE option(ID) subtype RPAREN [ RPAREN LPAREN EOF ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN IMPORT VALTYPE
-##
-## Ends in an error in state: 94.
-##
-## import -> LPAREN IMPORT . name name importdesc RPAREN [ RPAREN LPAREN EOF ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN IMPORT
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN IMPORT STRING VALTYPE
-##
-## Ends in an error in state: 96.
-##
-## import -> LPAREN IMPORT name . name importdesc RPAREN [ RPAREN LPAREN EOF ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN IMPORT name
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN IMPORT STRING STRING VALTYPE
-##
-## Ends in an error in state: 97.
-##
-## import -> LPAREN IMPORT name name . importdesc RPAREN [ RPAREN LPAREN EOF ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN IMPORT name name
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN IMPORT STRING STRING LPAREN VALTYPE
-##
-## Ends in an error in state: 98.
-##
-## importdesc -> LPAREN . FUNC option(ID) typeuse RPAREN [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN IMPORT STRING STRING LPAREN FUNC VALTYPE
-##
-## Ends in an error in state: 99.
-##
-## importdesc -> LPAREN FUNC . option(ID) typeuse RPAREN [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN FUNC
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN IMPORT STRING STRING LPAREN FUNC ID VALTYPE
-##
-## Ends in an error in state: 100.
-##
-## importdesc -> LPAREN FUNC option(ID) . typeuse RPAREN [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN FUNC option(ID)
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 module_: LPAREN IMPORT STRING STRING LPAREN FUNC LPAREN VALTYPE
 ##
-## Ends in an error in state: 101.
+## Ends in an error in state: 110.
 ##
 ## params_and_results -> LPAREN . PARAM ID valtype RPAREN params_and_results [ RPAREN ]
 ## params_and_results -> LPAREN . PARAM list(valtype) RPAREN params_and_results [ RPAREN ]
@@ -631,33 +837,9 @@ module_: LPAREN IMPORT STRING STRING LPAREN FUNC LPAREN VALTYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LPAREN IMPORT STRING STRING LPAREN FUNC LPAREN TYPE VALTYPE
-##
-## Ends in an error in state: 102.
-##
-## typeuse -> LPAREN TYPE . idx RPAREN params_and_results [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN TYPE
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN IMPORT STRING STRING LPAREN FUNC LPAREN TYPE NAT VALTYPE
-##
-## Ends in an error in state: 103.
-##
-## typeuse -> LPAREN TYPE idx . RPAREN params_and_results [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN TYPE idx
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 module_: LPAREN IMPORT STRING STRING LPAREN FUNC LPAREN TYPE NAT RPAREN VALTYPE
 ##
-## Ends in an error in state: 104.
+## Ends in an error in state: 113.
 ##
 ## typeuse -> LPAREN TYPE idx RPAREN . params_and_results [ RPAREN ]
 ##
@@ -667,21 +849,9 @@ module_: LPAREN IMPORT STRING STRING LPAREN FUNC LPAREN TYPE NAT RPAREN VALTYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LPAREN IMPORT STRING STRING LPAREN FUNC RPAREN VALTYPE
-##
-## Ends in an error in state: 109.
-##
-## import -> LPAREN IMPORT name name importdesc . RPAREN [ RPAREN LPAREN EOF ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN IMPORT name name importdesc
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 module_: LPAREN GLOBAL TYPE
 ##
-## Ends in an error in state: 111.
+## Ends in an error in state: 120.
 ##
 ## global -> LPAREN GLOBAL . option(ID) globaldesc RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -693,7 +863,7 @@ module_: LPAREN GLOBAL TYPE
 
 module_: LPAREN GLOBAL ID TYPE
 ##
-## Ends in an error in state: 112.
+## Ends in an error in state: 121.
 ##
 ## global -> LPAREN GLOBAL option(ID) . globaldesc RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -705,7 +875,7 @@ module_: LPAREN GLOBAL ID TYPE
 
 module_: LPAREN GLOBAL LPAREN VALTYPE
 ##
-## Ends in an error in state: 113.
+## Ends in an error in state: 122.
 ##
 ## globaldesc -> LPAREN . IMPORT name name RPAREN globaltype [ RPAREN ]
 ## globaldesc -> LPAREN . EXPORT name RPAREN globaldesc [ RPAREN ]
@@ -718,118 +888,9 @@ module_: LPAREN GLOBAL LPAREN VALTYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LPAREN GLOBAL LPAREN MUT TYPE
-##
-## Ends in an error in state: 114.
-##
-## globaltype -> LPAREN MUT . valtype RPAREN [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN MUT
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN GLOBAL LPAREN MUT VALTYPE VALTYPE
-##
-## Ends in an error in state: 115.
-##
-## globaltype -> LPAREN MUT valtype . RPAREN [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN MUT valtype
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN GLOBAL LPAREN IMPORT VALTYPE
-##
-## Ends in an error in state: 117.
-##
-## globaldesc -> LPAREN IMPORT . name name RPAREN globaltype [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN IMPORT
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN GLOBAL LPAREN IMPORT STRING VALTYPE
-##
-## Ends in an error in state: 118.
-##
-## globaldesc -> LPAREN IMPORT name . name RPAREN globaltype [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN IMPORT name
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN GLOBAL LPAREN IMPORT STRING STRING VALTYPE
-##
-## Ends in an error in state: 119.
-##
-## globaldesc -> LPAREN IMPORT name name . RPAREN globaltype [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN IMPORT name name
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN GLOBAL LPAREN IMPORT STRING STRING RPAREN TYPE
-##
-## Ends in an error in state: 120.
-##
-## globaldesc -> LPAREN IMPORT name name RPAREN . globaltype [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN IMPORT name name RPAREN
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN GLOBAL LPAREN IMPORT STRING STRING RPAREN LPAREN VALTYPE
-##
-## Ends in an error in state: 121.
-##
-## globaltype -> LPAREN . MUT valtype RPAREN [ RPAREN ]
-## reftype -> LPAREN . REF boption(NULL) heaptype RPAREN [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN GLOBAL LPAREN EXPORT VALTYPE
-##
-## Ends in an error in state: 124.
-##
-## globaldesc -> LPAREN EXPORT . name RPAREN globaldesc [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN EXPORT
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN GLOBAL LPAREN EXPORT STRING VALTYPE
-##
-## Ends in an error in state: 125.
-##
-## globaldesc -> LPAREN EXPORT name . RPAREN globaldesc [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## LPAREN EXPORT name
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 module_: LPAREN GLOBAL LPAREN EXPORT STRING RPAREN TYPE
 ##
-## Ends in an error in state: 126.
+## Ends in an error in state: 130.
 ##
 ## globaldesc -> LPAREN EXPORT name RPAREN . globaldesc [ RPAREN ]
 ##
@@ -839,45 +900,21 @@ module_: LPAREN GLOBAL LPAREN EXPORT STRING RPAREN TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LPAREN GLOBAL VALTYPE VALTYPE
-##
-## Ends in an error in state: 127.
-##
-## globaldesc -> globaltype . expr [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## globaltype
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-module_: LPAREN GLOBAL VALTYPE STRUCT_NEW VALTYPE
-##
-## Ends in an error in state: 128.
-##
-## plaininstr -> STRUCT_NEW . idx [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
-##
-## The known suffix of the stack is as follows:
-## STRUCT_NEW
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 module_: LPAREN GLOBAL VALTYPE REF_NULL VALTYPE
 ##
-## Ends in an error in state: 130.
+## Ends in an error in state: 134.
 ##
-## plaininstr -> REF_NULL . idx [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
+## plaininstr -> REF_NULL . heaptype [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
 ##
 ## The known suffix of the stack is as follows:
 ## REF_NULL
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting a heap type.
 
 module_: LPAREN GLOBAL VALTYPE REF_FUNC VALTYPE
 ##
-## Ends in an error in state: 132.
+## Ends in an error in state: 136.
 ##
 ## plaininstr -> REF_FUNC . idx [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
 ##
@@ -885,11 +922,11 @@ module_: LPAREN GLOBAL VALTYPE REF_FUNC VALTYPE
 ## REF_FUNC
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting a function index.
 
 module_: LPAREN GLOBAL VALTYPE LPAREN VALTYPE
 ##
-## Ends in an error in state: 134.
+## Ends in an error in state: 138.
 ##
 ## foldedinstr -> LPAREN . plaininstr list(foldedinstr) RPAREN [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
 ##
@@ -901,7 +938,7 @@ module_: LPAREN GLOBAL VALTYPE LPAREN VALTYPE
 
 module_: LPAREN GLOBAL VALTYPE I32_CONST VALTYPE
 ##
-## Ends in an error in state: 135.
+## Ends in an error in state: 139.
 ##
 ## plaininstr -> I32_CONST . i32 [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
 ##
@@ -909,11 +946,11 @@ module_: LPAREN GLOBAL VALTYPE I32_CONST VALTYPE
 ## I32_CONST
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting an integer constant.
 
 module_: LPAREN GLOBAL VALTYPE ARRAY_NEW_FIXED VALTYPE
 ##
-## Ends in an error in state: 139.
+## Ends in an error in state: 143.
 ##
 ## plaininstr -> ARRAY_NEW_FIXED . idx u32 [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
 ##
@@ -921,11 +958,11 @@ module_: LPAREN GLOBAL VALTYPE ARRAY_NEW_FIXED VALTYPE
 ## ARRAY_NEW_FIXED
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting a type index.
 
 module_: LPAREN GLOBAL VALTYPE ARRAY_NEW_FIXED NAT VALTYPE
 ##
-## Ends in an error in state: 140.
+## Ends in an error in state: 144.
 ##
 ## plaininstr -> ARRAY_NEW_FIXED idx . u32 [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
 ##
@@ -933,11 +970,11 @@ module_: LPAREN GLOBAL VALTYPE ARRAY_NEW_FIXED NAT VALTYPE
 ## ARRAY_NEW_FIXED idx
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting an unsigned 32-bit integer.
 
 module_: LPAREN GLOBAL VALTYPE LPAREN I32_CONST INT VALTYPE
 ##
-## Ends in an error in state: 142.
+## Ends in an error in state: 146.
 ##
 ## foldedinstr -> LPAREN plaininstr . list(foldedinstr) RPAREN [ STRUCT_NEW RPAREN REF_NULL REF_FUNC LPAREN I32_CONST ARRAY_NEW_FIXED ]
 ##
@@ -949,7 +986,7 @@ module_: LPAREN GLOBAL VALTYPE LPAREN I32_CONST INT VALTYPE
 
 module_: LPAREN GLOBAL VALTYPE LPAREN I32_CONST INT LPAREN I32_CONST INT RPAREN VALTYPE
 ##
-## Ends in an error in state: 145.
+## Ends in an error in state: 149.
 ##
 ## list(foldedinstr) -> foldedinstr . list(foldedinstr) [ RPAREN ]
 ##
@@ -961,7 +998,7 @@ module_: LPAREN GLOBAL VALTYPE LPAREN I32_CONST INT LPAREN I32_CONST INT RPAREN 
 
 module_: LPAREN GLOBAL VALTYPE I32_CONST INT VALTYPE
 ##
-## Ends in an error in state: 149.
+## Ends in an error in state: 153.
 ##
 ## list(instr) -> instr . list(instr) [ RPAREN ]
 ##
@@ -969,11 +1006,11 @@ module_: LPAREN GLOBAL VALTYPE I32_CONST INT VALTYPE
 ## instr
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting a sequence of instructions followed by a closing parenthesis.
 
 module_: LPAREN GLOBAL LPAREN IMPORT STRING STRING RPAREN VALTYPE VALTYPE
 ##
-## Ends in an error in state: 154.
+## Ends in an error in state: 158.
 ##
 ## global -> LPAREN GLOBAL option(ID) globaldesc . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -981,11 +1018,11 @@ module_: LPAREN GLOBAL LPAREN IMPORT STRING STRING RPAREN VALTYPE VALTYPE
 ## LPAREN GLOBAL option(ID) globaldesc
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting ')'.
 
 module_: LPAREN REC RPAREN VALTYPE
 ##
-## Ends in an error in state: 158.
+## Ends in an error in state: 162.
 ##
 ## list(modulefield) -> modulefield . list(modulefield) [ RPAREN EOF ]
 ##
@@ -993,11 +1030,11 @@ module_: LPAREN REC RPAREN VALTYPE
 ## modulefield
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting a list of module fields.
 
 module_: LPAREN MODULE LPAREN REC RPAREN EOF
 ##
-## Ends in an error in state: 162.
+## Ends in an error in state: 166.
 ##
 ## module_ -> LPAREN MODULE option(ID) list(modulefield) . RPAREN EOF [ # ]
 ##
@@ -1008,15 +1045,15 @@ module_: LPAREN MODULE LPAREN REC RPAREN EOF
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 158, spurious reduction of production list(modulefield) ->
-## In state 159, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
+## In state 162, spurious reduction of production list(modulefield) ->
+## In state 163, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting a module field or a closing parenthesis.
 
 module_: LPAREN MODULE RPAREN VALTYPE
 ##
-## Ends in an error in state: 163.
+## Ends in an error in state: 167.
 ##
 ## module_ -> LPAREN MODULE option(ID) list(modulefield) RPAREN . EOF [ # ]
 ##
@@ -1024,11 +1061,11 @@ module_: LPAREN MODULE RPAREN VALTYPE
 ## LPAREN MODULE option(ID) list(modulefield) RPAREN
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Garbage after the end of the module. Maybe you have closed too many parentheses.
 
 module_: LPAREN REC RPAREN RPAREN
 ##
-## Ends in an error in state: 166.
+## Ends in an error in state: 170.
 ##
 ## module_ -> list(modulefield) . EOF [ # ]
 ##
@@ -1039,8 +1076,8 @@ module_: LPAREN REC RPAREN RPAREN
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 158, spurious reduction of production list(modulefield) ->
-## In state 159, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
+## In state 162, spurious reduction of production list(modulefield) ->
+## In state 163, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting a module field.

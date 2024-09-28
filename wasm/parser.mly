@@ -132,7 +132,7 @@ plaininstr:
 | STRUCT_NEW i = idx { StructNew i }
 | ARRAY_NEW_FIXED i = idx l = u32 { ArrayNewFixed (i, l) }
 | REF_FUNC i = idx { RefFunc i }
-| REF_NULL i = idx { RefNull i }
+| REF_NULL t = heaptype { RefNull t }
 | I32_CONST i = i32 { I32Const i }
 
 instr:
@@ -162,7 +162,9 @@ import:
 importdesc:
 | LPAREN FUNC i = option(ID) t = typeuse RPAREN
     { Func (i, t) }
-(* ZZZ *)
+| LPAREN GLOBAL i = option(ID) t = globaltype RPAREN
+    { (Global (i, t) : importdesc) }
+    (* ZZZ *)
 
 globaltype:
 | typ = valtype { {mut = false; typ} }
