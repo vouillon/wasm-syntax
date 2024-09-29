@@ -137,7 +137,6 @@ let rec token lexbuf =
   | "result" -> RESULT
   | "mut" -> MUT
   | "field" -> FIELD
-  | "module" -> MODULE
   | "rec" -> REC
   | "type" -> TYPE
   | "sub" -> SUB
@@ -146,11 +145,72 @@ let rec token lexbuf =
   | "export" -> EXPORT
   | "local" -> LOCAL
   | "global" -> GLOBAL
-  | "struct.new" -> STRUCT_NEW
-  | "array.new_fixed" -> ARRAY_NEW_FIXED
-  | "ref.func" -> REF_FUNC
+  | "memory" -> MEMORY
+  | "data" -> DATA
+  | "offset" -> OFFSET
+  | "module" -> MODULE
+  | "block" -> BLOCK
+  | "loop" -> LOOP
+  | "if" -> IF
+  | "then" -> THEN
+  | "else" -> ELSE
+  | "call" -> CALL
+  | "call_ref" -> CALL_REF
+  | "call_indirect" -> CALL_INDIRECT
+  | "return_call" -> RETURN_CALL
+  | "return_call_ref" -> RETURN_CALL_REF
+  | "return_call_indirect" -> RETURN_CALL_INDIRECT
+  | "local.get" -> LOCAL_GET
+  | "local.set" -> LOCAL_SET
+  | "local.tee" -> LOCAL_TEE
+  | "global.get" -> GLOBAL_GET
+  | "global.set" -> GLOBAL_SET
   | "ref.null" -> REF_NULL
+  | "ref.func" -> REF_FUNC
+  | "ref.test" -> REF_TEST
+  | "ref.cast" -> REF_CAST
+  | "struct.new" -> STRUCT_NEW
+  | "struct.new_default" -> STRUCT_NEW_DEFAULT
+  | "struct.get" -> STRUCT_GET None
+  | "struct.get_u" -> STRUCT_GET (Some Unsigned)
+  | "struct.get_s" -> STRUCT_GET (Some Signed)
+  | "struct.set" -> STRUCT_SET
+  | "array.new" -> ARRAY_NEW
+  | "array.new_default" -> ARRAY_NEW_DEFAULT
+  | "array.new_fixed" -> ARRAY_NEW_FIXED
+  | "array.new_data" -> ARRAY_NEW_DATA
+  | "array.new_elem" -> ARRAY_NEW_ELEM
+  | "ref.i31" -> REF_I31
+  | "i31.get_s" -> I31_GET Signed
+  | "i31.get_u" -> I31_GET Unsigned
   | "i32.const" -> I32_CONST
+  | "i32.add" -> I32_ADD
+  | "i32.sub" -> I32_SUB
+  | "i32.mul" -> I32_MUL
+  | "i32.div_s" -> I32_DIV Signed
+  | "i32.div_u" -> I32_DIV Unsigned
+  | "i32.rem_s" -> I32_REM Signed
+  | "i32.rem_u" -> I32_REM Unsigned
+  | "i32.and" -> I32_AND
+  | "i32.or" -> I32_OR
+  | "i32.xor" -> I32_XOR
+  | "i32.shl" -> I32_SHL
+  | "i32.shr_s" -> I32_SHR Signed
+  | "i32.shr_u" -> I32_SHR Unsigned
+  | "i32.rotl" -> I32_ROTL
+  | "i32.rotr" -> I32_ROTR
+  | "i32.eqz" -> I32_EQZ
+  | "i32.eq" -> I32_EQ
+  | "i32.ne" -> I32_NE
+  | "i32.lt_s" -> I32_LT Signed
+  | "i32.lt_u" -> I32_LT Unsigned
+  | "i32.gt_s" -> I32_GT Signed
+  | "i32.gt_u" -> I32_GT Unsigned
+  | "i32.le_s" -> I32_LE Signed
+  | "i32.le_u" -> I32_LE Unsigned
+  | "i32.ge_s" -> I32_GE Signed
+  | "i32.ge_u" -> I32_GE Unsigned
+  | "tuple.make" -> TUPLE_MAKE
   | _ ->
       raise
         (Misc.Syntax_error

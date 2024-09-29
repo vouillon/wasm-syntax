@@ -29,15 +29,67 @@
 %token SUB
 %token FINAL
 %token IMPORT
-%token LOCAL
 %token EXPORT
+%token LOCAL
 %token GLOBAL
+%token MEMORY
+%token DATA
+%token OFFSET
 %token MODULE
-%token STRUCT_NEW
-%token ARRAY_NEW_FIXED
-%token REF_FUNC
+
+%token BLOCK
+%token LOOP
+%token END
+%token IF
+%token THEN
+%token ELSE
+%token CALL
+%token CALL_REF
+%token CALL_INDIRECT
+%token RETURN_CALL
+%token RETURN_CALL_REF
+%token RETURN_CALL_INDIRECT
+%token LOCAL_GET
+%token LOCAL_SET
+%token LOCAL_TEE
+%token GLOBAL_GET
+%token GLOBAL_SET
 %token REF_NULL
+%token REF_FUNC
+%token REF_TEST
+%token REF_CAST
+%token STRUCT_NEW
+%token STRUCT_NEW_DEFAULT
+%token <Ast.signage option> STRUCT_GET
+%token STRUCT_SET
+%token ARRAY_NEW
+%token ARRAY_NEW_DEFAULT
+%token ARRAY_NEW_FIXED
+%token ARRAY_NEW_DATA
+%token ARRAY_NEW_ELEM
+%token REF_I31
+%token <Ast.signage> I31_GET
 %token I32_CONST
+%token I32_ADD
+%token I32_SUB
+%token I32_MUL
+%token <Ast.signage> I32_DIV
+%token <Ast.signage> I32_REM
+%token I32_AND
+%token I32_OR
+%token I32_XOR
+%token I32_SHL
+%token <Ast.signage> I32_SHR
+%token I32_ROTL
+%token I32_ROTR
+%token I32_EQZ
+%token I32_EQ
+%token I32_NE
+%token <Ast.signage> I32_LT
+%token <Ast.signage> I32_GT
+%token <Ast.signage> I32_LE
+%token <Ast.signage> I32_GE
+%token TUPLE_MAKE
 
 %{
 open Ast
@@ -137,23 +189,121 @@ subtype:
 
 (* Instructions *)
 
+blockinstr:
+| BLOCK label = label bti = blocktype(instrs(END))
+  { let (typ, block) = bti in Block {label; typ; block} }
+| LOOP label = label bti = blocktype(instrs(END))
+  { let (typ, block) = bti in Loop {label; typ; block} }
+| IF label = label bti = blocktype(instrs(ELSE))
+  label else_block = instrs(END)
+  label (*ZZZ labels must match *)
+  { let (typ, if_block) = bti in
+    If {label; typ; if_block; else_block } }
+| IF label = label bti = blocktype(instrs(END))
+  label (*ZZZ labels must match *)
+  { let (typ, if_block) = bti in
+    If {label; typ; if_block; else_block = [] } }
+
+label:
+| i = ID ? { i }
+
+blocktype(cont):
+| r = typeuse(cont)
+  { map_fst (fun t -> Option.map (fun v -> Idx v) (fst t)) r }
+  (*ZZZ single result / implicit? validate?*)
+
 plaininstr:
-| STRUCT_NEW i = idx { StructNew i }
-| ARRAY_NEW_FIXED i = idx l = u32 { ArrayNewFixed (i, l) }
-| REF_FUNC i = idx { RefFunc i }
+| CALL i = idx { Call i }
+| CALL_REF i = idx { CallRef i }
+| RETURN_CALL i = idx { ReturnCall i }
+| RETURN_CALL_REF i = idx { ReturnCallRef i }
+| LOCAL_GET i = idx { LocalGet i }
+| LOCAL_SET i = idx { LocalSet i }
+| LOCAL_TEE i = idx { LocalTee i }
+| GLOBAL_GET i = idx { GlobalGet i }
+| GLOBAL_SET i = idx { GlobalSet i }
 | REF_NULL t = heaptype { RefNull t }
+| REF_FUNC i = idx { RefFunc i }
+| REF_TEST t = reftype { RefTest t }
+| REF_CAST t = reftype { RefCast t }
+| STRUCT_NEW i = idx { StructNew i }
+| STRUCT_NEW_DEFAULT i = idx { StructNewDefault i }
+| s = STRUCT_GET i1 = idx i2 = idx { StructGet (s, i1, i2) }
+| STRUCT_SET i1 = idx i2 = idx { StructSet (i1, i2) }
+| ARRAY_NEW i = idx { ArrayNew i }
+| ARRAY_NEW_DEFAULT i = idx { ArrayNewDefault i }
+| ARRAY_NEW_FIXED i = idx l = u32 { ArrayNewFixed (i, l) }
+| ARRAY_NEW_DATA i1 = idx i2 = idx { ArrayNewData (i1, i2) }
+| ARRAY_NEW_ELEM i1 = idx i2 = idx { ArrayNewElem (i1, i2) }
+| REF_I31 { RefI31 }
+| s = I31_GET { I31Get s }
 | I32_CONST i = i32 { I32Const i }
+| I32_ADD { I32Add }
+| I32_SUB { I32Sub }
+| I32_MUL { I32Mul }
+| s = I32_DIV { I32Div s }
+| s = I32_REM { I32Rem s }
+| I32_AND { I32And }
+| I32_OR { I32Or }
+| I32_XOR { I32Xor }
+| I32_SHL { I32Shl }
+| s = I32_SHR { I32Shr s }
+| I32_ROTL { I32Rotl }
+| I32_ROTR { I32Rotr }
+| I32_EQZ { I32Eqz }
+| I32_EQ { I32Eq }
+| I32_NE { I32Ne }
+| s = I32_LT { I32Lt s }
+| s = I32_GT { I32Gt s }
+| s = I32_LE { I32Le s }
+| s = I32_GE { I32Ge s }
+| TUPLE_MAKE l = u32 { TupleMake l }
+
+callindirect(cont):
+| CALL_INDIRECT i = idx t = typeuse(cont) { CallIndirect (i, fst t) :: snd t }
+| CALL_INDIRECT t = typeuse(cont) { CallIndirect (Num 0l, fst t) :: snd t }
+| RETURN_CALL_INDIRECT i = idx t = typeuse(cont)
+  { ReturnCallIndirect (i, fst t) :: snd t }
+| RETURN_CALL_INDIRECT t = typeuse(cont)
+  { ReturnCallIndirect (Num 0l, fst t) :: snd t }
 
 instr:
 | i = plaininstr { i }
+| l = callindirect({[]}) { List.hd l }
+| i = blockinstr { i }
 | i = foldedinstr { i }
+
+instrs (cont):
+| cont { [] }
+| i = plaininstr r = instrs(cont) { i :: r }
+| l = callindirect(instrs(cont)) { l }
+| i = blockinstr r = instrs(cont) { i :: r }
+| i = foldedinstr r = instrs(cont) { i :: r }
 
 foldedinstr:
 | "(" i = plaininstr l = foldedinstr * ")"
   { Folded (i, l) }
+| "(" IF label = label
+  btx = blocktype (foldedinstrs("(" THEN l =  instrs(")") {l}))
+  else_block = option("(" ELSE l = instrs(")") { l })
+  ")"
+  { let (typ, (l, if_block)) = btx in
+    Folded (If {label; typ; if_block;
+                else_block = Option.value ~default:[] else_block },
+            l) }
+| "(" BLOCK label = label btx = blocktype (instrs(")"))
+  { let (typ, block) = btx in
+    Folded (Block {label; typ; block}, []) }
+| "(" LOOP label = label btx = blocktype (instrs(")"))
+  { let (typ, block) = btx in
+    Folded (Loop {label; typ; block}, []) }
+
+foldedinstrs(cont):
+| c = cont { [], c }
+| i = foldedinstr r = foldedinstrs(cont) { map_fst (fun l -> i :: l) r }
 
 expr:
-| l = instr * { l }
+| l = instrs({}) { l }
 
 (* Modules *)
 
@@ -178,14 +328,26 @@ importdesc:
     (* ZZZ *)
 
 func:
-| "(" FUNC id = ID ? r = typeuse(locals(instr *)) ")"
-    { let (typ, (locals, instrs)) = r in
-      Func {id; typ; locals; instrs} }
+| "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(")"))))
+  { let (_, (typ, (locals, instrs))) = r in
+    Func {id; typ; locals; instrs} }
+| "(" FUNC id = ID ?
+  r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
+  t = typeuse({}) ")"
+  { let (_, (module_, name)) = r in
+    Import {module_; name; desc = Func (id, fst t) } }
+
+exports(cont):
+| c = cont { [], c }
+| "(" EXPORT n = name ")" r = exports(cont)
+  { map_fst (fun l -> n :: l) r }
 
 locals(cont):
 | c = cont { [], c }
-| "(" LOCAL i = ID ? t = valtype ")" r = locals(cont)
-  { map_fst (fun l -> (i, t) :: l) r }
+| "(" LOCAL i = ID t = valtype ")" r = locals(cont)
+  { map_fst (fun l -> (Some i, t) :: l) r }
+| "(" LOCAL l = valtype * ")" r = locals(cont)
+  { map_fst ((@) (List.map (fun t -> (None, t)) l)) r }
 
 globaltype:
 | typ = valtype { {mut = false; typ} }
@@ -203,11 +365,35 @@ globaldesc:
 | "(" EXPORT n = name ")" d = globaldesc
   { fun i exp -> d i (n :: exp) }
 
+export:
+| "(" EXPORT n = name d = exportdesc ")" { Export (n, d) }
+
+exportdesc:
+| "(" FUNC i = idx ")" { (Func i : exportdesc) }
+| "(" GLOBAL i = idx ")" { (Global i : exportdesc) }
+
+data:
+| "(" DATA id = ID ? init = datastring ")"
+  { Data { id; init; mode = Passive } }
+| "(" DATA id = ID ? m = memuse "(" OFFSET e = expr ")" init = datastring ")"
+  { Data { id; init; mode = Active (m, e) } }
+| "(" DATA id = ID ? m = memuse "(" instr = instr ")" init = datastring ")"
+  { Data { id; init; mode = Active (m, [instr]) } }
+
+datastring:
+| l = STRING * { String.concat "" l }
+
+%inline memuse:
+| "(" MEMORY i = idx ")" { i }
+| { Num 0l }
+
 modulefield:
 | t = rectype { t }
 | i = import { i }
 | g = global { g }
-| func { assert false (*ZZZ*) }
+| f = func { f }
+| e = export { e }
+| d = data { d }
 
 module_:
 | "(" MODULE name = ID ? l = modulefield * ")" EOF
