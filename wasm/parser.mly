@@ -106,6 +106,7 @@
 %token TUPLE
 %token TUPLE_MAKE
 %token TUPLE_EXTRACT
+%token TAG
 
 %{
 open Ast
@@ -387,7 +388,9 @@ importdesc:
     { Func (i, fst t) }
 | "(" GLOBAL i = ID ? t = globaltype ")"
     { (Global (i, t) : importdesc) }
-    (* ZZZ *)
+| "(" TAG i = ID ? t = typeuse(")")
+    { (Tag (i, fst t) : importdesc) }
+(* ZZZ *)
 
 func:
 | "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(")"))))
@@ -411,6 +414,16 @@ locals(cont):
 | "(" LOCAL l = valtype * ")" r = locals(cont)
   { map_fst ((@) (List.map (fun t -> (None, t)) l)) r }
 
+tag:
+| "(" TAG i = ID ? r = exports(typeuse (")"))
+    { let (_, (t, _)) = r in
+      Tag (i, t) }
+| "(" TAG i = ID ?
+  r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
+  t = typeuse (")")
+  { let (_, (module_, name)) = r in
+    Import {module_; name; desc = Tag (i, fst t) } }
+
 globaltype:
 | typ = valtype { {mut = false; typ} }
 | "(" MUT typ = valtype ")" { {mut = true; typ} }
@@ -433,6 +446,7 @@ export:
 exportdesc:
 | "(" FUNC i = idx ")" { (Func i : exportdesc) }
 | "(" GLOBAL i = idx ")" { (Global i : exportdesc) }
+| "(" TAG i = idx ")" { (Tag i : exportdesc) }
 
 start:
 | "(" START i = idx ")" { Start i }
@@ -455,8 +469,9 @@ datastring:
 modulefield:
 | f = rectype
 | f = import
-| f = global
 | f = func
+| f = tag
+| f = global
 | f = export
 | f = data
 | f = start

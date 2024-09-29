@@ -197,20 +197,22 @@ type expr = instr list
 type importdesc =
   | Func of string option * typeuse
   | Global of string option * globaltype
+  | Tag of string option * typeuse
 
-type exportdesc = Func of idx | Global of idx
+type exportdesc = Func of idx | Global of idx | Tag of idx
 type datamode = Passive | Active of idx * expr
 
 type modulefield =
   | Types of subtype list
   | Import of { module_ : string; name : string; desc : importdesc }
-  | Global of string option * globaltype * expr
   | Func of {
       id : string option;
       typ : typeuse;
       locals : (string option * valtype) list;
       instrs : instr list;
     }
+  | Tag of string option * typeuse
+  | Global of string option * globaltype * expr
   | Export of string * exportdesc
   | Data of { id : string option; init : string; mode : datamode }
   | Start of idx

@@ -342,6 +342,7 @@ let rec token lexbuf =
   | "tuple" -> TUPLE
   | "tuple.make" -> TUPLE_MAKE
   | "tuple.extract" -> TUPLE_EXTRACT
+  | "tag" -> TAG
   | _ ->
       raise
         (Misc.Syntax_error
