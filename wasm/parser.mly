@@ -10,7 +10,7 @@ ZZZ
 %token <string> FLOAT
 %token <string> STRING
 %token <string> ID
-%token <Ast.valtype> VALTYPE
+%token <Ast.idx Ast.valtype> VALTYPE
 %token <Ast.packedtype> PACKEDTYPE
 %token LPAREN "("
 %token RPAREN ")"
@@ -107,7 +107,7 @@ ZZZ
 %token I64_CONST
 %token F32_CONST
 %token F64_CONST
-%token <Ast.instr> INSTR
+%token <(Ast.idx, Ast.typeuse) Ast.instr> INSTR
 %token TAG
 %token TRY
 %token DO
@@ -220,7 +220,7 @@ results(cont):
 params_and_results(cont):
 | r = params(results(cont))
   { let (p, (r, c)) = r in
-    ({params = Array.of_list p; result = Array.of_list r }, c) }
+    ({params = Array.of_list p; results = Array.of_list r }, c) }
 
 field:
 | "(" FIELD i = ID t = fieldtype ")" { [(Some i, t)] }
@@ -429,7 +429,7 @@ typeuse(cont):
 | "(" TYPE i = idx ")" rem = params_and_results(cont)
   { let (s, r) = rem in
     (match s with
-     | {params = [||]; result = [||]} -> Some i, None
+     | {params = [||]; results = [||]} -> Some i, None
      | _ -> Some i, Some s),
     r }
 | rem = params_and_results(cont) { let (s, r) = rem in (None, Some s), r }

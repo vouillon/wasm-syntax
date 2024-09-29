@@ -2,7 +2,7 @@ type id = string
 type idx = Num of Int32.t | Id of id
 
 (* Types *)
-type heaptype =
+type 'idx heaptype =
   | Func
   | NoFunc
   | Extern
@@ -13,40 +13,45 @@ type heaptype =
   | Struct
   | Array
   | None_
-  | Type of idx
+  | Type of 'idx
 
-type reftype = { nullable : bool; typ : heaptype }
+type 'idx reftype = { nullable : bool; typ : 'idx heaptype }
 
-type valtype =
+type 'idx valtype =
   | I32
   | I64
   | F32
   | F64
   | V128
-  | Ref of reftype
-  | Tuple of valtype list
+  | Ref of 'idx reftype
+  | Tuple of 'idx valtype list
 
-type functype = { params : valtype array; result : valtype array }
+type 'idx functype = {
+  params : 'idx valtype array;
+  results : 'idx valtype array;
+}
+
 type packedtype = I8 | I16
-type storagetype = Value of valtype | Packed of packedtype
+type 'idx storagetype = Value of 'idx valtype | Packed of packedtype
 type 'typ muttype = { mut : bool; typ : 'typ }
-type fieldtype = storagetype muttype
+type 'idx fieldtype = 'idx storagetype muttype
 
-type comptype =
-  | Func of functype
-  | Struct of (id option * fieldtype) array
-  | Array of fieldtype
+type 'idx comptype =
+  | Func of 'idx functype
+  | Struct of (id option * 'idx fieldtype) array
+  | Array of 'idx fieldtype
 
-type subtype = {
+type 'idx subtype = {
   name : id option;
-  typ : comptype;
-  supertype : idx option;
+  typ : 'idx comptype;
+  supertype : 'idx option;
   final : bool;
 }
 
+type 'idx rectype = 'idx subtype array
 type limits = { mi : Int32.t; ma : Int32.t option }
-type globaltype = valtype muttype
-type typeuse = idx option * functype option
+type 'idx globaltype = 'idx valtype muttype
+type typeuse = idx option * idx functype option
 
 (* Instructions *)
 
@@ -114,74 +119,82 @@ type float_bin_op =
   | Le
   | Ge
 
-type blocktype = Idx of idx | ValType of valtype
+type 'idx blocktype = Idx of 'idx | ValType of 'idx valtype
 type memarg = { offset : Int32.t; align : Int32.t }
 
-type instr =
-  | Block of { label : id option; typ : blocktype option; block : instr list }
-  | Loop of { label : id option; typ : blocktype option; block : instr list }
+type ('idx, 'typeuse) instr =
+  | Block of {
+      label : id option;
+      typ : 'idx blocktype option;
+      block : ('idx, 'typeuse) instr list;
+    }
+  | Loop of {
+      label : id option;
+      typ : 'idx blocktype option;
+      block : ('idx, 'typeuse) instr list;
+    }
   | If of {
       label : id option;
-      typ : blocktype option;
-      if_block : instr list;
-      else_block : instr list;
+      typ : 'idx blocktype option;
+      if_block : ('idx, 'typeuse) instr list;
+      else_block : ('idx, 'typeuse) instr list;
     }
   | Try of {
       label : id option;
-      typ : blocktype option;
-      block : instr list;
-      catches : (idx * instr list) list;
-      catch_all : instr list option;
+      typ : 'idx blocktype option;
+      block : ('idx, 'typeuse) instr list;
+      catches : (idx * ('idx, 'typeuse) instr list) list;
+      catch_all : ('idx, 'typeuse) instr list option;
     }
   | Unreachable
   | Nop
-  | Throw of idx
-  | Br of idx
-  | Br_if of idx
-  | Br_table of idx list * idx
-  | Br_on_null of idx
-  | Br_on_non_null of idx
-  | Br_on_cast of idx * reftype * reftype
-  | Br_on_cast_fail of idx * reftype * reftype
+  | Throw of 'idx
+  | Br of 'idx
+  | Br_if of 'idx
+  | Br_table of 'idx list * 'idx
+  | Br_on_null of 'idx
+  | Br_on_non_null of 'idx
+  | Br_on_cast of 'idx * 'idx reftype * 'idx reftype
+  | Br_on_cast_fail of 'idx * 'idx reftype * 'idx reftype
   | Return
-  | Call of idx
-  | CallRef of idx
-  | CallIndirect of idx * typeuse
-  | ReturnCall of idx
-  | ReturnCallRef of idx
-  | ReturnCallIndirect of idx * typeuse
+  | Call of 'idx
+  | CallRef of 'idx
+  | CallIndirect of 'idx * 'typeuse
+  | ReturnCall of 'idx
+  | ReturnCallRef of 'idx
+  | ReturnCallIndirect of 'idx * 'typeuse
   | Drop
-  | Select of valtype option
-  | LocalGet of idx
-  | LocalSet of idx
-  | LocalTee of idx
-  | GlobalGet of idx
-  | GlobalSet of idx
+  | Select of 'idx valtype option
+  | LocalGet of 'idx
+  | LocalSet of 'idx
+  | LocalTee of 'idx
+  | GlobalGet of 'idx
+  | GlobalSet of 'idx
   | I32Load8 of signage * memarg
   | I32Store8 of memarg
-  | RefNull of heaptype
-  | RefFunc of idx
+  | RefNull of 'idx heaptype
+  | RefFunc of 'idx
   | RefIsNull
   | RefAsNonNull
   | RefEq
-  | RefTest of reftype
-  | RefCast of reftype
-  | StructNew of idx
-  | StructNewDefault of idx
-  | StructGet of signage option * idx * idx
-  | StructSet of idx * idx
-  | ArrayNew of idx
-  | ArrayNewDefault of idx
-  | ArrayNewFixed of idx * Int32.t
-  | ArrayNewData of idx * idx
-  | ArrayNewElem of idx * idx
-  | ArrayGet of signage option * idx
-  | ArraySet of idx
+  | RefTest of 'idx reftype
+  | RefCast of 'idx reftype
+  | StructNew of 'idx
+  | StructNewDefault of 'idx
+  | StructGet of signage option * 'idx * 'idx
+  | StructSet of 'idx * 'idx
+  | ArrayNew of 'idx
+  | ArrayNewDefault of 'idx
+  | ArrayNewFixed of 'idx * Int32.t
+  | ArrayNewData of 'idx * 'idx
+  | ArrayNewElem of 'idx * 'idx
+  | ArrayGet of signage option * 'idx
+  | ArraySet of 'idx
   | ArrayLen
-  | ArrayFill of idx
-  | ArrayCopy of idx * idx
-  | ArrayInitData of idx * idx
-  | ArrayInitElem of idx * idx
+  | ArrayFill of 'idx
+  | ArrayCopy of 'idx * 'idx
+  | ArrayInitData of 'idx * 'idx
+  | ArrayInitElem of 'idx * 'idx
   | RefI31
   | I31Get of signage
   | Const of (Int32.t, Int64.t, string, string) op
@@ -193,39 +206,42 @@ type instr =
   | F64PromoteF32
   | ExternConvertAny
   | AnyConvertExtern
-  | Folded of instr * instr list
+  | Folded of ('idx, 'typeuse) instr * ('idx, 'typeuse) instr list
   (* Binaryen extensions *)
-  | Pop of valtype
+  | Pop of 'idx valtype
   | TupleMake of Int32.t
   | TupleExtract of Int32.t * Int32.t
 
-type expr = instr list
+type ('idx, 'typeuse) expr = ('idx, 'typeuse) instr list
 
 (* Modules *)
 
-type 'typ importdesc =
-  | Func of 'typ
+type ('idx, 'typeuse) importdesc =
+  | Func of 'typeuse
   | Memory of limits
-  | Global of globaltype
-  | Tag of 'typ
+  | Global of 'idx globaltype
+  | Tag of 'typeuse
 
 type exportable = Func | Memory | Tag | Global
-type datamode = Passive | Active of idx * expr
+
+type ('idx, 'typeuse) datamode =
+  | Passive
+  | Active of 'idx * ('idx, 'typeuse) expr
 
 type modulefield =
-  | Types of subtype array
+  | Types of idx subtype array
   | Import of {
       module_ : string;
       name : string;
       id : id option;
-      desc : typeuse importdesc;
+      desc : (idx, typeuse) importdesc;
       exports : string list;
     }
   | Func of {
       id : id option;
       typ : typeuse;
-      locals : (id option * valtype) list;
-      instrs : instr list;
+      locals : (id option * idx valtype) list;
+      instrs : (idx, typeuse) instr list;
       exports : string list;
     }
   | Memory of {
@@ -237,11 +253,15 @@ type modulefield =
   | Tag of { id : id option; typ : typeuse; exports : string list }
   | Global of {
       id : id option;
-      typ : globaltype;
-      init : expr;
+      typ : idx globaltype;
+      init : (idx, typeuse) expr;
       exports : string list;
     }
   | Export of { name : string; kind : exportable; index : idx }
   | Start of idx
-  | Elem of { id : id option; typ : reftype; init : expr list }
-  | Data of { id : id option; init : string; mode : datamode }
+  | Elem of {
+      id : id option;
+      typ : idx reftype;
+      init : (idx, typeuse) expr list;
+    }
+  | Data of { id : id option; init : string; mode : (idx, typeuse) datamode }

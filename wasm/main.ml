@@ -92,3 +92,5 @@ let _ =
   ignore
     (parse
        "/home/jerome/tmp/jane-street/_build/default/lib/bonsai/ppx_bonsai/test/inline/.ppx_bonsai_test.inline-tests/inline_test_runner_ppx_bonsai_test.bc.wasm.wat")
+
+let _ = Types.create
