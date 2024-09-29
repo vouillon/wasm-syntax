@@ -131,6 +131,16 @@ let rec token lexbuf =
   | "nofunc" -> NOFUNC
   | "extern" -> EXTERN
   | "noextern" -> NOEXTERN
+  | "anyref" -> ANYREF
+  | "eqref" -> EQREF
+  | "i31ref" -> I31REF
+  | "structref" -> STRUCTREF
+  | "arrayref" -> ARRAYREF
+  | "nullref" -> NULLREF
+  | "funcref" -> FUNCREF
+  | "nullfuncref" -> NULLFUNCREF
+  | "externref" -> EXTERNREF
+  | "nullexternref" -> NULLEXTERNREF
   | "ref" -> REF
   | "null" -> NULL
   | "param" -> PARAM
@@ -154,12 +164,22 @@ let rec token lexbuf =
   | "if" -> IF
   | "then" -> THEN
   | "else" -> ELSE
+  | "br" -> BR
+  | "br_if" -> BR_IF
+  | "br_table" -> BR_TABLE
+  | "br_on_null" -> BR_ON_NULL
+  | "br_on_non_null" -> BR_ON_NON_NULL
+  | "br_on_cast" -> BR_ON_CAST
+  | "br_on_cast_fail" -> BR_ON_CAST_FAIL
+  | "return" -> RETURN
   | "call" -> CALL
   | "call_ref" -> CALL_REF
   | "call_indirect" -> CALL_INDIRECT
   | "return_call" -> RETURN_CALL
   | "return_call_ref" -> RETURN_CALL_REF
   | "return_call_indirect" -> RETURN_CALL_INDIRECT
+  | "drop" -> DROP
+  | "select" -> SELECT
   | "local.get" -> LOCAL_GET
   | "local.set" -> LOCAL_SET
   | "local.tee" -> LOCAL_TEE
@@ -167,6 +187,9 @@ let rec token lexbuf =
   | "global.set" -> GLOBAL_SET
   | "ref.null" -> REF_NULL
   | "ref.func" -> REF_FUNC
+  | "ref.is_null" -> REF_IS_NULL
+  | "ref.as_non_null" -> REF_AS_NON_NULL
+  | "ref.eq" -> REF_EQ
   | "ref.test" -> REF_TEST
   | "ref.cast" -> REF_CAST
   | "struct.new" -> STRUCT_NEW
@@ -180,10 +203,20 @@ let rec token lexbuf =
   | "array.new_fixed" -> ARRAY_NEW_FIXED
   | "array.new_data" -> ARRAY_NEW_DATA
   | "array.new_elem" -> ARRAY_NEW_ELEM
+  | "array.get" -> ARRAY_GET None
+  | "array.get_u" -> ARRAY_GET (Some Unsigned)
+  | "array.get_s" -> ARRAY_GET (Some Signed)
+  | "array.set" -> ARRAY_SET
+  | "array.len" -> ARRAY_LEN
+  | "array.fill" -> ARRAY_FILL
+  | "array.copy" -> ARRAY_COPY
   | "ref.i31" -> REF_I31
   | "i31.get_s" -> I31_GET Signed
   | "i31.get_u" -> I31_GET Unsigned
   | "i32.const" -> I32_CONST
+  | "i64.const" -> I64_CONST
+  | "f32.const" -> F32_CONST
+  | "f64.const" -> F64_CONST
   | "i32.add" -> I32_ADD
   | "i32.sub" -> I32_SUB
   | "i32.mul" -> I32_MUL

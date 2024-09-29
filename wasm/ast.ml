@@ -59,12 +59,22 @@ type instr =
       if_block : instr list;
       else_block : instr list;
     }
+  | Br of idx
+  | Br_if of idx
+  | Br_table of idx list * idx
+  | Br_on_null of idx
+  | Br_on_non_null of idx
+  | Br_on_cast of idx * reftype * reftype
+  | Br_on_cast_fail of idx * reftype * reftype
+  | Return
   | Call of idx
   | CallRef of idx
   | CallIndirect of idx * typeuse
   | ReturnCall of idx
   | ReturnCallRef of idx
   | ReturnCallIndirect of idx * typeuse
+  | Drop
+  | Select of valtype option
   | LocalGet of idx
   | LocalSet of idx
   | LocalTee of idx
@@ -72,6 +82,9 @@ type instr =
   | GlobalSet of idx
   | RefNull of heaptype
   | RefFunc of idx
+  | RefIsNull
+  | RefAsNonNull
+  | RefEq
   | RefTest of reftype
   | RefCast of reftype
   | StructNew of idx
@@ -83,9 +96,17 @@ type instr =
   | ArrayNewFixed of idx * Int32.t
   | ArrayNewData of idx * idx
   | ArrayNewElem of idx * idx
+  | ArrayGet of signage option * idx
+  | ArraySet of idx
+  | ArrayLen
+  | ArrayFill of idx
+  | ArrayCopy of idx * idx
   | RefI31
   | I31Get of signage
   | I32Const of Int32.t
+  | I64Const of Int64.t
+  | F32Const of string
+  | F64Const of string
   | I32Add
   | I32Sub
   | I32Mul

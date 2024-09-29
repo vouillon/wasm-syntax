@@ -78,4 +78,4 @@ let parse filename =
     Format.eprintf "%s%s%!" location msg;
     exit 1
 
-let _ = parse "int32.wat"
+let _ = parse "/home/jerome/wasm_of_ocaml/runtime/wasm/string.wat"
