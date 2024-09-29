@@ -47,7 +47,6 @@
 %token DATA
 %token OFFSET
 %token MODULE
-
 %token BLOCK
 %token LOOP
 %token END
@@ -90,6 +89,8 @@
 %token ARRAY_SET
 %token ARRAY_FILL
 %token ARRAY_COPY
+%token ARRAY_INIT_DATA
+%token ARRAY_INIT_ELEM
 %token I32_CONST
 %token I64_CONST
 %token F32_CONST
@@ -99,6 +100,11 @@
 %token TUPLE_MAKE
 %token TUPLE_EXTRACT
 %token TAG
+%token TRY
+%token DO
+%token CATCH
+%token CATCH_ALL
+%token THROW
 
 %{
 open Ast
@@ -239,6 +245,16 @@ blockinstr:
   label (*ZZZ labels must match *)
   { let (typ, if_block) = bti in
     If {label; typ; if_block; else_block = [] } }
+| TRY label = label bti = blocktype(instrs({})) c = catches END
+  { let (typ, block) = bti in
+  let (catches, catch_all) = c in
+  Try {label; typ; block; catches; catch_all} }
+
+catches:
+| END { [], None }
+| CATCH_ALL l = instrs(END) { [], Some l }
+| CATCH i = idx l = instrs({}) rem = catches
+  { map_fst (fun r -> (i, l) :: r) rem }
 
 label:
 | i = ID ? { i }
@@ -249,6 +265,7 @@ blocktype(cont):
   (*ZZZ single result / implicit? validate?*)
 
 plaininstr:
+| THROW i = idx { Throw i }
 | BR i = idx { Br i }
 | BR_IF i = idx { Br_if i }
 | BR_TABLE l = idx +
@@ -285,6 +302,8 @@ plaininstr:
 | ARRAY_SET i = idx { ArraySet i }
 | ARRAY_FILL i = idx { ArrayFill i }
 | ARRAY_COPY i1 = idx i2 = idx { ArrayCopy (i1, i2) }
+| ARRAY_INIT_DATA i1 = idx i2 = idx { ArrayInitData (i1, i2) }
+| ARRAY_INIT_ELEM i1 = idx i2 = idx { ArrayInitElem (i1, i2) }
 | I32_CONST i = i32 { Const (I32 i) }
 | I64_CONST i = i64 { Const (I64 i) }
 | F32_CONST f = f32 { Const (F64 f) }
@@ -330,6 +349,12 @@ foldedinstr:
   { Folded (i, l) }
 | "(" l = ambiguous_instr(foldedinstr *) ")"
   { Folded (List.hd l, List.tl l) }
+| "(" BLOCK label = label btx = blocktype (instrs(")"))
+  { let (typ, block) = btx in
+    Folded (Block {label; typ; block}, []) }
+| "(" LOOP label = label btx = blocktype (instrs(")"))
+  { let (typ, block) = btx in
+    Folded (Loop {label; typ; block}, []) }
 | "(" IF label = label
   btx = blocktype (foldedinstrs("(" THEN l =  instrs(")") {l}))
   else_block = option("(" ELSE l = instrs(")") { l })
@@ -338,12 +363,18 @@ foldedinstr:
     Folded (If {label; typ; if_block;
                 else_block = Option.value ~default:[] else_block },
             l) }
-| "(" BLOCK label = label btx = blocktype (instrs(")"))
-  { let (typ, block) = btx in
-    Folded (Block {label; typ; block}, []) }
-| "(" LOOP label = label btx = blocktype (instrs(")"))
-  { let (typ, block) = btx in
-    Folded (Loop {label; typ; block}, []) }
+| "(" TRY label = label
+  btb = blocktype("(" DO l = instrs(")") { l })
+  c = foldedcatches ")"
+{ let (typ, block) = btb in
+  let (catches, catch_all) = c in
+  Folded (Try {label; typ; block; catches; catch_all}, []) }
+
+foldedcatches:
+| { [], None }
+| "(" CATCH_ALL l = instrs(")") { [], Some l }
+| "(" CATCH i = idx l = instrs(")") rem = foldedcatches
+  { map_fst (fun r -> (i, l) :: r) rem }
 
 foldedinstrs(cont):
 | c = cont { [], c }

@@ -84,12 +84,14 @@ let _ =
   let lst =
     [
       (* exceptions *)
+      (*
       "effect.wat";
       "io.wat";
       "stdlib.wat";
       "fs.wat";
       "fail.wat";
       "sys.wat";
+*)
       (* memory *)
       "jsstring.wat";
     ]
@@ -99,4 +101,9 @@ let _ =
     (fun nm ->
       if Filename.check_suffix nm ".wat" && not (List.mem nm lst) then
         ignore (parse (Filename.concat p nm)))
-    l
+    l;
+  if false then
+    (* elem declare *)
+    ignore
+      (parse
+         "/home/jerome/tmp/jane-street/_build/default/lib/bonsai/ppx_bonsai/test/inline/.ppx_bonsai_test.inline-tests/inline_test_runner_ppx_bonsai_test.bc.wasm.wat")

@@ -131,8 +131,16 @@ type instr =
       if_block : instr list;
       else_block : instr list;
     }
+  | Try of {
+      label : string option;
+      typ : blocktype option;
+      block : instr list;
+      catches : (idx * instr list) list;
+      catch_all : instr list option;
+    }
   | Unreachable
   | Nop
+  | Throw of idx
   | Br of idx
   | Br_if of idx
   | Br_table of idx list * idx
@@ -175,6 +183,8 @@ type instr =
   | ArrayLen
   | ArrayFill of idx
   | ArrayCopy of idx * idx
+  | ArrayInitData of idx * idx
+  | ArrayInitElem of idx * idx
   | RefI31
   | I31Get of signage
   | Const of (Int32.t, Int64.t, string, string) op

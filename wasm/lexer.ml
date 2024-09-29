@@ -30,9 +30,11 @@ let linechar = [%sedlex.regexp? Sub (any, (10 | 13))]
 let newline = [%sedlex.regexp? 10 | 13 | 13, 10]
 let linecomment = [%sedlex.regexp? ";;", Star linechar, (newline | eof)]
 let format = [%sedlex.regexp? '\n' | 9]
+
 (*
 let space = [%sedlex.regexp? ' ' | format | comment]
 *)
+let keyword = [%sedlex.regexp? 'a' .. 'z', Star idchar]
 
 let rec comment lexbuf =
   match%sedlex lexbuf with
@@ -214,6 +216,8 @@ let rec token lexbuf =
   | "array.len" -> INSTR ArrayLen
   | "array.fill" -> ARRAY_FILL
   | "array.copy" -> ARRAY_COPY
+  | "array.init_data" -> ARRAY_INIT_DATA
+  | "array.init_elem" -> ARRAY_INIT_ELEM
   | "ref.i31" -> INSTR RefI31
   | "i31.get_s" -> INSTR (I31Get Signed)
   | "i31.get_u" -> INSTR (I31Get Unsigned)
@@ -343,6 +347,17 @@ let rec token lexbuf =
   | "tuple.make" -> TUPLE_MAKE
   | "tuple.extract" -> TUPLE_EXTRACT
   | "tag" -> TAG
+  | "try" -> TRY
+  | "do" -> DO
+  | "catch" -> CATCH
+  | "catch_all" -> CATCH_ALL
+  | "throw" -> THROW
+  | keyword ->
+      raise
+        (Misc.Syntax_error
+           ( Sedlexing.lexing_positions lexbuf,
+             Printf.sprintf "Unkown keyword '%s'.\n"
+               (Sedlexing.Utf8.lexeme lexbuf) ))
   | _ ->
       raise
         (Misc.Syntax_error
