@@ -57,7 +57,7 @@ let rec string lexbuf =
       let s = Buffer.contents string_buffer in
       Buffer.clear string_buffer;
       s
-  | Plus (Sub (any, (0 .. 31 | 0x7f | '"' | '\'' | '\\'))) ->
+  | Plus (Sub (any, (0 .. 31 | 0x7f | '"' | '\\'))) ->
       Buffer.add_string string_buffer (Sedlexing.Utf8.lexeme lexbuf);
       string lexbuf
   | "\\t" ->

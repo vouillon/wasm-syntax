@@ -16,3 +16,12 @@ allow to put block labels at the end?
 collect constraints on untyped variables while parsing
 
 simplify parser (type use)
+
+
+Folding:
+- stack with placeholders for value that do not correspond
+  to an expression (multiple returns / block inputs)
+- peek an instruction; compute its arity and peek arguments from the stack
+  if no return value, emit instruction; otherwise;
+  push on the stack with count of return values
+- at end of block; write stack contents
