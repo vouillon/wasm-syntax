@@ -61,14 +61,12 @@
 %token BR_ON_NON_NULL
 %token BR_ON_CAST
 %token BR_ON_CAST_FAIL
-%token RETURN
 %token CALL
 %token CALL_REF
 %token CALL_INDIRECT
 %token RETURN_CALL
 %token RETURN_CALL_REF
 %token RETURN_CALL_INDIRECT
-%token DROP
 %token SELECT
 %token LOCAL_GET
 %token LOCAL_SET
@@ -77,9 +75,6 @@
 %token GLOBAL_SET
 %token REF_NULL
 %token REF_FUNC
-%token REF_IS_NULL
-%token REF_AS_NON_NULL
-%token REF_EQ
 %token REF_TEST
 %token REF_CAST
 %token STRUCT_NEW
@@ -93,11 +88,8 @@
 %token ARRAY_NEW_ELEM
 %token <Ast.signage option> ARRAY_GET
 %token ARRAY_SET
-%token ARRAY_LEN
 %token ARRAY_FILL
 %token ARRAY_COPY
-%token REF_I31
-%token <Ast.signage> I31_GET
 %token I32_CONST
 %token I64_CONST
 %token F32_CONST
@@ -267,12 +259,10 @@ plaininstr:
   { Br_on_cast (i, t1, t2) }
 | BR_ON_CAST_FAIL i = idx t1 = reftype t2 = reftype
   { Br_on_cast_fail (i, t1, t2) }
-| RETURN { Return }
 | CALL i = idx { Call i }
 | CALL_REF i = idx { CallRef i }
 | RETURN_CALL i = idx { ReturnCall i }
 | RETURN_CALL_REF i = idx { ReturnCallRef i }
-| DROP { Drop }
 | LOCAL_GET i = idx { LocalGet i }
 | LOCAL_SET i = idx { LocalSet i }
 | LOCAL_TEE i = idx { LocalTee i }
@@ -280,9 +270,6 @@ plaininstr:
 | GLOBAL_SET i = idx { GlobalSet i }
 | REF_NULL t = heaptype { RefNull t }
 | REF_FUNC i = idx { RefFunc i }
-| REF_IS_NULL { RefIsNull }
-| REF_AS_NON_NULL { RefAsNonNull }
-| REF_EQ { RefEq }
 | REF_TEST t = reftype { RefTest t }
 | REF_CAST t = reftype { RefCast t }
 | STRUCT_NEW i = idx { StructNew i }
@@ -296,18 +283,15 @@ plaininstr:
 | ARRAY_NEW_ELEM i1 = idx i2 = idx { ArrayNewElem (i1, i2) }
 | s = ARRAY_GET i = idx { ArrayGet (s, i) }
 | ARRAY_SET i = idx { ArraySet i }
-| ARRAY_LEN { ArrayLen }
 | ARRAY_FILL i = idx { ArrayFill i }
 | ARRAY_COPY i1 = idx i2 = idx { ArrayCopy (i1, i2) }
-| REF_I31 { RefI31 }
-| s = I31_GET { I31Get s }
 | I32_CONST i = i32 { Const (I32 i) }
 | I64_CONST i = i64 { Const (I64 i) }
 | F32_CONST f = f32 { Const (F64 f) }
 | F64_CONST f = f64 { Const (F64 f) }
-| i = INSTR { i }
 | TUPLE_MAKE l = u32 { TupleMake l }
 | TUPLE_EXTRACT l = u32 i = u32 { TupleExtract (l, i) }
+| i = INSTR { i }
 
 callindirect(cont):
 | CALL_INDIRECT i = idx t = typeuse(cont) { CallIndirect (i, fst t) :: snd t }

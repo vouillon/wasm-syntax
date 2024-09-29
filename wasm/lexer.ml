@@ -175,14 +175,14 @@ let rec token lexbuf =
   | "br_on_non_null" -> BR_ON_NON_NULL
   | "br_on_cast" -> BR_ON_CAST
   | "br_on_cast_fail" -> BR_ON_CAST_FAIL
-  | "return" -> RETURN
+  | "return" -> INSTR Return
   | "call" -> CALL
   | "call_ref" -> CALL_REF
   | "call_indirect" -> CALL_INDIRECT
   | "return_call" -> RETURN_CALL
   | "return_call_ref" -> RETURN_CALL_REF
   | "return_call_indirect" -> RETURN_CALL_INDIRECT
-  | "drop" -> DROP
+  | "drop" -> INSTR Drop
   | "select" -> SELECT
   | "local.get" -> LOCAL_GET
   | "local.set" -> LOCAL_SET
@@ -191,9 +191,9 @@ let rec token lexbuf =
   | "global.set" -> GLOBAL_SET
   | "ref.null" -> REF_NULL
   | "ref.func" -> REF_FUNC
-  | "ref.is_null" -> REF_IS_NULL
-  | "ref.as_non_null" -> REF_AS_NON_NULL
-  | "ref.eq" -> REF_EQ
+  | "ref.is_null" -> INSTR RefIsNull
+  | "ref.as_non_null" -> INSTR RefAsNonNull
+  | "ref.eq" -> INSTR RefEq
   | "ref.test" -> REF_TEST
   | "ref.cast" -> REF_CAST
   | "struct.new" -> STRUCT_NEW
@@ -211,12 +211,12 @@ let rec token lexbuf =
   | "array.get_u" -> ARRAY_GET (Some Unsigned)
   | "array.get_s" -> ARRAY_GET (Some Signed)
   | "array.set" -> ARRAY_SET
-  | "array.len" -> ARRAY_LEN
+  | "array.len" -> INSTR ArrayLen
   | "array.fill" -> ARRAY_FILL
   | "array.copy" -> ARRAY_COPY
-  | "ref.i31" -> REF_I31
-  | "i31.get_s" -> I31_GET Signed
-  | "i31.get_u" -> I31_GET Unsigned
+  | "ref.i31" -> INSTR RefI31
+  | "i31.get_s" -> INSTR (I31Get Signed)
+  | "i31.get_u" -> INSTR (I31Get Unsigned)
   | "i32.const" -> I32_CONST
   | "i64.const" -> I64_CONST
   | "f32.const" -> F32_CONST
