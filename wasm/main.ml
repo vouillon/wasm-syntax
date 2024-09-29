@@ -78,4 +78,25 @@ let parse filename =
     Format.eprintf "%s%s%!" location msg;
     exit 1
 
-let _ = parse "/home/jerome/wasm_of_ocaml/runtime/wasm/string.wat"
+let _ =
+  let p = "/home/jerome/wasm_of_ocaml/runtime/wasm" in
+  (* f32 *)
+  let lst =
+    [
+      (* exceptions *)
+      "effect.wat";
+      "io.wat";
+      "stdlib.wat";
+      "fs.wat";
+      "fail.wat";
+      "sys.wat";
+      (* memory *)
+      "jsstring.wat";
+    ]
+  in
+  let l = Sys.readdir p in
+  Array.iter
+    (fun nm ->
+      if Filename.check_suffix nm ".wat" && not (List.mem nm lst) then
+        ignore (parse (Filename.concat p nm)))
+    l

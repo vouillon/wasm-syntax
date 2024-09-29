@@ -6,3 +6,4 @@
 - output wasm code
 - parse wasm code and output to this format
 - type for 8bit/16bit values + explicit type expansion
+- validation of wasm code

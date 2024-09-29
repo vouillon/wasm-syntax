@@ -42,6 +42,7 @@
 %token EXPORT
 %token LOCAL
 %token GLOBAL
+%token START
 %token MEMORY
 %token DATA
 %token OFFSET
@@ -101,26 +102,10 @@
 %token I64_CONST
 %token F32_CONST
 %token F64_CONST
-%token I32_ADD
-%token I32_SUB
-%token I32_MUL
-%token <Ast.signage> I32_DIV
-%token <Ast.signage> I32_REM
-%token I32_AND
-%token I32_OR
-%token I32_XOR
-%token I32_SHL
-%token <Ast.signage> I32_SHR
-%token I32_ROTL
-%token I32_ROTR
-%token I32_EQZ
-%token I32_EQ
-%token I32_NE
-%token <Ast.signage> I32_LT
-%token <Ast.signage> I32_GT
-%token <Ast.signage> I32_LE
-%token <Ast.signage> I32_GE
+%token <Ast.instr> INSTR
+%token TUPLE
 %token TUPLE_MAKE
+%token TUPLE_EXTRACT
 
 %{
 open Ast
@@ -187,9 +172,13 @@ reftype:
 | EXTERNREF { {nullable = true; typ = Extern} }
 | NULLEXTERNREF { {nullable = true; typ = NoExtern} }
 
+tupletype:
+| "(" TUPLE l = list(valtype) ")" { l }
+
 valtype:
 | t = VALTYPE { t }
 | t = reftype { Ref t }
+| t = tupletype { Tuple t }
 
 functype:
 | "(" FUNC r = params_and_results(")")
@@ -311,30 +300,13 @@ plaininstr:
 | ARRAY_COPY i1 = idx i2 = idx { ArrayCopy (i1, i2) }
 | REF_I31 { RefI31 }
 | s = I31_GET { I31Get s }
-| I32_CONST i = i32 { I32Const i }
-| I64_CONST i = i64 { I64Const i }
-| F32_CONST f = f32 { F32Const f }
-| F64_CONST f = f64 { F64Const f }
-| I32_ADD { I32Add }
-| I32_SUB { I32Sub }
-| I32_MUL { I32Mul }
-| s = I32_DIV { I32Div s }
-| s = I32_REM { I32Rem s }
-| I32_AND { I32And }
-| I32_OR { I32Or }
-| I32_XOR { I32Xor }
-| I32_SHL { I32Shl }
-| s = I32_SHR { I32Shr s }
-| I32_ROTL { I32Rotl }
-| I32_ROTR { I32Rotr }
-| I32_EQZ { I32Eqz }
-| I32_EQ { I32Eq }
-| I32_NE { I32Ne }
-| s = I32_LT { I32Lt s }
-| s = I32_GT { I32Gt s }
-| s = I32_LE { I32Le s }
-| s = I32_GE { I32Ge s }
+| I32_CONST i = i32 { Const (I32 i) }
+| I64_CONST i = i64 { Const (I64 i) }
+| F32_CONST f = f32 { Const (F64 f) }
+| F64_CONST f = f64 { Const (F64 f) }
+| i = INSTR { i }
 | TUPLE_MAKE l = u32 { TupleMake l }
+| TUPLE_EXTRACT l = u32 i = u32 { TupleExtract (l, i) }
 
 callindirect(cont):
 | CALL_INDIRECT i = idx t = typeuse(cont) { CallIndirect (i, fst t) :: snd t }
@@ -462,6 +434,9 @@ exportdesc:
 | "(" FUNC i = idx ")" { (Func i : exportdesc) }
 | "(" GLOBAL i = idx ")" { (Global i : exportdesc) }
 
+start:
+| "(" START i = idx ")" { Start i }
+
 data:
 | "(" DATA id = ID ? init = datastring ")"
   { Data { id; init; mode = Passive } }
@@ -478,12 +453,14 @@ datastring:
 | { Num 0l }
 
 modulefield:
-| t = rectype { t }
-| i = import { i }
-| g = global { g }
-| f = func { f }
-| e = export { e }
-| d = data { d }
+| f = rectype
+| f = import
+| f = global
+| f = func
+| f = export
+| f = data
+| f = start
+  { f }
 
 module_:
 | "(" MODULE name = ID ? l = modulefield * ")" EOF
