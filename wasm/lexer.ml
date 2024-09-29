@@ -144,6 +144,7 @@ let rec token lexbuf =
   | "final" -> FINAL
   | "import" -> IMPORT
   | "export" -> EXPORT
+  | "local" -> LOCAL
   | "global" -> GLOBAL
   | "struct.new" -> STRUCT_NEW
   | "array.new_fixed" -> ARRAY_NEW_FIXED

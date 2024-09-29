@@ -54,3 +54,9 @@ type modulefield =
   | Types of subtype list
   | Import of { module_ : string; name : string; desc : importdesc }
   | Global of string option * globaltype * expr
+  | Func of {
+      id : string option;
+      typ : typeuse;
+      locals : (string option * valtype) list;
+      instrs : instr list;
+    }

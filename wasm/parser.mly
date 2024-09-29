@@ -5,8 +5,8 @@
 %token <string> ID
 %token <Ast.valtype> VALTYPE
 %token <Ast.packedtype> PACKEDTYPE
-%token LPAREN
-%token RPAREN
+%token LPAREN "("
+%token RPAREN ")"
 %token EOF
 %token ANY
 %token EQ
@@ -29,6 +29,7 @@
 %token SUB
 %token FINAL
 %token IMPORT
+%token LOCAL
 %token EXPORT
 %token GLOBAL
 %token MODULE
@@ -40,6 +41,8 @@
 
 %{
 open Ast
+
+let map_fst f (x, y) = (f x, y)
 %}
 
 %start <string option * Ast.modulefield list> module_
@@ -74,7 +77,7 @@ heaptype:
 | i = idx { Type i }
 
 reftype:
-| LPAREN REF nullable = boption(NULL) typ = heaptype RPAREN
+| "(" REF nullable = boption(NULL) typ = heaptype ")"
   { { nullable; typ } }
 (*ZZZ abbreviations *)
 
@@ -83,46 +86,52 @@ valtype:
 | t = reftype { Ref t }
 
 functype:
-| LPAREN FUNC r = params_and_results RPAREN
-  { r }
+| "(" FUNC r = params_and_results(")")
+  { fst r }
 
-params_and_results:
-| r = list(result) { {params = []; result = List.flatten r} }
-| LPAREN PARAM ID t = valtype RPAREN rem = params_and_results
-  { {rem with params = t :: rem.params} }
-| LPAREN PARAM l = list(valtype) RPAREN rem = params_and_results
-  { {rem with params = l @ rem.params} }
+params(cont):
+| c = cont { [], c }
+| "(" PARAM ID t = valtype ")" rem = params(cont)
+  { map_fst (fun l -> t :: l) rem }
+| "(" PARAM l = valtype * ")" rem = params(cont)
+  { map_fst ((@) l) rem }
 
-result:
-| LPAREN RESULT l = list(valtype) RPAREN { l }
+results(cont):
+| c = cont { [], c }
+| "(" RESULT l = valtype * ")" rem = results(cont)
+  { map_fst ((@) l) rem }
+
+params_and_results(cont):
+| r = params(results(cont))
+  { let (params, (result, c)) = r in ({params; result }, c) }
 
 field:
-| LPAREN FIELD i = ID t = fieldtype RPAREN { [(Some i, t)] }
-| LPAREN FIELD l = list(fieldtype) RPAREN { List.map (fun t -> (None, t)) l }
+| "(" FIELD i = ID t = fieldtype ")" { [(Some i, t)] }
+| "(" FIELD l = fieldtype * ")" { List.map (fun t -> (None, t)) l }
 
 fieldtype:
 | typ = storagetype { {mut = false; typ} }
-| LPAREN MUT typ = storagetype RPAREN { {mut = true; typ} }
+| "(" MUT typ = storagetype ")" { {mut = true; typ} }
 
 storagetype:
 | t = valtype { Value t }
 | t = PACKEDTYPE { Packed t }
 
 comptype:
-| LPAREN ARRAY t = fieldtype RPAREN { Array t }
-| LPAREN STRUCT l = list(field) RPAREN { Struct (List.flatten l) }
+| "(" ARRAY t = fieldtype ")" { Array t }
+| "(" STRUCT l = field * ")" { Struct (List.flatten l) }
 | t = functype { Func t }
 
 rectype:
-| LPAREN REC l = list(typedef) RPAREN { Types l }
+| "(" REC l = typedef * ")" { Types l }
 | t = typedef { Types [t] }
 
 typedef:
-| LPAREN TYPE name = option(ID) t = subtype RPAREN { t name }
+| "(" TYPE name = ID ? t = subtype ")" { t name }
 
 subtype:
-| LPAREN SUB final = boption(FINAL) supertype = option(idx) typ = comptype
-  RPAREN
+| "(" SUB final = boption(FINAL) supertype = idx ? typ = comptype
+  ")"
   { fun name -> {name; final; supertype; typ} }
 | typ = comptype { fun name -> {name; final = true; supertype = None; typ } }
 
@@ -140,57 +149,70 @@ instr:
 | i = foldedinstr { i }
 
 foldedinstr:
-| LPAREN i = plaininstr l = list(foldedinstr) RPAREN
+| "(" i = plaininstr l = foldedinstr * ")"
   { Folded (i, l) }
 
 expr:
-| l = list(instr) { l }
+| l = instr * { l }
 
 (* Modules *)
 
-typeuse:
-| LPAREN TYPE i = idx RPAREN s = params_and_results
-  { match s with
-    | {params = []; result = []} -> Some i, None
-    | _ -> Some i, Some s }
-| s = params_and_results { None, Some s }
+typeuse(cont):
+| "(" TYPE i = idx ")" rem = params_and_results(cont)
+  { let (s, r) = rem in
+    (match s with
+     | {params = []; result = []} -> Some i, None
+     | _ -> Some i, Some s),
+    r }
+| rem = params_and_results(cont) { let (s, r) = rem in (None, Some s), r }
 
 import:
-| LPAREN IMPORT module_ = name name = name desc = importdesc RPAREN
+| "(" IMPORT module_ = name name = name desc = importdesc ")"
     { Import {module_; name; desc } }
 
 importdesc:
-| LPAREN FUNC i = option(ID) t = typeuse RPAREN
-    { Func (i, t) }
-| LPAREN GLOBAL i = option(ID) t = globaltype RPAREN
+| "(" FUNC i = ID ? t = typeuse(")")
+    { Func (i, fst t) }
+| "(" GLOBAL i = ID ? t = globaltype ")"
     { (Global (i, t) : importdesc) }
     (* ZZZ *)
 
+func:
+| "(" FUNC id = ID ? r = typeuse(locals(instr *)) ")"
+    { let (typ, (locals, instrs)) = r in
+      Func {id; typ; locals; instrs} }
+
+locals(cont):
+| c = cont { [], c }
+| "(" LOCAL i = ID ? t = valtype ")" r = locals(cont)
+  { map_fst (fun l -> (i, t) :: l) r }
+
 globaltype:
 | typ = valtype { {mut = false; typ} }
-| LPAREN MUT typ = valtype RPAREN { {mut = true; typ} }
+| "(" MUT typ = valtype ")" { {mut = true; typ} }
 
 global:
-| LPAREN GLOBAL i = option(ID) d = globaldesc RPAREN
+| "(" GLOBAL i = ID ? d = globaldesc ")"
     { d i [] }
 
 globaldesc:
 | t = globaltype e = expr
   { fun i _ -> Global (i, t, e) }
-| LPAREN IMPORT module_ = name name = name RPAREN t = globaltype
+| "(" IMPORT module_ = name name = name ")" t = globaltype
   { fun i _ -> Import {module_; name; desc = Global (i, t) } }
-| LPAREN EXPORT n = name RPAREN d = globaldesc
+| "(" EXPORT n = name ")" d = globaldesc
   { fun i exp -> d i (n :: exp) }
 
 modulefield:
 | t = rectype { t }
 | i = import { i }
 | g = global { g }
+| func { assert false (*ZZZ*) }
 
 module_:
-| LPAREN MODULE name = option(ID) l = list(modulefield) RPAREN EOF
+| "(" MODULE name = ID ? l = modulefield * ")" EOF
   { (name, l) }
-| l = list(modulefield) EOF
+| l = modulefield * EOF
   { (None, l) }
 
 (*ZZZ
