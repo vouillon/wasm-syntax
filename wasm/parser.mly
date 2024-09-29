@@ -173,7 +173,7 @@ heaptype:
 | STRUCT { Struct }
 | ARRAY { Array }
 | NONE { None_ }
-| FUNC { Func_ }
+| FUNC { Func }
 | NOFUNC { NoFunc }
 | EXTERN { Extern }
 | NOEXTERN { NoExtern }
@@ -188,7 +188,7 @@ reftype:
 | STRUCTREF { {nullable = true; typ = Struct} }
 | ARRAYREF { {nullable = true; typ = Array} }
 | NULLREF { {nullable = true; typ = None_} }
-| FUNCREF { {nullable = true; typ = Func_} }
+| FUNCREF { {nullable = true; typ = Func} }
 | NULLFUNCREF { {nullable = true; typ = NoFunc} }
 | EXTERNREF { {nullable = true; typ = Extern} }
 | NULLEXTERNREF { {nullable = true; typ = NoExtern} }
@@ -219,7 +219,8 @@ results(cont):
 
 params_and_results(cont):
 | r = params(results(cont))
-  { let (params, (result, c)) = r in ({params; result }, c) }
+  { let (p, (r, c)) = r in
+    ({params = Array.of_list p; result = Array.of_list r }, c) }
 
 field:
 | "(" FIELD i = ID t = fieldtype ")" { [(Some i, t)] }
@@ -235,12 +236,12 @@ storagetype:
 
 comptype:
 | "(" ARRAY t = fieldtype ")" { Array t }
-| "(" STRUCT l = field * ")" { Struct (List.flatten l) }
+| "(" STRUCT l = field * ")" { Struct (Array.of_list (List.flatten l)) }
 | t = functype { Func t }
 
 rectype:
-| "(" REC l = typedef * ")" { Types l }
-| t = typedef { Types [t] }
+| "(" REC l = typedef * ")" { Types (Array.of_list l) }
+| t = typedef { Types [|t|] }
 
 typedef:
 | "(" TYPE name = ID ? t = subtype ")" { t name }
@@ -428,7 +429,7 @@ typeuse(cont):
 | "(" TYPE i = idx ")" rem = params_and_results(cont)
   { let (s, r) = rem in
     (match s with
-     | {params = []; result = []} -> Some i, None
+     | {params = [||]; result = [||]} -> Some i, None
      | _ -> Some i, Some s),
     r }
 | rem = params_and_results(cont) { let (s, r) = rem in (None, Some s), r }
@@ -441,11 +442,11 @@ importdesc:
 | "(" FUNC i = ID ? t = typeuse(")")
     { (i, Func (fst t)) }
 | "(" MEMORY i = ID ? l = limits ")"
-    { (i, (Memory l : importdesc)) }
+    { (i, (Memory l)) }
 | "(" GLOBAL i = ID ? t = globaltype ")"
-    { (i, (Global t : importdesc)) }
+    { (i, (Global t)) }
 | "(" TAG i = ID ? t = typeuse(")")
-    { (i, (Tag (fst t) : importdesc)) }
+    { (i, (Tag (fst t) : _ importdesc)) }
 
 func:
 | "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(")"))))
@@ -506,13 +507,14 @@ globaltype:
 | "(" MUT typ = valtype ")" { {mut = true; typ} }
 
 export:
-| "(" EXPORT n = name d = exportdesc ")" { Export (n, d) }
+| "(" EXPORT name = name d = exportdesc ")"
+  { let (index, kind) = d in Export {name; kind; index} }
 
 exportdesc:
-| "(" FUNC i = idx ")" { (Func i : exportdesc) }
-| "(" GLOBAL i = idx ")" { (Global i : exportdesc) }
-| "(" MEMORY i = idx ")" { (Memory i : exportdesc) }
-| "(" TAG i = idx ")" { (Tag i : exportdesc) }
+| "(" FUNC i = idx ")" { (i, Func) }
+| "(" GLOBAL i = idx ")" { (i, Global) }
+| "(" MEMORY i = idx ")" { (i, Memory) }
+| "(" TAG i = idx ")" { (i, (Tag : exportable)) }
 
 start:
 | "(" START i = idx ")" { Start i }
@@ -524,7 +526,7 @@ elem:
 elemlist:
 | t = reftype l = elemexpr * { (t, l) }
 | FUNC l = idx *
-  { ({nullable = false; typ = Func_}, List.map (fun i -> [RefFunc i]) l) }
+  { ({nullable = false; typ = Func}, List.map (fun i -> [RefFunc i]) l) }
 
 elemexpr:
 | "(" ITEM  e = expr ")" {e}

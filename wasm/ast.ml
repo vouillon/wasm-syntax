@@ -3,7 +3,7 @@ type idx = Num of Int32.t | Id of id
 
 (* Types *)
 type heaptype =
-  | Func_
+  | Func
   | NoFunc
   | Extern
   | NoExtern
@@ -26,16 +26,16 @@ type valtype =
   | Ref of reftype
   | Tuple of valtype list
 
-type functype = { params : valtype list; result : valtype list }
+type functype = { params : valtype array; result : valtype array }
 type packedtype = I8 | I16
 type storagetype = Value of valtype | Packed of packedtype
 type 'typ muttype = { mut : bool; typ : 'typ }
 type fieldtype = storagetype muttype
 
 type comptype =
-  | Struct of (id option * fieldtype) list
-  | Array of fieldtype
   | Func of functype
+  | Struct of (id option * fieldtype) array
+  | Array of fieldtype
 
 type subtype = {
   name : id option;
@@ -203,22 +203,22 @@ type expr = instr list
 
 (* Modules *)
 
-type importdesc =
-  | Func of typeuse
+type 'typ importdesc =
+  | Func of 'typ
   | Memory of limits
   | Global of globaltype
-  | Tag of typeuse
+  | Tag of 'typ
 
-type exportdesc = Func of idx | Memory of idx | Tag of idx | Global of idx
+type exportable = Func | Memory | Tag | Global
 type datamode = Passive | Active of idx * expr
 
 type modulefield =
-  | Types of subtype list
+  | Types of subtype array
   | Import of {
       module_ : string;
       name : string;
       id : id option;
-      desc : importdesc;
+      desc : typeuse importdesc;
       exports : string list;
     }
   | Func of {
@@ -241,7 +241,7 @@ type modulefield =
       init : expr;
       exports : string list;
     }
-  | Export of string * exportdesc
+  | Export of { name : string; kind : exportable; index : idx }
   | Start of idx
   | Elem of { id : id option; typ : reftype; init : expr list }
   | Data of { id : id option; init : string; mode : datamode }

@@ -1,12 +1,18 @@
 (menhir
  (modules parser)
- (flags --table --explain --dump)
-; (flags --compile-errors %{dep:parser.messages}})
+ (flags --table)
 )
 
+(menhir
+ (modules fast_parser)
+ (flags --external-tokens Parser)
+ (explain false)
+)
+
+(rule (copy parser.mly fast_parser.mly))
 
 (rule
-  (deps parser_messages.check)
+;  (deps parser_messages.check)
   (action (with-stdout-to parser_messages.ml
     (run menhir
       %{dep:parser.mly}

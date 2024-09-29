@@ -1,6 +1,6 @@
 (menhir
  (modules parser)
- (flags --table --explain --dump)
+ (flags --table)
 ; (flags --compile-errors %{dep:parser.messages}})
 )
 

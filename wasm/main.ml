@@ -15,22 +15,12 @@ let env checkpoint =
 let state checkpoint : int =
   match Parser.MenhirInterpreter.top (env checkpoint) with
   | Some (Element (s, _, _, _)) -> Parser.MenhirInterpreter.number s
-  | None ->
-      (* Hmm... The parser is in its initial state. The incremental API
-         currently lacks a way of finding out the number of the initial
-         state. It is usually 0, so we return 0. This is unsatisfactory
-         and should be fixed in the future. *)
-      0
+  | None -> 0
 
 let get text checkpoint i =
   match Parser.MenhirInterpreter.get i (env checkpoint) with
   | Some (Element (_, _, pos1, pos2)) -> show text (pos1, pos2)
-  | None ->
-      (* The index is out of range. This should not happen if [$i]
-         keywords are correctly inside the syntax error message
-         database. The integer [i] should always be a valid offset
-         into the known suffix of the stack. *)
-      "???"
+  | None -> (* should not happen *) "???"
 
 let fail text buffer checkpoint =
   (* Indicate where in the input file the error occurred. *)
@@ -52,19 +42,20 @@ let fail text buffer checkpoint =
   Format.eprintf "%s%s%s%!" location indication message;
   exit 1
 
-let read file =
-  let text = In_channel.with_open_bin file In_channel.input_all in
+let read filename = In_channel.with_open_bin filename In_channel.input_all
+
+let initialize_lexing filename text =
   let lexbuf = Sedlexing.Utf8.from_string text in
-  Sedlexing.set_filename lexbuf file;
-  (text, lexbuf)
+  Sedlexing.set_filename lexbuf filename;
+  lexbuf
 
 let lexer_lexbuf_to_supplier lexer (lexbuf : Sedlexing.lexbuf) () =
   let token = lexer lexbuf in
   let startp, endp = Sedlexing.lexing_positions lexbuf in
   (token, startp, endp)
 
-let parse filename =
-  let text, lexbuf = read filename in
+let parse_with_errors filename text =
+  let lexbuf = initialize_lexing filename text in
   let supplier = lexer_lexbuf_to_supplier Lexer.token lexbuf in
   let buffer, supplier = E.wrap_supplier supplier in
   let checkpoint =
@@ -78,14 +69,24 @@ let parse filename =
     Format.eprintf "%s%s%!" location msg;
     exit 1
 
+let parse filename =
+  let text = read filename in
+  try
+    let lexbuf = initialize_lexing filename text in
+    let supplier = lexer_lexbuf_to_supplier Lexer.token lexbuf in
+    let revised_parser =
+      MenhirLib.Convert.Simplified.traditional2revised Fast_parser.module_
+    in
+    revised_parser supplier
+  with Fast_parser.Error | Misc.Syntax_error _ ->
+    parse_with_errors filename text
+
 let _ =
   let p = "/home/jerome/wasm_of_ocaml/runtime/wasm" in
-  (* f32 *)
-  let lst = [] in
   let l = Sys.readdir p in
   Array.iter
     (fun nm ->
-      if Filename.check_suffix nm ".wat" && not (List.mem nm lst) then
+      if Filename.check_suffix nm ".wat" then
         ignore (parse (Filename.concat p nm)))
     l;
   ignore
