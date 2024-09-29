@@ -13,7 +13,6 @@
 ====
 
 allow to put block labels at the end?
+collect constraints on untyped variables while parsing
 
 simplify parser (type use)
-
-collect constraints on untyped variables while parsing

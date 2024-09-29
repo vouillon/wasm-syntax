@@ -1,4 +1,5 @@
-type idx = Num of Int32.t | Id of string
+type id = string
+type idx = Num of Int32.t | Id of id
 
 (* Types *)
 type heaptype =
@@ -32,12 +33,12 @@ type 'typ muttype = { mut : bool; typ : 'typ }
 type fieldtype = storagetype muttype
 
 type comptype =
-  | Struct of (string option * fieldtype) list
+  | Struct of (id option * fieldtype) list
   | Array of fieldtype
   | Func of functype
 
 type subtype = {
-  name : string option;
+  name : id option;
   typ : comptype;
   supertype : idx option;
   final : bool;
@@ -117,24 +118,16 @@ type blocktype = Idx of idx | ValType of valtype
 type memarg = { offset : Int32.t; align : Int32.t }
 
 type instr =
-  | Block of {
-      label : string option;
-      typ : blocktype option;
-      block : instr list;
-    }
-  | Loop of {
-      label : string option;
-      typ : blocktype option;
-      block : instr list;
-    }
+  | Block of { label : id option; typ : blocktype option; block : instr list }
+  | Loop of { label : id option; typ : blocktype option; block : instr list }
   | If of {
-      label : string option;
+      label : id option;
       typ : blocktype option;
       if_block : instr list;
       else_block : instr list;
     }
   | Try of {
-      label : string option;
+      label : id option;
       typ : blocktype option;
       block : instr list;
       catches : (idx * instr list) list;
@@ -211,27 +204,44 @@ type expr = instr list
 (* Modules *)
 
 type importdesc =
-  | Func of string option * typeuse
-  | Memory of string option * limits
-  | Global of string option * globaltype
-  | Tag of string option * typeuse
+  | Func of typeuse
+  | Memory of limits
+  | Global of globaltype
+  | Tag of typeuse
 
-type exportdesc = Func of idx | Global of idx | Tag of idx
+type exportdesc = Func of idx | Memory of idx | Tag of idx | Global of idx
 type datamode = Passive | Active of idx * expr
 
 type modulefield =
   | Types of subtype list
-  | Import of { module_ : string; name : string; desc : importdesc }
-  | Func of {
-      id : string option;
-      typ : typeuse;
-      locals : (string option * valtype) list;
-      instrs : instr list;
+  | Import of {
+      module_ : string;
+      name : string;
+      id : id option;
+      desc : importdesc;
+      exports : string list;
     }
-  | Memory of string option * limits * string option
-  | Tag of string option * typeuse
-  | Global of string option * globaltype * expr
+  | Func of {
+      id : id option;
+      typ : typeuse;
+      locals : (id option * valtype) list;
+      instrs : instr list;
+      exports : string list;
+    }
+  | Memory of {
+      id : id option;
+      limits : limits;
+      init : string option;
+      exports : string list;
+    }
+  | Tag of { id : id option; typ : typeuse; exports : string list }
+  | Global of {
+      id : id option;
+      typ : globaltype;
+      init : expr;
+      exports : string list;
+    }
   | Export of string * exportdesc
   | Start of idx
-  | Elem of string option * reftype * expr list
-  | Data of { id : string option; init : string; mode : datamode }
+  | Elem of { id : id option; typ : reftype; init : expr list }
+  | Data of { id : id option; init : string; mode : datamode }

@@ -1,3 +1,10 @@
+(*
+- More memory instructions
+- Tables
+- Segments
+- String parsing
+*)
+
 %token <string> NAT
 %token <string> INT
 %token <string> FLOAT
@@ -149,7 +156,13 @@ idx:
 | n = u32 { Num n }
 | i = ID { Id i }
 
-name: s = STRING { s (*ZZZ check well-formedness*) }
+name: s = STRING
+  { if not (String.is_valid_utf_8 s) then
+      raise
+        (Misc.Syntax_error
+           ( $sloc,
+             Printf.sprintf "Malformed name \"%s\".\n" s));
+    s }
 
 (* Types *)
 
@@ -422,26 +435,27 @@ typeuse(cont):
 
 import:
 | "(" IMPORT module_ = name name = name desc = importdesc ")"
-    { Import {module_; name; desc } }
+    { let (id, desc) = desc in Import {module_; name; id; desc; exports = [] } }
 
 importdesc:
 | "(" FUNC i = ID ? t = typeuse(")")
-    { Func (i, fst t) }
+    { (i, Func (fst t)) }
+| "(" MEMORY i = ID ? l = limits ")"
+    { (i, (Memory l : importdesc)) }
 | "(" GLOBAL i = ID ? t = globaltype ")"
-    { (Global (i, t) : importdesc) }
+    { (i, (Global t : importdesc)) }
 | "(" TAG i = ID ? t = typeuse(")")
-    { (Tag (i, fst t) : importdesc) }
-(* ZZZ *)
+    { (i, (Tag (fst t) : importdesc)) }
 
 func:
 | "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(")"))))
-  { let (_, (typ, (locals, instrs))) = r in
-    Func {id; typ; locals; instrs} }
+  { let (exports, (typ, (locals, instrs))) = r in
+    Func {id; typ; locals; instrs; exports} }
 | "(" FUNC id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = typeuse({}) ")"
-  { let (_, (module_, name)) = r in
-    Import {module_; name; desc = Func (id, fst t) } }
+  { let (exports, (module_, name)) = r in
+    Import {module_; name; id; desc = Func (fst t); exports } }
 
 exports(cont):
 | c = cont { [], c }
@@ -456,39 +470,36 @@ locals(cont):
   { map_fst ((@) (List.map (fun t -> (None, t)) l)) r }
 
 memory:
-| "(" MEMORY i = ID? r = exports(memtype) ")"
-  { let (_, t) = r in Memory (i, t, None) }
-| "(" MEMORY i = ID? r = exports("(" DATA s = datastring ")" { s }) ")"
-  { let (_, s) = r in
+| "(" MEMORY id = ID? r = exports(memtype) ")"
+  { let (exports, limits) = r in Memory {id; limits; init = None; exports} }
+| "(" MEMORY id = ID? r = exports("(" DATA s = datastring ")" { s }) ")"
+  { let (exports, s) = r in
     let sz = Int32.of_int ((String.length s + 65535) lsr 16) in
-    Memory (i, {mi = sz; ma = Some sz}, Some s) }
-| "(" MEMORY i = ID ?
+    Memory {id; limits = {mi = sz; ma = Some sz}; init = Some s; exports} }
+| "(" MEMORY id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = memtype ")"
-  { let (_, (module_, name)) = r in
-    Import {module_; name; desc = Memory (i, t) } }
+  { let (exports, (module_, name)) = r in
+    Import {module_; name; id; desc = Memory t; exports } }
 
 tag:
-| "(" TAG i = ID ? r = exports(typeuse (")"))
-    { let (_, (t, _)) = r in
-      Tag (i, t) }
-| "(" TAG i = ID ?
+| "(" TAG id = ID ? r = exports(typeuse (")"))
+    { let (exports, (typ, _)) = r in
+      Tag {id; typ; exports} }
+| "(" TAG id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = typeuse (")")
-  { let (_, (module_, name)) = r in
-    Import {module_; name; desc = Tag (i, fst t) } }
+  { let (exports, (module_, name)) = r in
+    Import {module_; name; id; desc = Tag (fst t); exports } }
 
 global:
-| "(" GLOBAL i = ID ? d = globaldesc ")"
-    { d i [] }
-
-globaldesc:
-| t = globaltype e = expr
-  { fun i _ -> Global (i, t, e) }
-| "(" IMPORT module_ = name name = name ")" t = globaltype
-  { fun i _ -> Import {module_; name; desc = Global (i, t) } }
-| "(" EXPORT n = name ")" d = globaldesc
-  { fun i exp -> d i (n :: exp) }
+| "(" GLOBAL id = ID ? r = exports(t = globaltype init = expr { t, init }) ")"
+  { let (exports, (typ, init)) = r in Global {id; typ; init; exports} }
+| "(" GLOBAL id = ID ?
+  r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
+  typ = globaltype ")"
+  { let (exports, (module_, name)) = r in
+    Import {module_; name; id; desc = Global typ; exports } }
 
 globaltype:
 | typ = valtype { {mut = false; typ} }
@@ -500,14 +511,15 @@ export:
 exportdesc:
 | "(" FUNC i = idx ")" { (Func i : exportdesc) }
 | "(" GLOBAL i = idx ")" { (Global i : exportdesc) }
+| "(" MEMORY i = idx ")" { (Memory i : exportdesc) }
 | "(" TAG i = idx ")" { (Tag i : exportdesc) }
 
 start:
 | "(" START i = idx ")" { Start i }
 
 elem:
-| "(" ELEM i = ID ? DECLARE l = elemlist ")"
-  { let (t, l) = l in Elem (i, t, l) }
+| "(" ELEM id = ID ? DECLARE l = elemlist ")"
+  { let (typ, init) = l in Elem {id; typ; init} }
 
 elemlist:
 | t = reftype l = elemexpr * { (t, l) }
@@ -550,7 +562,3 @@ module_:
   { (name, l) }
 | l = modulefield * EOF
   { (None, l) }
-
-(*ZZZ
-exports (in globals)
-*)

@@ -95,8 +95,6 @@ let rec string lexbuf =
            ( Sedlexing.lexing_positions lexbuf,
              Printf.sprintf "Malformed string.\n" ))
 
-(* ZZZ names should be well-formed utf strings... *)
-
 let rec token lexbuf =
   let open Parser in
   match%sedlex lexbuf with
@@ -196,7 +194,6 @@ let rec token lexbuf =
   | "global.set" -> GLOBAL_SET
   | "i32.load8_u" -> I32LOAD8 Unsigned
   | "i32.store8" -> I32STORE8
-  (* ZZZ more memory instructions *)
   | "ref.null" -> REF_NULL
   | "ref.func" -> REF_FUNC
   | "ref.is_null" -> INSTR RefIsNull
