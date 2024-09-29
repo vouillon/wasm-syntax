@@ -81,29 +81,13 @@ let parse filename =
 let _ =
   let p = "/home/jerome/wasm_of_ocaml/runtime/wasm" in
   (* f32 *)
-  let lst =
-    [
-      (* exceptions *)
-      (*
-      "effect.wat";
-      "io.wat";
-      "stdlib.wat";
-      "fs.wat";
-      "fail.wat";
-      "sys.wat";
-*)
-      (* memory *)
-      "jsstring.wat";
-    ]
-  in
+  let lst = [] in
   let l = Sys.readdir p in
   Array.iter
     (fun nm ->
       if Filename.check_suffix nm ".wat" && not (List.mem nm lst) then
         ignore (parse (Filename.concat p nm)))
     l;
-  if false then
-    (* elem declare *)
-    ignore
-      (parse
-         "/home/jerome/tmp/jane-street/_build/default/lib/bonsai/ppx_bonsai/test/inline/.ppx_bonsai_test.inline-tests/inline_test_runner_ppx_bonsai_test.bc.wasm.wat")
+  ignore
+    (parse
+       "/home/jerome/tmp/jane-street/_build/default/lib/bonsai/ppx_bonsai/test/inline/.ppx_bonsai_test.inline-tests/inline_test_runner_ppx_bonsai_test.bc.wasm.wat")

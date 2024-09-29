@@ -43,6 +43,9 @@
 %token LOCAL
 %token GLOBAL
 %token START
+%token ELEM
+%token DECLARE
+%token ITEM
 %token MEMORY
 %token DATA
 %token OFFSET
@@ -72,6 +75,8 @@
 %token LOCAL_TEE
 %token GLOBAL_GET
 %token GLOBAL_SET
+%token I32STORE8
+%token <Ast.signage> I32LOAD8
 %token REF_NULL
 %token REF_FUNC
 %token REF_TEST
@@ -96,15 +101,19 @@
 %token F32_CONST
 %token F64_CONST
 %token <Ast.instr> INSTR
-%token TUPLE
-%token TUPLE_MAKE
-%token TUPLE_EXTRACT
 %token TAG
 %token TRY
 %token DO
 %token CATCH
 %token CATCH_ALL
 %token THROW
+%token <string> MEM_ALIGN
+%token <string> MEM_OFFSET
+(* Binaryen extensions *)
+%token POP
+%token TUPLE
+%token TUPLE_MAKE
+%token TUPLE_EXTRACT
 
 %{
 open Ast
@@ -229,6 +238,13 @@ subtype:
   { fun name -> {name; final; supertype; typ} }
 | typ = comptype { fun name -> {name; final = true; supertype = None; typ } }
 
+limits:
+| mi = u32 { {mi; ma = None} }
+| mi = u32 ma = u32 { {mi; ma = Some ma} }
+
+memtype:
+| l = limits { l }
+
 (* Instructions *)
 
 blockinstr:
@@ -280,11 +296,14 @@ plaininstr:
 | CALL_REF i = idx { CallRef i }
 | RETURN_CALL i = idx { ReturnCall i }
 | RETURN_CALL_REF i = idx { ReturnCallRef i }
+| POP t = valtype { Pop t }
 | LOCAL_GET i = idx { LocalGet i }
 | LOCAL_SET i = idx { LocalSet i }
 | LOCAL_TEE i = idx { LocalTee i }
 | GLOBAL_GET i = idx { GlobalGet i }
 | GLOBAL_SET i = idx { GlobalSet i }
+| s = I32LOAD8 m = memarg { I32Load8 (s, m 1l) }
+| I32STORE8 m = memarg { I32Store8 (m 1l) }
 | REF_NULL t = heaptype { RefNull t }
 | REF_FUNC i = idx { RefFunc i }
 | REF_TEST t = reftype { RefTest t }
@@ -311,6 +330,13 @@ plaininstr:
 | TUPLE_MAKE l = u32 { TupleMake l }
 | TUPLE_EXTRACT l = u32 i = u32 { TupleExtract (l, i) }
 | i = INSTR { i }
+
+memarg:
+| o = option(MEM_OFFSET) a = option(MEM_ALIGN)
+  { fun width ->
+    (* ZZZ overflows *)
+    {offset = Option.value ~default:0l (Option.map Int32.of_string o);
+     align = Option.value ~default:width  (Option.map Int32.of_string a)} }
 
 callindirect(cont):
 | CALL_INDIRECT i = idx t = typeuse(cont) { CallIndirect (i, fst t) :: snd t }
@@ -429,6 +455,19 @@ locals(cont):
 | "(" LOCAL l = valtype * ")" r = locals(cont)
   { map_fst ((@) (List.map (fun t -> (None, t)) l)) r }
 
+memory:
+| "(" MEMORY i = ID? r = exports(memtype) ")"
+  { let (_, t) = r in Memory (i, t, None) }
+| "(" MEMORY i = ID? r = exports("(" DATA s = datastring ")" { s }) ")"
+  { let (_, s) = r in
+    let sz = Int32.of_int ((String.length s + 65535) lsr 16) in
+    Memory (i, {mi = sz; ma = Some sz}, Some s) }
+| "(" MEMORY i = ID ?
+  r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
+  t = memtype ")"
+  { let (_, (module_, name)) = r in
+    Import {module_; name; desc = Memory (i, t) } }
+
 tag:
 | "(" TAG i = ID ? r = exports(typeuse (")"))
     { let (_, (t, _)) = r in
@@ -438,10 +477,6 @@ tag:
   t = typeuse (")")
   { let (_, (module_, name)) = r in
     Import {module_; name; desc = Tag (i, fst t) } }
-
-globaltype:
-| typ = valtype { {mut = false; typ} }
-| "(" MUT typ = valtype ")" { {mut = true; typ} }
 
 global:
 | "(" GLOBAL i = ID ? d = globaldesc ")"
@@ -455,6 +490,10 @@ globaldesc:
 | "(" EXPORT n = name ")" d = globaldesc
   { fun i exp -> d i (n :: exp) }
 
+globaltype:
+| typ = valtype { {mut = false; typ} }
+| "(" MUT typ = valtype ")" { {mut = true; typ} }
+
 export:
 | "(" EXPORT n = name d = exportdesc ")" { Export (n, d) }
 
@@ -465,6 +504,18 @@ exportdesc:
 
 start:
 | "(" START i = idx ")" { Start i }
+
+elem:
+| "(" ELEM i = ID ? DECLARE l = elemlist ")"
+  { let (t, l) = l in Elem (i, t, l) }
+
+elemlist:
+| t = reftype l = elemexpr * { (t, l) }
+| FUNC l = idx *
+  { ({nullable = false; typ = Func_}, List.map (fun i -> [RefFunc i]) l) }
+
+elemexpr:
+| "(" ITEM  e = expr ")" {e}
 
 data:
 | "(" DATA id = ID ? init = datastring ")"
@@ -486,10 +537,12 @@ modulefield:
 | f = import
 | f = func
 | f = tag
+| f = memory
 | f = global
 | f = export
-| f = data
 | f = start
+| f = elem
+| f = data
   { f }
 
 module_:

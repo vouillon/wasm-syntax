@@ -1,6 +1,8 @@
 - how to deal with functions returning multiple values?
   (in generated binary code)
   ==> maybe just have a destructuring let?
+  note that (x, y, z) is just a sequence of instructions
+    let (x,y) = (u, v) ==> u v (locat.set $y) (local.set $x)
 - syntax errors
 - typing
 - output wasm code
@@ -11,3 +13,7 @@
 ====
 
 allow to put block labels at the end?
+
+simplify parser (type use)
+
+collect constraints on untyped variables while parsing

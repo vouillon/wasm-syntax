@@ -43,18 +43,13 @@ let rec comment lexbuf =
       comment lexbuf;
       comment lexbuf
   | ';' | '(' | Plus (Sub (any, (';' | '('))) -> comment lexbuf
-  | _ -> assert false (*ZZZ*)
+  | _ ->
+      raise
+        (Misc.Syntax_error
+           ( Sedlexing.lexing_positions lexbuf,
+             Printf.sprintf "Malformed comment.\n" ))
 
 let string_buffer = Buffer.create 256
-
-let stringchar =
-  [%sedlex.regexp?
-    ( Sub (any, (0 .. 31 | 0x7f | '"' | '\''))
-    | "\t" | "\\n" | "\\r" | "\\\"" | "\\'" | "\\\\"
-    | "\\u{", hexnum, "}" )]
-
-let stringelem = [%sedlex.regexp? stringchar | '\\', hexdigit, hexdigit]
-let string = [%sedlex.regexp? '"', Star stringelem, '"']
 
 let rec string lexbuf =
   match%sedlex lexbuf with
@@ -62,7 +57,7 @@ let rec string lexbuf =
       let s = Buffer.contents string_buffer in
       Buffer.clear string_buffer;
       s
-  | Plus (Sub (any, (0 .. 31 | 0x7f | '"' | '\''))) ->
+  | Plus (Sub (any, (0 .. 31 | 0x7f | '"' (*ZZZ | '\'' *)))) ->
       Buffer.add_string string_buffer (Sedlexing.Utf8.lexeme lexbuf);
       string lexbuf
   | "\\t" ->
@@ -94,7 +89,11 @@ let rec string lexbuf =
       Buffer.add_utf_8_uchar string_buffer
         (Uchar.unsafe_of_int (int_of_string ("0x" ^ n)));
       string lexbuf
-  | _ -> assert false
+  | _ ->
+      raise
+        (Misc.Syntax_error
+           ( Sedlexing.lexing_positions lexbuf,
+             Printf.sprintf "Malformed string.\n" ))
 
 (* ZZZ names should be well-formed utf strings... *)
 
@@ -159,6 +158,9 @@ let rec token lexbuf =
   | "local" -> LOCAL
   | "global" -> GLOBAL
   | "start" -> START
+  | "elem" -> ELEM
+  | "declare" -> DECLARE
+  | "item" -> ITEM
   | "memory" -> MEMORY
   | "data" -> DATA
   | "offset" -> OFFSET
@@ -185,12 +187,16 @@ let rec token lexbuf =
   | "return_call_ref" -> RETURN_CALL_REF
   | "return_call_indirect" -> RETURN_CALL_INDIRECT
   | "drop" -> INSTR Drop
+  | "pop" -> POP
   | "select" -> SELECT
   | "local.get" -> LOCAL_GET
   | "local.set" -> LOCAL_SET
   | "local.tee" -> LOCAL_TEE
   | "global.get" -> GLOBAL_GET
   | "global.set" -> GLOBAL_SET
+  | "i32.load8_u" -> I32LOAD8 Unsigned
+  | "i32.store8" -> I32STORE8
+  (* ZZZ more memory instructions *)
   | "ref.null" -> REF_NULL
   | "ref.func" -> REF_FUNC
   | "ref.is_null" -> INSTR RefIsNull
@@ -304,24 +310,24 @@ let rec token lexbuf =
   | "f64.le" -> INSTR (BinOp (F64 Le))
   | "f64.ge" -> INSTR (BinOp (F64 Ge))
   | "i32.wrap_i64" -> INSTR I32WrapI64
-  | "i32_trunc_f32_s" -> INSTR (UnOp (I32 (Trunc (`F32, Signed))))
-  | "i32_trunc_f32_u" -> INSTR (UnOp (I32 (Trunc (`F32, Unsigned))))
-  | "i32_trunc_f64_s" -> INSTR (UnOp (I32 (Trunc (`F64, Signed))))
-  | "i32_trunc_f64_u" -> INSTR (UnOp (I32 (Trunc (`F64, Unsigned))))
-  | "i32_trunc_sat_f32_s" -> INSTR (UnOp (I32 (TruncSat (`F32, Signed))))
-  | "i32_trunc_sat_f32_u" -> INSTR (UnOp (I32 (TruncSat (`F32, Unsigned))))
-  | "i32_trunc_sat_f64_s" -> INSTR (UnOp (I32 (TruncSat (`F64, Signed))))
-  | "i32_trunc_sat_f64_u" -> INSTR (UnOp (I32 (TruncSat (`F64, Unsigned))))
+  | "i32.trunc_f32_s" -> INSTR (UnOp (I32 (Trunc (`F32, Signed))))
+  | "i32.trunc_f32_u" -> INSTR (UnOp (I32 (Trunc (`F32, Unsigned))))
+  | "i32.trunc_f64_s" -> INSTR (UnOp (I32 (Trunc (`F64, Signed))))
+  | "i32.trunc_f64_u" -> INSTR (UnOp (I32 (Trunc (`F64, Unsigned))))
+  | "i32.trunc_sat_f32_s" -> INSTR (UnOp (I32 (TruncSat (`F32, Signed))))
+  | "i32.trunc_sat_f32_u" -> INSTR (UnOp (I32 (TruncSat (`F32, Unsigned))))
+  | "i32.trunc_sat_f64_s" -> INSTR (UnOp (I32 (TruncSat (`F64, Signed))))
+  | "i32.trunc_sat_f64_u" -> INSTR (UnOp (I32 (TruncSat (`F64, Unsigned))))
   | "i64.extend_i32_s" -> INSTR (I64ExtendI32 Signed)
   | "i64.extend_i32_u" -> INSTR (I64ExtendI32 Unsigned)
-  | "i64_trunc_f32_s" -> INSTR (UnOp (I64 (Trunc (`F32, Signed))))
-  | "i64_trunc_f32_u" -> INSTR (UnOp (I64 (Trunc (`F32, Unsigned))))
-  | "i64_trunc_f64_s" -> INSTR (UnOp (I64 (Trunc (`F64, Signed))))
-  | "i64_trunc_f64_u" -> INSTR (UnOp (I64 (Trunc (`F64, Unsigned))))
-  | "i64_trunc_sat_f32_s" -> INSTR (UnOp (I64 (TruncSat (`F32, Signed))))
-  | "i64_trunc_sat_f32_u" -> INSTR (UnOp (I64 (TruncSat (`F32, Unsigned))))
-  | "i64_trunc_sat_f64_s" -> INSTR (UnOp (I64 (TruncSat (`F64, Signed))))
-  | "i64_trunc_sat_f64_u" -> INSTR (UnOp (I64 (TruncSat (`F64, Unsigned))))
+  | "i64.trunc_f32_s" -> INSTR (UnOp (I64 (Trunc (`F32, Signed))))
+  | "i64.trunc_f32_u" -> INSTR (UnOp (I64 (Trunc (`F32, Unsigned))))
+  | "i64.trunc_f64_s" -> INSTR (UnOp (I64 (Trunc (`F64, Signed))))
+  | "i64.trunc_f64_u" -> INSTR (UnOp (I64 (Trunc (`F64, Unsigned))))
+  | "i64.trunc_sat_f32_s" -> INSTR (UnOp (I64 (TruncSat (`F32, Signed))))
+  | "i64.trunc_sat_f32_u" -> INSTR (UnOp (I64 (TruncSat (`F32, Unsigned))))
+  | "i64.trunc_sat_f64_s" -> INSTR (UnOp (I64 (TruncSat (`F64, Signed))))
+  | "i64.trunc_sat_f64_u" -> INSTR (UnOp (I64 (TruncSat (`F64, Unsigned))))
   | "f32.convert_i32_s" -> INSTR (UnOp (F32 (Convert (`I32, Signed))))
   | "f32.convert_i32_u" -> INSTR (UnOp (F32 (Convert (`I32, Unsigned))))
   | "f32.convert_i64_s" -> INSTR (UnOp (F32 (Convert (`I64, Signed))))
@@ -352,6 +358,14 @@ let rec token lexbuf =
   | "catch" -> CATCH
   | "catch_all" -> CATCH_ALL
   | "throw" -> THROW
+  | "align=", uN ->
+      MEM_ALIGN
+        (Sedlexing.Utf8.sub_lexeme lexbuf 6
+           (Sedlexing.lexeme_length lexbuf - 6))
+  | "offset=", uN ->
+      MEM_OFFSET
+        (Sedlexing.Utf8.sub_lexeme lexbuf 7
+           (Sedlexing.lexeme_length lexbuf - 7))
   | keyword ->
       raise
         (Misc.Syntax_error

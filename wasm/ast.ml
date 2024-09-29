@@ -43,6 +43,7 @@ type subtype = {
   final : bool;
 }
 
+type limits = { mi : Int32.t; ma : Int32.t option }
 type globaltype = valtype muttype
 type typeuse = idx option * functype option
 
@@ -113,6 +114,7 @@ type float_bin_op =
   | Ge
 
 type blocktype = Idx of idx | ValType of valtype
+type memarg = { offset : Int32.t; align : Int32.t }
 
 type instr =
   | Block of {
@@ -162,6 +164,8 @@ type instr =
   | LocalTee of idx
   | GlobalGet of idx
   | GlobalSet of idx
+  | I32Load8 of signage * memarg
+  | I32Store8 of memarg
   | RefNull of heaptype
   | RefFunc of idx
   | RefIsNull
@@ -197,6 +201,8 @@ type instr =
   | ExternConvertAny
   | AnyConvertExtern
   | Folded of instr * instr list
+  (* Binaryen extensions *)
+  | Pop of valtype
   | TupleMake of Int32.t
   | TupleExtract of Int32.t * Int32.t
 
@@ -206,6 +212,7 @@ type expr = instr list
 
 type importdesc =
   | Func of string option * typeuse
+  | Memory of string option * limits
   | Global of string option * globaltype
   | Tag of string option * typeuse
 
@@ -221,8 +228,10 @@ type modulefield =
       locals : (string option * valtype) list;
       instrs : instr list;
     }
+  | Memory of string option * limits * string option
   | Tag of string option * typeuse
   | Global of string option * globaltype * expr
   | Export of string * exportdesc
-  | Data of { id : string option; init : string; mode : datamode }
   | Start of idx
+  | Elem of string option * reftype * expr list
+  | Data of { id : string option; init : string; mode : datamode }
