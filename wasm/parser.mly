@@ -1,8 +1,8 @@
 (*
+ZZZ
 - More memory instructions
 - Tables
 - Segments
-- String parsing
 *)
 
 %token <string> NAT
