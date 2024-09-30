@@ -162,8 +162,121 @@ let rectype f t =
            subtype)
         l
 
+let binop f op =
+  Format.fprintf f "%s"
+    (match op with
+    | Add -> "+"
+    | Sub -> "-"
+    | Gt Signed -> ">s"
+    | Gt Unsigned -> ">u"
+    | Lt Signed -> "<s"
+    | Lt Unsigned -> "<s"
+    | Or -> "|"
+    | And -> "&"
+    | Ne -> "!="
+    | Eq -> "==")
+
+(* precedence, labels *)
+let rec instr f i =
+  match i.descr with
+  | Block (label, l) -> block f label "" l
+  | Loop (label, l) -> block f label "loop " l
+  | If (_label, i, l1, l2) ->
+      Format.fprintf f "@[@[<hv2>@[if@ %a@ {@]@ %a" instr i
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f "@ ")
+           deliminated_instr)
+        l1;
+      Option.iter
+        (fun l2 ->
+          Format.fprintf f "@]@ @[<2hv>@[}@ else@ {@]@ %a"
+            (Format.pp_print_list
+               ~pp_sep:(fun f () -> Format.fprintf f "@ ")
+               deliminated_instr)
+            l2)
+        l2;
+      Format.fprintf f "@]@ }@]"
+  | Unreachable -> Format.fprintf f "unreachable"
+  | Nop -> Format.fprintf f "nop"
+  | Get x -> Format.fprintf f "%s" x
+  | Set (x, i) -> Format.fprintf f "@[<2>%s@ :=@ %a@]" x instr i
+  | Tee (x, i) -> Format.fprintf f "@[<2>%s@ =@ %a@]" x instr i
+  | Call (i, l) ->
+      Format.fprintf f "@[<2>%a@[(%a)@]@]" instr i
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+           instr)
+        l
+  (*
+  | Struct of string option * (string * instr) list
+*)
+  | String s -> Format.fprintf f "\"%s\"" s (* Escape *)
+  | Int s -> Format.fprintf f "%s" s
+  | Cast (i, t) -> Format.fprintf f "@[<2>%a@ as@ %a@]" instr i reftype t
+  | Test (i, t) -> Format.fprintf f "@[<2>%a@ is@ %a@]" instr i reftype t
+  | StructGet (i, s) -> Format.fprintf f "%a.%s" instr i s
+  | StructSet (i, s, i') ->
+      Format.fprintf f "@[<2>%a.%s@ =@ %a@]" instr i s instr i'
+  | BinOp (op, i, i') ->
+      Format.fprintf f "@[<2>%a@ %a@ %a@]" instr i binop op instr i'
+  | Local (x, t, i) ->
+      Format.fprintf f "@[let@ %s" x;
+      Option.iter (fun t -> Format.fprintf f "@ :@ %a" valtype t) t;
+      Option.iter (fun i -> Format.fprintf f "@ =@ %a" instr i) i;
+      Format.fprintf f "@]"
+  | Br (label, i) ->
+      Format.fprintf f "@[br@ %s" label;
+      Option.iter (fun i -> Format.fprintf f "@ %a" instr i) i;
+      Format.fprintf f "@]"
+  | Br_if (label, i) ->
+      Format.fprintf f "@[br_if@ %s" label;
+      Format.fprintf f "@ =@ %a" instr i;
+      Format.fprintf f "@]"
+  | Return i ->
+      Format.fprintf f "@[return";
+      Option.iter (fun i -> Format.fprintf f "@ %a" instr i) i;
+      Format.fprintf f "@]"
+  | Sequence l ->
+      Format.fprintf f "@[<1>(%a)@]"
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+           instr)
+        l
+  | _ -> Format.fprintf f "/* instr */"
+
+(*
+  | Br_table of string list * instr
+  | Br_on_null of string * instr
+  | Br_on_non_null of string * instr
+  | Br_on_cast of string * reftype * instr
+  | Br_on_cast_fail of string * reftype * instr
+*)
+and block f _label kind l =
+  Format.fprintf f "@[<hv2>%s{%a]@}" kind
+    (Format.pp_print_list
+       ~pp_sep:(fun f () -> Format.fprintf f "@ ")
+       deliminated_instr)
+    l
+
+and deliminated_instr f i =
+  match i.descr with
+  | Block _ | Loop _ | If _ -> Format.fprintf f "%a" instr i
+  | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | Struct _ | String _
+  | Int _ | Cast _ | Test _ | StructGet _ | StructSet _ | BinOp _ | Local _
+  | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | Br_on_cast_fail _ | Return _ | Sequence _ ->
+      Format.fprintf f "@[%a;@]" instr i
+
 let modulefield f field =
-  match field with Type t -> rectype f t | _ -> Format.fprintf f "/*...*/"
+  match field with
+  | Type t -> rectype f t
+  | Func { name; typ = _; sign = _; body = _lab, body } ->
+      Format.fprintf f "@[@[<hv2>@[fn@ %s@ {@]@ %a@]@ @]}" name
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f "@ ")
+           deliminated_instr)
+        body
+  | _ -> Format.fprintf f "/*...*/"
 (*
   | Fundecl of { name : string; typ : string option; sign : funsig option }
   | Func of {
