@@ -42,7 +42,7 @@
 %token BR_ON_NULL BR_ON_NON_NULL
 
 %nonassoc LET
-%nonassoc br IDENT plain
+%nonassoc IDENT prec_branch prec_instr
 %nonassoc LBRACE LBRACKET
 %right EQUAL COLONEQUAL
 %nonassoc LTU GTU LTS GTS
@@ -55,9 +55,10 @@
 (* BR foo 1 + 2 understood as BR foo (1 + 2)
    BR_TABLE { ...} 1 + 2 understood as BR_TABLE { ...} (1 + 2)
    BR foo { ... } understood as a single instruction
-   LET x = br foo LET --> LET x = (br foo) LET  (LET < br)
+   LET x = br foo LET --> LET x = (br foo) LET  (LET < branch)
    IF BR_TABLE {...} { ... } --> IF (BR_TABLE {...}) { ... } (br < LBRACE)
    IF foo { ... } --> IF (foo) { ... }    (not a struct)  (IDENT < LBRACE)
+   { ... } ( ... } --> sequence (instr < LPAREN)
 *)
 
 %{
@@ -178,14 +179,14 @@ func:
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
 %inline block:
-| label = label "{" l = list(delimited_instr) "}" { (label, l) }
+| label = label "{" l = delimited_instr_list "}" { (label, l) }
 
 %inline blockinstr:
 | b = block { let (label, l) = b in with_loc $sloc (Block(label, l)) }
-| label = label LOOP "{" l = list(delimited_instr) "}"
+| label = label LOOP "{" l = delimited_instr_list "}"
   { with_loc $sloc (Loop(label, l)) }
-| label = label IF e = instr "{" l1 = list(delimited_instr) "}"
-  l2 = option(ELSE  "{" l = list(delimited_instr) "}" { l })
+| label = label IF e = instr "{" l1 = delimited_instr_list "}"
+  l2 = option(ELSE  "{" l = delimited_instr_list "}" { l })
   { with_loc $sloc (If(label, e, l1, l2)) }
 
 plaininstr:
@@ -217,27 +218,28 @@ plaininstr:
 | i = instr "|" j = instr { with_loc $sloc (BinOp(Or, i, j)) }
 | LET x = IDENT t = option(":" t = valtype {t}) i = option("=" i = instr {i})
   { with_loc $sloc (Local (x, t, i)) }
-| BR l = IDENT i = ioption(instr) { with_loc $sloc (Br (l, i)) } %prec br
-| BR_IF l = IDENT i = instr { with_loc $sloc (Br_if (l, i)) } %prec br
+| BR l = IDENT i = ioption(instr) { with_loc $sloc (Br (l, i)) } %prec prec_branch
+| BR_IF l = IDENT i = instr { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
 | BR_TABLE "{" l = nonempty_list(IDENT) "}" i = instr
-  { with_loc $sloc (Br_table (l, i)) } %prec br
-| BR_ON_NULL l = IDENT i = instr { with_loc $sloc (Br_on_null (l, i)) } %prec br
-| BR_ON_NON_NULL l = IDENT i = instr { with_loc $sloc (Br_on_non_null (l, i)) } %prec br
+  { with_loc $sloc (Br_table (l, i)) } %prec prec_branch
+| BR_ON_NULL l = IDENT i = instr { with_loc $sloc (Br_on_null (l, i)) } %prec prec_branch
+| BR_ON_NON_NULL l = IDENT i = instr { with_loc $sloc (Br_on_non_null (l, i)) } %prec prec_branch
 | BR_ON_CAST l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
 | BR_ON_CAST_FAIL l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
-| RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec br
+| RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec prec_branch
 | "[" separated_list(",", instr) "]" { assert false } (* array.new *)
 | "[" instr ";" instr "]" { assert false } (* array.new_fixed *)
 | plaininstr "[" instr "]" { assert false } (* array.get *)
 | plaininstr "[" instr "]" "=" instr { assert false } (* array.set *)
 
 instr:
-| i = blockinstr { i }
-| i = plaininstr { i } %prec plain
+| i = blockinstr { i } %prec prec_instr
+| i = plaininstr { i } %prec prec_instr
 
-delimited_instr:
-| i = blockinstr { i }
-| i = plaininstr ";" { i }
+delimited_instr_list:
+| {[]}
+| i = blockinstr l = delimited_instr_list  {i :: l }
+| i = plaininstr ";" l = delimited_instr_list  {i :: l }
 
 global:
 | LET name = IDENT

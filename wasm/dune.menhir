@@ -1,6 +1,6 @@
 (menhir
  (modules parser)
- (flags --table))
+ (flags --table --dump))
 
 (menhir
  (modules fast_parser)

@@ -173,6 +173,7 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | TupleMake _ -> no_loc (Sequence args)
   | Const (I32 n) -> no_loc (Int (Int32.to_string n))
   | StructNew i ->
+      (*ZZZZ*)
       ignore args;
       no_loc (Struct (Some (idx st `Type i), []))
   | RefI31 -> no_loc (Cast (sequence args, { nullable = false; typ = I31 }))
