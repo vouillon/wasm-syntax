@@ -2,8 +2,9 @@ module Src = Wasm.Ast.Text
 
 let get_annot (a, _) = a
 let get_type (_, t) = t
-let name_field _st _a = "foo"
-let name_type _st _a = "foo"
+let name_field _st a = Option.value ~default:"foo" a
+let name_type _st a = Option.value ~default:"foo" a
+let name_func _st a = Option.value ~default:"foo" a
 let annotated a t = (a, t)
 
 (*ZZZ Get name from table*)
@@ -187,7 +188,7 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
       Some
         (Func
            {
-             name = "toto";
+             name = name_func st id;
              typ = None;
              sign = None;
              body = (None, List.map (fun i -> instr st i []) instrs);
