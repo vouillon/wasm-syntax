@@ -36,3 +36,9 @@ Folding:
 - at end of block; write stack contents
 
 Keep strings as strings
+
+Precedence tests (read and write text and check unchanged)
+
+When inheriting, we can omit existing fields
+
+   type int32 : custom = { .., foo: i32 }

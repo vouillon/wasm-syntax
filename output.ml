@@ -136,21 +136,21 @@ let fieldtype = muttype storagetype
 
 let comptype f (t : comptype) =
   match t with
-  | Func t -> functype f t
+  | Func t -> Format.fprintf f "@]@ %a@]" functype t
   | Struct l ->
-      Format.fprintf f "{@[<1> @[<hv>%a@]@ @]}"
+      Format.fprintf f "@ {@]@ %a@]@ }"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (fun f (nm, t) -> Format.fprintf f "@[<2>%s:@ %a@]" nm fieldtype t))
         (Array.to_list l)
-  | Array t -> Format.fprintf f "@[<1>[%a]@]" fieldtype t
+  | Array t -> Format.fprintf f "@]@ @[<1>[%a]@]@]" fieldtype t
 
 let subtype f (nm, { typ; supertype; final }) =
-  Format.fprintf f "@[<2>type@ %s%s" nm (if final then "" else " open");
+  Format.fprintf f "@[@[<hv2>@[type@ %s%s" nm (if final then "" else " open");
   (match supertype with
   | Some supertype -> Format.fprintf f "@ :@ %s" supertype
   | None -> ());
-  Format.fprintf f "@ =@ %a@]" comptype typ
+  Format.fprintf f "@ =%a@]" comptype typ
 
 let rectype f t =
   match Array.to_list t with
