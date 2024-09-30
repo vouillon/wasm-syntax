@@ -173,12 +173,11 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | TupleMake _ -> no_loc (Sequence args)
   | Const (I32 n) -> no_loc (Int (Int32.to_string n))
   | StructNew i ->
-      (*ZZZZ*)
-      ignore args;
-      no_loc (Struct (Some (idx st `Type i), []))
+      (*ZZZZ Use type *)
+      no_loc (Struct (Some (idx st `Type i), List.map (fun i -> ("f", i)) args))
   | RefI31 -> no_loc (Cast (sequence args, { nullable = false; typ = I31 }))
   | ArrayNewData _ -> no_loc (String "foo")
-  | _ -> assert false
+  | _ -> no_loc Unreachable (* ZZZ *)
 
 let modulefield st (f : Src.modulefield) : Ast.modulefield option =
   match f with

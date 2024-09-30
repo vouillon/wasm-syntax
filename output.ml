@@ -207,9 +207,14 @@ let rec instr f i =
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            instr)
         l
-  (*
-  | Struct of string option * (string * instr) list
-*)
+  | Struct (nm, l) ->
+      Format.fprintf f "@[@[<2>@[";
+      Option.iter (fun nm -> Format.fprintf f "%s@ " nm) nm;
+      Format.fprintf f "{@]@ %a@]@ }@]"
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+           (fun f (nm, i) -> Format.fprintf f "@[<2>%s:@ %a@]" nm instr i))
+        l
   | String s -> Format.fprintf f "\"%s\"" s (* Escape *)
   | Int s -> Format.fprintf f "%s" s
   | Cast (i, t) -> Format.fprintf f "@[<2>%a@ as@ %a@]" instr i reftype t
