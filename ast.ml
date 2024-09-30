@@ -9,6 +9,9 @@ type binop = Plus | Minus | Gtu | Ltu | Or | And
 type location = { loc_start : Lexing.position; loc_end : Lexing.position }
 type 'a with_loc = { descr : 'a; loc : location }
 
+let no_loc descr =
+  { descr; loc = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos } }
+
 type instr_descr =
   | Block of string option * instr list
   | Loop of string option * instr list

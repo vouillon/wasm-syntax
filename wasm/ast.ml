@@ -1,5 +1,9 @@
 (* Types *)
 
+type packedtype = I8 | I16
+type 'typ muttype = { mut : bool; typ : 'typ }
+type limits = { mi : Int32.t; ma : Int32.t option }
+
 module Types (X : sig
   type idx
   type 'a annotated_array
@@ -30,9 +34,9 @@ struct
     | Tuple of valtype list
 
   type functype = { params : valtype array; results : valtype array }
-  type packedtype = I8 | I16
+  type nonrec packedtype = packedtype = I8 | I16
   type storagetype = Value of valtype | Packed of packedtype
-  type 'typ muttype = { mut : bool; typ : 'typ }
+  type nonrec 'typ muttype = 'typ muttype = { mut : bool; typ : 'typ }
   type fieldtype = storagetype muttype
 
   type comptype =
@@ -42,7 +46,7 @@ struct
 
   type subtype = { typ : comptype; supertype : X.idx option; final : bool }
   type rectype = subtype X.annotated_array
-  type limits = { mi : Int32.t; ma : Int32.t option }
+  type nonrec limits = limits = { mi : Int32.t; ma : Int32.t option }
   type globaltype = valtype muttype
 end
 
@@ -243,7 +247,7 @@ module Text = struct
   type datamode = Passive | Active of idx * expr
 
   type modulefield =
-    | Types of (id option * subtype) array
+    | Types of rectype
     | Import of {
         module_ : string;
         name : string;
