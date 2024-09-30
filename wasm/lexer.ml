@@ -45,7 +45,7 @@ let rec comment lexbuf =
   | ';' | '(' | Plus (Sub (any, (';' | '('))) -> comment lexbuf
   | _ ->
       raise
-        (Misc.Syntax_error
+        (Parsing.Syntax_error
            ( Sedlexing.lexing_positions lexbuf,
              Printf.sprintf "Malformed comment.\n" ))
 
@@ -91,7 +91,7 @@ let rec string lexbuf =
       string lexbuf
   | _ ->
       raise
-        (Misc.Syntax_error
+        (Parsing.Syntax_error
            ( Sedlexing.lexing_positions lexbuf,
              Printf.sprintf "Malformed string.\n" ))
 
@@ -365,11 +365,11 @@ let rec token lexbuf =
            (Sedlexing.lexeme_length lexbuf - 7))
   | keyword ->
       raise
-        (Misc.Syntax_error
+        (Parsing.Syntax_error
            ( Sedlexing.lexing_positions lexbuf,
              Printf.sprintf "Unkown keyword '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))
   | _ ->
       raise
-        (Misc.Syntax_error
+        (Parsing.Syntax_error
            (Sedlexing.lexing_positions lexbuf, Printf.sprintf "Syntax error.\n"))

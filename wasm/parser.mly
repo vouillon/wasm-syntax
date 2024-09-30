@@ -123,12 +123,15 @@ ZZZ
 %token TUPLE_EXTRACT
 
 %{
+ (* To avoid references to module Wasm in the generated mli file *)
+module Wasm = struct end
+
 open Ast
 
 let map_fst f (x, y) = (f x, y)
 %}
 
-%start <string option * Ast.modulefield list> module_
+%start <string option * Ast.modulefield list> parse
 
 %%
 
@@ -159,7 +162,7 @@ idx:
 name: s = STRING
   { if not (String.is_valid_utf_8 s) then
       raise
-        (Misc.Syntax_error
+        (Parsing.Syntax_error
            ( $sloc,
              Printf.sprintf "Malformed name \"%s\".\n" s));
     s }
@@ -559,7 +562,7 @@ modulefield:
 | f = data
   { f }
 
-module_:
+parse:
 | "(" MODULE name = ID ? l = modulefield * ")" EOF
   { (name, l) }
 | l = modulefield * EOF

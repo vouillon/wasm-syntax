@@ -1,3 +1,8 @@
+(library (name wasm)
+  (preprocess (pps sedlex.ppx))
+  (libraries sedlex menhirLib)
+)
+
 (menhir
  (modules parser)
  (flags --table)
@@ -60,9 +65,4 @@
     --compare-errors %{dep:parser_messages.auto.messages}
     --compare-errors %{dep:parser_messages.messages}
   ))
-)
-
-(executable (name main)
-  (preprocess (pps sedlex.ppx))
-  (libraries sedlex menhirLib)
 )

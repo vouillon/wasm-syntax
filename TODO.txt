@@ -9,6 +9,15 @@
 - parse wasm code and output to this format
 - type for 8bit/16bit values + explicit type expansion
 - validation of wasm code
+- switch translated to br_table?
+    match (foo) {
+    1 => ..,
+    2 => ..,
+    _ => ..
+    }
+- same for try/catch
+    try (body) { a => br x, ..., _ => br z}
+  (not sure this works well)
 
 ====
 
