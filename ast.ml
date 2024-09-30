@@ -5,7 +5,8 @@ include Wasm.Ast.Types (struct
   type 'a annotated_array = (string * 'a) array
 end)
 
-type binop = Plus | Minus | Gtu | Ltu | Or | And
+type signage = Wasm.Ast.signage = Signed | Unsigned
+type binop = Add | Sub | Gt of signage | Lt of signage | Or | And | Ne | Eq
 type location = { loc_start : Lexing.position; loc_end : Lexing.position }
 type 'a with_loc = { descr : 'a; loc : location }
 
@@ -20,8 +21,8 @@ type instr_descr =
   | Nop
   | Get of idx
   | Set of idx * instr
-  | Call of idx * instr list
-  | RefFunc of idx
+  | Tee of idx * instr
+  | Call of instr * instr list
   | Struct of string option * (string * instr) list
   | String of string
   | Int of string

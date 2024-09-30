@@ -52,6 +52,8 @@ end
 
 (* Instructions *)
 
+type signage = Signed | Unsigned
+
 module Instructions (X : sig
   type idx
   type typeuse
@@ -67,7 +69,7 @@ struct
     | F32 of 'f32
     | F64 of 'f64
 
-  type signage = Signed | Unsigned
+  type nonrec signage = signage = Signed | Unsigned
 
   type int_un_op =
     | Clz
@@ -313,7 +315,7 @@ module Binary = struct
   type datamode = Passive | Active of idx * expr
 
   type modulefield =
-    | Types of subtype array
+    | Types of rectype
     | Import of {
         module_ : string;
         name : string;

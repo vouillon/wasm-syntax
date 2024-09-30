@@ -2,7 +2,7 @@ parse: UNREACHABLE
 ##
 ## Ends in an error in state: 0.
 ##
-## start' -> . start [ # ]
+## parse' -> . parse [ # ]
 ##
 ## The known suffix of the stack is as follows:
 ##
@@ -110,7 +110,7 @@ parse: LET IDENT COLON AMPERSAND UNREACHABLE
 ##
 ## Ends in an error in state: 15.
 ##
-## reftype -> AMPERSAND . boption(QUESTIONMARK) heaptype [ UNREACHABLE TYPE STRING SEMI RPAREN RETURN REC RBRACKET RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACKET LBRACE IS INT IF IDENT GTU FN EQUAL EOF DOT COMMA BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR AS ARROW AMPERSAND ]
+## reftype -> AMPERSAND . boption(QUESTIONMARK) heaptype [ UNREACHABLE TYPE STRING SEMI RPAREN RETURN REC RBRACKET RBRACE QUOTE PLUS PIPE NOP MINUS LTU LTS LPAREN LOOP LET LBRACKET LBRACE IS INT IF IDENT GTU GTS FN EQUAL EOF DOT COMMA BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR AS ARROW AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## AMPERSAND
@@ -122,7 +122,7 @@ parse: LET IDENT COLON AMPERSAND QUESTIONMARK UNREACHABLE
 ##
 ## Ends in an error in state: 17.
 ##
-## reftype -> AMPERSAND boption(QUESTIONMARK) . heaptype [ UNREACHABLE TYPE STRING SEMI RPAREN RETURN REC RBRACKET RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACKET LBRACE IS INT IF IDENT GTU FN EQUAL EOF DOT COMMA BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR AS ARROW AMPERSAND ]
+## reftype -> AMPERSAND boption(QUESTIONMARK) . heaptype [ UNREACHABLE TYPE STRING SEMI RPAREN RETURN REC RBRACKET RBRACE QUOTE PLUS PIPE NOP MINUS LTU LTS LPAREN LOOP LET LBRACKET LBRACE IS INT IF IDENT GTU GTS FN EQUAL EOF DOT COMMA BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR AS ARROW AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## AMPERSAND boption(QUESTIONMARK)
@@ -379,9 +379,9 @@ parse: LET IDENT EQUAL QUOTE UNREACHABLE
 ##
 ## Ends in an error in state: 67.
 ##
-## instr -> QUOTE . IDENT COLON LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## instr -> QUOTE . IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## instr -> QUOTE . IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE . IDENT COLON LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE . IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE . IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE
@@ -393,9 +393,9 @@ parse: LET IDENT EQUAL QUOTE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 68.
 ##
-## instr -> QUOTE IDENT . COLON LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## instr -> QUOTE IDENT . COLON LOOP LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## instr -> QUOTE IDENT . COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT . COLON LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT . COLON LOOP LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT . COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT
@@ -407,9 +407,9 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 69.
 ##
-## instr -> QUOTE IDENT COLON . LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## instr -> QUOTE IDENT COLON . LOOP LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## instr -> QUOTE IDENT COLON . IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON . LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON . LOOP LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON . IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON
@@ -421,7 +421,7 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON LOOP UNREACHABLE
 ##
 ## Ends in an error in state: 70.
 ##
-## instr -> QUOTE IDENT COLON LOOP . LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON LOOP . LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LOOP
@@ -433,7 +433,7 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON LOOP LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 71.
 ##
-## instr -> QUOTE IDENT COLON LOOP LBRACE . list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON LOOP LBRACE . list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LOOP LBRACE
@@ -445,7 +445,7 @@ parse: LET IDENT EQUAL LPAREN UNDERSCORE
 ##
 ## Ends in an error in state: 78.
 ##
-## plaininstr -> LPAREN . loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> LPAREN . loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LPAREN
@@ -457,7 +457,7 @@ parse: LET IDENT EQUAL LOOP UNREACHABLE
 ##
 ## Ends in an error in state: 79.
 ##
-## instr -> LOOP . LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> LOOP . LBRACE list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LOOP
@@ -469,7 +469,7 @@ parse: LET IDENT EQUAL LOOP LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 80.
 ##
-## instr -> LOOP LBRACE . list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> LOOP LBRACE . list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LOOP LBRACE
@@ -481,7 +481,7 @@ parse: LET IDENT EQUAL LET UNREACHABLE
 ##
 ## Ends in an error in state: 83.
 ##
-## plaininstr -> LET . IDENT option(__anonymous_9) option(__anonymous_10) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> LET . IDENT option(__anonymous_9) option(__anonymous_10) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LET
@@ -493,7 +493,7 @@ parse: LET IDENT EQUAL LET IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 84.
 ##
-## plaininstr -> LET IDENT . option(__anonymous_9) option(__anonymous_10) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> LET IDENT . option(__anonymous_9) option(__anonymous_10) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LET IDENT
@@ -505,7 +505,7 @@ parse: LET IDENT EQUAL LET IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 85.
 ##
-## option(__anonymous_9) -> COLON . valtype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EQUAL EOF DOT COMMA AS AMPERSAND ]
+## option(__anonymous_9) -> COLON . valtype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EQUAL EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## COLON
@@ -517,7 +517,7 @@ parse: LET IDENT EQUAL LET IDENT COLON IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 87.
 ##
-## plaininstr -> LET IDENT option(__anonymous_9) . option(__anonymous_10) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> LET IDENT option(__anonymous_9) . option(__anonymous_10) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LET IDENT option(__anonymous_9)
@@ -529,7 +529,7 @@ parse: LET IDENT EQUAL LET IDENT EQUAL UNDERSCORE
 ##
 ## Ends in an error in state: 88.
 ##
-## option(__anonymous_10) -> EQUAL . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## option(__anonymous_10) -> EQUAL . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## EQUAL
@@ -541,8 +541,8 @@ parse: LET IDENT EQUAL LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 90.
 ##
-## instr -> LBRACE . list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> LBRACE . separated_nonempty_list(COMMA,__anonymous_8) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> LBRACE . list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> LBRACE . separated_nonempty_list(COMMA,__anonymous_8) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACE
@@ -552,7 +552,7 @@ Expecting an instruction
 
 parse: FN IDENT LPAREN IDENT COLON IDENT COMMA UNREACHABLE
 ##
-## Ends in an error in state: 245.
+## Ends in an error in state: 251.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON valtype COMMA . separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
 ##
@@ -564,7 +564,7 @@ Expecting a parameter name or an underscore '_'.
 
 parse: FN IDENT LPAREN RPAREN UNREACHABLE
 ##
-## Ends in an error in state: 250.
+## Ends in an error in state: 256.
 ##
 ## option(__anonymous_4) -> LPAREN funcparams RPAREN . ARROW resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -590,7 +590,7 @@ parse: LET IDENT EQUAL IDENT MINUS UNDERSCORE
 ##
 ## Ends in an error in state: 133.
 ##
-## plaininstr -> instr MINUS . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr MINUS . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr MINUS
@@ -602,7 +602,7 @@ parse: LET IDENT EQUAL IDENT AS UNREACHABLE
 ##
 ## Ends in an error in state: 135.
 ##
-## plaininstr -> instr AS . reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr AS . reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr AS
@@ -614,7 +614,7 @@ parse: LET IDENT EQUAL IDENT LTU UNDERSCORE
 ##
 ## Ends in an error in state: 139.
 ##
-## plaininstr -> instr LTU . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr LTU . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr LTU
@@ -624,9 +624,9 @@ Expecting an instruction.
 
 parse: LET IDENT EQUAL IDENT GTU UNDERSCORE
 ##
-## Ends in an error in state: 141.
+## Ends in an error in state: 143.
 ##
-## plaininstr -> instr GTU . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr GTU . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr GTU
@@ -636,7 +636,7 @@ Expecting an instruction.
 
 parse: LET IDENT EQUAL LPAREN IDENT COMMA UNDERSCORE
 ##
-## Ends in an error in state: 154.
+## Ends in an error in state: 158.
 ##
 ## separated_nonempty_list(COMMA,instr) -> instr COMMA . separated_nonempty_list(COMMA,instr) [ RPAREN RBRACKET ]
 ##
@@ -648,7 +648,7 @@ Expecting an instruction, or a closing parenthesis '('.
 
 parse: LET IDENT EQUAL IDENT LBRACE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 157.
+## Ends in an error in state: 161.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT . COLON instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT . COLON instr COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
@@ -661,7 +661,7 @@ Expecting a colon ':' after the field name of a structure.
 
 parse: LET IDENT EQUAL IDENT LBRACE IDENT COLON UNDERSCORE
 ##
-## Ends in an error in state: 158.
+## Ends in an error in state: 162.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON . instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON . instr COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
@@ -674,7 +674,7 @@ Expecting an instruction.
 
 parse: LET IDENT EQUAL IDENT LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 ##
-## Ends in an error in state: 160.
+## Ends in an error in state: 164.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON instr COMMA . separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
 ##
@@ -686,9 +686,9 @@ Expecting a field definition, or a character '}'.
 
 parse: LET IDENT EQUAL IDENT EQUAL UNDERSCORE
 ##
-## Ends in an error in state: 165.
+## Ends in an error in state: 169.
 ##
-## plaininstr -> IDENT EQUAL . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> IDENT EQUAL . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IDENT EQUAL
@@ -698,7 +698,7 @@ Expecting an instruction.
 
 parse: LET IDENT EQUAL LBRACE IDENT COLON UNDERSCORE
 ##
-## Ends in an error in state: 187.
+## Ends in an error in state: 193.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON . instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON . instr COMMA separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
@@ -711,7 +711,7 @@ Expecting an instruction.
 
 parse: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 ##
-## Ends in an error in state: 189.
+## Ends in an error in state: 195.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON instr COMMA . separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
 ##
@@ -723,7 +723,7 @@ Expecting a field definition, or a character '}'.
 
 parse: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA IDENT UNREACHABLE
 ##
-## Ends in an error in state: 190.
+## Ends in an error in state: 196.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT . COLON instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT . COLON instr COMMA separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
@@ -736,9 +736,9 @@ Expecting a colon ':'.
 
 parse: LET IDENT EQUAL QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 225.
+## Ends in an error in state: 231.
 ##
-## instr -> QUOTE IDENT COLON LBRACE . list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON LBRACE . list(delimited_instr) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LBRACE
@@ -748,7 +748,7 @@ Expecting an instruction, or a character '}'.
 
 parse: FN IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 254.
+## Ends in an error in state: 260.
 ##
 ## fundecl -> FN IDENT COLON IDENT . option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ## valtype -> IDENT . [ ARROW ]
@@ -761,7 +761,7 @@ Expecting a list of function parameters.
 
 parse: FN IDENT LPAREN UNREACHABLE
 ##
-## Ends in an error in state: 239.
+## Ends in an error in state: 245.
 ##
 ## option(__anonymous_4) -> LPAREN . funcparams RPAREN ARROW resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -773,7 +773,7 @@ Expecting a list of function parameters.
 
 parse: FN IDENT LPAREN IDENT UNREACHABLE
 ##
-## Ends in an error in state: 242.
+## Ends in an error in state: 248.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat . COLON valtype [ RPAREN ]
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat . COLON valtype COMMA separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
@@ -786,7 +786,7 @@ Expecting a colon ':' followed by a value type.
 
 parse: FN IDENT LPAREN IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 243.
+## Ends in an error in state: 249.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON . valtype [ RPAREN ]
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON . valtype COMMA separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
@@ -799,7 +799,7 @@ Expecting a value type.
 
 parse: FN IDENT LPAREN IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 244.
+## Ends in an error in state: 250.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON valtype . [ RPAREN ]
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON valtype . COMMA separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
@@ -812,7 +812,7 @@ Expecting a comma ',' followed by a parameter declaration, or a closing parenthe
 
 parse: FN IDENT LPAREN RPAREN ARROW UNREACHABLE
 ##
-## Ends in an error in state: 251.
+## Ends in an error in state: 257.
 ##
 ## option(__anonymous_4) -> LPAREN funcparams RPAREN ARROW . resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -824,7 +824,7 @@ Expecting a result type.
 
 parse: REC LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 262.
+## Ends in an error in state: 269.
 ##
 ## list(modulefield) -> modulefield . list(modulefield) [ EOF ]
 ##
@@ -836,7 +836,7 @@ Expecting a module field.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 ##
-## Ends in an error in state: 265.
+## Ends in an error in state: 272.
 ##
 ## func -> fundecl . LBRACE list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ## func -> fundecl . QUOTE IDENT COLON LBRACE list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
@@ -850,7 +850,7 @@ Expecting a label, the start of the function body, or another module field.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE UNREACHABLE
 ##
-## Ends in an error in state: 266.
+## Ends in an error in state: 273.
 ##
 ## func -> fundecl QUOTE . IDENT COLON LBRACE list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ##
@@ -862,7 +862,7 @@ Expecting a label name.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 267.
+## Ends in an error in state: 274.
 ##
 ## func -> fundecl QUOTE IDENT . COLON LBRACE list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ##
@@ -874,7 +874,7 @@ Expecting a colon ':' after the label name.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 268.
+## Ends in an error in state: 275.
 ##
 ## func -> fundecl QUOTE IDENT COLON . LBRACE list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ##
@@ -886,7 +886,7 @@ Expecting a block starting with character '{'.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 269.
+## Ends in an error in state: 276.
 ##
 ## func -> fundecl QUOTE IDENT COLON LBRACE . list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ##
@@ -898,7 +898,7 @@ Expecting an instruction, or a character '}'.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 272.
+## Ends in an error in state: 279.
 ##
 ## func -> fundecl LBRACE . list(delimited_instr) RBRACE [ TYPE REC LET FN EOF ]
 ##
@@ -912,7 +912,7 @@ parse: FN IDENT LBRACE IDENT LPAREN UNDERSCORE
 ##
 ## Ends in an error in state: 96.
 ##
-## plaininstr -> IDENT LPAREN . loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> IDENT LPAREN . loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IDENT LPAREN
@@ -925,7 +925,7 @@ parse: FN IDENT LBRACE IDENT PLUS UNDERSCORE
 ##
 ## Ends in an error in state: 123.
 ##
-## plaininstr -> instr PLUS . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr PLUS . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr PLUS
@@ -937,8 +937,8 @@ parse: FN IDENT LBRACE IDENT DOT UNREACHABLE
 ##
 ## Ends in an error in state: 127.
 ##
-## plaininstr -> instr DOT . IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr DOT . IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr DOT . IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr DOT . IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr DOT
@@ -950,8 +950,8 @@ parse: FN IDENT LBRACE IDENT DOT IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 128.
 ##
-## plaininstr -> instr DOT IDENT . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr DOT IDENT . EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr DOT IDENT . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr DOT IDENT . EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr DOT IDENT
@@ -963,7 +963,7 @@ parse: FN IDENT LBRACE IDENT DOT IDENT EQUAL UNDERSCORE
 ##
 ## Ends in an error in state: 129.
 ##
-## plaininstr -> instr DOT IDENT EQUAL . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr DOT IDENT EQUAL . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr DOT IDENT EQUAL
@@ -973,9 +973,9 @@ Expecting an instruction.
 
 parse: FN IDENT LBRACE IDENT LBRACE UNREACHABLE
 ##
-## Ends in an error in state: 156.
+## Ends in an error in state: 160.
 ##
-## plaininstr -> IDENT LBRACE . loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> IDENT LBRACE . loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IDENT LBRACE
@@ -985,12 +985,12 @@ Expecting a field definition, or a character '}'.
 
 parse: FN IDENT LBRACE IDENT TYPE
 ##
-## Ends in an error in state: 169.
+## Ends in an error in state: 175.
 ##
 ## delimited_instr -> plaininstr . SEMI [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> plaininstr . [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
-## plaininstr -> plaininstr . LBRACKET instr RBRACKET [ SEMI PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> plaininstr . LBRACKET instr RBRACKET EQUAL instr [ SEMI PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
+## instr -> plaininstr . [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> plaininstr . LBRACKET instr RBRACKET [ SEMI PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> plaininstr . LBRACKET instr RBRACKET EQUAL instr [ SEMI PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## plaininstr
@@ -1028,7 +1028,7 @@ parse: FN IDENT LBRACE IF UNDERSCORE
 ## Ends in an error in state: 93.
 ##
 ## delimited_instr -> IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF
@@ -1040,10 +1040,11 @@ parse: FN IDENT LBRACE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 95.
 ##
-## plaininstr -> IDENT . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> IDENT . EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> IDENT . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> IDENT . LBRACE loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> IDENT . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> IDENT . COLONEQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> IDENT . EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> IDENT . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> IDENT . LBRACE loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IDENT
@@ -1055,7 +1056,7 @@ parse: FN IDENT LBRACE BR_TABLE UNREACHABLE
 ##
 ## Ends in an error in state: 97.
 ##
-## plaininstr -> BR_TABLE . LBRACE nonempty_list(IDENT) RBRACE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_TABLE . LBRACE nonempty_list(IDENT) RBRACE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_TABLE
@@ -1067,7 +1068,7 @@ parse: FN IDENT LBRACE BR_TABLE LBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 98.
 ##
-## plaininstr -> BR_TABLE LBRACE . nonempty_list(IDENT) RBRACE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_TABLE LBRACE . nonempty_list(IDENT) RBRACE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_TABLE LBRACE
@@ -1092,7 +1093,7 @@ parse: FN IDENT LBRACE BR_TABLE LBRACE IDENT RBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 102.
 ##
-## plaininstr -> BR_TABLE LBRACE nonempty_list(IDENT) RBRACE . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_TABLE LBRACE nonempty_list(IDENT) RBRACE . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_TABLE LBRACE nonempty_list(IDENT) RBRACE
@@ -1104,8 +1105,8 @@ parse: FN IDENT LBRACE BR UNREACHABLE
 ##
 ## Ends in an error in state: 115.
 ##
-## plaininstr -> BR . IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> BR . IDENT instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR . IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR . IDENT instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR
@@ -1117,8 +1118,8 @@ parse: FN IDENT LBRACE BR IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 116.
 ##
-## plaininstr -> BR IDENT . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> BR IDENT . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR IDENT . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR IDENT . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR IDENT
@@ -1130,7 +1131,7 @@ parse: FN IDENT LBRACE IDENT PIPE UNDERSCORE
 ##
 ## Ends in an error in state: 131.
 ##
-## plaininstr -> instr PIPE . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr PIPE . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr PIPE
@@ -1142,7 +1143,7 @@ parse: FN IDENT LBRACE IDENT AMPERSAND UNDERSCORE
 ##
 ## Ends in an error in state: 137.
 ##
-## plaininstr -> instr AMPERSAND . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr AMPERSAND . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr AMPERSAND
@@ -1152,10 +1153,10 @@ Expecting an instruction.
 
 parse: FN IDENT LBRACE IF INT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 182.
+## Ends in an error in state: 188.
 ##
 ## delimited_instr -> IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF instr LBRACE
@@ -1165,10 +1166,10 @@ Expecting an instruction, or the character '}'.
 
 parse: FN IDENT LBRACE IF INT LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 184.
+## Ends in an error in state: 190.
 ##
 ## delimited_instr -> IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF instr LBRACE list(delimited_instr) RBRACE
@@ -1178,9 +1179,9 @@ Expecting an 'else' branch, another instruction, or a character '}'.
 
 parse: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE UNREACHABLE
 ##
-## Ends in an error in state: 173.
+## Ends in an error in state: 179.
 ##
-## option(__anonymous_6) -> ELSE . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN RETURN REC RBRACKET RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACKET LBRACE IS INT IF IDENT GTU FN EOF DOT COMMA BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR AS AMPERSAND ]
+## option(__anonymous_6) -> ELSE . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN RETURN REC RBRACKET RBRACE QUOTE PLUS PIPE NOP MINUS LTU LTS LPAREN LOOP LET LBRACKET LBRACE IS INT IF IDENT GTU GTS FN EOF DOT COMMA BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## ELSE
@@ -1190,9 +1191,9 @@ Expecting a character '{'.
 
 parse: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 174.
+## Ends in an error in state: 180.
 ##
-## option(__anonymous_6) -> ELSE LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN RETURN REC RBRACKET RBRACE QUOTE PLUS PIPE NOP MINUS LTU LPAREN LOOP LET LBRACKET LBRACE IS INT IF IDENT GTU FN EOF DOT COMMA BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR AS AMPERSAND ]
+## option(__anonymous_6) -> ELSE LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE TYPE STRING SEMI RPAREN RETURN REC RBRACKET RBRACE QUOTE PLUS PIPE NOP MINUS LTU LTS LPAREN LOOP LET LBRACKET LBRACE IS INT IF IDENT GTU GTS FN EOF DOT COMMA BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## ELSE LBRACE
@@ -1202,7 +1203,7 @@ Expecting an instruction or the character '}'.
 
 parse: FN IDENT LBRACE IDENT SEMI UNDERSCORE
 ##
-## Ends in an error in state: 178.
+## Ends in an error in state: 184.
 ##
 ## list(delimited_instr) -> delimited_instr . list(delimited_instr) [ RBRACE ]
 ##
@@ -1214,10 +1215,10 @@ Expecting an instruction or the character '}'.
 
 parse: FN IDENT LBRACE LBRACE RBRACE TYPE
 ##
-## Ends in an error in state: 195.
+## Ends in an error in state: 201.
 ##
 ## delimited_instr -> LBRACE list(delimited_instr) RBRACE . [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> LBRACE list(delimited_instr) RBRACE . [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> LBRACE list(delimited_instr) RBRACE . [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACE list(delimited_instr) RBRACE
@@ -1229,9 +1230,9 @@ parse: FN IDENT LBRACE LBRACE IDENT COLON INT UNREACHABLE
 ##
 ## Ends in an error in state: 117.
 ##
-## instr -> plaininstr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> plaininstr . LBRACKET instr RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> plaininstr . LBRACKET instr RBRACKET EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> plaininstr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> plaininstr . LBRACKET instr RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> plaininstr . LBRACKET instr RBRACKET EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## plaininstr
@@ -1241,10 +1242,10 @@ Missing semicolon ';'
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON IF UNDERSCORE
 ##
-## Ends in an error in state: 217.
+## Ends in an error in state: 223.
 ##
 ## delimited_instr -> QUOTE IDENT COLON IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF
@@ -1254,10 +1255,10 @@ Expecting an instruction.
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 219.
+## Ends in an error in state: 225.
 ##
 ## delimited_instr -> QUOTE IDENT COLON IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF instr LBRACE
@@ -1267,10 +1268,10 @@ Expecting an instruction or the character '}'.
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 221.
+## Ends in an error in state: 227.
 ##
 ## delimited_instr -> QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE
@@ -1280,7 +1281,7 @@ Expecting an 'else' branch, another instruction, or a character '}'.
 
 parse: FN UNREACHABLE
 ##
-## Ends in an error in state: 237.
+## Ends in an error in state: 243.
 ##
 ## fundecl -> FN . IDENT option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ## fundecl -> FN . IDENT COLON IDENT option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
@@ -1294,7 +1295,7 @@ Expecting a function name.
 
 parse: FN IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 253.
+## Ends in an error in state: 259.
 ##
 ## fundecl -> FN IDENT COLON . IDENT option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ## fundecl -> FN IDENT COLON . resulttype ARROW resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
@@ -1307,7 +1308,7 @@ Expecting a type name or a function type.
 
 parse: FN IDENT COLON AMPERSAND IDENT UNREACHABLE
 ##
-## Ends in an error in state: 256.
+## Ends in an error in state: 262.
 ##
 ## fundecl -> FN IDENT COLON resulttype . ARROW resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -1319,7 +1320,7 @@ Expecting an arrow '->'.
 
 parse: FN IDENT COLON IDENT ARROW UNREACHABLE
 ##
-## Ends in an error in state: 257.
+## Ends in an error in state: 263.
 ##
 ## fundecl -> FN IDENT COLON resulttype ARROW . resulttype [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -1333,8 +1334,8 @@ parse: FN IDENT LBRACE RETURN UNDERSCORE
 ##
 ## Ends in an error in state: 66.
 ##
-## plaininstr -> RETURN . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> RETURN . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> RETURN . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> RETURN . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## RETURN
@@ -1349,9 +1350,9 @@ parse: FN IDENT LBRACE QUOTE UNREACHABLE
 ## delimited_instr -> QUOTE . IDENT COLON LBRACE list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
 ## delimited_instr -> QUOTE . IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
 ## delimited_instr -> QUOTE . IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE . IDENT COLON LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
-## instr -> QUOTE . IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
-## instr -> QUOTE . IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE . IDENT COLON LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
+## instr -> QUOTE . IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
+## instr -> QUOTE . IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE
@@ -1366,9 +1367,9 @@ parse: FN IDENT LBRACE QUOTE IDENT UNREACHABLE
 ## delimited_instr -> QUOTE IDENT . COLON LBRACE list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
 ## delimited_instr -> QUOTE IDENT . COLON LOOP LBRACE list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
 ## delimited_instr -> QUOTE IDENT . COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT . COLON LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
-## instr -> QUOTE IDENT . COLON LOOP LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
-## instr -> QUOTE IDENT . COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT . COLON LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT . COLON LOOP LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT . COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT
@@ -1383,9 +1384,9 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON UNREACHABLE
 ## delimited_instr -> QUOTE IDENT COLON . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
 ## delimited_instr -> QUOTE IDENT COLON . LOOP LBRACE list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
 ## delimited_instr -> QUOTE IDENT COLON . IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON . LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
-## instr -> QUOTE IDENT COLON . LOOP LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
-## instr -> QUOTE IDENT COLON . IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON . LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON . LOOP LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON . IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON
@@ -1398,7 +1399,7 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON LOOP UNREACHABLE
 ## Ends in an error in state: 75.
 ##
 ## delimited_instr -> QUOTE IDENT COLON LOOP . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON LOOP . LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON LOOP . LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LOOP
@@ -1411,7 +1412,7 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE UNDERSCORE
 ## Ends in an error in state: 76.
 ##
 ## delimited_instr -> QUOTE IDENT COLON LOOP LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON LOOP LBRACE . list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON LOOP LBRACE . list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LOOP LBRACE
@@ -1424,7 +1425,7 @@ parse: FN IDENT LBRACE LOOP UNREACHABLE
 ## Ends in an error in state: 81.
 ##
 ## delimited_instr -> LOOP . LBRACE list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> LOOP . LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> LOOP . LBRACE list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LOOP
@@ -1437,7 +1438,7 @@ parse: FN IDENT LBRACE LOOP LBRACE UNDERSCORE
 ## Ends in an error in state: 82.
 ##
 ## delimited_instr -> LOOP LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> LOOP LBRACE . list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> LOOP LBRACE . list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LOOP LBRACE
@@ -1449,8 +1450,8 @@ parse: FN IDENT LBRACE LBRACKET UNDERSCORE
 ##
 ## Ends in an error in state: 89.
 ##
-## plaininstr -> LBRACKET . loption(separated_nonempty_list(COMMA,instr)) RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> LBRACKET . instr SEMI instr RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> LBRACKET . loption(separated_nonempty_list(COMMA,instr)) RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> LBRACKET . instr SEMI instr RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACKET
@@ -1463,8 +1464,8 @@ parse: FN IDENT LBRACE LBRACE UNDERSCORE
 ## Ends in an error in state: 91.
 ##
 ## delimited_instr -> LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> LBRACE . list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
-## plaininstr -> LBRACE . separated_nonempty_list(COMMA,__anonymous_8) RBRACE [ SEMI PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
+## instr -> LBRACE . list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> LBRACE . separated_nonempty_list(COMMA,__anonymous_8) RBRACE [ SEMI PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACE
@@ -1476,7 +1477,7 @@ parse: LET IDENT EQUAL IF UNDERSCORE
 ##
 ## Ends in an error in state: 94.
 ##
-## instr -> IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF
@@ -1488,7 +1489,7 @@ parse: FN IDENT LBRACE BR_ON_NULL UNREACHABLE
 ##
 ## Ends in an error in state: 103.
 ##
-## plaininstr -> BR_ON_NULL . IDENT instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_NULL . IDENT instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_NULL
@@ -1500,7 +1501,7 @@ parse: FN IDENT LBRACE BR_ON_NULL IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 104.
 ##
-## plaininstr -> BR_ON_NULL IDENT . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_NULL IDENT . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_NULL IDENT
@@ -1512,7 +1513,7 @@ parse: FN IDENT LBRACE BR_ON_NON_NULL UNREACHABLE
 ##
 ## Ends in an error in state: 105.
 ##
-## plaininstr -> BR_ON_NON_NULL . IDENT instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_NON_NULL . IDENT instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_NON_NULL
@@ -1524,7 +1525,7 @@ parse: FN IDENT LBRACE BR_ON_NON_NULL IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 106.
 ##
-## plaininstr -> BR_ON_NON_NULL IDENT . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_NON_NULL IDENT . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_NON_NULL IDENT
@@ -1536,7 +1537,7 @@ parse: FN IDENT LBRACE BR_ON_CAST_FAIL UNREACHABLE
 ##
 ## Ends in an error in state: 107.
 ##
-## plaininstr -> BR_ON_CAST_FAIL . IDENT reftype instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_CAST_FAIL . IDENT reftype instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_CAST_FAIL
@@ -1548,7 +1549,7 @@ parse: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 108.
 ##
-## plaininstr -> BR_ON_CAST_FAIL IDENT . reftype instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_CAST_FAIL IDENT . reftype instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_CAST_FAIL IDENT
@@ -1560,7 +1561,7 @@ parse: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT AMPERSAND IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 109.
 ##
-## plaininstr -> BR_ON_CAST_FAIL IDENT reftype . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_CAST_FAIL IDENT reftype . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_CAST_FAIL IDENT reftype
@@ -1572,7 +1573,7 @@ parse: FN IDENT LBRACE BR_ON_CAST UNREACHABLE
 ##
 ## Ends in an error in state: 110.
 ##
-## plaininstr -> BR_ON_CAST . IDENT reftype instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_CAST . IDENT reftype instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_CAST
@@ -1584,7 +1585,7 @@ parse: FN IDENT LBRACE BR_ON_CAST IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 111.
 ##
-## plaininstr -> BR_ON_CAST IDENT . reftype instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_CAST IDENT . reftype instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_CAST IDENT
@@ -1596,7 +1597,7 @@ parse: FN IDENT LBRACE BR_ON_CAST IDENT AMPERSAND IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 112.
 ##
-## plaininstr -> BR_ON_CAST IDENT reftype . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_CAST IDENT reftype . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_CAST IDENT reftype
@@ -1608,7 +1609,7 @@ parse: FN IDENT LBRACE BR_IF UNREACHABLE
 ##
 ## Ends in an error in state: 113.
 ##
-## plaininstr -> BR_IF . IDENT instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_IF . IDENT instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_IF
@@ -1620,7 +1621,7 @@ parse: FN IDENT LBRACE BR_IF IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 114.
 ##
-## plaininstr -> BR_IF IDENT . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_IF IDENT . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_IF IDENT
@@ -1632,8 +1633,8 @@ parse: FN IDENT LBRACE IDENT LBRACKET UNDERSCORE
 ##
 ## Ends in an error in state: 118.
 ##
-## plaininstr -> plaininstr LBRACKET . instr RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> plaininstr LBRACKET . instr RBRACKET EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> plaininstr LBRACKET . instr RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> plaininstr LBRACKET . instr RBRACKET EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## plaininstr LBRACKET
@@ -1645,18 +1646,20 @@ parse: FN IDENT LBRACE IDENT LBRACKET IDENT TYPE
 ##
 ## Ends in an error in state: 119.
 ##
-## plaininstr -> instr . AS reftype [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> plaininstr LBRACKET instr . RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> plaininstr LBRACKET instr . RBRACKET EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> plaininstr LBRACKET instr . RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> plaininstr LBRACKET instr . RBRACKET EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## plaininstr LBRACKET instr
@@ -1675,8 +1678,8 @@ parse: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET UNREACHABLE
 ##
 ## Ends in an error in state: 120.
 ##
-## plaininstr -> plaininstr LBRACKET instr RBRACKET . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> plaininstr LBRACKET instr RBRACKET . EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> plaininstr LBRACKET instr RBRACKET . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> plaininstr LBRACKET instr RBRACKET . EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## plaininstr LBRACKET instr RBRACKET
@@ -1688,7 +1691,7 @@ parse: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET EQUAL UNDERSCORE
 ##
 ## Ends in an error in state: 121.
 ##
-## plaininstr -> plaininstr LBRACKET instr RBRACKET EQUAL . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> plaininstr LBRACKET instr RBRACKET EQUAL . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## plaininstr LBRACKET instr RBRACKET EQUAL
@@ -1700,17 +1703,19 @@ parse: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET EQUAL LBRACE RBRACE UNREACH
 ##
 ## Ends in an error in state: 122.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> plaininstr LBRACKET instr RBRACKET EQUAL instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> plaininstr LBRACKET instr RBRACKET EQUAL instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## plaininstr LBRACKET instr RBRACKET EQUAL instr
@@ -1722,17 +1727,19 @@ parse: FN IDENT LBRACE IDENT PLUS LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 124.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr PLUS instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr PLUS instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr PLUS instr
@@ -1744,7 +1751,7 @@ parse: FN IDENT LBRACE IDENT IS UNREACHABLE
 ##
 ## Ends in an error in state: 125.
 ##
-## plaininstr -> instr IS . reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr IS . reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr IS
@@ -1756,17 +1763,19 @@ parse: FN IDENT LBRACE IDENT DOT IDENT EQUAL LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 130.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr DOT IDENT EQUAL instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr DOT IDENT EQUAL instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr DOT IDENT EQUAL instr
@@ -1778,17 +1787,19 @@ parse: FN IDENT LBRACE IDENT PIPE LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 132.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr PIPE instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr PIPE instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr PIPE instr
@@ -1800,17 +1811,19 @@ parse: FN IDENT LBRACE IDENT MINUS LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 134.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr MINUS instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr MINUS instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr MINUS instr
@@ -1822,17 +1835,19 @@ parse: FN IDENT LBRACE IDENT AMPERSAND LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 138.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr AMPERSAND instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr AMPERSAND instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr AMPERSAND instr
@@ -1844,17 +1859,19 @@ parse: FN IDENT LBRACE IDENT LTU IDENT LTU
 ##
 ## Ends in an error in state: 140.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr LTU instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr LTU instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr LTU instr
@@ -1869,21 +1886,66 @@ parse: FN IDENT LBRACE IDENT LTU IDENT LTU
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: FN IDENT LBRACE IDENT GTU IDENT LTU
+parse: FN IDENT LBRACE IDENT LTS UNDERSCORE
+##
+## Ends in an error in state: 141.
+##
+## plaininstr -> instr LTS . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## instr LTS
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT LBRACE IDENT LTS IDENT LTU
 ##
 ## Ends in an error in state: 142.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr GTU instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr LTS instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## instr LTS instr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 95, spurious reduction of production plaininstr -> IDENT
+## In state 117, spurious reduction of production instr -> plaininstr
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT LBRACE IDENT GTU IDENT LTU
+##
+## Ends in an error in state: 144.
+##
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr GTU instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## instr GTU instr
@@ -1898,21 +1960,66 @@ parse: FN IDENT LBRACE IDENT GTU IDENT LTU
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
+parse: FN IDENT LBRACE IDENT GTS UNDERSCORE
+##
+## Ends in an error in state: 145.
+##
+## plaininstr -> instr GTS . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## instr GTS
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT LBRACE IDENT GTS IDENT LTU
+##
+## Ends in an error in state: 146.
+##
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr GTS instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## instr GTS instr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 95, spurious reduction of production plaininstr -> IDENT
+## In state 117, spurious reduction of production instr -> plaininstr
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
 parse: FN IDENT LBRACE BR IDENT LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 143.
+## Ends in an error in state: 147.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> BR IDENT instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR IDENT instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR IDENT instr
@@ -1922,19 +2029,21 @@ parse: FN IDENT LBRACE BR IDENT LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE BR_IF IDENT LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 144.
+## Ends in an error in state: 148.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> BR_IF IDENT instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_IF IDENT instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_IF IDENT instr
@@ -1944,19 +2053,21 @@ parse: FN IDENT LBRACE BR_IF IDENT LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE BR_ON_CAST IDENT AMPERSAND IDENT LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 145.
+## Ends in an error in state: 149.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> BR_ON_CAST IDENT reftype instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_CAST IDENT reftype instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_CAST IDENT reftype instr
@@ -1966,19 +2077,21 @@ parse: FN IDENT LBRACE BR_ON_CAST IDENT AMPERSAND IDENT LBRACE RBRACE UNREACHABL
 
 parse: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT AMPERSAND IDENT LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 146.
+## Ends in an error in state: 150.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> BR_ON_CAST_FAIL IDENT reftype instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_CAST_FAIL IDENT reftype instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_CAST_FAIL IDENT reftype instr
@@ -1988,19 +2101,21 @@ parse: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT AMPERSAND IDENT LBRACE RBRACE UNREA
 
 parse: FN IDENT LBRACE BR_ON_NON_NULL IDENT LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 147.
+## Ends in an error in state: 151.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> BR_ON_NON_NULL IDENT instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_NON_NULL IDENT instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_NON_NULL IDENT instr
@@ -2010,19 +2125,21 @@ parse: FN IDENT LBRACE BR_ON_NON_NULL IDENT LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE BR_ON_NULL IDENT LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 148.
+## Ends in an error in state: 152.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> BR_ON_NULL IDENT instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_ON_NULL IDENT instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_ON_NULL IDENT instr
@@ -2032,19 +2149,21 @@ parse: FN IDENT LBRACE BR_ON_NULL IDENT LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE BR_TABLE LBRACE IDENT RBRACE LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 149.
+## Ends in an error in state: 153.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> BR_TABLE LBRACE nonempty_list(IDENT) RBRACE instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> BR_TABLE LBRACE nonempty_list(IDENT) RBRACE instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## BR_TABLE LBRACE nonempty_list(IDENT) RBRACE instr
@@ -2054,9 +2173,9 @@ parse: FN IDENT LBRACE BR_TABLE LBRACE IDENT RBRACE LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE IDENT LPAREN IDENT RBRACKET
 ##
-## Ends in an error in state: 151.
+## Ends in an error in state: 155.
 ##
-## plaininstr -> IDENT LPAREN loption(separated_nonempty_list(COMMA,instr)) . RPAREN [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> IDENT LPAREN loption(separated_nonempty_list(COMMA,instr)) . RPAREN [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IDENT LPAREN loption(separated_nonempty_list(COMMA,instr))
@@ -2067,26 +2186,28 @@ parse: FN IDENT LBRACE IDENT LPAREN IDENT RBRACKET
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 95, spurious reduction of production plaininstr -> IDENT
 ## In state 117, spurious reduction of production instr -> plaininstr
-## In state 153, spurious reduction of production separated_nonempty_list(COMMA,instr) -> instr
-## In state 150, spurious reduction of production loption(separated_nonempty_list(COMMA,instr)) -> separated_nonempty_list(COMMA,instr)
+## In state 157, spurious reduction of production separated_nonempty_list(COMMA,instr) -> instr
+## In state 154, spurious reduction of production loption(separated_nonempty_list(COMMA,instr)) -> separated_nonempty_list(COMMA,instr)
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 parse: FN IDENT LBRACE LPAREN IDENT TYPE
 ##
-## Ends in an error in state: 153.
+## Ends in an error in state: 157.
 ##
-## plaininstr -> instr . AS reftype [ RPAREN RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ RPAREN RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ RPAREN RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ RPAREN RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
 ## separated_nonempty_list(COMMA,instr) -> instr . [ RPAREN RBRACKET ]
 ## separated_nonempty_list(COMMA,instr) -> instr . COMMA separated_nonempty_list(COMMA,instr) [ RPAREN RBRACKET ]
 ##
@@ -2105,18 +2226,20 @@ parse: FN IDENT LBRACE LPAREN IDENT TYPE
 
 parse: FN IDENT LBRACE IDENT LBRACE IDENT COLON IDENT TYPE
 ##
-## Ends in an error in state: 159.
+## Ends in an error in state: 163.
 ##
-## plaininstr -> instr . AS reftype [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON instr . [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON instr . COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
 ##
@@ -2135,19 +2258,21 @@ parse: FN IDENT LBRACE IDENT LBRACE IDENT COLON IDENT TYPE
 
 parse: FN IDENT LBRACE IDENT EQUAL LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 166.
+## Ends in an error in state: 170.
 ##
-## plaininstr -> IDENT EQUAL instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> IDENT EQUAL instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IDENT EQUAL instr
@@ -2155,21 +2280,59 @@ parse: FN IDENT LBRACE IDENT EQUAL LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
+parse: FN IDENT LBRACE IDENT COLONEQUAL UNDERSCORE
+##
+## Ends in an error in state: 171.
+##
+## plaininstr -> IDENT COLONEQUAL . instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## IDENT COLONEQUAL
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT LBRACE IDENT COLONEQUAL LBRACE RBRACE UNREACHABLE
+##
+## Ends in an error in state: 172.
+##
+## plaininstr -> IDENT COLONEQUAL instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## IDENT COLONEQUAL instr
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
 parse: LET IDENT EQUAL IF IDENT TYPE
 ##
-## Ends in an error in state: 167.
+## Ends in an error in state: 173.
 ##
-## instr -> IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AS reftype [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
+## instr -> IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF instr
@@ -2186,9 +2349,9 @@ parse: LET IDENT EQUAL IF IDENT TYPE
 
 parse: LET IDENT EQUAL IF INT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 168.
+## Ends in an error in state: 174.
 ##
-## instr -> IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF instr LBRACE
@@ -2198,9 +2361,9 @@ parse: LET IDENT EQUAL IF INT LBRACE UNDERSCORE
 
 parse: LET IDENT EQUAL IF INT LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 172.
+## Ends in an error in state: 178.
 ##
-## instr -> IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF instr LBRACE list(delimited_instr) RBRACE
@@ -2210,20 +2373,22 @@ parse: LET IDENT EQUAL IF INT LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE IF IDENT TYPE
 ##
-## Ends in an error in state: 181.
+## Ends in an error in state: 187.
 ##
 ## delimited_instr -> IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . AS reftype [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
+## instr -> IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF instr
@@ -2240,10 +2405,10 @@ parse: FN IDENT LBRACE IF IDENT TYPE
 
 parse: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 185.
+## Ends in an error in state: 191.
 ##
 ## delimited_instr -> IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) . [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) . [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) . [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6)
@@ -2253,12 +2418,13 @@ parse: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
 
 parse: FN IDENT LBRACE LBRACE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 186.
+## Ends in an error in state: 192.
 ##
-## plaininstr -> IDENT . [ SEMI PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> IDENT . EQUAL instr [ SEMI PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> IDENT . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ SEMI PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> IDENT . LBRACE loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ SEMI PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
+## plaininstr -> IDENT . [ SEMI PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> IDENT . COLONEQUAL instr [ SEMI PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> IDENT . EQUAL instr [ SEMI PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> IDENT . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ SEMI PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> IDENT . LBRACE loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ SEMI PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT . COLON instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT . COLON instr COMMA separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
 ##
@@ -2270,18 +2436,20 @@ parse: FN IDENT LBRACE LBRACE IDENT UNREACHABLE
 
 parse: FN IDENT LBRACE LBRACE IDENT COLON IDENT TYPE
 ##
-## Ends in an error in state: 188.
+## Ends in an error in state: 194.
 ##
-## plaininstr -> instr . AS reftype [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ RBRACE PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ RBRACE PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON instr . [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON instr . COMMA separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
 ##
@@ -2300,9 +2468,9 @@ parse: FN IDENT LBRACE LBRACE IDENT COLON IDENT TYPE
 
 parse: FN IDENT LBRACE LBRACKET IDENT COMMA IDENT RPAREN
 ##
-## Ends in an error in state: 198.
+## Ends in an error in state: 204.
 ##
-## plaininstr -> LBRACKET loption(separated_nonempty_list(COMMA,instr)) . RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> LBRACKET loption(separated_nonempty_list(COMMA,instr)) . RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACKET loption(separated_nonempty_list(COMMA,instr))
@@ -2313,28 +2481,30 @@ parse: FN IDENT LBRACE LBRACKET IDENT COMMA IDENT RPAREN
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 95, spurious reduction of production plaininstr -> IDENT
 ## In state 117, spurious reduction of production instr -> plaininstr
-## In state 153, spurious reduction of production separated_nonempty_list(COMMA,instr) -> instr
-## In state 155, spurious reduction of production separated_nonempty_list(COMMA,instr) -> instr COMMA separated_nonempty_list(COMMA,instr)
-## In state 150, spurious reduction of production loption(separated_nonempty_list(COMMA,instr)) -> separated_nonempty_list(COMMA,instr)
+## In state 157, spurious reduction of production separated_nonempty_list(COMMA,instr) -> instr
+## In state 159, spurious reduction of production separated_nonempty_list(COMMA,instr) -> instr COMMA separated_nonempty_list(COMMA,instr)
+## In state 154, spurious reduction of production loption(separated_nonempty_list(COMMA,instr)) -> separated_nonempty_list(COMMA,instr)
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 parse: FN IDENT LBRACE LBRACKET IDENT TYPE
 ##
-## Ends in an error in state: 200.
+## Ends in an error in state: 206.
 ##
-## plaininstr -> instr . AS reftype [ SEMI RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ SEMI RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ SEMI RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT COMMA AS AMPERSAND ]
-## plaininstr -> LBRACKET instr . SEMI instr RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ SEMI RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT COMMA AS AMPERSAND ]
+## plaininstr -> LBRACKET instr . SEMI instr RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ## separated_nonempty_list(COMMA,instr) -> instr . [ RBRACKET ]
 ## separated_nonempty_list(COMMA,instr) -> instr . COMMA separated_nonempty_list(COMMA,instr) [ RBRACKET ]
 ##
@@ -2353,9 +2523,9 @@ parse: FN IDENT LBRACE LBRACKET IDENT TYPE
 
 parse: FN IDENT LBRACE LBRACKET IDENT SEMI UNDERSCORE
 ##
-## Ends in an error in state: 201.
+## Ends in an error in state: 207.
 ##
-## plaininstr -> LBRACKET instr SEMI . instr RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> LBRACKET instr SEMI . instr RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACKET instr SEMI
@@ -2365,19 +2535,21 @@ parse: FN IDENT LBRACE LBRACKET IDENT SEMI UNDERSCORE
 
 parse: FN IDENT LBRACE LBRACKET IDENT SEMI IDENT TYPE
 ##
-## Ends in an error in state: 202.
+## Ends in an error in state: 208.
 ##
-## plaininstr -> instr . AS reftype [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ RBRACKET PLUS PIPE MINUS LTU LBRACKET IS GTU DOT AS AMPERSAND ]
-## plaininstr -> LBRACKET instr SEMI instr . RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ RBRACKET PLUS PIPE MINUS LTU LTS LBRACKET IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> LBRACKET instr SEMI instr . RBRACKET [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACKET instr SEMI instr
@@ -2394,19 +2566,21 @@ parse: FN IDENT LBRACE LBRACKET IDENT SEMI IDENT TYPE
 
 parse: FN IDENT LBRACE LET IDENT EQUAL LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 204.
+## Ends in an error in state: 210.
 ##
-## option(__anonymous_10) -> EQUAL instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## option(__anonymous_10) -> EQUAL instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## EQUAL instr
@@ -2416,10 +2590,10 @@ parse: FN IDENT LBRACE LET IDENT EQUAL LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE LOOP LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 207.
+## Ends in an error in state: 213.
 ##
 ## delimited_instr -> LOOP LBRACE list(delimited_instr) RBRACE . [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> LOOP LBRACE list(delimited_instr) RBRACE . [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> LOOP LBRACE list(delimited_instr) RBRACE . [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LOOP LBRACE list(delimited_instr) RBRACE
@@ -2429,9 +2603,9 @@ parse: FN IDENT LBRACE LOOP LBRACE RBRACE UNDERSCORE
 
 parse: FN IDENT LBRACE LPAREN IDENT RBRACKET
 ##
-## Ends in an error in state: 210.
+## Ends in an error in state: 216.
 ##
-## plaininstr -> LPAREN loption(separated_nonempty_list(COMMA,instr)) . RPAREN [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> LPAREN loption(separated_nonempty_list(COMMA,instr)) . RPAREN [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LPAREN loption(separated_nonempty_list(COMMA,instr))
@@ -2442,18 +2616,18 @@ parse: FN IDENT LBRACE LPAREN IDENT RBRACKET
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 95, spurious reduction of production plaininstr -> IDENT
 ## In state 117, spurious reduction of production instr -> plaininstr
-## In state 153, spurious reduction of production separated_nonempty_list(COMMA,instr) -> instr
-## In state 150, spurious reduction of production loption(separated_nonempty_list(COMMA,instr)) -> separated_nonempty_list(COMMA,instr)
+## In state 157, spurious reduction of production separated_nonempty_list(COMMA,instr) -> instr
+## In state 154, spurious reduction of production loption(separated_nonempty_list(COMMA,instr)) -> separated_nonempty_list(COMMA,instr)
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 213.
+## Ends in an error in state: 219.
 ##
 ## delimited_instr -> QUOTE IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE . [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE . [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE . [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LOOP LBRACE list(delimited_instr) RBRACE
@@ -2463,10 +2637,10 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE RBRACE UNDERSCORE
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 214.
+## Ends in an error in state: 220.
 ##
 ## delimited_instr -> QUOTE IDENT COLON LBRACE . list(delimited_instr) RBRACE [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON LBRACE . list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON LBRACE . list(delimited_instr) RBRACE [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LBRACE
@@ -2476,10 +2650,10 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON LBRACE UNDERSCORE
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 216.
+## Ends in an error in state: 222.
 ##
 ## delimited_instr -> QUOTE IDENT COLON LBRACE list(delimited_instr) RBRACE . [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON LBRACE list(delimited_instr) RBRACE . [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON LBRACE list(delimited_instr) RBRACE . [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON LBRACE list(delimited_instr) RBRACE
@@ -2489,20 +2663,22 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON LBRACE RBRACE UNDERSCORE
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON IF IDENT TYPE
 ##
-## Ends in an error in state: 218.
+## Ends in an error in state: 224.
 ##
 ## delimited_instr -> QUOTE IDENT COLON IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . AS reftype [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF instr
@@ -2519,10 +2695,10 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON IF IDENT TYPE
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 222.
+## Ends in an error in state: 228.
 ##
 ## delimited_instr -> QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) . [ UNREACHABLE STRING RETURN RBRACE QUOTE NOP LPAREN LOOP LET LBRACKET LBRACE INT IF IDENT BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR ]
-## instr -> QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) . [ PLUS PIPE MINUS LTU IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) . [ PLUS PIPE MINUS LTU LTS IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6)
@@ -2532,9 +2708,9 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE ELSE LBRACE RBRACE
 
 parse: LET IDENT EQUAL QUOTE IDENT COLON IF UNDERSCORE
 ##
-## Ends in an error in state: 228.
+## Ends in an error in state: 234.
 ##
-## instr -> QUOTE IDENT COLON IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON IF . instr LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF
@@ -2544,19 +2720,21 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON IF UNDERSCORE
 
 parse: LET IDENT EQUAL QUOTE IDENT COLON IF IDENT TYPE
 ##
-## Ends in an error in state: 229.
+## Ends in an error in state: 235.
 ##
-## instr -> QUOTE IDENT COLON IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AS reftype [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ PLUS PIPE MINUS LTU LBRACKET LBRACE IS GTU DOT AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON IF instr . LBRACE list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ PLUS PIPE MINUS LTU LTS LBRACKET LBRACE IS GTU GTS DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF instr
@@ -2573,9 +2751,9 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON IF IDENT TYPE
 
 parse: LET IDENT EQUAL QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 230.
+## Ends in an error in state: 236.
 ##
-## instr -> QUOTE IDENT COLON IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON IF instr LBRACE . list(delimited_instr) RBRACE option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF instr LBRACE
@@ -2585,9 +2763,9 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
 
 parse: LET IDENT EQUAL QUOTE IDENT COLON IF INT LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 232.
+## Ends in an error in state: 238.
 ##
-## instr -> QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## instr -> QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE . option(__anonymous_6) [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## QUOTE IDENT COLON IF instr LBRACE list(delimited_instr) RBRACE
@@ -2597,19 +2775,21 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON IF INT LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE RETURN LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 234.
+## Ends in an error in state: 240.
 ##
-## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
-## plaininstr -> RETURN instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LET LBRACKET LBRACE IS GTU FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
+## plaininstr -> RETURN instr . [ TYPE SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE MINUS LTU LTS LET LBRACKET LBRACE IS GTU GTS FN EOF DOT COMMA AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## RETURN instr
@@ -2619,19 +2799,21 @@ parse: FN IDENT LBRACE RETURN LBRACE RBRACE UNREACHABLE
 
 parse: LET IDENT EQUAL IDENT RPAREN
 ##
-## Ends in an error in state: 235.
+## Ends in an error in state: 241.
 ##
 ## global -> LET IDENT option(__anonymous_11) EQUAL instr . option(SEMI) [ TYPE REC LET FN EOF ]
-## plaininstr -> instr . AS reftype [ TYPE SEMI REC PLUS PIPE MINUS LTU LET LBRACKET IS GTU FN EOF DOT AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ TYPE SEMI REC PLUS PIPE MINUS LTU LET LBRACKET IS GTU FN EOF DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ TYPE SEMI REC PLUS PIPE MINUS LTU LET LBRACKET IS GTU FN EOF DOT AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LET LBRACKET IS GTU FN EOF DOT AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LET LBRACKET IS GTU FN EOF DOT AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LET LBRACKET IS GTU FN EOF DOT AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LET LBRACKET IS GTU FN EOF DOT AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LET LBRACKET IS GTU FN EOF DOT AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LET LBRACKET IS GTU FN EOF DOT AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LET LBRACKET IS GTU FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . AS reftype [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ TYPE SEMI REC PLUS PIPE MINUS LTU LTS LET LBRACKET IS GTU GTS FN EOF DOT AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LET IDENT option(__anonymous_11) EQUAL instr
@@ -2648,7 +2830,7 @@ parse: LET IDENT EQUAL IDENT RPAREN
 
 parse: FN IDENT UNREACHABLE
 ##
-## Ends in an error in state: 238.
+## Ends in an error in state: 244.
 ##
 ## fundecl -> FN IDENT . option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]
 ## fundecl -> FN IDENT . COLON IDENT option(__anonymous_4) [ TYPE SEMI REC QUOTE LET LBRACE FN EOF ]

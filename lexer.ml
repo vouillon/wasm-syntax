@@ -30,12 +30,15 @@ let rec token lexbuf =
   | ':' -> COLON
   | "->" -> ARROW
   | '=' -> EQUAL
+  | ":=" -> COLONEQUAL
   | "'" -> QUOTE
   | "." -> DOT
   | "+" -> PLUS
   | "-" -> MINUS
   | "_" -> UNDERSCORE
+  | "<s" -> LTS
   | "<u" -> LTU
+  | ">s" -> GTS
   | ">u" -> GTU
   | "fn" -> FN
   | "mut" -> MUT

@@ -1,5 +1,5 @@
 (executables
- (names main test_wasm)
+ (names main test_wasm convert)
  (libraries wasm menhirLib)
  (preprocess
   (pps sedlex.ppx)))

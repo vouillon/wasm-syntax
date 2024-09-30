@@ -18,11 +18,14 @@
 %token COLON ":"
 %token ARROW "->"
 %token EQUAL "="
+%token COLONEQUAL ":="
 %token QUOTE "'"
 %token DOT "."
 %token MINUS "-"
 %token PLUS "+"
+%token LTS "<s"
 %token LTU "<u"
+%token GTS ">s"
 %token GTU ">u"
 %token UNDERSCORE "_"
 
@@ -41,13 +44,13 @@
 %nonassoc LET
 %nonassoc br IDENT plain
 %nonassoc LBRACE LBRACKET
-%right EQUAL
-%nonassoc LTU GTU
+%right EQUAL COLONEQUAL
+%nonassoc LTU GTU LTS GTS
 %left PIPE
 %left AMPERSAND
 %left MINUS PLUS
 %left AS IS
-%left DOT
+%left DOT LPAREN
 
 (* BR foo 1 + 2 understood as BR foo (1 + 2)
    BR_TABLE { ...} 1 + 2 understood as BR_TABLE { ...} (1 + 2)
@@ -189,10 +192,11 @@ plaininstr:
 | NOP { with_loc $sloc Nop }
 | UNREACHABLE { with_loc $sloc Unreachable }
 | x = IDENT { with_loc $sloc (Get x) }
-| x = IDENT "=" i = instr { with_loc $sloc (Set (x, i)) }
+| x = IDENT ":=" i = instr { with_loc $sloc (Set (x, i)) }
+| x = IDENT "=" i = instr { with_loc $sloc (Tee (x, i)) }
 | "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
-| x = IDENT "(" l = separated_list(",", instr) ")"
-   { with_loc $sloc (Call(x, l)) }
+| i = instr "(" l = separated_list(",", instr) ")"
+   { with_loc $sloc (Call(i, l)) }
 | s = STRING { with_loc $sloc (String s) }
 | i = INT { with_loc $sloc (Int i) }
 | x = IDENT "{" l = separated_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
@@ -203,10 +207,12 @@ plaininstr:
 | i = instr IS t = reftype { with_loc $sloc (Test(i, t)) }
 | i = instr "." x = IDENT { with_loc $sloc (StructGet(i, x)) }
 | i = instr "." x = IDENT "=" j = instr { with_loc $sloc (StructSet(i, x, j)) }
-| i = instr "+" j = instr { with_loc $sloc (BinOp(Plus, i, j)) }
-| i = instr "-" j = instr { with_loc $sloc (BinOp(Minus, i, j)) }
-| i = instr "<u" j = instr { with_loc $sloc (BinOp(Ltu, i, j)) }
-| i = instr ">u" j = instr { with_loc $sloc (BinOp(Gtu, i, j)) }
+| i = instr "+" j = instr { with_loc $sloc (BinOp(Add, i, j)) }
+| i = instr "-" j = instr { with_loc $sloc (BinOp(Sub, i, j)) }
+| i = instr "<s" j = instr { with_loc $sloc (BinOp(Lt Signed, i, j)) }
+| i = instr "<u" j = instr { with_loc $sloc (BinOp(Lt Unsigned, i, j)) }
+| i = instr ">s" j = instr { with_loc $sloc (BinOp(Gt Signed, i, j)) }
+| i = instr ">u" j = instr { with_loc $sloc (BinOp(Gt Unsigned, i, j)) }
 | i = instr "&" j = instr { with_loc $sloc (BinOp(And, i, j)) }
 | i = instr "|" j = instr { with_loc $sloc (BinOp(Or, i, j)) }
 | LET x = IDENT t = option(":" t = valtype {t}) i = option("=" i = instr {i})

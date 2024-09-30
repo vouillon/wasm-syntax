@@ -37,15 +37,15 @@ let rec valtype st (t : Src.valtype) : Ast.valtype =
   | Ref t -> Ref (reftype st t)
   | Tuple l -> Tuple (List.map (fun t -> valtype st t) l)
 
-let rec functype st (t : Src.functype) : Ast.functype =
+let functype st (t : Src.functype) : Ast.functype =
   {
     params = Array.map (fun t -> valtype st t) t.params;
     results = Array.map (fun t -> valtype st t) t.results;
   }
 
-let rec packedtype _ (t : Src.packedtype) : Ast.packedtype = t
+let packedtype _ (t : Src.packedtype) : Ast.packedtype = t
 
-let rec storagetype st (t : Src.storagetype) : Ast.storagetype =
+let storagetype st (t : Src.storagetype) : Ast.storagetype =
   match t with
   | Value t -> Value (valtype st t)
   | Packed t -> Packed (packedtype st t)
@@ -53,7 +53,7 @@ let rec storagetype st (t : Src.storagetype) : Ast.storagetype =
 let muttype typ st (t : _ Src.muttype) : _ Ast.muttype =
   { t with typ = typ st t.typ }
 
-let fieldtype = muttype storagetype
+let fieldtype st = muttype storagetype st
 
 let comptype st (t : Src.comptype) : Ast.comptype =
   match t with
@@ -78,7 +78,7 @@ let rectype st (t : Src.rectype) : Ast.rectype =
     (fun t -> annotated (name_type st (get_annot t)) (subtype st (get_type t)))
     t
 
-let globaltype = muttype valtype
+let globaltype st = muttype valtype st
 
 (*
 Step 1: traverse types and find existing names
@@ -89,13 +89,24 @@ Step 2: use this info to generate using names without reusing existing names
   - first pass to see missing labels
   - explode tuples
 *)
-let sequence l = match l with [ i ] -> i | _ -> Ast.no_loc (Ast.Sequence [])
+
+let unit = Ast.no_loc (Ast.Sequence [])
+let sequence l = match l with [ i ] -> i | _ -> unit
 
 let sequence_opt l =
   match l with
   | [] -> None
   | [ i ] -> Some i
-  | _ -> Some (Ast.no_loc (Ast.Sequence []))
+  | l -> Some (Ast.no_loc (Ast.Sequence l))
+
+let two_args l : Ast.instr * Ast.instr =
+  match l with
+  | [] -> (unit, unit)
+  | [ x ] -> (unit, x)
+  | [ x; y ] -> (x, y)
+  | x :: r ->
+      (*ZZZ Should take arity into account *)
+      (x, Ast.no_loc (Ast.Sequence r))
 
 let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
@@ -125,70 +136,97 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | GlobalGet x -> sequence (args @ [ no_loc (Get (idx st `Global x)) ])
   | LocalSet x -> no_loc (Set (idx st `Local x, sequence args))
   | GlobalSet x -> no_loc (Set (idx st `Global x, sequence args))
+  | LocalTee x -> no_loc (Tee (idx st `Local x, sequence args))
+  | RefCast t -> no_loc (Cast (sequence args, reftype st t))
+  | BinOp (I32 Add) ->
+      let e1, e2 = two_args args in
+      no_loc (BinOp (Add, e1, e2))
+  | BinOp (I32 Sub) ->
+      let e1, e2 = two_args args in
+      no_loc (BinOp (Sub, e1, e2))
+  | BinOp (I32 (Lt s)) ->
+      let e1, e2 = two_args args in
+      no_loc (BinOp (Lt s, e1, e2))
+  | BinOp (I32 (Gt s)) ->
+      let e1, e2 = two_args args in
+      no_loc (BinOp (Gt s, e1, e2))
+  | BinOp (I32 And) ->
+      let e1, e2 = two_args args in
+      no_loc (BinOp (And, e1, e2))
+  | BinOp (I32 Or) ->
+      let e1, e2 = two_args args in
+      no_loc (BinOp (Or, e1, e2))
+  | BinOp (I32 Eq) ->
+      let e1, e2 = two_args args in
+      no_loc (BinOp (Eq, e1, e2))
+  | BinOp (I32 Ne) ->
+      let e1, e2 = two_args args in
+      no_loc (BinOp (Ne, e1, e2))
+  | BinOp (I32 Rotr) -> no_loc (Call (no_loc (Get "rotr"), args))
+  | BinOp (I32 Rotl) -> no_loc (Call (no_loc (Get "rotl"), args))
+  | StructGet (_s, _t, _f) -> no_loc (StructGet (sequence args, "f"))
+  | Call x -> no_loc (Call (no_loc (Get (idx st `Func x)), args))
+  | ReturnCall x ->
+      no_loc
+        (Return (Some (no_loc (Call (no_loc (Get (idx st `Func x)), args)))))
+  | TupleMake _ -> no_loc (Sequence args)
+  | Const (I32 n) -> no_loc (Int (Int32.to_string n))
+  | StructNew i ->
+      ignore args;
+      no_loc (Struct (Some (idx st `Type i), []))
+  | RefI31 -> no_loc (Cast (sequence args, { nullable = false; typ = I31 }))
+  | ArrayNewData _ -> no_loc (String "foo")
   | _ -> assert false
+
+let modulefield st (f : Src.modulefield) : Ast.modulefield option =
+  match f with
+  | Types t -> Some (Type (rectype st t))
+  | Func { id; instrs; _ } ->
+      prerr_endline "AAA";
+      Option.iter prerr_endline id;
+      Some
+        (Func
+           {
+             name = "toto";
+             typ = None;
+             sign = None;
+             body = (None, List.map (fun i -> instr st i []) instrs);
+           })
+  | _ -> None
+
 (*
-    | Try of {
-        label : X.label;
-        typ : blocktype option;
-        block : instr list;
-        catches : (X.idx * instr list) list;
-        catch_all : instr list option;
+    | Import of {
+        module_ : string;
+        name : string;
+        id : id option;
+        desc : importdesc;
+        exports : string list;
       }
-    | Throw of X.idx
-    | Br_table of X.idx list * X.idx
-    | Br_on_null of X.idx
-    | Br_on_non_null of X.idx
-    | Br_on_cast of X.idx * X.reftype * X.reftype
-    | Br_on_cast_fail of X.idx * X.reftype * X.reftype
-    | Return
-    | Call of X.idx
-    | CallRef of X.idx
-    | CallIndirect of X.idx * X.typeuse
-    | ReturnCall of X.idx
-    | ReturnCallRef of X.idx
-    | ReturnCallIndirect of X.idx * X.typeuse
-    | Drop
-    | Select of X.valtype option
-    | LocalTee of X.idx
-    | I32Load8 of signage * memarg
-    | I32Store8 of memarg
-    | RefNull of X.heaptype
-    | RefFunc of X.idx
-    | RefIsNull
-    | RefAsNonNull
-    | RefEq
-    | RefTest of X.reftype
-    | RefCast of X.reftype
-    | StructNew of X.idx
-    | StructNewDefault of X.idx
-    | StructGet of signage option * X.idx * X.idx
-    | StructSet of X.idx * X.idx
-    | ArrayNew of X.idx
-    | ArrayNewDefault of X.idx
-    | ArrayNewFixed of X.idx * Int32.t
-    | ArrayNewData of X.idx * X.idx
-    | ArrayNewElem of X.idx * X.idx
-    | ArrayGet of signage option * X.idx
-    | ArraySet of X.idx
-    | ArrayLen
-    | ArrayFill of X.idx
-    | ArrayCopy of X.idx * X.idx
-    | ArrayInitData of X.idx * X.idx
-    | ArrayInitElem of X.idx * X.idx
-    | RefI31
-    | I31Get of signage
-    | Const of (Int32.t, Int64.t, string, string) op
-    | UnOp of (int_un_op, int_un_op, float_un_op, float_un_op) op
-    | BinOp of (int_bin_op, int_bin_op, float_bin_op, float_bin_op) op
-    | I32WrapI64
-    | I64ExtendI32 of signage
-    | F32DemoteF64
-    | F64PromoteF32
-    | ExternConvertAny
-    | AnyConvertExtern
-    | Folded of instr * instr list
-    (* Binaryen extensions *)
-    | Pop of X.valtype
-    | TupleMake of Int32.t
-    | TupleExtract of Int32.t * Int32.t
+    | Func of {
+        id : id option;
+        typ : typeuse;
+        locals : (id option * valtype) list;
+        instrs : instr list;
+        exports : string list;
+      }
+    | Memory of {
+        id : id option;
+        limits : limits;
+        init : string option;
+        exports : string list;
+      }
+    | Tag of { id : id option; typ : typeuse; exports : string list }
+    | Global of {
+        id : id option;
+        typ : globaltype;
+        init : expr;
+        exports : string list;
+      }
+    | Export of { name : string; kind : exportable; index : idx }
+    | Start of idx
+    | Elem of { id : id option; typ : reftype; init : expr list }
+    | Data of { id : id option; init : string; mode : datamode }
 *)
+let module_ (_, fields) =
+  Format.eprintf "AAA %d@." (List.length fields);
+  List.map (fun f -> modulefield () f) fields
