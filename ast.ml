@@ -19,6 +19,7 @@ type instr_descr =
   | If of string option * instr * instr list * instr list option
   | Unreachable
   | Nop
+  | Null
   | Get of idx
   | Set of idx * instr
   | Tee of idx * instr

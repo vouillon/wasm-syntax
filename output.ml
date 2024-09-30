@@ -162,6 +162,8 @@ let rectype f t =
            subtype)
         l
 
+let globaltype = muttype valtype
+
 let binop f op =
   Format.fprintf f "%s"
     (match op with
@@ -199,7 +201,7 @@ let rec instr f i =
            instr)
         l
   | Struct (nm, l) ->
-      Format.fprintf f "@[@[<2>@[";
+      Format.fprintf f "@[@[<hv2>@[";
       Option.iter (fun nm -> Format.fprintf f "%s@ " nm) nm;
       Format.fprintf f "{@]@ %a@]@ }@]"
         (Format.pp_print_list
@@ -238,6 +240,7 @@ let rec instr f i =
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            instr)
         l
+  | Null -> Format.fprintf f "null"
   | _ -> Format.fprintf f "/* instr */"
 
 (*
@@ -256,7 +259,7 @@ and deliminated_instr f i =
   | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | Struct _ | String _
   | Int _ | Cast _ | Test _ | StructGet _ | StructSet _ | BinOp _ | Local _
   | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
-  | Br_on_cast_fail _ | Return _ | Sequence _ ->
+  | Br_on_cast_fail _ | Return _ | Sequence _ | Null ->
       Format.fprintf f "@[%a;@]" instr i
 
 and block_instrs f l =
@@ -273,6 +276,10 @@ let modulefield f field =
   | Type t -> rectype f t
   | Func { name; typ = _; sign = _; body = _lab, body } ->
       Format.fprintf f "@[@[<hv2>@[fn@ %s@ {@]%a}@]" name block_contents body
+  | Global { name; typ; def } ->
+      Format.fprintf f "@[<2>let@ %s" name;
+      Option.iter (fun t -> Format.fprintf f "@ :@ %a" globaltype t) typ;
+      Format.fprintf f "@ =@ %a@]" instr def
   | _ -> Format.fprintf f "/*...*/"
 (*
   | Fundecl of { name : string; typ : string option; sign : funsig option }

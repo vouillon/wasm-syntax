@@ -5,6 +5,8 @@ let get_type (_, t) = t
 let name_field _st a = Option.value ~default:"foo" a
 let name_type _st a = Option.value ~default:"foo" a
 let name_func _st a = Option.value ~default:"foo" a
+let name_local _st a = Option.value ~default:"x" a
+let name_global _st a = Option.value ~default:"x" a
 let annotated a t = (a, t)
 
 (*ZZZ Get name from table*)
@@ -177,21 +179,40 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
       no_loc (Struct (Some (idx st `Type i), List.map (fun i -> ("f", i)) args))
   | RefI31 -> no_loc (Cast (sequence args, { nullable = false; typ = I31 }))
   | ArrayNewData _ -> no_loc (String "foo")
+  | RefFunc f -> no_loc (Get (idx st `Func f))
+  | RefNull _ -> no_loc Null
   | _ -> no_loc Unreachable (* ZZZ *)
+
+let bind_locals st l =
+  List.map
+    (fun (id, t) ->
+      Ast.no_loc (Ast.Local (name_local st id, Some (valtype st t), None)))
+    l
 
 let modulefield st (f : Src.modulefield) : Ast.modulefield option =
   match f with
   | Types t -> Some (Type (rectype st t))
-  | Func { id; instrs; _ } ->
+  | Func { id; locals; instrs; _ } ->
       prerr_endline "AAA";
       Option.iter prerr_endline id;
+      let locals = bind_locals st locals in
       Some
         (Func
            {
              name = name_func st id;
              typ = None;
              sign = None;
-             body = (None, List.map (fun i -> instr st i []) instrs);
+             body = (None, locals @ List.map (fun i -> instr st i []) instrs);
+           })
+  | Import { module_ = _; name = _; id; desc = Func _typeuse; exports = _ } ->
+      Some (Fundecl { name = name_func st id; typ = None; sign = None })
+  | Global { id; typ; init; exports = _ } ->
+      Some
+        (Global
+           {
+             name = name_global st id;
+             typ = Some (globaltype st typ);
+             def = sequence (List.map (fun i -> instr st i []) init);
            })
   | _ -> None
 
@@ -217,12 +238,6 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
         exports : string list;
       }
     | Tag of { id : id option; typ : typeuse; exports : string list }
-    | Global of {
-        id : id option;
-        typ : globaltype;
-        init : expr;
-        exports : string list;
-      }
     | Export of { name : string; kind : exportable; index : idx }
     | Start of idx
     | Elem of { id : id option; typ : reftype; init : expr list }

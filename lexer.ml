@@ -40,6 +40,7 @@ let rec token lexbuf =
   | "<u" -> LTU
   | ">s" -> GTS
   | ">u" -> GTU
+  | "null" -> NULL
   | "fn" -> FN
   | "mut" -> MUT
   | "type" -> TYPE

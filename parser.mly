@@ -34,7 +34,7 @@
 %token TYPE
 %token REC
 %token OPEN
-%token NOP UNREACHABLE
+%token NOP UNREACHABLE NULL
 %token LOOP IF ELSE
 %token LET AS IS
 %token BR BR_IF BR_TABLE RETURN
@@ -192,6 +192,7 @@ func:
 plaininstr:
 | NOP { with_loc $sloc Nop }
 | UNREACHABLE { with_loc $sloc Unreachable }
+| NULL { with_loc $sloc Null }
 | x = IDENT { with_loc $sloc (Get x) }
 | x = IDENT ":=" i = instr { with_loc $sloc (Set (x, i)) }
 | x = IDENT "=" i = instr { with_loc $sloc (Tee (x, i)) }
