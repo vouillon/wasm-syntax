@@ -1,7 +1,7 @@
 (executables
  (names main test_wasm)
  (libraries wasm menhirLib)
- (preprocess (pps sedlex.ppx))
-)
+ (preprocess
+  (pps sedlex.ppx)))
 
 (include wasm/dune.menhir)

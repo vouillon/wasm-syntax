@@ -1,6 +1,7 @@
-(library (name wasm)
-  (preprocess (pps sedlex.ppx))
-  (libraries sedlex menhirLib)
-)
+(library
+ (name wasm)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries sedlex menhirLib))
 
 (include dune.menhir)
