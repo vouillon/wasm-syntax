@@ -67,7 +67,7 @@ let tbl_from_list l =
 
 let absheaptype_tbl =
   tbl_from_list
-    ["func", Func_;
+    ["func", (Func : heaptype);
      "nofunc", NoFunc;
      "extern", Extern;
      "noextern", NoExtern;
@@ -80,11 +80,11 @@ let absheaptype_tbl =
 
 let valtype_tbl =
   tbl_from_list
-    ["i32", I32; "i64", I64; "f32", F32; "f64", F64; "v128", V128]
+    ["i32", (I32 : valtype); "i64", I64; "f32", F32; "f64", F64; "v128", V128]
 
 let storagetype_tbl =
   tbl_from_list
-    ["i8", Packed I8; "i16", Packed I16;
+    ["i8", (Packed I8 : storagetype); "i16", Packed I16;
      "i32", Value I32; "i64", Value I64; "f32", Value F32; "f64", Value F64;
      "v128", Value V128]
 
@@ -92,7 +92,7 @@ let with_loc (loc_start, loc_end) descr = {descr; loc = { loc_start; loc_end }}
 
 %}
 
-%start <modulefield list> module_
+%start <modulefield list> parse
 
 %%
 
@@ -115,7 +115,8 @@ resulttype:
 | "(" l = separated_nonempty_list(",", valtype) ")" { l }
 
 functype:
-| FN params = resulttype "->" result = resulttype { {params; result} }
+| FN params = resulttype "->" result = resulttype
+  { {params = Array.of_list params; results = Array.of_list result} }
 
 storagetype:
 | t = IDENT
@@ -127,7 +128,8 @@ fieldtype:
 | mut = boption(MUT) typ = storagetype { {mut; typ } }
 
 structtype:
-| "{" l = separated_list(",", x = IDENT ":" t = fieldtype { (x, t) } ) "}" { l }
+| "{" l = separated_list(",", x = IDENT ":" t = fieldtype { (x, t) } ) "}"
+  { Array.of_list l }
 
 arraytype:
 | "[" t = fieldtype "]" { t }
@@ -141,11 +143,11 @@ typedef:
 | TYPE name = IDENT op = boption(OPEN)
   supertype = option(":" s = IDENT { s })
   "=" typ = comptype option(";")
-    { {name; typ; supertype; final = not op} }
+    { (name, {typ; supertype; final = not op}) }
 
 rectype:
-| REC "{" l = list(typedef) "}" { l }
-| t = typedef { [t] }
+| REC "{" l = list(typedef) "}" { Array.of_list l }
+| t = typedef { [|t|] }
 
 simple_pat:
 | x = IDENT { Some x }
@@ -244,4 +246,4 @@ modulefield:
 | f = func { f }
 | g = global { g }
 
-module_: l = list(modulefield) EOF { l }
+parse: l = list(modulefield) EOF { l }

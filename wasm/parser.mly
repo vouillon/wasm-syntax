@@ -10,8 +10,8 @@ ZZZ
 %token <string> FLOAT
 %token <string> STRING
 %token <string> ID
-%token <Ast.idx Ast.valtype> VALTYPE
-%token <Ast.packedtype> PACKEDTYPE
+%token <Ast.Text.valtype> VALTYPE
+%token <Ast.Text.packedtype> PACKEDTYPE
 %token LPAREN "("
 %token RPAREN ")"
 %token EOF
@@ -83,21 +83,21 @@ ZZZ
 %token GLOBAL_GET
 %token GLOBAL_SET
 %token I32STORE8
-%token <Ast.signage> I32LOAD8
+%token <Ast.Text.signage> I32LOAD8
 %token REF_NULL
 %token REF_FUNC
 %token REF_TEST
 %token REF_CAST
 %token STRUCT_NEW
 %token STRUCT_NEW_DEFAULT
-%token <Ast.signage option> STRUCT_GET
+%token <Ast.Text.signage option> STRUCT_GET
 %token STRUCT_SET
 %token ARRAY_NEW
 %token ARRAY_NEW_DEFAULT
 %token ARRAY_NEW_FIXED
 %token ARRAY_NEW_DATA
 %token ARRAY_NEW_ELEM
-%token <Ast.signage option> ARRAY_GET
+%token <Ast.Text.signage option> ARRAY_GET
 %token ARRAY_SET
 %token ARRAY_FILL
 %token ARRAY_COPY
@@ -107,7 +107,7 @@ ZZZ
 %token I64_CONST
 %token F32_CONST
 %token F64_CONST
-%token <(Ast.idx, Ast.typeuse) Ast.instr> INSTR
+%token <Ast.Text.instr> INSTR
 %token TAG
 %token TRY
 %token DO
@@ -126,12 +126,12 @@ ZZZ
  (* To avoid references to module Wasm in the generated mli file *)
 module Wasm = struct end
 
-open Ast
+open Ast.Text
 
 let map_fst f (x, y) = (f x, y)
 %}
 
-%start <string option * Ast.modulefield list> parse
+%start <string option * Ast.Text.modulefield list> parse
 
 %%
 
@@ -247,13 +247,13 @@ rectype:
 | t = typedef { Types [|t|] }
 
 typedef:
-| "(" TYPE name = ID ? t = subtype ")" { t name }
+| "(" TYPE name = ID ? t = subtype ")" { (name, t) }
 
 subtype:
 | "(" SUB final = boption(FINAL) supertype = idx ? typ = comptype
   ")"
-  { fun name -> {name; final; supertype; typ} }
-| typ = comptype { fun name -> {name; final = true; supertype = None; typ } }
+  { {final; supertype; typ} }
+| typ = comptype { {final = true; supertype = None; typ } }
 
 limits:
 | mi = u32 { {mi; ma = None} }
@@ -449,7 +449,7 @@ importdesc:
 | "(" GLOBAL i = ID ? t = globaltype ")"
     { (i, (Global t)) }
 | "(" TAG i = ID ? t = typeuse(")")
-    { (i, (Tag (fst t) : _ importdesc)) }
+    { (i, (Tag (fst t) : importdesc)) }
 
 func:
 | "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(")"))))

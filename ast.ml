@@ -1,37 +1,9 @@
 type idx = string
 
-type heaptype =
-  | Func_
-  | NoFunc
-  | Extern
-  | NoExtern
-  | Any
-  | Eq
-  | I31
-  | Struct
-  | Array
-  | None_
-  | Type of idx
-
-type reftype = { nullable : bool; typ : heaptype }
-type valtype = I32 | I64 | F32 | F64 | V128 | Ref of reftype
-type functype = { params : valtype list; result : valtype list }
-type packedtype = I8 | I16
-type storagetype = Value of valtype | Packed of packedtype
-type 'typ muttype = { mut : bool; typ : 'typ }
-type fieldtype = storagetype muttype
-
-type comptype =
-  | Struct of (idx * fieldtype) list
-  | Array of fieldtype
-  | Func of functype
-
-type subtype = {
-  name : idx;
-  typ : comptype;
-  supertype : idx option;
-  final : bool;
-}
+include Wasm.Ast.Types (struct
+  type nonrec idx = idx
+  type 'a annotated_array = (string * 'a) array
+end)
 
 type binop = Plus | Minus | Gtu | Ltu | Or | And
 type location = { loc_start : Lexing.position; loc_end : Lexing.position }
@@ -74,7 +46,7 @@ type funsig = {
 }
 
 type modulefield =
-  | Type of subtype list
+  | Type of rectype
   | Fundecl of { name : string; typ : string option; sign : funsig option }
   | Func of {
       name : string;

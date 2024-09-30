@@ -1,7 +1,7 @@
 exception Syntax_error of (Lexing.position * Lexing.position) * string
 
 module Make_parser (Output : sig
-  type t = string option * Ast.modulefield list
+  type t
 end) (Parser : sig
   type token
 

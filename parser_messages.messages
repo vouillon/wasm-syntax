@@ -1,8 +1,8 @@
-module_: UNREACHABLE
+parse: UNREACHABLE
 ##
 ## Ends in an error in state: 0.
 ##
-## module_' -> . module_ [ # ]
+## start' -> . start [ # ]
 ##
 ## The known suffix of the stack is as follows:
 ##
@@ -10,7 +10,7 @@ module_: UNREACHABLE
 
 Expecting a module field.
 
-module_: TYPE UNREACHABLE
+parse: TYPE UNREACHABLE
 ##
 ## Ends in an error in state: 1.
 ##
@@ -22,7 +22,7 @@ module_: TYPE UNREACHABLE
 
 Expecting the name of the type.
 
-module_: TYPE IDENT UNREACHABLE
+parse: TYPE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 2.
 ##
@@ -34,7 +34,7 @@ module_: TYPE IDENT UNREACHABLE
 
 Expecting an 'open' flag, a colon ':' followed by a supertype, or an equal sign '=' followed by a type definition.
 
-module_: TYPE IDENT OPEN UNREACHABLE
+parse: TYPE IDENT OPEN UNREACHABLE
 ##
 ## Ends in an error in state: 4.
 ##
@@ -46,7 +46,7 @@ module_: TYPE IDENT OPEN UNREACHABLE
 
 Expecting a colon ':' followed by a supertype, or an equal sign '=' followed by a type definition.
 
-module_: TYPE IDENT COLON UNREACHABLE
+parse: TYPE IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 5.
 ##
@@ -58,7 +58,7 @@ module_: TYPE IDENT COLON UNREACHABLE
 
 Expecting the name of the supertype.
 
-module_: TYPE IDENT COLON IDENT UNREACHABLE
+parse: TYPE IDENT COLON IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 7.
 ##
@@ -70,7 +70,7 @@ module_: TYPE IDENT COLON IDENT UNREACHABLE
 
 Expecting an equal sign '=' followed by the type definition.
 
-module_: TYPE IDENT EQUAL UNREACHABLE
+parse: TYPE IDENT EQUAL UNREACHABLE
 ##
 ## Ends in an error in state: 8.
 ##
@@ -82,7 +82,7 @@ module_: TYPE IDENT EQUAL UNREACHABLE
 
 Expecting a type definition.
 
-module_: TYPE IDENT EQUAL LBRACKET UNREACHABLE
+parse: TYPE IDENT EQUAL LBRACKET UNREACHABLE
 ##
 ## Ends in an error in state: 9.
 ##
@@ -94,7 +94,7 @@ module_: TYPE IDENT EQUAL LBRACKET UNREACHABLE
 
 Expecting a field type.
 
-module_: TYPE IDENT EQUAL LBRACKET MUT UNREACHABLE
+parse: TYPE IDENT EQUAL LBRACKET MUT UNREACHABLE
 ##
 ## Ends in an error in state: 13.
 ##
@@ -106,7 +106,7 @@ module_: TYPE IDENT EQUAL LBRACKET MUT UNREACHABLE
 
 Expecting a storage type.
 
-module_: LET IDENT COLON AMPERSAND UNREACHABLE
+parse: LET IDENT COLON AMPERSAND UNREACHABLE
 ##
 ## Ends in an error in state: 15.
 ##
@@ -118,7 +118,7 @@ module_: LET IDENT COLON AMPERSAND UNREACHABLE
 
 Expecting a character '?', or a heap type.
 
-module_: LET IDENT COLON AMPERSAND QUESTIONMARK UNREACHABLE
+parse: LET IDENT COLON AMPERSAND QUESTIONMARK UNREACHABLE
 ##
 ## Ends in an error in state: 17.
 ##
@@ -130,7 +130,7 @@ module_: LET IDENT COLON AMPERSAND QUESTIONMARK UNREACHABLE
 
 Expecting a character '?', a heap type.
 
-module_: TYPE IDENT EQUAL LBRACKET IDENT UNREACHABLE
+parse: TYPE IDENT EQUAL LBRACKET IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 11.
 ##
@@ -142,7 +142,7 @@ module_: TYPE IDENT EQUAL LBRACKET IDENT UNREACHABLE
 
 Expecting a character ']'.
 
-module_: TYPE IDENT EQUAL LBRACE UNREACHABLE
+parse: TYPE IDENT EQUAL LBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 22.
 ##
@@ -154,7 +154,7 @@ module_: TYPE IDENT EQUAL LBRACE UNREACHABLE
 
 Expecting a field name, or character '}'.
 
-module_: TYPE IDENT EQUAL LBRACE IDENT UNREACHABLE
+parse: TYPE IDENT EQUAL LBRACE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 23.
 ##
@@ -167,7 +167,7 @@ module_: TYPE IDENT EQUAL LBRACE IDENT UNREACHABLE
 
 Expecting a colon ':'.
 
-module_: TYPE IDENT EQUAL LBRACE IDENT COLON UNREACHABLE
+parse: TYPE IDENT EQUAL LBRACE IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 24.
 ##
@@ -180,7 +180,7 @@ module_: TYPE IDENT EQUAL LBRACE IDENT COLON UNREACHABLE
 
 Expecting a field type.
 
-module_: TYPE IDENT EQUAL LBRACE IDENT COLON IDENT UNREACHABLE
+parse: TYPE IDENT EQUAL LBRACE IDENT COLON IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 25.
 ##
@@ -193,7 +193,7 @@ module_: TYPE IDENT EQUAL LBRACE IDENT COLON IDENT UNREACHABLE
 
 Expecting a comma ',', or a character '}'.
 
-module_: TYPE IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
+parse: TYPE IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 ##
 ## Ends in an error in state: 26.
 ##
@@ -205,7 +205,7 @@ module_: TYPE IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 
 Expecting a field name.
 
-module_: TYPE IDENT EQUAL FN UNREACHABLE
+parse: TYPE IDENT EQUAL FN UNREACHABLE
 ##
 ## Ends in an error in state: 31.
 ##
@@ -217,7 +217,7 @@ module_: TYPE IDENT EQUAL FN UNREACHABLE
 
 Expecting a result type.
 
-module_: TYPE IDENT EQUAL FN LPAREN UNREACHABLE
+parse: TYPE IDENT EQUAL FN LPAREN UNREACHABLE
 ##
 ## Ends in an error in state: 32.
 ##
@@ -230,7 +230,7 @@ module_: TYPE IDENT EQUAL FN LPAREN UNREACHABLE
 
 Expecting a value type, or a closing parenthesis ')'.
 
-module_: TYPE IDENT EQUAL FN LPAREN IDENT UNREACHABLE
+parse: TYPE IDENT EQUAL FN LPAREN IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 35.
 ##
@@ -243,7 +243,7 @@ module_: TYPE IDENT EQUAL FN LPAREN IDENT UNREACHABLE
 
 Expecting a comma ',', or a closing parenthesis ')'.
 
-module_: TYPE IDENT EQUAL FN LPAREN IDENT COMMA UNREACHABLE
+parse: TYPE IDENT EQUAL FN LPAREN IDENT COMMA UNREACHABLE
 ##
 ## Ends in an error in state: 36.
 ##
@@ -255,7 +255,7 @@ module_: TYPE IDENT EQUAL FN LPAREN IDENT COMMA UNREACHABLE
 
 Expecting a value type.
 
-module_: TYPE IDENT EQUAL FN IDENT UNREACHABLE
+parse: TYPE IDENT EQUAL FN IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 42.
 ##
@@ -267,7 +267,7 @@ module_: TYPE IDENT EQUAL FN IDENT UNREACHABLE
 
 Expecting an arrow '->'.
 
-module_: TYPE IDENT EQUAL FN IDENT ARROW UNREACHABLE
+parse: TYPE IDENT EQUAL FN IDENT ARROW UNREACHABLE
 ##
 ## Ends in an error in state: 43.
 ##
@@ -279,7 +279,7 @@ module_: TYPE IDENT EQUAL FN IDENT ARROW UNREACHABLE
 
 Expecting a result type.
 
-module_: REC UNREACHABLE
+parse: REC UNREACHABLE
 ##
 ## Ends in an error in state: 51.
 ##
@@ -291,7 +291,7 @@ module_: REC UNREACHABLE
 
 Expecting a character '{'.
 
-module_: REC LBRACE UNREACHABLE
+parse: REC LBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 52.
 ##
@@ -303,7 +303,7 @@ module_: REC LBRACE UNREACHABLE
 
 Expecting keyword 'type', or character '}'.
 
-module_: REC LBRACE TYPE IDENT EQUAL LBRACE RBRACE UNREACHABLE
+parse: REC LBRACE TYPE IDENT EQUAL LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 47.
 ##
@@ -315,7 +315,7 @@ module_: REC LBRACE TYPE IDENT EQUAL LBRACE RBRACE UNREACHABLE
 
 Expecting keyword 'type', or character '}'.
 
-module_: LET UNREACHABLE
+parse: LET UNREACHABLE
 ##
 ## Ends in an error in state: 57.
 ##
@@ -327,7 +327,7 @@ module_: LET UNREACHABLE
 
 Expecting the name of the global variable.
 
-module_: LET IDENT UNREACHABLE
+parse: LET IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 58.
 ##
@@ -339,7 +339,7 @@ module_: LET IDENT UNREACHABLE
 
 Expecting a colon ':' followed by the type of the global, or an equal sign '=' followed by its definition.
 
-module_: LET IDENT COLON UNREACHABLE
+parse: LET IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 59.
 ##
@@ -351,7 +351,7 @@ module_: LET IDENT COLON UNREACHABLE
 
 Expecting a global type.
 
-module_: LET IDENT COLON IDENT UNREACHABLE
+parse: LET IDENT COLON IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 62.
 ##
@@ -363,7 +363,7 @@ module_: LET IDENT COLON IDENT UNREACHABLE
 
 Expecting an equal sign '=' followed by an instruction.
 
-module_: LET IDENT EQUAL UNDERSCORE
+parse: LET IDENT EQUAL UNDERSCORE
 ##
 ## Ends in an error in state: 63.
 ##
@@ -375,7 +375,7 @@ module_: LET IDENT EQUAL UNDERSCORE
 
 Expecting an instruction.
 
-module_: LET IDENT EQUAL QUOTE UNREACHABLE
+parse: LET IDENT EQUAL QUOTE UNREACHABLE
 ##
 ## Ends in an error in state: 67.
 ##
@@ -389,7 +389,7 @@ module_: LET IDENT EQUAL QUOTE UNREACHABLE
 
 Expecting a label name.
 
-module_: LET IDENT EQUAL QUOTE IDENT UNREACHABLE
+parse: LET IDENT EQUAL QUOTE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 68.
 ##
@@ -403,7 +403,7 @@ module_: LET IDENT EQUAL QUOTE IDENT UNREACHABLE
 
 Expecting a colon ':' after the label name.
 
-module_: LET IDENT EQUAL QUOTE IDENT COLON UNREACHABLE
+parse: LET IDENT EQUAL QUOTE IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 69.
 ##
@@ -417,7 +417,7 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON UNREACHABLE
 
 Expecting a block expression after a label.
 
-module_: LET IDENT EQUAL QUOTE IDENT COLON LOOP UNREACHABLE
+parse: LET IDENT EQUAL QUOTE IDENT COLON LOOP UNREACHABLE
 ##
 ## Ends in an error in state: 70.
 ##
@@ -429,7 +429,7 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON LOOP UNREACHABLE
 
 Expecting character '{'.
 
-module_: LET IDENT EQUAL QUOTE IDENT COLON LOOP LBRACE UNDERSCORE
+parse: LET IDENT EQUAL QUOTE IDENT COLON LOOP LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 71.
 ##
@@ -441,7 +441,7 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON LOOP LBRACE UNDERSCORE
 
 Expecting an instruction, or the character '}'.
 
-module_: LET IDENT EQUAL LPAREN UNDERSCORE
+parse: LET IDENT EQUAL LPAREN UNDERSCORE
 ##
 ## Ends in an error in state: 78.
 ##
@@ -453,7 +453,7 @@ module_: LET IDENT EQUAL LPAREN UNDERSCORE
 
 Expecting an instruction, or a closing parenthesis ')'.
 
-module_: LET IDENT EQUAL LOOP UNREACHABLE
+parse: LET IDENT EQUAL LOOP UNREACHABLE
 ##
 ## Ends in an error in state: 79.
 ##
@@ -465,7 +465,7 @@ module_: LET IDENT EQUAL LOOP UNREACHABLE
 
 Expecting character '{'.
 
-module_: LET IDENT EQUAL LOOP LBRACE UNDERSCORE
+parse: LET IDENT EQUAL LOOP LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 80.
 ##
@@ -477,7 +477,7 @@ module_: LET IDENT EQUAL LOOP LBRACE UNDERSCORE
 
 Expecting an instruction, or the character '}'.
 
-module_: LET IDENT EQUAL LET UNREACHABLE
+parse: LET IDENT EQUAL LET UNREACHABLE
 ##
 ## Ends in an error in state: 83.
 ##
@@ -489,7 +489,7 @@ module_: LET IDENT EQUAL LET UNREACHABLE
 
 Expecting a local variable name.
 
-module_: LET IDENT EQUAL LET IDENT UNDERSCORE
+parse: LET IDENT EQUAL LET IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 84.
 ##
@@ -501,7 +501,7 @@ module_: LET IDENT EQUAL LET IDENT UNDERSCORE
 
 Missing semincolon ';'.
 
-module_: LET IDENT EQUAL LET IDENT COLON UNREACHABLE
+parse: LET IDENT EQUAL LET IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 85.
 ##
@@ -513,7 +513,7 @@ module_: LET IDENT EQUAL LET IDENT COLON UNREACHABLE
 
 Expecting a value type.
 
-module_: LET IDENT EQUAL LET IDENT COLON IDENT UNDERSCORE
+parse: LET IDENT EQUAL LET IDENT COLON IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 87.
 ##
@@ -525,7 +525,7 @@ module_: LET IDENT EQUAL LET IDENT COLON IDENT UNDERSCORE
 
 Missing semicolon ';'.
 
-module_: LET IDENT EQUAL LET IDENT EQUAL UNDERSCORE
+parse: LET IDENT EQUAL LET IDENT EQUAL UNDERSCORE
 ##
 ## Ends in an error in state: 88.
 ##
@@ -537,7 +537,7 @@ module_: LET IDENT EQUAL LET IDENT EQUAL UNDERSCORE
 
 Expecting an instruction, or the character '}'.
 
-module_: LET IDENT EQUAL LBRACE UNDERSCORE
+parse: LET IDENT EQUAL LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 90.
 ##
@@ -550,7 +550,7 @@ module_: LET IDENT EQUAL LBRACE UNDERSCORE
 
 Expecting an instruction
 
-module_: FN IDENT LPAREN IDENT COLON IDENT COMMA UNREACHABLE
+parse: FN IDENT LPAREN IDENT COLON IDENT COMMA UNREACHABLE
 ##
 ## Ends in an error in state: 245.
 ##
@@ -562,7 +562,7 @@ module_: FN IDENT LPAREN IDENT COLON IDENT COMMA UNREACHABLE
 
 Expecting a parameter name or an underscore '_'.
 
-module_: FN IDENT LPAREN RPAREN UNREACHABLE
+parse: FN IDENT LPAREN RPAREN UNREACHABLE
 ##
 ## Ends in an error in state: 250.
 ##
@@ -574,7 +574,7 @@ module_: FN IDENT LPAREN RPAREN UNREACHABLE
 
 Expecting an arrow '->'.
 
-module_: LET IDENT COLON MUT UNREACHABLE
+parse: LET IDENT COLON MUT UNREACHABLE
 ##
 ## Ends in an error in state: 60.
 ##
@@ -586,7 +586,7 @@ module_: LET IDENT COLON MUT UNREACHABLE
 
 Expecting a value type.
 
-module_: LET IDENT EQUAL IDENT MINUS UNDERSCORE
+parse: LET IDENT EQUAL IDENT MINUS UNDERSCORE
 ##
 ## Ends in an error in state: 133.
 ##
@@ -598,7 +598,7 @@ module_: LET IDENT EQUAL IDENT MINUS UNDERSCORE
 
 Expecting an instruction.
 
-module_: LET IDENT EQUAL IDENT AS UNREACHABLE
+parse: LET IDENT EQUAL IDENT AS UNREACHABLE
 ##
 ## Ends in an error in state: 135.
 ##
@@ -610,7 +610,7 @@ module_: LET IDENT EQUAL IDENT AS UNREACHABLE
 
 Expecting a refernce type.
 
-module_: LET IDENT EQUAL IDENT LTU UNDERSCORE
+parse: LET IDENT EQUAL IDENT LTU UNDERSCORE
 ##
 ## Ends in an error in state: 139.
 ##
@@ -622,7 +622,7 @@ module_: LET IDENT EQUAL IDENT LTU UNDERSCORE
 
 Expecting an instruction.
 
-module_: LET IDENT EQUAL IDENT GTU UNDERSCORE
+parse: LET IDENT EQUAL IDENT GTU UNDERSCORE
 ##
 ## Ends in an error in state: 141.
 ##
@@ -634,7 +634,7 @@ module_: LET IDENT EQUAL IDENT GTU UNDERSCORE
 
 Expecting an instruction.
 
-module_: LET IDENT EQUAL LPAREN IDENT COMMA UNDERSCORE
+parse: LET IDENT EQUAL LPAREN IDENT COMMA UNDERSCORE
 ##
 ## Ends in an error in state: 154.
 ##
@@ -646,7 +646,7 @@ module_: LET IDENT EQUAL LPAREN IDENT COMMA UNDERSCORE
 
 Expecting an instruction, or a closing parenthesis '('.
 
-module_: LET IDENT EQUAL IDENT LBRACE IDENT UNREACHABLE
+parse: LET IDENT EQUAL IDENT LBRACE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 157.
 ##
@@ -659,7 +659,7 @@ module_: LET IDENT EQUAL IDENT LBRACE IDENT UNREACHABLE
 
 Expecting a colon ':' after the field name of a structure.
 
-module_: LET IDENT EQUAL IDENT LBRACE IDENT COLON UNDERSCORE
+parse: LET IDENT EQUAL IDENT LBRACE IDENT COLON UNDERSCORE
 ##
 ## Ends in an error in state: 158.
 ##
@@ -672,7 +672,7 @@ module_: LET IDENT EQUAL IDENT LBRACE IDENT COLON UNDERSCORE
 
 Expecting an instruction.
 
-module_: LET IDENT EQUAL IDENT LBRACE IDENT COLON IDENT COMMA UNREACHABLE
+parse: LET IDENT EQUAL IDENT LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 ##
 ## Ends in an error in state: 160.
 ##
@@ -684,7 +684,7 @@ module_: LET IDENT EQUAL IDENT LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 
 Expecting a field definition, or a character '}'.
 
-module_: LET IDENT EQUAL IDENT EQUAL UNDERSCORE
+parse: LET IDENT EQUAL IDENT EQUAL UNDERSCORE
 ##
 ## Ends in an error in state: 165.
 ##
@@ -696,7 +696,7 @@ module_: LET IDENT EQUAL IDENT EQUAL UNDERSCORE
 
 Expecting an instruction.
 
-module_: LET IDENT EQUAL LBRACE IDENT COLON UNDERSCORE
+parse: LET IDENT EQUAL LBRACE IDENT COLON UNDERSCORE
 ##
 ## Ends in an error in state: 187.
 ##
@@ -709,7 +709,7 @@ module_: LET IDENT EQUAL LBRACE IDENT COLON UNDERSCORE
 
 Expecting an instruction.
 
-module_: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
+parse: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 ##
 ## Ends in an error in state: 189.
 ##
@@ -721,7 +721,7 @@ module_: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 
 Expecting a field definition, or a character '}'.
 
-module_: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA IDENT UNREACHABLE
+parse: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 190.
 ##
@@ -734,7 +734,7 @@ module_: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA IDENT UNREACHABLE
 
 Expecting a colon ':'.
 
-module_: LET IDENT EQUAL QUOTE IDENT COLON LBRACE UNDERSCORE
+parse: LET IDENT EQUAL QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 225.
 ##
@@ -746,7 +746,7 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON LBRACE UNDERSCORE
 
 Expecting an instruction, or a character '}'.
 
-module_: FN IDENT COLON IDENT UNREACHABLE
+parse: FN IDENT COLON IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 254.
 ##
@@ -759,7 +759,7 @@ module_: FN IDENT COLON IDENT UNREACHABLE
 
 Expecting a list of function parameters.
 
-module_: FN IDENT LPAREN UNREACHABLE
+parse: FN IDENT LPAREN UNREACHABLE
 ##
 ## Ends in an error in state: 239.
 ##
@@ -771,7 +771,7 @@ module_: FN IDENT LPAREN UNREACHABLE
 
 Expecting a list of function parameters.
 
-module_: FN IDENT LPAREN IDENT UNREACHABLE
+parse: FN IDENT LPAREN IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 242.
 ##
@@ -784,7 +784,7 @@ module_: FN IDENT LPAREN IDENT UNREACHABLE
 
 Expecting a colon ':' followed by a value type.
 
-module_: FN IDENT LPAREN IDENT COLON UNREACHABLE
+parse: FN IDENT LPAREN IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 243.
 ##
@@ -797,7 +797,7 @@ module_: FN IDENT LPAREN IDENT COLON UNREACHABLE
 
 Expecting a value type.
 
-module_: FN IDENT LPAREN IDENT COLON IDENT UNREACHABLE
+parse: FN IDENT LPAREN IDENT COLON IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 244.
 ##
@@ -810,7 +810,7 @@ module_: FN IDENT LPAREN IDENT COLON IDENT UNREACHABLE
 
 Expecting a comma ',' followed by a parameter declaration, or a closing parenthesis ')'.
 
-module_: FN IDENT LPAREN RPAREN ARROW UNREACHABLE
+parse: FN IDENT LPAREN RPAREN ARROW UNREACHABLE
 ##
 ## Ends in an error in state: 251.
 ##
@@ -822,7 +822,7 @@ module_: FN IDENT LPAREN RPAREN ARROW UNREACHABLE
 
 Expecting a result type.
 
-module_: REC LBRACE RBRACE UNREACHABLE
+parse: REC LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 262.
 ##
@@ -834,7 +834,7 @@ module_: REC LBRACE RBRACE UNREACHABLE
 
 Expecting a module field.
 
-module_: FN IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
+parse: FN IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 265.
 ##
@@ -848,7 +848,7 @@ module_: FN IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 
 Expecting a label, the start of the function body, or another module field.
 
-module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE UNREACHABLE
+parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE UNREACHABLE
 ##
 ## Ends in an error in state: 266.
 ##
@@ -860,7 +860,7 @@ module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE UNREACHABLE
 
 Expecting a label name.
 
-module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT UNREACHABLE
+parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 267.
 ##
@@ -872,7 +872,7 @@ module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT UNREACHABLE
 
 Expecting a colon ':' after the label name.
 
-module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON UNREACHABLE
+parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 268.
 ##
@@ -884,7 +884,7 @@ module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON UNREACHABLE
 
 Expecting a block starting with character '{'.
 
-module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON LBRACE UNDERSCORE
+parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 269.
 ##
@@ -896,7 +896,7 @@ module_: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON LBRACE UNDERSCORE
 
 Expecting an instruction, or a character '}'.
 
-module_: FN IDENT LPAREN RPAREN ARROW IDENT LBRACE UNDERSCORE
+parse: FN IDENT LPAREN RPAREN ARROW IDENT LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 272.
 ##
@@ -908,7 +908,7 @@ module_: FN IDENT LPAREN RPAREN ARROW IDENT LBRACE UNDERSCORE
 
 Expecting an instruction, or a character '}'.
 
-module_: FN IDENT LBRACE IDENT LPAREN UNDERSCORE
+parse: FN IDENT LBRACE IDENT LPAREN UNDERSCORE
 ##
 ## Ends in an error in state: 96.
 ##
@@ -921,7 +921,7 @@ module_: FN IDENT LBRACE IDENT LPAREN UNDERSCORE
 Expecting an instruction.
 
 
-module_: FN IDENT LBRACE IDENT PLUS UNDERSCORE
+parse: FN IDENT LBRACE IDENT PLUS UNDERSCORE
 ##
 ## Ends in an error in state: 123.
 ##
@@ -933,7 +933,7 @@ module_: FN IDENT LBRACE IDENT PLUS UNDERSCORE
 
 Expecting an instruction
 
-module_: FN IDENT LBRACE IDENT DOT UNREACHABLE
+parse: FN IDENT LBRACE IDENT DOT UNREACHABLE
 ##
 ## Ends in an error in state: 127.
 ##
@@ -946,7 +946,7 @@ module_: FN IDENT LBRACE IDENT DOT UNREACHABLE
 
 Expecting a field name.
 
-module_: FN IDENT LBRACE IDENT DOT IDENT UNDERSCORE
+parse: FN IDENT LBRACE IDENT DOT IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 128.
 ##
@@ -959,7 +959,7 @@ module_: FN IDENT LBRACE IDENT DOT IDENT UNDERSCORE
 
 Missing semicolon ';'.
 
-module_: FN IDENT LBRACE IDENT DOT IDENT EQUAL UNDERSCORE
+parse: FN IDENT LBRACE IDENT DOT IDENT EQUAL UNDERSCORE
 ##
 ## Ends in an error in state: 129.
 ##
@@ -971,7 +971,7 @@ module_: FN IDENT LBRACE IDENT DOT IDENT EQUAL UNDERSCORE
 
 Expecting an instruction.
 
-module_: FN IDENT LBRACE IDENT LBRACE UNREACHABLE
+parse: FN IDENT LBRACE IDENT LBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 156.
 ##
@@ -983,7 +983,7 @@ module_: FN IDENT LBRACE IDENT LBRACE UNREACHABLE
 
 Expecting a field definition, or a character '}'.
 
-module_: FN IDENT LBRACE IDENT TYPE
+parse: FN IDENT LBRACE IDENT TYPE
 ##
 ## Ends in an error in state: 169.
 ##
@@ -1004,7 +1004,7 @@ module_: FN IDENT LBRACE IDENT TYPE
 
 Missing semicolon ';'.
 
-module_: REC LBRACE TYPE IDENT EQUAL LBRACE RBRACE REC
+parse: REC LBRACE TYPE IDENT EQUAL LBRACE RBRACE REC
 ##
 ## Ends in an error in state: 53.
 ##
@@ -1023,7 +1023,7 @@ module_: REC LBRACE TYPE IDENT EQUAL LBRACE RBRACE REC
 
 Expecting keyword 'type', or character '}'.
 
-module_: FN IDENT LBRACE IF UNDERSCORE
+parse: FN IDENT LBRACE IF UNDERSCORE
 ##
 ## Ends in an error in state: 93.
 ##
@@ -1036,7 +1036,7 @@ module_: FN IDENT LBRACE IF UNDERSCORE
 
 Expecting an instruction.
 
-module_: FN IDENT LBRACE IDENT UNREACHABLE
+parse: FN IDENT LBRACE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 95.
 ##
@@ -1051,7 +1051,7 @@ module_: FN IDENT LBRACE IDENT UNREACHABLE
 
 Missing semicolon ';'.
 
-module_: FN IDENT LBRACE BR_TABLE UNREACHABLE
+parse: FN IDENT LBRACE BR_TABLE UNREACHABLE
 ##
 ## Ends in an error in state: 97.
 ##
@@ -1063,7 +1063,7 @@ module_: FN IDENT LBRACE BR_TABLE UNREACHABLE
 
 Expecting a character '{'.
 
-module_: FN IDENT LBRACE BR_TABLE LBRACE UNREACHABLE
+parse: FN IDENT LBRACE BR_TABLE LBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 98.
 ##
@@ -1075,7 +1075,7 @@ module_: FN IDENT LBRACE BR_TABLE LBRACE UNREACHABLE
 
 Expecting a sequence of label names followed by character '}'.
 
-module_: FN IDENT LBRACE BR_TABLE LBRACE IDENT UNREACHABLE
+parse: FN IDENT LBRACE BR_TABLE LBRACE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 99.
 ##
@@ -1088,7 +1088,7 @@ module_: FN IDENT LBRACE BR_TABLE LBRACE IDENT UNREACHABLE
 
 Expecting a sequence of label names followed by character '}'.
 
-module_: FN IDENT LBRACE BR_TABLE LBRACE IDENT RBRACE UNDERSCORE
+parse: FN IDENT LBRACE BR_TABLE LBRACE IDENT RBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 102.
 ##
@@ -1100,7 +1100,7 @@ module_: FN IDENT LBRACE BR_TABLE LBRACE IDENT RBRACE UNDERSCORE
 
 Missing semicolon ';'
 
-module_: FN IDENT LBRACE BR UNREACHABLE
+parse: FN IDENT LBRACE BR UNREACHABLE
 ##
 ## Ends in an error in state: 115.
 ##
@@ -1113,7 +1113,7 @@ module_: FN IDENT LBRACE BR UNREACHABLE
 
 Expecting a label name.
 
-module_: FN IDENT LBRACE BR IDENT UNDERSCORE
+parse: FN IDENT LBRACE BR IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 116.
 ##
@@ -1126,7 +1126,7 @@ module_: FN IDENT LBRACE BR IDENT UNDERSCORE
 
 Missing semicolon ';'.
 
-module_: FN IDENT LBRACE IDENT PIPE UNDERSCORE
+parse: FN IDENT LBRACE IDENT PIPE UNDERSCORE
 ##
 ## Ends in an error in state: 131.
 ##
@@ -1138,7 +1138,7 @@ module_: FN IDENT LBRACE IDENT PIPE UNDERSCORE
 
 Expecting an instruction.
 
-module_: FN IDENT LBRACE IDENT AMPERSAND UNDERSCORE
+parse: FN IDENT LBRACE IDENT AMPERSAND UNDERSCORE
 ##
 ## Ends in an error in state: 137.
 ##
@@ -1150,7 +1150,7 @@ module_: FN IDENT LBRACE IDENT AMPERSAND UNDERSCORE
 
 Expecting an instruction.
 
-module_: FN IDENT LBRACE IF INT LBRACE UNDERSCORE
+parse: FN IDENT LBRACE IF INT LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 182.
 ##
@@ -1163,7 +1163,7 @@ module_: FN IDENT LBRACE IF INT LBRACE UNDERSCORE
 
 Expecting an instruction, or the character '}'.
 
-module_: FN IDENT LBRACE IF INT LBRACE RBRACE UNDERSCORE
+parse: FN IDENT LBRACE IF INT LBRACE RBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 184.
 ##
@@ -1176,7 +1176,7 @@ module_: FN IDENT LBRACE IF INT LBRACE RBRACE UNDERSCORE
 
 Expecting an 'else' branch, another instruction, or a character '}'.
 
-module_: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE UNREACHABLE
+parse: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE UNREACHABLE
 ##
 ## Ends in an error in state: 173.
 ##
@@ -1188,7 +1188,7 @@ module_: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE UNREACHABLE
 
 Expecting a character '{'.
 
-module_: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE UNDERSCORE
+parse: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 174.
 ##
@@ -1200,7 +1200,7 @@ module_: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE UNDERSCORE
 
 Expecting an instruction or the character '}'.
 
-module_: FN IDENT LBRACE IDENT SEMI UNDERSCORE
+parse: FN IDENT LBRACE IDENT SEMI UNDERSCORE
 ##
 ## Ends in an error in state: 178.
 ##
@@ -1212,7 +1212,7 @@ module_: FN IDENT LBRACE IDENT SEMI UNDERSCORE
 
 Expecting an instruction or the character '}'.
 
-module_: FN IDENT LBRACE LBRACE RBRACE TYPE
+parse: FN IDENT LBRACE LBRACE RBRACE TYPE
 ##
 ## Ends in an error in state: 195.
 ##
@@ -1225,7 +1225,7 @@ module_: FN IDENT LBRACE LBRACE RBRACE TYPE
 
 Expecting an instruction or the character '}'.
 
-module_: FN IDENT LBRACE LBRACE IDENT COLON INT UNREACHABLE
+parse: FN IDENT LBRACE LBRACE IDENT COLON INT UNREACHABLE
 ##
 ## Ends in an error in state: 117.
 ##
@@ -1239,7 +1239,7 @@ module_: FN IDENT LBRACE LBRACE IDENT COLON INT UNREACHABLE
 
 Missing semicolon ';'
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON IF UNDERSCORE
+parse: FN IDENT LBRACE QUOTE IDENT COLON IF UNDERSCORE
 ##
 ## Ends in an error in state: 217.
 ##
@@ -1252,7 +1252,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON IF UNDERSCORE
 
 Expecting an instruction.
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
+parse: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 219.
 ##
@@ -1265,7 +1265,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
 
 Expecting an instruction or the character '}'.
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE UNDERSCORE
+parse: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 221.
 ##
@@ -1278,7 +1278,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE UNDERSCORE
 
 Expecting an 'else' branch, another instruction, or a character '}'.
 
-module_: FN UNREACHABLE
+parse: FN UNREACHABLE
 ##
 ## Ends in an error in state: 237.
 ##
@@ -1292,7 +1292,7 @@ module_: FN UNREACHABLE
 
 Expecting a function name.
 
-module_: FN IDENT COLON UNREACHABLE
+parse: FN IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 253.
 ##
@@ -1305,7 +1305,7 @@ module_: FN IDENT COLON UNREACHABLE
 
 Expecting a type name or a function type.
 
-module_: FN IDENT COLON AMPERSAND IDENT UNREACHABLE
+parse: FN IDENT COLON AMPERSAND IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 256.
 ##
@@ -1317,7 +1317,7 @@ module_: FN IDENT COLON AMPERSAND IDENT UNREACHABLE
 
 Expecting an arrow '->'.
 
-module_: FN IDENT COLON IDENT ARROW UNREACHABLE
+parse: FN IDENT COLON IDENT ARROW UNREACHABLE
 ##
 ## Ends in an error in state: 257.
 ##
@@ -1329,7 +1329,7 @@ module_: FN IDENT COLON IDENT ARROW UNREACHABLE
 
 Expectint a result type.
 
-module_: FN IDENT LBRACE RETURN UNDERSCORE
+parse: FN IDENT LBRACE RETURN UNDERSCORE
 ##
 ## Ends in an error in state: 66.
 ##
@@ -1342,7 +1342,7 @@ module_: FN IDENT LBRACE RETURN UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE UNREACHABLE
+parse: FN IDENT LBRACE QUOTE UNREACHABLE
 ##
 ## Ends in an error in state: 72.
 ##
@@ -1359,7 +1359,7 @@ module_: FN IDENT LBRACE QUOTE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE IDENT UNREACHABLE
+parse: FN IDENT LBRACE QUOTE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 73.
 ##
@@ -1376,7 +1376,7 @@ module_: FN IDENT LBRACE QUOTE IDENT UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON UNREACHABLE
+parse: FN IDENT LBRACE QUOTE IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 74.
 ##
@@ -1393,7 +1393,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON LOOP UNREACHABLE
+parse: FN IDENT LBRACE QUOTE IDENT COLON LOOP UNREACHABLE
 ##
 ## Ends in an error in state: 75.
 ##
@@ -1406,7 +1406,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON LOOP UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE UNDERSCORE
+parse: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 76.
 ##
@@ -1419,7 +1419,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LOOP UNREACHABLE
+parse: FN IDENT LBRACE LOOP UNREACHABLE
 ##
 ## Ends in an error in state: 81.
 ##
@@ -1432,7 +1432,7 @@ module_: FN IDENT LBRACE LOOP UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LOOP LBRACE UNDERSCORE
+parse: FN IDENT LBRACE LOOP LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 82.
 ##
@@ -1445,7 +1445,7 @@ module_: FN IDENT LBRACE LOOP LBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LBRACKET UNDERSCORE
+parse: FN IDENT LBRACE LBRACKET UNDERSCORE
 ##
 ## Ends in an error in state: 89.
 ##
@@ -1458,7 +1458,7 @@ module_: FN IDENT LBRACE LBRACKET UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LBRACE UNDERSCORE
+parse: FN IDENT LBRACE LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 91.
 ##
@@ -1472,7 +1472,7 @@ module_: FN IDENT LBRACE LBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LET IDENT EQUAL IF UNDERSCORE
+parse: LET IDENT EQUAL IF UNDERSCORE
 ##
 ## Ends in an error in state: 94.
 ##
@@ -1484,7 +1484,7 @@ module_: LET IDENT EQUAL IF UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_NULL UNREACHABLE
+parse: FN IDENT LBRACE BR_ON_NULL UNREACHABLE
 ##
 ## Ends in an error in state: 103.
 ##
@@ -1496,7 +1496,7 @@ module_: FN IDENT LBRACE BR_ON_NULL UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_NULL IDENT UNDERSCORE
+parse: FN IDENT LBRACE BR_ON_NULL IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 104.
 ##
@@ -1508,7 +1508,7 @@ module_: FN IDENT LBRACE BR_ON_NULL IDENT UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_NON_NULL UNREACHABLE
+parse: FN IDENT LBRACE BR_ON_NON_NULL UNREACHABLE
 ##
 ## Ends in an error in state: 105.
 ##
@@ -1520,7 +1520,7 @@ module_: FN IDENT LBRACE BR_ON_NON_NULL UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_NON_NULL IDENT UNDERSCORE
+parse: FN IDENT LBRACE BR_ON_NON_NULL IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 106.
 ##
@@ -1532,7 +1532,7 @@ module_: FN IDENT LBRACE BR_ON_NON_NULL IDENT UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_CAST_FAIL UNREACHABLE
+parse: FN IDENT LBRACE BR_ON_CAST_FAIL UNREACHABLE
 ##
 ## Ends in an error in state: 107.
 ##
@@ -1544,7 +1544,7 @@ module_: FN IDENT LBRACE BR_ON_CAST_FAIL UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT UNREACHABLE
+parse: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 108.
 ##
@@ -1556,7 +1556,7 @@ module_: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT AMPERSAND IDENT UNDERSCORE
+parse: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT AMPERSAND IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 109.
 ##
@@ -1568,7 +1568,7 @@ module_: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT AMPERSAND IDENT UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_CAST UNREACHABLE
+parse: FN IDENT LBRACE BR_ON_CAST UNREACHABLE
 ##
 ## Ends in an error in state: 110.
 ##
@@ -1580,7 +1580,7 @@ module_: FN IDENT LBRACE BR_ON_CAST UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_CAST IDENT UNREACHABLE
+parse: FN IDENT LBRACE BR_ON_CAST IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 111.
 ##
@@ -1592,7 +1592,7 @@ module_: FN IDENT LBRACE BR_ON_CAST IDENT UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_CAST IDENT AMPERSAND IDENT UNDERSCORE
+parse: FN IDENT LBRACE BR_ON_CAST IDENT AMPERSAND IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 112.
 ##
@@ -1604,7 +1604,7 @@ module_: FN IDENT LBRACE BR_ON_CAST IDENT AMPERSAND IDENT UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_IF UNREACHABLE
+parse: FN IDENT LBRACE BR_IF UNREACHABLE
 ##
 ## Ends in an error in state: 113.
 ##
@@ -1616,7 +1616,7 @@ module_: FN IDENT LBRACE BR_IF UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_IF IDENT UNDERSCORE
+parse: FN IDENT LBRACE BR_IF IDENT UNDERSCORE
 ##
 ## Ends in an error in state: 114.
 ##
@@ -1628,7 +1628,7 @@ module_: FN IDENT LBRACE BR_IF IDENT UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT LBRACKET UNDERSCORE
+parse: FN IDENT LBRACE IDENT LBRACKET UNDERSCORE
 ##
 ## Ends in an error in state: 118.
 ##
@@ -1641,7 +1641,7 @@ module_: FN IDENT LBRACE IDENT LBRACKET UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT LBRACKET IDENT TYPE
+parse: FN IDENT LBRACE IDENT LBRACKET IDENT TYPE
 ##
 ## Ends in an error in state: 119.
 ##
@@ -1671,7 +1671,7 @@ module_: FN IDENT LBRACE IDENT LBRACKET IDENT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET UNREACHABLE
+parse: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET UNREACHABLE
 ##
 ## Ends in an error in state: 120.
 ##
@@ -1684,7 +1684,7 @@ module_: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET EQUAL UNDERSCORE
+parse: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET EQUAL UNDERSCORE
 ##
 ## Ends in an error in state: 121.
 ##
@@ -1696,7 +1696,7 @@ module_: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET EQUAL UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET EQUAL LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET EQUAL LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 122.
 ##
@@ -1718,7 +1718,7 @@ module_: FN IDENT LBRACE IDENT LBRACKET IDENT RBRACKET EQUAL LBRACE RBRACE UNREA
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT PLUS LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE IDENT PLUS LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 124.
 ##
@@ -1740,7 +1740,7 @@ module_: FN IDENT LBRACE IDENT PLUS LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT IS UNREACHABLE
+parse: FN IDENT LBRACE IDENT IS UNREACHABLE
 ##
 ## Ends in an error in state: 125.
 ##
@@ -1752,7 +1752,7 @@ module_: FN IDENT LBRACE IDENT IS UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT DOT IDENT EQUAL LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE IDENT DOT IDENT EQUAL LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 130.
 ##
@@ -1774,7 +1774,7 @@ module_: FN IDENT LBRACE IDENT DOT IDENT EQUAL LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT PIPE LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE IDENT PIPE LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 132.
 ##
@@ -1796,7 +1796,7 @@ module_: FN IDENT LBRACE IDENT PIPE LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT MINUS LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE IDENT MINUS LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 134.
 ##
@@ -1818,7 +1818,7 @@ module_: FN IDENT LBRACE IDENT MINUS LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT AMPERSAND LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE IDENT AMPERSAND LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 138.
 ##
@@ -1840,7 +1840,7 @@ module_: FN IDENT LBRACE IDENT AMPERSAND LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT LTU IDENT LTU
+parse: FN IDENT LBRACE IDENT LTU IDENT LTU
 ##
 ## Ends in an error in state: 140.
 ##
@@ -1869,7 +1869,7 @@ module_: FN IDENT LBRACE IDENT LTU IDENT LTU
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT GTU IDENT LTU
+parse: FN IDENT LBRACE IDENT GTU IDENT LTU
 ##
 ## Ends in an error in state: 142.
 ##
@@ -1898,7 +1898,7 @@ module_: FN IDENT LBRACE IDENT GTU IDENT LTU
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR IDENT LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE BR IDENT LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 143.
 ##
@@ -1920,7 +1920,7 @@ module_: FN IDENT LBRACE BR IDENT LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_IF IDENT LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE BR_IF IDENT LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 144.
 ##
@@ -1942,7 +1942,7 @@ module_: FN IDENT LBRACE BR_IF IDENT LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_CAST IDENT AMPERSAND IDENT LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE BR_ON_CAST IDENT AMPERSAND IDENT LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 145.
 ##
@@ -1964,7 +1964,7 @@ module_: FN IDENT LBRACE BR_ON_CAST IDENT AMPERSAND IDENT LBRACE RBRACE UNREACHA
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT AMPERSAND IDENT LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT AMPERSAND IDENT LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 146.
 ##
@@ -1986,7 +1986,7 @@ module_: FN IDENT LBRACE BR_ON_CAST_FAIL IDENT AMPERSAND IDENT LBRACE RBRACE UNR
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_NON_NULL IDENT LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE BR_ON_NON_NULL IDENT LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 147.
 ##
@@ -2008,7 +2008,7 @@ module_: FN IDENT LBRACE BR_ON_NON_NULL IDENT LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_ON_NULL IDENT LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE BR_ON_NULL IDENT LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 148.
 ##
@@ -2030,7 +2030,7 @@ module_: FN IDENT LBRACE BR_ON_NULL IDENT LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE BR_TABLE LBRACE IDENT RBRACE LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE BR_TABLE LBRACE IDENT RBRACE LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 149.
 ##
@@ -2052,7 +2052,7 @@ module_: FN IDENT LBRACE BR_TABLE LBRACE IDENT RBRACE LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT LPAREN IDENT RBRACKET
+parse: FN IDENT LBRACE IDENT LPAREN IDENT RBRACKET
 ##
 ## Ends in an error in state: 151.
 ##
@@ -2073,7 +2073,7 @@ module_: FN IDENT LBRACE IDENT LPAREN IDENT RBRACKET
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LPAREN IDENT TYPE
+parse: FN IDENT LBRACE LPAREN IDENT TYPE
 ##
 ## Ends in an error in state: 153.
 ##
@@ -2103,7 +2103,7 @@ module_: FN IDENT LBRACE LPAREN IDENT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT LBRACE IDENT COLON IDENT TYPE
+parse: FN IDENT LBRACE IDENT LBRACE IDENT COLON IDENT TYPE
 ##
 ## Ends in an error in state: 159.
 ##
@@ -2133,7 +2133,7 @@ module_: FN IDENT LBRACE IDENT LBRACE IDENT COLON IDENT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IDENT EQUAL LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE IDENT EQUAL LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 166.
 ##
@@ -2155,7 +2155,7 @@ module_: FN IDENT LBRACE IDENT EQUAL LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LET IDENT EQUAL IF IDENT TYPE
+parse: LET IDENT EQUAL IF IDENT TYPE
 ##
 ## Ends in an error in state: 167.
 ##
@@ -2184,7 +2184,7 @@ module_: LET IDENT EQUAL IF IDENT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LET IDENT EQUAL IF INT LBRACE UNDERSCORE
+parse: LET IDENT EQUAL IF INT LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 168.
 ##
@@ -2196,7 +2196,7 @@ module_: LET IDENT EQUAL IF INT LBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LET IDENT EQUAL IF INT LBRACE RBRACE UNREACHABLE
+parse: LET IDENT EQUAL IF INT LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 172.
 ##
@@ -2208,7 +2208,7 @@ module_: LET IDENT EQUAL IF INT LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IF IDENT TYPE
+parse: FN IDENT LBRACE IF IDENT TYPE
 ##
 ## Ends in an error in state: 181.
 ##
@@ -2238,7 +2238,7 @@ module_: FN IDENT LBRACE IF IDENT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
+parse: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 185.
 ##
@@ -2251,7 +2251,7 @@ module_: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LBRACE IDENT UNREACHABLE
+parse: FN IDENT LBRACE LBRACE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 186.
 ##
@@ -2268,7 +2268,7 @@ module_: FN IDENT LBRACE LBRACE IDENT UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LBRACE IDENT COLON IDENT TYPE
+parse: FN IDENT LBRACE LBRACE IDENT COLON IDENT TYPE
 ##
 ## Ends in an error in state: 188.
 ##
@@ -2298,7 +2298,7 @@ module_: FN IDENT LBRACE LBRACE IDENT COLON IDENT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LBRACKET IDENT COMMA IDENT RPAREN
+parse: FN IDENT LBRACE LBRACKET IDENT COMMA IDENT RPAREN
 ##
 ## Ends in an error in state: 198.
 ##
@@ -2320,7 +2320,7 @@ module_: FN IDENT LBRACE LBRACKET IDENT COMMA IDENT RPAREN
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LBRACKET IDENT TYPE
+parse: FN IDENT LBRACE LBRACKET IDENT TYPE
 ##
 ## Ends in an error in state: 200.
 ##
@@ -2351,7 +2351,7 @@ module_: FN IDENT LBRACE LBRACKET IDENT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LBRACKET IDENT SEMI UNDERSCORE
+parse: FN IDENT LBRACE LBRACKET IDENT SEMI UNDERSCORE
 ##
 ## Ends in an error in state: 201.
 ##
@@ -2363,7 +2363,7 @@ module_: FN IDENT LBRACE LBRACKET IDENT SEMI UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LBRACKET IDENT SEMI IDENT TYPE
+parse: FN IDENT LBRACE LBRACKET IDENT SEMI IDENT TYPE
 ##
 ## Ends in an error in state: 202.
 ##
@@ -2392,7 +2392,7 @@ module_: FN IDENT LBRACE LBRACKET IDENT SEMI IDENT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LET IDENT EQUAL LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE LET IDENT EQUAL LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 204.
 ##
@@ -2414,7 +2414,7 @@ module_: FN IDENT LBRACE LET IDENT EQUAL LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LOOP LBRACE RBRACE UNDERSCORE
+parse: FN IDENT LBRACE LOOP LBRACE RBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 207.
 ##
@@ -2427,7 +2427,7 @@ module_: FN IDENT LBRACE LOOP LBRACE RBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE LPAREN IDENT RBRACKET
+parse: FN IDENT LBRACE LPAREN IDENT RBRACKET
 ##
 ## Ends in an error in state: 210.
 ##
@@ -2448,7 +2448,7 @@ module_: FN IDENT LBRACE LPAREN IDENT RBRACKET
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE RBRACE UNDERSCORE
+parse: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE RBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 213.
 ##
@@ -2461,7 +2461,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE RBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON LBRACE UNDERSCORE
+parse: FN IDENT LBRACE QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 214.
 ##
@@ -2474,7 +2474,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON LBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON LBRACE RBRACE UNDERSCORE
+parse: FN IDENT LBRACE QUOTE IDENT COLON LBRACE RBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 216.
 ##
@@ -2487,7 +2487,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON LBRACE RBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON IF IDENT TYPE
+parse: FN IDENT LBRACE QUOTE IDENT COLON IF IDENT TYPE
 ##
 ## Ends in an error in state: 218.
 ##
@@ -2517,7 +2517,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON IF IDENT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
+parse: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 222.
 ##
@@ -2530,7 +2530,7 @@ module_: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE ELSE LBRACE RBRA
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LET IDENT EQUAL QUOTE IDENT COLON IF UNDERSCORE
+parse: LET IDENT EQUAL QUOTE IDENT COLON IF UNDERSCORE
 ##
 ## Ends in an error in state: 228.
 ##
@@ -2542,7 +2542,7 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON IF UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LET IDENT EQUAL QUOTE IDENT COLON IF IDENT TYPE
+parse: LET IDENT EQUAL QUOTE IDENT COLON IF IDENT TYPE
 ##
 ## Ends in an error in state: 229.
 ##
@@ -2571,7 +2571,7 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON IF IDENT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LET IDENT EQUAL QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
+parse: LET IDENT EQUAL QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
 ##
 ## Ends in an error in state: 230.
 ##
@@ -2583,7 +2583,7 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LET IDENT EQUAL QUOTE IDENT COLON IF INT LBRACE RBRACE UNREACHABLE
+parse: LET IDENT EQUAL QUOTE IDENT COLON IF INT LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 232.
 ##
@@ -2595,7 +2595,7 @@ module_: LET IDENT EQUAL QUOTE IDENT COLON IF INT LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT LBRACE RETURN LBRACE RBRACE UNREACHABLE
+parse: FN IDENT LBRACE RETURN LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 234.
 ##
@@ -2617,7 +2617,7 @@ module_: FN IDENT LBRACE RETURN LBRACE RBRACE UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: LET IDENT EQUAL IDENT RPAREN
+parse: LET IDENT EQUAL IDENT RPAREN
 ##
 ## Ends in an error in state: 235.
 ##
@@ -2646,7 +2646,7 @@ module_: LET IDENT EQUAL IDENT RPAREN
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-module_: FN IDENT UNREACHABLE
+parse: FN IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 238.
 ##

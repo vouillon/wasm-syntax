@@ -1,7 +1,7 @@
-open Ast
+open Ast.Binary
 
 module RecTypeTbl = Hashtbl.Make (struct
-  type t = int rectype
+  type t = rectype
 
   let hash t =
     (* We have large structs, that tend to hash to the same value *)
@@ -36,13 +36,11 @@ module RecTypeTbl = Hashtbl.Make (struct
     in
     loop p a1 a2 n1 0
 
-  let field_eq (_, t1) (_, t2) = fieldtype_eq t1 t2
-
-  let comptype_eq (t1 : int comptype) (t2 : int comptype) =
+  let comptype_eq (t1 : comptype) (t2 : comptype) =
     match (t1, t2) with
     | Func { params = p1; results = r1 }, Func { params = p2; results = r2 } ->
         array_for_all2 valtype_eq p1 p2 && array_for_all2 valtype_eq r1 r2
-    | Struct l1, Struct l2 -> array_for_all2 field_eq l1 l2
+    | Struct l1, Struct l2 -> array_for_all2 fieldtype_eq l1 l2
     | Array f1, Array f2 -> fieldtype_eq f1 f2
     | _ -> false
 
@@ -64,7 +62,7 @@ end)
 type t = {
   types : int RecTypeTbl.t;
   mutable last_index : int;
-  mutable rev_list : int rectype list;
+  mutable rev_list : rectype list;
 }
 
 let create () =
@@ -86,8 +84,8 @@ let rec subtype subtyping_info (i : int) i' =
   | None -> false
   | Some s -> subtype subtyping_info s i'
 
-let heap_subtype (subtyping_info : int subtype array) (ty : int heaptype)
-    (ty' : int heaptype) =
+let heap_subtype (subtyping_info : subtype array) (ty : heaptype)
+    (ty' : heaptype) =
   match (ty, ty') with
   | (Func | NoFunc), Func
   | NoFunc, NoFunc
