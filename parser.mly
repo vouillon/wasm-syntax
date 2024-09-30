@@ -237,9 +237,10 @@ instr:
 | i = plaininstr { i } %prec prec_instr
 
 delimited_instr_list:
-| {[]}
-| i = blockinstr l = delimited_instr_list  {i :: l }
-| i = plaininstr ";" l = delimited_instr_list  {i :: l }
+| { [] }
+| i = plaininstr { [i] }
+| i = blockinstr l = delimited_instr_list { i :: l }
+| i = plaininstr ";" l = delimited_instr_list { i :: l }
 
 global:
 | LET name = IDENT

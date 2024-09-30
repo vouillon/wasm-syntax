@@ -182,20 +182,11 @@ let rec instr f i =
   | Block (label, l) -> block f label "" l
   | Loop (label, l) -> block f label "loop " l
   | If (_label, i, l1, l2) ->
-      Format.fprintf f "@[@[<hv2>@[if@ %a@ {@]@ %a" instr i
-        (Format.pp_print_list
-           ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-           deliminated_instr)
-        l1;
+      Format.fprintf f "@[@[<hv2>@[if@ %a@ {@]%a" instr i block_contents l1;
       Option.iter
-        (fun l2 ->
-          Format.fprintf f "@]@ @[<2hv>@[}@ else@ {@]@ %a"
-            (Format.pp_print_list
-               ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-               deliminated_instr)
-            l2)
+        (fun l2 -> Format.fprintf f "@[<2hv>@[}@ else@ {@]%a" block_contents l2)
         l2;
-      Format.fprintf f "@]@ }@]"
+      Format.fprintf f "}@]"
   | Unreachable -> Format.fprintf f "unreachable"
   | Nop -> Format.fprintf f "nop"
   | Get x -> Format.fprintf f "%s" x
@@ -257,11 +248,7 @@ let rec instr f i =
   | Br_on_cast_fail of string * reftype * instr
 *)
 and block f _label kind l =
-  Format.fprintf f "@[<hv2>%s{%a]@}" kind
-    (Format.pp_print_list
-       ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-       deliminated_instr)
-    l
+  Format.fprintf f "@[<hv2>@[%s{@]%a}" kind block_contents l
 
 and deliminated_instr f i =
   match i.descr with
@@ -272,15 +259,20 @@ and deliminated_instr f i =
   | Br_on_cast_fail _ | Return _ | Sequence _ ->
       Format.fprintf f "@[%a;@]" instr i
 
+and block_instrs f l =
+  match l with
+  | [] -> ()
+  | [ i ] -> instr f i
+  | i :: rem -> Format.fprintf f "%a@ %a" deliminated_instr i block_instrs rem
+
+and block_contents f l =
+  match l with [] -> () | _ -> Format.fprintf f "@ %a@]@ " block_instrs l
+
 let modulefield f field =
   match field with
   | Type t -> rectype f t
   | Func { name; typ = _; sign = _; body = _lab, body } ->
-      Format.fprintf f "@[@[<hv2>@[fn@ %s@ {@]@ %a@]@ @]}" name
-        (Format.pp_print_list
-           ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-           deliminated_instr)
-        body
+      Format.fprintf f "@[@[<hv2>@[fn@ %s@ {@]%a}@]" name block_contents body
   | _ -> Format.fprintf f "/*...*/"
 (*
   | Fundecl of { name : string; typ : string option; sign : funsig option }

@@ -42,3 +42,9 @@ Precedence tests (read and write text and check unchanged)
 When inheriting, we can omit existing fields
 
    type int32 : custom = { .., foo: i32 }
+
+make semicolon optional at end of block; allow comma at end of block
+
+include a file (e.g. common types, imports)
+
+conditional compilation using attributes
