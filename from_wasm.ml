@@ -97,7 +97,7 @@ Step 2: use this info to generate using names without reusing existing names
 *)
 
 let unit = Ast.no_loc (Ast.Sequence [])
-let sequence l = match l with [ i ] -> i | _ -> unit
+let sequence l = match l with [ i ] -> i | _ -> Ast.no_loc (Ast.Sequence l)
 
 let is_integer =
   let int_re =
