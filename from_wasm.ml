@@ -210,7 +210,8 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
       no_loc
         (Return (Some (no_loc (Call (no_loc (Get (idx st `Func x)), args)))))
   | TupleMake _ -> no_loc (Sequence args)
-  | Const (I32 n) | Const (I64 n) -> no_loc (Int n)
+  | Const (I32 n) | Const (I64 n) ->
+      no_loc (Int n) (*ZZZ Negative ints / floats *)
   | Const (F32 f) | Const (F64 f) ->
       let f = if is_integer f then f ^ "." else f in
       no_loc (Float f)
