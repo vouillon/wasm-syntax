@@ -48,3 +48,11 @@ make semicolon optional at end of block; allow comma at end of block
 include a file (e.g. common types, imports)
 
 conditional compilation using attributes
+
+Use typechecking to eliminate unnecessary type annotations
+  - we know the number type for other reasons
+  - the value is known to have a more precise type
+
+Two-step inference?
+  - preserve overloading of number functions
+  - propagate type in all directions (simple unification / union find?)

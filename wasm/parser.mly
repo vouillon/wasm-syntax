@@ -129,6 +129,14 @@ module Wasm = struct end
 open Ast.Text
 
 let map_fst f (x, y) = (f x, y)
+
+let remove_bindings (id, sign) =
+  (id,
+   Option.map
+     (fun (params, results) ->
+        { params = Array.of_list (List.map snd params);
+          results = Array.of_list results } )
+     sign)
 %}
 
 %start <string option * Ast.Text.modulefield list> parse
@@ -205,14 +213,19 @@ valtype:
 | t = tupletype { Tuple t }
 
 functype:
-| "(" FUNC r = params_and_results(")")
+| "(" FUNC r = params_and_results_no_bindings(")")
   { fst r }
 
 params(cont):
-| c = cont { [], c }
-| "(" PARAM ID t = valtype ")" rem = params(cont)
-  { map_fst (fun l -> t :: l) rem }
+| c = cont { ([] , c) }
+| "(" PARAM i = ID t = valtype ")" rem = params(cont)
+  { map_fst (fun l -> (Some i, t) :: l) rem }
 | "(" PARAM l = valtype * ")" rem = params(cont)
+  { map_fst ((@) (List.map (fun t -> (None, t)) l)) rem }
+
+params_no_bindings(cont):
+| c = cont { [], c }
+| "(" PARAM l = valtype * ")" rem = params_no_bindings(cont)
   { map_fst ((@) l) rem }
 
 results(cont):
@@ -222,6 +235,10 @@ results(cont):
 
 params_and_results(cont):
 | r = params(results(cont))
+  { let (p, (r, c)) = r in ((p, r), c) }
+
+params_and_results_no_bindings(cont):
+| r = params_no_bindings(results(cont))
   { let (p, (r, c)) = r in
     ({params = Array.of_list p; results = Array.of_list r }, c) }
 
@@ -293,7 +310,7 @@ label:
 | i = ID ? { i }
 
 blocktype(cont):
-| r = typeuse(cont)
+| r = typeuse_no_bindings(cont)
   { map_fst (fun t -> Option.map (fun v -> Idx v) (fst t)) r }
   (*ZZZ single result / implicit? validate?*)
 
@@ -356,11 +373,13 @@ memarg:
      align = Option.value ~default:width  (Option.map Int32.of_string a)} }
 
 callindirect(cont):
-| CALL_INDIRECT i = idx t = typeuse(cont) { CallIndirect (i, fst t) :: snd t }
-| CALL_INDIRECT t = typeuse(cont) { CallIndirect (Num 0l, fst t) :: snd t }
-| RETURN_CALL_INDIRECT i = idx t = typeuse(cont)
+| CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
+  { CallIndirect (i, fst t) :: snd t }
+| CALL_INDIRECT t = typeuse_no_bindings(cont)
+  { CallIndirect (Num 0l, fst t) :: snd t }
+| RETURN_CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
   { ReturnCallIndirect (i, fst t) :: snd t }
-| RETURN_CALL_INDIRECT t = typeuse(cont)
+| RETURN_CALL_INDIRECT t = typeuse_no_bindings(cont)
   { ReturnCallIndirect (Num 0l, fst t) :: snd t }
 
 select(cont):
@@ -430,12 +449,22 @@ expr:
 
 typeuse(cont):
 | "(" TYPE i = idx ")" rem = params_and_results(cont)
+  { let ((params, results) as s, r) = rem in
+    (match params, results with
+     | [], [] -> Some i, None
+     | _ -> Some i, Some s),
+    r }
+| rem = params_and_results(cont) { let (s, r) = rem in (None, Some s), r }
+
+typeuse_no_bindings(cont):
+| "(" TYPE i = idx ")" rem = params_and_results_no_bindings(cont)
   { let (s, r) = rem in
     (match s with
      | {params = [||]; results = [||]} -> Some i, None
      | _ -> Some i, Some s),
     r }
-| rem = params_and_results(cont) { let (s, r) = rem in (None, Some s), r }
+| rem = params_and_results_no_bindings(cont)
+  { let (s, r) = rem in (None, Some s), r }
 
 import:
 | "(" IMPORT module_ = name name = name desc = importdesc ")"
@@ -443,13 +472,13 @@ import:
 
 importdesc:
 | "(" FUNC i = ID ? t = typeuse(")")
-    { (i, Func (fst t)) }
+    { (i, Func (remove_bindings (fst t))) }
 | "(" MEMORY i = ID ? l = limits ")"
     { (i, (Memory l)) }
 | "(" GLOBAL i = ID ? t = globaltype ")"
     { (i, (Global t)) }
 | "(" TAG i = ID ? t = typeuse(")")
-    { (i, (Tag (fst t) : importdesc)) }
+    { (i, (Tag (remove_bindings (fst t)) : importdesc)) }
 
 func:
 | "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(")"))))
@@ -459,7 +488,7 @@ func:
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = typeuse({}) ")"
   { let (exports, (module_, name)) = r in
-    Import {module_; name; id; desc = Func (fst t); exports } }
+    Import {module_; name; id; desc = Func (remove_bindings (fst t)); exports } }
 
 exports(cont):
 | c = cont { [], c }
@@ -489,12 +518,12 @@ memory:
 tag:
 | "(" TAG id = ID ? r = exports(typeuse (")"))
     { let (exports, (typ, _)) = r in
-      Tag {id; typ; exports} }
+      Tag {id; typ = remove_bindings typ; exports} }
 | "(" TAG id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = typeuse (")")
   { let (exports, (module_, name)) = r in
-    Import {module_; name; id; desc = Tag (fst t); exports } }
+    Import {module_; name; id; desc = Tag (remove_bindings (fst t)); exports } }
 
 global:
 | "(" GLOBAL id = ID ? r = exports(t = globaltype init = expr { t, init }) ")"

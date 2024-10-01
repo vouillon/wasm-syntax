@@ -180,7 +180,8 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | RefI31 -> no_loc (Cast (sequence args, { nullable = false; typ = I31 }))
   | ArrayNewData _ -> no_loc (String "foo")
   | RefFunc f -> no_loc (Get (idx st `Func f))
-  | RefNull _ -> no_loc Null
+  | RefNull t ->
+      no_loc (Cast (no_loc Null, { nullable = true; typ = heaptype st t }))
   | _ -> no_loc Unreachable (* ZZZ *)
 
 let bind_locals st l =

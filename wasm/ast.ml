@@ -232,6 +232,9 @@ module Text = struct
 
   type typeuse = idx option * functype option
 
+  type typeuse_with_bindings =
+    idx option * ((id option * valtype) list * valtype list) option
+
   include Instructions (struct
     include X
     include Types
@@ -259,7 +262,7 @@ module Text = struct
       }
     | Func of {
         id : id option;
-        typ : typeuse;
+        typ : typeuse_with_bindings;
         locals : (id option * valtype) list;
         instrs : instr list;
         exports : string list;
