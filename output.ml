@@ -93,14 +93,32 @@ let binop f op =
     (match op with
     | Add -> "+"
     | Sub -> "-"
-    | Gt Signed -> ">s"
-    | Gt Unsigned -> ">u"
-    | Lt Signed -> "<s"
-    | Lt Unsigned -> "<s"
-    | Or -> "|"
+    | Mul -> "*"
+    | Div None -> "/"
+    | Div (Some Signed) -> "/s"
+    | Div (Some Unsigned) -> "/u"
+    | Rem Signed -> "%s"
+    | Rem Unsigned -> "%u"
     | And -> "&"
+    | Or -> "|"
+    | Xor -> "^"
+    | Shl -> "<<"
+    | Shr Signed -> ">>s"
+    | Shr Unsigned -> ">>u"
+    | Eq -> "=="
     | Ne -> "!="
-    | Eq -> "==")
+    | Lt None -> "<"
+    | Lt (Some Signed) -> "<s"
+    | Lt (Some Unsigned) -> "<u"
+    | Gt None -> ">"
+    | Gt (Some Signed) -> ">s"
+    | Gt (Some Unsigned) -> ">u"
+    | Le None -> "<="
+    | Le (Some Signed) -> "<=s"
+    | Le (Some Unsigned) -> "<=u"
+    | Ge None -> ">="
+    | Ge (Some Signed) -> ">=s"
+    | Ge (Some Unsigned) -> ">=u")
 
 type prec =
   | Instruction
@@ -108,7 +126,9 @@ type prec =
   | Assignement
   | Comparison
   | LogicalOr
+  | LogicalXor
   | LogicalAnd
+  | Shift
   | Addition
   | Multiplication
   | Branch
@@ -128,10 +148,12 @@ let prec_op op =
   (* out, left, right *)
   match op with
   | Add | Sub -> (Addition, Addition, Multiplication)
-  | Gt Signed | Gt Unsigned | Lt Signed | Lt Unsigned | Ne | Eq ->
-      (Comparison, LogicalOr, LogicalOr)
-  | Or -> (LogicalOr, LogicalOr, LogicalAnd)
-  | And -> (LogicalAnd, Addition, Addition)
+  | Mul | Div _ | Rem _ -> (Multiplication, Multiplication, Branch)
+  | And -> (LogicalAnd, LogicalAnd, Shift)
+  | Or -> (LogicalOr, LogicalOr, LogicalXor)
+  | Xor -> (LogicalXor, LogicalXor, LogicalAnd)
+  | Shl | Shr _ -> (Shift, Shift, Addition)
+  | Gt _ | Lt _ | Ge _ | Le _ | Eq | Ne -> (Comparison, LogicalOr, LogicalOr)
 
 let long_block l =
   let rec loop l n =
@@ -193,6 +215,14 @@ let rec instr prec f (i : instr) =
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))
         l
+  | String s -> Format.fprintf f "\"%s\"" (String.escaped s) (*ZZZ Escape *)
+  | Int s | Float s -> Format.pp_print_string f s
+  | Cast (i, t) ->
+      parentheses prec Cast f @@ fun () ->
+      Format.fprintf f "@[<2>%a@ @[as@ %a@]@]" (instr Cast) i valtype t
+  | Test (i, t) ->
+      parentheses prec Cast f @@ fun () ->
+      Format.fprintf f "@[<2>%a@ @[is@ %a@]@]" (instr Cast) i reftype t
   | Struct (nm, l) ->
       Format.fprintf f "@[<hv>@[";
       Option.iter (fun nm -> Format.fprintf f "%s@ " nm) nm;
@@ -202,14 +232,6 @@ let rec instr prec f (i : instr) =
            (fun f (nm, i) ->
              Format.fprintf f "@[<2>%s:@ %a@]" nm (instr Instruction) i))
         l
-  | String s -> Format.fprintf f "\"%s\"" (String.escaped s) (*ZZZ Escape *)
-  | Int s | Float s -> Format.pp_print_string f s
-  | Cast (i, t) ->
-      parentheses prec Cast f @@ fun () ->
-      Format.fprintf f "@[<2>%a@ @[as@ %a@]@]" (instr Cast) i valtype t
-  | Test (i, t) ->
-      parentheses prec Cast f @@ fun () ->
-      Format.fprintf f "@[<2>%a@ @[is@ %a@]@]" (instr Cast) i reftype t
   | StructGet (i, s) ->
       parentheses prec FieldAccess f @@ fun () ->
       Format.fprintf f "%a.%s" (instr FieldAccess) i s
@@ -217,6 +239,21 @@ let rec instr prec f (i : instr) =
       parentheses prec FieldAccess f @@ fun () ->
       Format.fprintf f "@[<2>%a.%s@ =@ %a@]" (instr FieldAccess) i s
         (instr Assignement) i'
+  | Array (i, n) ->
+      Format.fprintf f "@[<1>[%a;@ %a]@]" (instr Instruction) i
+        (instr Instruction) n
+  | ArrayFixed l ->
+      Format.fprintf f "@[<1>[%a]@]"
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+           (instr Instruction))
+        l
+  | ArrayGet (i1, i2) ->
+      Format.fprintf f "@[<2>%a@,@[[%a]@]@]" (instr Call) i1 (instr Instruction)
+        i2
+  | ArraySet (i1, i2, i3) ->
+      Format.fprintf f "@[<2>%a@,@[[%a]@]@ =@ %a@]" (instr Call) i1
+        (instr Instruction) i2 (instr Assignement) i3
   | BinOp (op, i, i') ->
       let out, left, right = prec_op op in
       parentheses prec out f @@ fun () ->
@@ -292,10 +329,11 @@ and block f label kind l =
 and deliminated_instr f (i : instr) =
   match i.descr with
   | Block _ | Loop _ | If _ -> instr Instruction f i
-  | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | Struct _ | String _
-  | Int _ | Float _ | Cast _ | Test _ | StructGet _ | StructSet _ | BinOp _
-  | Let _ | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _
-  | Br_on_cast _ | Br_on_cast_fail _ | Return _ | Sequence _ | Null ->
+  | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | String _ | Int _
+  | Float _ | Cast _ | Test _ | Struct _ | StructGet _ | StructSet _ | Array _
+  | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | Let _ | Br _ | Br_if _
+  | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | Br_on_cast_fail _ | Return _ | Sequence _ | Null ->
       Format.fprintf f "@[%a;@]" (instr Instruction) i
 
 and block_instrs f l =
@@ -313,7 +351,7 @@ let fundecl f (name, typ, sign) =
   Option.iter (fun typ -> Format.fprintf f "@ : %s@ " typ) typ;
   Option.iter
     (fun { named_params; results } ->
-      Format.fprintf f "@[<1>(%a)@]"
+      Format.fprintf f "@,@[<1>(%a)@]"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (fun f (id, t) ->

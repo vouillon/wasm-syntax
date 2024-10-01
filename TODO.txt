@@ -1,14 +1,11 @@
-- how to deal with functions returning multiple values?
-  (in generated binary code)
-  ==> maybe just have a destructuring let?
-  note that (x, y, z) is just a sequence of instructions
-    let (x,y) = (u, v) ==> u v (locat.set $y) (local.set $x)
-- syntax errors
 - typing
 - output wasm code
-- parse wasm code and output to this format
-- type for 8bit/16bit values + explicit type expansion
 - validation of wasm code
+- parse wasm code and output to this format
+
+syntaxic sugar:
+- i++
+- for (...)  / while / do { ... } while
 - switch translated to br_table?
     match (foo) {
     1 => ..,
@@ -18,14 +15,13 @@
 - same for try/catch
     try (body) { a => br x, ..., _ => br z}
   (not sure this works well)
+- When inheriting, we can omit existing fields
+
+  type int32 : custom = { .., foo: i32 }
 
 ====
 
-allow to put block labels at the end?
 collect constraints on untyped variables while parsing
-
-simplify parser (type use)
-
 
 Folding:
 - stack with placeholders for value that do not correspond
@@ -39,11 +35,7 @@ Keep strings as strings
 
 Precedence tests (read and write text and check unchanged)
 
-When inheriting, we can omit existing fields
-
-   type int32 : custom = { .., foo: i32 }
-
-make semicolon optional at end of block; allow comma at end of block
+allow comma at end of block
 
 include a file (e.g. common types, imports)
 
@@ -59,13 +51,28 @@ Two-step inference?
 
 ============
 
-br 'foo ...
-labels
-array operations (array.new, array.new_fixed, array.get, array.set)
-drop instruction (==> let _ =)
 ref.as_non_null (need types?)
-more ops: shr, ...
+unary ops (fxx.abs, ...)
+select
 we need to put constraints on integer/float constants and eliminate afterwards
+exceptions
+tuples
+array.copy/fill
+! for eqz / ref.null
+block types? |t1,..,t2| -> t { ... }
+
+desugar tuples
+==============
+tuple.make  ==> just push to the stack   (e1, ..., en)
+local.set  ===> store actually in n variables
+local.get  ===> push all to the stack
+tuple.extract(local.get x,i)
+    ==> if x is a variable, just load from associated variable
+    ==> otherwise, if first component, drop all other components
+        else store in a temp variable before
+          let (_, _, x, _, _) = e;
+          x
+
 =====
 
 fn caml_string_equal(p1: &eq, p2: &eq) -> &eq {

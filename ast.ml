@@ -6,7 +6,25 @@ include Wasm.Ast.Types (struct
 end)
 
 type signage = Wasm.Ast.signage = Signed | Unsigned
-type binop = Add | Sub | Gt of signage | Lt of signage | Or | And | Ne | Eq
+
+type binop =
+  | Add
+  | Sub
+  | Mul
+  | Div of signage option
+  | Rem of signage
+  | And
+  | Or
+  | Xor
+  | Shl
+  | Shr of signage
+  | Eq
+  | Ne
+  | Lt of signage option
+  | Gt of signage option
+  | Le of signage option
+  | Ge of signage option
+
 type location = { loc_start : Lexing.position; loc_end : Lexing.position }
 type 'a with_loc = { descr : 'a; loc : location }
 
@@ -24,14 +42,18 @@ type instr_descr =
   | Set of idx * instr
   | Tee of idx * instr
   | Call of instr * instr list
-  | Struct of string option * (string * instr) list
   | String of string
   | Int of string
   | Float of string
   | Cast of instr * valtype
   | Test of instr * reftype
+  | Struct of string option * (string * instr) list
   | StructGet of instr * string
   | StructSet of instr * string * instr
+  | Array of instr * instr
+  | ArrayFixed of instr list
+  | ArrayGet of instr * instr
+  | ArraySet of instr * instr * instr
   | BinOp of binop * instr * instr
   | Let of (string option * valtype option) list * instr option
   | Br of string * instr option

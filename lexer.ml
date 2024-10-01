@@ -32,8 +32,6 @@ let rec token lexbuf =
   | white | newline -> token lexbuf
   | ';' -> SEMI
   | '#' -> SHARP
-  | '&' -> AMPERSAND
-  | '|' -> PIPE
   | '?' -> QUESTIONMARK
   | '(' -> LPAREN
   | ')' -> RPAREN
@@ -50,11 +48,33 @@ let rec token lexbuf =
   | "." -> DOT
   | "+" -> PLUS
   | "-" -> MINUS
+  | "*" -> STAR
+  | "/" -> SLASH
+  | "/s" -> SLASHS
+  | "/u" -> SLASHU
+  | "%s" -> PERCENTS
+  | "%u" -> PERCENTU
+  | '&' -> AMPERSAND
+  | '|' -> PIPE
+  | '^' -> CARET
+  | "<<" -> SHL
+  | ">>s" -> SHRS
+  | ">>u" -> SHRU
+  | "==" -> EQUALEQUAL
+  | "!=" -> BANGEQUAL
   | "_" -> UNDERSCORE
-  | "<s" -> LTS
-  | "<u" -> LTU
+  | ">" -> GT
   | ">s" -> GTS
   | ">u" -> GTU
+  | "<" -> LT
+  | "<s" -> LTS
+  | "<u" -> LTU
+  | ">=" -> GE
+  | ">=s" -> GES
+  | ">=u" -> GEU
+  | "<=" -> LE
+  | "<=s" -> LES
+  | "<=u" -> LEU
   | "null" -> NULL
   | "fn" -> FN
   | "mut" -> MUT

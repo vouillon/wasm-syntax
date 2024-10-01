@@ -131,6 +131,16 @@ let two_args l : Ast.instr * Ast.instr =
       (*ZZZ Should take arity into account *)
       (x, Ast.no_loc (Ast.Sequence r))
 
+let three_args l : Ast.instr * Ast.instr * Ast.instr =
+  match l with
+  | [] -> (unit, unit, unit)
+  | [ x ] -> (unit, unit, x)
+  | [ x; y ] -> (unit, x, y)
+  | [ x; y; z ] -> (x, y, z)
+  | x :: y :: r ->
+      (*ZZZ Should take arity into account *)
+      (x, y, Ast.no_loc (Ast.Sequence r))
+
 let string_args n args =
   try
     if Int32.of_int (List.length args) <> n then raise Exit;
@@ -155,6 +165,66 @@ let rec split_last l =
   | y :: r ->
       let x, l = split_last r in
       (x, y :: l)
+
+let int_bin_op (op : Src.int_bin_op) args =
+  let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
+  let symbol op =
+    let e1, e2 = two_args args in
+    no_loc (BinOp (op, e1, e2))
+  in
+  match op with
+  | Add -> symbol Add
+  | Sub -> symbol Sub
+  | Mul -> symbol Mul
+  | Div s -> symbol (Div (Some s))
+  | Rem s -> symbol (Rem s)
+  | And -> symbol And
+  | Or -> symbol Or
+  | Xor -> symbol Xor
+  | Shl -> symbol Shl
+  | Shr s -> symbol (Shr s)
+  | Rotl -> no_loc (Call (no_loc (Get "rotl"), args))
+  | Rotr -> no_loc (Call (no_loc (Get "rotr"), args))
+  | Eq -> symbol Eq
+  | Ne -> symbol Ne
+  | Lt s -> symbol (Lt (Some s))
+  | Gt s -> symbol (Gt (Some s))
+  | Le s -> symbol (Le (Some s))
+  | Ge s -> symbol (Ge (Some s))
+
+let float_bin_op (op : Src.float_bin_op) args =
+  let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
+  let symbol op =
+    let e1, e2 = two_args args in
+    no_loc (BinOp (op, e1, e2))
+  in
+  match op with
+  | Add -> symbol Add
+  | Sub -> symbol Sub
+  | Mul -> symbol Mul
+  | Div -> symbol (Div None)
+  | Min -> no_loc (Call (no_loc (Get "min"), args))
+  | Max -> no_loc (Call (no_loc (Get "max"), args))
+  | CopySign -> no_loc (Call (no_loc (Get "copysign"), args))
+  | Eq -> symbol Eq
+  | Ne -> symbol Ne
+  | Lt -> symbol (Lt None)
+  | Gt -> symbol (Gt None)
+  | Le -> symbol (Le None)
+  | Ge -> symbol (Ge None)
+
+let signage s args =
+  match s with
+  | None -> sequence args
+  | Some s ->
+      Ast.no_loc
+        (Ast.Call
+           ( Ast.no_loc
+               (Ast.Get
+                  (match s with
+                  | Ast.Signed -> "signed"
+                  | Unsigned -> "unsigned")),
+             args ))
 
 let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
@@ -199,37 +269,35 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | LocalSet x -> no_loc (Set (idx st `Local x, sequence args))
   | GlobalSet x -> no_loc (Set (idx st `Global x, sequence args))
   | LocalTee x -> no_loc (Tee (idx st `Local x, sequence args))
-  | RefCast t -> no_loc (Cast (sequence args, Ref (reftype st t)))
-  | BinOp (I32 Add) ->
+  | BinOp (I32 op) | BinOp (I64 op) -> int_bin_op op args
+  | BinOp (F32 op) | BinOp (F64 op) -> float_bin_op op args
+  | StructNew i ->
+      (*ZZZZ Use type *)
+      no_loc (Struct (Some (idx st `Type i), List.map (fun i -> ("f", i)) args))
+  | StructGet (s, _t, _f) ->
+      signage s [ no_loc (StructGet (sequence args, "f")) ]
+  | StructSet (_t, _f) ->
       let e1, e2 = two_args args in
-      no_loc (BinOp (Add, e1, e2))
-  | BinOp (I32 Sub) ->
+      no_loc (StructSet (e1, "f", e2))
+  | ArrayNew _t ->
       let e1, e2 = two_args args in
-      no_loc (BinOp (Sub, e1, e2))
-  | BinOp (I32 (Lt s)) ->
+      no_loc (Array (e1, e2))
+  | ArrayNewFixed (t, n) -> (
+      match string_args n args with
+      | Some s ->
+          no_loc
+            (Cast
+               ( no_loc (String s),
+                 Ref { nullable = false; typ = Type (idx st `Type t) } ))
+      | None ->
+          (*ZZZ take n into account *)
+          no_loc (ArrayFixed args))
+  | ArrayGet (s, _t) ->
       let e1, e2 = two_args args in
-      no_loc (BinOp (Lt s, e1, e2))
-  | BinOp (I32 (Gt s)) ->
-      let e1, e2 = two_args args in
-      no_loc (BinOp (Gt s, e1, e2))
-  | BinOp (I32 And) ->
-      let e1, e2 = two_args args in
-      no_loc (BinOp (And, e1, e2))
-  | BinOp (I32 Or) ->
-      let e1, e2 = two_args args in
-      no_loc (BinOp (Or, e1, e2))
-  | BinOp (I32 Eq) ->
-      let e1, e2 = two_args args in
-      no_loc (BinOp (Eq, e1, e2))
-  | BinOp (I32 Ne) ->
-      let e1, e2 = two_args args in
-      no_loc (BinOp (Ne, e1, e2))
-  | RefEq ->
-      let e1, e2 = two_args args in
-      no_loc (BinOp (Eq, e1, e2))
-  | BinOp (I32 Rotr) -> no_loc (Call (no_loc (Get "rotr"), args))
-  | BinOp (I32 Rotl) -> no_loc (Call (no_loc (Get "rotl"), args))
-  | StructGet (_s, _t, _f) -> no_loc (StructGet (sequence args, "f"))
+      signage s [ no_loc (ArrayGet (e1, e2)) ]
+  | ArraySet _t ->
+      let e1, e2, e3 = three_args args in
+      no_loc (ArraySet (e1, e2, e3))
   | Call x -> no_loc (Call (no_loc (Get (idx st `Func x)), args))
   | CallRef _ ->
       (* ZZZ cast? *)
@@ -256,9 +324,6 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | Const (F32 f) | Const (F64 f) ->
       let f = if is_integer f then f ^ "." else f in
       no_loc (Float f)
-  | StructNew i ->
-      (*ZZZZ Use type *)
-      no_loc (Struct (Some (idx st `Type i), List.map (fun i -> ("f", i)) args))
   | RefI31 -> no_loc (Cast (sequence args, Ref { nullable = false; typ = I31 }))
   | I31Get s ->
       no_loc
@@ -270,19 +335,23 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
       no_loc (BinOp (Eq, sequence args, no_loc (Int "0")))
   | UnOp (I64 Reinterpret) -> no_loc (Cast (sequence args, I64))
   | UnOp (I32 Reinterpret) | I32WrapI64 -> no_loc (Cast (sequence args, I32))
+  | F64PromoteF32 -> no_loc (Cast (sequence args, F64))
+  | F32DemoteF64 -> no_loc (Cast (sequence args, F32))
+  | ExternConvertAny ->
+      no_loc (Cast (sequence args, Ref { nullable = true; typ = Extern }))
+  | AnyConvertExtern ->
+      no_loc (Cast (sequence args, Ref { nullable = true; typ = Any }))
   | ArrayNewData _ -> no_loc (String "foo")
   | ArrayLen -> no_loc (Call (no_loc (Get "array_len"), args))
+  | RefCast t -> no_loc (Cast (sequence args, Ref (reftype st t)))
+  | RefTest t -> no_loc (Test (sequence args, reftype st t))
+  | RefEq ->
+      let e1, e2 = two_args args in
+      no_loc (BinOp (Eq, e1, e2))
   | RefFunc f -> no_loc (Get (idx st `Func f))
   | RefNull t ->
       no_loc (Cast (no_loc Null, Ref { nullable = true; typ = heaptype st t }))
-  | ArrayNewFixed (t, n) -> (
-      match string_args n args with
-      | Some s ->
-          no_loc
-            (Cast
-               ( no_loc (String s),
-                 Ref { nullable = false; typ = Type (idx st `Type t) } ))
-      | None -> no_loc Unreachable)
+  | RefIsNull -> no_loc (BinOp (Eq, sequence args, no_loc Null))
   | _ -> no_loc Unreachable (* ZZZ *)
 
 let bind_locals st l =
@@ -377,5 +446,5 @@ Collect exports to associate them to the corresponding module field
 
 List of reserved names:
 - all keywords
-- signed, unsigned, array_len ...
+- signed, unsigned, array_len, min, max, copysign, rotr, rotl ...
 *)

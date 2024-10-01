@@ -7,8 +7,6 @@
 
 %token SEMI ";"
 %token SHARP "#"
-%token AMPERSAND "&"
-%token PIPE "|"
 %token QUESTIONMARK "?"
 %token LPAREN "("
 %token RPAREN ")"
@@ -23,12 +21,34 @@
 %token COLONEQUAL ":="
 %token QUOTE "'"
 %token DOT "."
-%token MINUS "-"
 %token PLUS "+"
-%token LTS "<s"
-%token LTU "<u"
+%token MINUS "-"
+%token STAR "*"
+%token SLASH "/"
+%token SLASHS "/s"
+%token SLASHU "/u"
+%token PERCENTS "%s"
+%token PERCENTU "%u"
+%token AMPERSAND "&"
+%token PIPE "|"
+%token CARET "^"
+%token SHL "<<"
+%token SHRS ">>s"
+%token SHRU ">>u"
+%token EQUALEQUAL "=="
+%token BANGEQUAL "!="
+%token GT ">"
 %token GTS ">s"
 %token GTU ">u"
+%token LT "<"
+%token LTS "<s"
+%token LTU "<u"
+%token GE ">="
+%token GES ">=s"
+%token GEU ">=u"
+%token LE "<="
+%token LES "<=s"
+%token LEU "<=u"
 %token UNDERSCORE "_"
 
 %token FN
@@ -47,10 +67,13 @@
 %nonassoc IDENT prec_branch prec_instr
 %nonassoc LBRACE LBRACKET
 %right EQUAL COLONEQUAL
-%nonassoc LTU GTU LTS GTS
+%nonassoc EQUALEQUAL BANGEQUAL GT GTU GTS LT LTU LTS GE GES GEU LE LES LEU
 %left PIPE
+%left CARET
 %left AMPERSAND
+%left SHL SHRS SHRU
 %left MINUS PLUS
+%left STAR SLASH SLASHS SLASHU PERCENTS PERCENTU
 %left AS IS
 %left DOT LPAREN
 
@@ -218,12 +241,32 @@ plaininstr:
 | i = instr "." x = IDENT "=" j = instr { with_loc $sloc (StructSet(i, x, j)) }
 | i = instr "+" j = instr { with_loc $sloc (BinOp(Add, i, j)) }
 | i = instr "-" j = instr { with_loc $sloc (BinOp(Sub, i, j)) }
-| i = instr "<s" j = instr { with_loc $sloc (BinOp(Lt Signed, i, j)) }
-| i = instr "<u" j = instr { with_loc $sloc (BinOp(Lt Unsigned, i, j)) }
-| i = instr ">s" j = instr { with_loc $sloc (BinOp(Gt Signed, i, j)) }
-| i = instr ">u" j = instr { with_loc $sloc (BinOp(Gt Unsigned, i, j)) }
+| i = instr "*" j = instr { with_loc $sloc (BinOp(Mul, i, j)) }
+| i = instr "/" j = instr { with_loc $sloc (BinOp(Div None, i, j)) }
+| i = instr "/s" j = instr { with_loc $sloc (BinOp(Div (Some Signed), i, j)) }
+| i = instr "/u" j = instr { with_loc $sloc (BinOp(Div (Some Unsigned), i, j)) }
+| i = instr "%s" j = instr { with_loc $sloc (BinOp(Rem Signed, i, j)) }
+| i = instr "%u" j = instr { with_loc $sloc (BinOp(Rem Unsigned, i, j)) }
 | i = instr "&" j = instr { with_loc $sloc (BinOp(And, i, j)) }
+| i = instr "^" j = instr { with_loc $sloc (BinOp(Xor, i, j)) }
 | i = instr "|" j = instr { with_loc $sloc (BinOp(Or, i, j)) }
+| i = instr "<<" j = instr { with_loc $sloc (BinOp(Shl, i, j)) }
+| i = instr ">>s" j = instr { with_loc $sloc (BinOp(Shr Signed, i, j)) }
+| i = instr ">>u" j = instr { with_loc $sloc (BinOp(Shr Unsigned, i, j)) }
+| i = instr "==" j = instr { with_loc $sloc (BinOp(Eq, i, j)) }
+| i = instr "!=" j = instr { with_loc $sloc (BinOp(Ne, i, j)) }
+| i = instr ">" j = instr { with_loc $sloc (BinOp(Gt None, i, j)) }
+| i = instr ">s" j = instr { with_loc $sloc (BinOp(Gt (Some Signed), i, j)) }
+| i = instr ">u" j = instr { with_loc $sloc (BinOp(Gt (Some Unsigned), i, j)) }
+| i = instr "<" j = instr { with_loc $sloc (BinOp(Lt None, i, j)) }
+| i = instr "<s" j = instr { with_loc $sloc (BinOp(Lt (Some Signed), i, j)) }
+| i = instr "<u" j = instr { with_loc $sloc (BinOp(Lt (Some Unsigned), i, j)) }
+| i = instr ">=" j = instr { with_loc $sloc (BinOp(Ge None, i, j)) }
+| i = instr ">=s" j = instr { with_loc $sloc (BinOp(Ge (Some Signed), i, j)) }
+| i = instr ">=u" j = instr { with_loc $sloc (BinOp(Ge (Some Unsigned), i, j)) }
+| i = instr "<=" j = instr { with_loc $sloc (BinOp(Le None, i, j)) }
+| i = instr "<=s" j = instr { with_loc $sloc (BinOp(Le (Some Signed), i, j)) }
+| i = instr "<=u" j = instr { with_loc $sloc (BinOp(Le (Some Unsigned), i, j)) }
 | LET x = simple_pat t = option(":" t = valtype {t})
   i = option("=" i = instr {i})
   { with_loc $sloc (Let ([(x, t)], i)) }
@@ -243,10 +286,12 @@ plaininstr:
 | BR_ON_CAST "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
 | BR_ON_CAST_FAIL "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec prec_branch
-| "[" separated_list(",", instr) "]" { assert false } (* array.new *)
-| "[" instr ";" instr "]" { assert false } (* array.new_fixed *)
-| plaininstr "[" instr "]" { assert false } (* array.get *)
-| plaininstr "[" instr "]" "=" instr { assert false } (* array.set *)
+| "[" l = separated_list(",", i = instr { i }) "]"
+  { with_loc $sloc (ArrayFixed l) }
+| "[" i1 = instr ";" i2 = instr "]" { with_loc $sloc (Array (i1, i2)) }
+| i1 = plaininstr "[" i2 = instr "]" { with_loc $sloc (ArrayGet (i1, i2)) }
+| i1 = plaininstr "[" i2 = instr "]" "=" i3 = instr
+  { with_loc $sloc (ArraySet (i1, i2, i3)) }
 
 instr:
 | i = blockinstr { i } %prec prec_instr
