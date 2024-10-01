@@ -245,6 +245,7 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
              else Some (List.map (fun i -> instr st i []) else_block) ))
   | Unreachable -> sequence (args @ [ no_loc Unreachable ])
   | Nop -> sequence (args @ [ no_loc Nop ])
+  | Pop _ -> sequence []
   | Drop -> no_loc (Let ([ (None, None) ], Some (sequence args)))
   | Br i -> no_loc (Br (idx st `Label i, sequence_opt args))
   | Br_if i -> no_loc (Br_if (idx st `Label i, sequence args))
@@ -333,8 +334,12 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
              args ))
   | UnOp (I64 Eqz) | UnOp (I32 Eqz) ->
       no_loc (BinOp (Eq, sequence args, no_loc (Int "0")))
-  | UnOp (I64 Reinterpret) -> no_loc (Cast (sequence args, I64))
-  | UnOp (I32 Reinterpret) | I32WrapI64 -> no_loc (Cast (sequence args, I32))
+  | UnOp (I64 Reinterpret) | UnOp (I32 Reinterpret) ->
+      no_loc (Call (no_loc (Get "reinterpret"), args))
+  | UnOp (I32 (TruncSat (_, s))) -> no_loc (Cast (signage (Some s) args, I32))
+  | UnOp (I64 (TruncSat (_, s))) -> no_loc (Cast (signage (Some s) args, I64))
+  | I64ExtendI32 s -> no_loc (Cast (signage (Some s) args, I64))
+  | I32WrapI64 -> no_loc (Cast (sequence args, I32))
   | F64PromoteF32 -> no_loc (Cast (sequence args, F64))
   | F32DemoteF64 -> no_loc (Cast (sequence args, F32))
   | ExternConvertAny ->
@@ -352,7 +357,18 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | RefNull t ->
       no_loc (Cast (no_loc Null, Ref { nullable = true; typ = heaptype st t }))
   | RefIsNull -> no_loc (BinOp (Eq, sequence args, no_loc Null))
-  | _ -> no_loc Unreachable (* ZZZ *)
+  (* To implement now *)
+  | Try _ | Throw _ | Select _ | TupleExtract _ | ArrayFill _ | ArrayCopy _
+  | UnOp (F64 _)
+  | UnOp (F32 _)
+  | UnOp (I64 (Clz | Ctz | Popcnt | Trunc _ | ExtendS _))
+  | UnOp (I32 (Clz | Ctz | Popcnt | Trunc _ | ExtendS _))
+  (* signed(x as i8) as i32 ? *)
+  (* Later *)
+  | ReturnCallIndirect _ | CallIndirect _ | RefAsNonNull | ArrayInitElem _
+  | ArrayInitData _ | ArrayNewElem _ | StructNewDefault _ | ArrayNewDefault _
+  | I32Load8 _ | I32Store8 _ ->
+      no_loc Unreachable (* ZZZ *)
 
 let bind_locals st l =
   List.map
@@ -446,5 +462,5 @@ Collect exports to associate them to the corresponding module field
 
 List of reserved names:
 - all keywords
-- signed, unsigned, array_len, min, max, copysign, rotr, rotl ...
+- signed, unsigned, array_len, min, max, copysign, rotr, rotl, reinterpret ...
 *)
