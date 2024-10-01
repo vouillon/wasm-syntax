@@ -4,7 +4,10 @@ let get_annot (a, _) = a
 let get_type (_, t) = t
 let name_field _st a = Option.value ~default:"foo" a
 let name_type _st a = Option.value ~default:"foo" a
-let name_func _st a = Option.value ~default:"foo" a
+
+let name_func _st a exports =
+  Option.value ~default:(match exports with nm :: _ -> nm | [] -> "foo") a
+
 let name_local _st a = Option.value ~default:"x" a
 let name_global _st a = Option.value ~default:"x" a
 let annotated a t = (a, t)
@@ -111,6 +114,23 @@ let two_args l : Ast.instr * Ast.instr =
       (*ZZZ Should take arity into account *)
       (x, Ast.no_loc (Ast.Sequence r))
 
+let string_args n args =
+  try
+    if Int32.of_int (List.length args) <> n then raise Exit;
+    let b = Bytes.create (Int32.to_int n) in
+    List.iteri
+      (fun i arg ->
+        match arg.Ast.descr with
+        | Ast.Int c
+          when let c = int_of_string c in
+               c >= 0 && c < 256 ->
+            Bytes.set b i (Char.chr (int_of_string c))
+        | _ -> raise Exit)
+      args;
+    let s = Bytes.to_string b in
+    if String.is_valid_utf_8 s then Some s else None
+  with Exit -> None
+
 let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
   match i with
@@ -182,6 +202,14 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | RefFunc f -> no_loc (Get (idx st `Func f))
   | RefNull t ->
       no_loc (Cast (no_loc Null, { nullable = true; typ = heaptype st t }))
+  | ArrayNewFixed (t, n) -> (
+      match string_args n args with
+      | Some s ->
+          no_loc
+            (Cast
+               ( no_loc (String s),
+                 { nullable = false; typ = Type (idx st `Type t) } ))
+      | None -> no_loc Unreachable)
   | _ -> no_loc Unreachable (* ZZZ *)
 
 let bind_locals st l =
@@ -190,48 +218,61 @@ let bind_locals st l =
       Ast.no_loc (Ast.Local (name_local st id, Some (valtype st t), None)))
     l
 
+let typeuse st (typ, sign) =
+  ( Option.map (fun i -> idx st `Type i) typ,
+    Option.map
+      (fun (p, r) ->
+        {
+          Ast.named_params = List.map (fun (id, t) -> (id, valtype st t)) p;
+          results = List.map (fun t -> valtype st t) r;
+        })
+      sign )
+
+let exports e = List.map (fun nm -> ("export", Ast.no_loc (Ast.String nm))) e
+
+let import (module_, name) =
+  ( "import",
+    Ast.no_loc
+      (Ast.Sequence
+         [ Ast.no_loc (Ast.String module_); Ast.no_loc (Ast.String name) ]) )
+
 let modulefield st (f : Src.modulefield) : Ast.modulefield option =
   match f with
   | Types t -> Some (Type (rectype st t))
-  | Func { id; locals; instrs; _ } ->
-      prerr_endline "AAA";
-      Option.iter prerr_endline id;
+  | Func { id; locals; instrs; typ; exports = e } ->
       let locals = bind_locals st locals in
+      let typ, sign = typeuse st typ in
       Some
         (Func
            {
-             name = name_func st id;
-             typ = None;
-             sign = None;
+             name = name_func st id e;
+             typ;
+             sign;
              body = (None, locals @ List.map (fun i -> instr st i []) instrs);
+             attributes = exports e;
            })
-  | Import { module_ = _; name = _; id; desc = Func _typeuse; exports = _ } ->
-      Some (Fundecl { name = name_func st id; typ = None; sign = None })
-  | Global { id; typ; init; exports = _ } ->
+  | Import { module_; name; id; desc = Func typ; exports = e } ->
+      let typ, sign = typeuse st typ in
+      Some
+        (Fundecl
+           {
+             name = name_func st id e;
+             typ;
+             sign;
+             attributes = import (module_, name) :: exports e;
+           })
+  | Global { id; typ; init; exports = e } ->
       Some
         (Global
            {
              name = name_global st id;
              typ = Some (globaltype st typ);
              def = sequence (List.map (fun i -> instr st i []) init);
+             attributes = exports e;
            })
   | _ -> None
 
 (*
-    | Import of {
-        module_ : string;
-        name : string;
-        id : id option;
-        desc : importdesc;
-        exports : string list;
-      }
-    | Func of {
-        id : id option;
-        typ : typeuse;
-        locals : (id option * valtype) list;
-        instrs : instr list;
-        exports : string list;
-      }
     | Memory of {
         id : id option;
         limits : limits;
@@ -244,6 +285,4 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
     | Elem of { id : id option; typ : reftype; init : expr list }
     | Data of { id : id option; init : string; mode : datamode }
 *)
-let module_ (_, fields) =
-  Format.eprintf "AAA %d@." (List.length fields);
-  List.map (fun f -> modulefield () f) fields
+let module_ (_, fields) = List.map (fun f -> modulefield () f) fields

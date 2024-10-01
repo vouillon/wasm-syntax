@@ -5,6 +5,7 @@
 %token EOF
 
 %token SEMI ";"
+%token SHARP "#"
 %token AMPERSAND "&"
 %token PIPE "|"
 %token QUESTIONMARK "?"
@@ -153,6 +154,9 @@ rectype:
 | REC "{" l = list(typedef) "}" { Array.of_list l }
 | t = typedef { [|t|] }
 
+attribute:
+| "#" "[" name = IDENT "=" i = instr "]" { (name, i) }
+
 simple_pat:
 | x = IDENT { Some x }
 | "_" { None }
@@ -165,16 +169,17 @@ fundecl:
 | FN name = IDENT
   t = ioption(":" t = IDENT { t } )
   sign = option ("(" named_params = funcparams ")"
-  "->" result = resulttype { {named_params; result} })
+  "->" results = resulttype { {named_params; results} })
   { (name, t, sign) }
 | FN name = IDENT
-  ":" params = resulttype "->" result = resulttype
-  { (name, None, Some {named_params = List.map (fun x -> (None, x)) params; result}) }
+  ":" params = resulttype "->" results = resulttype
+  { (name, None,
+     Some {named_params = List.map (fun x -> (None, x)) params; results}) }
 
 func:
-| f = fundecl body = block
+| attributes = list(attribute) f = fundecl body = block
   { let (name, typ, sign) = f in
-    Func {name; typ; sign; body} }
+    Func {name; typ; sign; body; attributes} }
 
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
@@ -244,15 +249,15 @@ delimited_instr_list:
 | i = plaininstr ";" l = delimited_instr_list { i :: l }
 
 global:
-| LET name = IDENT
+| attributes = list(attribute) LET name = IDENT
   typ = option(":" mut = boption(MUT) typ = valtype { {mut; typ} })
   "=" def = instr option(";")
-  { Global {name; typ; def} }
+  { Global {name; typ; def; attributes} }
 
 modulefield:
 | r = rectype { Type r }
-| f = fundecl option(";")
-  { let (name, typ, sign) = f in Fundecl {name; typ; sign} }
+| attributes = list(attribute) f = fundecl option(";")
+  { let (name, typ, sign) = f in Fundecl {name; typ; sign; attributes} }
 | f = func { f }
 | g = global { g }
 

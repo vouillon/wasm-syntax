@@ -1,84 +1,3 @@
-(*
-module Types (X : sig
-  type idx
-  type 'a annotated_array
-end) =
-struct
-
-  type comptype =
-    | Func of functype
-    | Struct of fieldtype X.annotated_array
-    | Array of fieldtype
-
-  type subtype = { typ : comptype; supertype : X.idx option; final : bool }
-  type rectype = subtype X.annotated_array
-  type nonrec limits = limits = { mi : Int32.t; ma : Int32.t option }
-  type globaltype = valtype muttype
-end
-
-type idx = string
-
-include Wasm.Ast.Types (struct
-  type nonrec idx = idx
-  type 'a annotated_array = (string * 'a) array
-end)
-
-type signage = Wasm.Ast.signage = Signed | Unsigned
-type binop = Add | Sub | Gt of signage | Lt of signage | Or | And | Ne | Eq
-type location = { loc_start : Lexing.position; loc_end : Lexing.position }
-type 'a with_loc = { descr : 'a; loc : location }
-
-let no_loc descr =
-  { descr; loc = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos } }
-
-type instr_descr =
-  | Block of string option * instr list
-  | Loop of string option * instr list
-  | If of string option * instr * instr list * instr list option
-  | Unreachable
-  | Nop
-  | Get of idx
-  | Set of idx * instr
-  | Tee of idx * instr
-  | Call of instr * instr list
-  | Struct of string option * (string * instr) list
-  | String of string
-  | Int of string
-  | Cast of instr * reftype
-  | Test of instr * reftype
-  | StructGet of instr * string
-  | StructSet of instr * string * instr
-  | BinOp of binop * instr * instr
-  | Local of string * valtype option * instr option
-  | Br of string * instr option
-  | Br_if of string * instr
-  | Br_table of string list * instr
-  | Br_on_null of string * instr
-  | Br_on_non_null of string * instr
-  | Br_on_cast of string * reftype * instr
-  | Br_on_cast_fail of string * reftype * instr
-  | Return of instr option
-  | Sequence of instr list
-
-and instr = instr_descr with_loc
-
-type funsig = {
-  named_params : (string option * valtype) list;
-  result : valtype list;
-}
-
-type modulefield =
-  | Type of rectype
-  | Fundecl of { name : string; typ : string option; sign : funsig option }
-  | Func of {
-      name : string;
-      typ : string option;
-      sign : funsig option;
-      body : string option * instr list;
-    }
-  | Global of { name : string; typ : valtype muttype option; def : instr }
-*)
-
 open Ast
 
 let heaptype f (t : heaptype) =
@@ -120,8 +39,11 @@ and tuple f l =
         l
 
 let functype f { params; results } =
-  Format.fprintf f "@[<2>fn@ %a ->@ %a@]" tuple (Array.to_list params) tuple
-    (Array.to_list results)
+  if results = [||] then
+    Format.fprintf f "@[<2>fn@ %a@]" tuple (Array.to_list params)
+  else
+    Format.fprintf f "@[<2>fn@ %a@ ->@ %a@]" tuple (Array.to_list params) tuple
+      (Array.to_list results)
 
 let packedtype f t =
   match t with I8 -> Format.fprintf f "i8" | I16 -> Format.fprintf f "i16"
@@ -136,17 +58,17 @@ let fieldtype = muttype storagetype
 
 let comptype f (t : comptype) =
   match t with
-  | Func t -> Format.fprintf f "@]@ %a@]" functype t
+  | Func t -> Format.fprintf f "@]@ %a" functype t
   | Struct l ->
-      Format.fprintf f "@ {@]@ %a@]@ }"
+      Format.fprintf f "@ {@]@;<1 2>%a@ }"
         (Format.pp_print_list
-           ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+           ~pp_sep:(fun f () -> Format.fprintf f ",@;<1 2>")
            (fun f (nm, t) -> Format.fprintf f "@[<2>%s:@ %a@]" nm fieldtype t))
         (Array.to_list l)
-  | Array t -> Format.fprintf f "@]@ @[<1>[%a]@]@]" fieldtype t
+  | Array t -> Format.fprintf f "@]@ @[<1>[%a]@]" fieldtype t
 
 let subtype f (nm, { typ; supertype; final }) =
-  Format.fprintf f "@[@[<hv2>@[type@ %s%s" nm (if final then "" else " open");
+  Format.fprintf f "@[<hv>@[type@ %s%s" nm (if final then "" else " open");
   (match supertype with
   | Some supertype -> Format.fprintf f "@ :@ %s" supertype
   | None -> ());
@@ -183,12 +105,12 @@ let rec instr f i =
   match i.descr with
   | Block (label, l) -> block f label "" l
   | Loop (label, l) -> block f label "loop " l
-  | If (_label, i, l1, l2) ->
-      Format.fprintf f "@[@[<hv2>@[if@ %a@ {@]%a" instr i block_contents l1;
-      Option.iter
-        (fun l2 -> Format.fprintf f "@[<2hv>@[}@ else@ {@]%a" block_contents l2)
-        l2;
-      Format.fprintf f "}@]"
+  | If (_label, i, l1, l2) -> (
+      Format.fprintf f "@[@[<hv>@[if@ %a@ {@]%a" instr i block_contents l1;
+      match l2 with
+      | Some l2 ->
+          Format.fprintf f "@[<hv>@[}@ else@ {@]%a}@]@]@]" block_contents l2
+      | None -> Format.fprintf f "}@]@]")
   | Unreachable -> Format.fprintf f "unreachable"
   | Nop -> Format.fprintf f "nop"
   | Get x -> Format.fprintf f "%s" x
@@ -201,11 +123,11 @@ let rec instr f i =
            instr)
         l
   | Struct (nm, l) ->
-      Format.fprintf f "@[@[<hv2>@[";
+      Format.fprintf f "@[<hv>@[";
       Option.iter (fun nm -> Format.fprintf f "%s@ " nm) nm;
-      Format.fprintf f "{@]@ %a@]@ }@]"
+      Format.fprintf f "{@]@;<1 2>%a@ }@]"
         (Format.pp_print_list
-           ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+           ~pp_sep:(fun f () -> Format.fprintf f ",@;<1 2>")
            (fun f (nm, i) -> Format.fprintf f "@[<2>%s:@ %a@]" nm instr i))
         l
   | String s -> Format.fprintf f "\"%s\"" s (* Escape *)
@@ -251,7 +173,7 @@ let rec instr f i =
   | Br_on_cast_fail of string * reftype * instr
 *)
 and block f _label kind l =
-  Format.fprintf f "@[<hv2>@[%s{@]%a}" kind block_contents l
+  Format.fprintf f "@[<hv>@[%s{@]%a}@]" kind block_contents l
 
 and deliminated_instr f i =
   match i.descr with
@@ -266,31 +188,45 @@ and block_instrs f l =
   match l with
   | [] -> ()
   | [ i ] -> instr f i
-  | i :: rem -> Format.fprintf f "%a@ %a" deliminated_instr i block_instrs rem
+  | i :: rem ->
+      Format.fprintf f "%a@;<1 2>%a" deliminated_instr i block_instrs rem
 
 and block_contents f l =
-  match l with [] -> () | _ -> Format.fprintf f "@ %a@]@ " block_instrs l
+  match l with [] -> () | _ -> Format.fprintf f "@;<1 2>%a@ " block_instrs l
+
+let fundecl f (name, typ, sign) =
+  Format.fprintf f "fn@ %s" name;
+  Option.iter (fun typ -> Format.fprintf f "@ : %s@ " typ) typ;
+  Option.iter
+    (fun { named_params; results } ->
+      Format.fprintf f "@[<1>(%a)@]"
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+           (fun f (id, t) ->
+             match id with
+             | None -> valtype f t
+             | Some id -> Format.fprintf f "@[<2>%s:@ %a@]" id valtype t))
+        named_params;
+      if results <> [] then Format.fprintf f "@ ->@ %a" tuple results)
+    sign
+
+let attributes f attributes =
+  List.iter
+    (fun (name, i) -> Format.fprintf f "@[<2>#[%s@ =@ %a]@]@ " name instr i)
+    attributes
 
 let modulefield f field =
   match field with
   | Type t -> rectype f t
-  | Func { name; typ = _; sign = _; body = _lab, body } ->
-      Format.fprintf f "@[@[<hv2>@[fn@ %s@ {@]%a}@]" name block_contents body
-  | Global { name; typ; def } ->
-      Format.fprintf f "@[<2>let@ %s" name;
+  | Func { name; typ; sign; body = _lab, body; attributes = a } ->
+      Format.fprintf f "@[<hv>%a@[<hv>@[%a@ {@]%a}@]@]" attributes a fundecl
+        (name, typ, sign) block_contents body
+  | Global { name; typ; def; attributes = a } ->
+      Format.fprintf f "@[<hv>%a@[<2>let@ %s" attributes a name;
       Option.iter (fun t -> Format.fprintf f "@ :@ %a" globaltype t) typ;
-      Format.fprintf f "@ =@ %a@]" instr def
-  | _ -> Format.fprintf f "/*...*/"
-(*
-  | Fundecl of { name : string; typ : string option; sign : funsig option }
-  | Func of {
-      name : string;
-      typ : string option;
-      sign : funsig option;
-      body : string option * instr list;
-    }
-  | Global of { name : string; typ : valtype muttype option; def : instr }
-*)
+      Format.fprintf f "@ =@ %a@]@]" instr def
+  | Fundecl { name; typ; sign; attributes = a } ->
+      Format.fprintf f "@[<hv>%a@[%a@]]" attributes a fundecl (name, typ, sign)
 
 let module_ f l =
   Format.fprintf f "@[<hv>%a@]@."

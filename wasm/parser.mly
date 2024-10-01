@@ -129,14 +129,6 @@ module Wasm = struct end
 open Ast.Text
 
 let map_fst f (x, y) = (f x, y)
-
-let remove_bindings (id, sign) =
-  (id,
-   Option.map
-     (fun (params, results) ->
-        { params = Array.of_list (List.map snd params);
-          results = Array.of_list results } )
-     sign)
 %}
 
 %start <string option * Ast.Text.modulefield list> parse
@@ -472,13 +464,13 @@ import:
 
 importdesc:
 | "(" FUNC i = ID ? t = typeuse(")")
-    { (i, Func (remove_bindings (fst t))) }
+    { (i, Func (fst t)) }
 | "(" MEMORY i = ID ? l = limits ")"
     { (i, (Memory l)) }
 | "(" GLOBAL i = ID ? t = globaltype ")"
     { (i, (Global t)) }
 | "(" TAG i = ID ? t = typeuse(")")
-    { (i, (Tag (remove_bindings (fst t)) : importdesc)) }
+    { (i, (Tag (fst t) : importdesc)) }
 
 func:
 | "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(")"))))
@@ -488,7 +480,7 @@ func:
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = typeuse({}) ")"
   { let (exports, (module_, name)) = r in
-    Import {module_; name; id; desc = Func (remove_bindings (fst t)); exports } }
+    Import {module_; name; id; desc = Func (fst t); exports } }
 
 exports(cont):
 | c = cont { [], c }
@@ -518,12 +510,12 @@ memory:
 tag:
 | "(" TAG id = ID ? r = exports(typeuse (")"))
     { let (exports, (typ, _)) = r in
-      Tag {id; typ = remove_bindings typ; exports} }
+      Tag {id; typ; exports} }
 | "(" TAG id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = typeuse (")")
   { let (exports, (module_, name)) = r in
-    Import {module_; name; id; desc = Tag (remove_bindings (fst t)); exports } }
+    Import {module_; name; id; desc = Tag (fst t); exports } }
 
 global:
 | "(" GLOBAL id = ID ? r = exports(t = globaltype init = expr { t, init }) ")"

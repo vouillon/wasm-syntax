@@ -47,16 +47,29 @@ and instr = instr_descr with_loc
 
 type funsig = {
   named_params : (string option * valtype) list;
-  result : valtype list;
+  results : valtype list;
 }
+
+type attributes = (string * instr) list
 
 type modulefield =
   | Type of rectype
-  | Fundecl of { name : string; typ : string option; sign : funsig option }
+  | Fundecl of {
+      name : string;
+      typ : string option;
+      sign : funsig option;
+      attributes : attributes;
+    }
   | Func of {
       name : string;
       typ : string option;
       sign : funsig option;
       body : string option * instr list;
+      attributes : attributes;
     }
-  | Global of { name : string; typ : valtype muttype option; def : instr }
+  | Global of {
+      name : string;
+      typ : valtype muttype option;
+      def : instr;
+      attributes : attributes;
+    }

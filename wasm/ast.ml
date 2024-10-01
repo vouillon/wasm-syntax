@@ -230,16 +230,14 @@ module Text = struct
   module Types = Types (X)
   include Types
 
-  type typeuse = idx option * functype option
-
-  type typeuse_with_bindings =
-    idx option * ((id option * valtype) list * valtype list) option
+  type typeuse_no_bindings = idx option * functype option
+  type typeuse = idx option * ((id option * valtype) list * valtype list) option
 
   include Instructions (struct
     include X
     include Types
 
-    type nonrec typeuse = typeuse
+    type nonrec typeuse = typeuse_no_bindings
   end)
 
   type importdesc =
@@ -262,7 +260,7 @@ module Text = struct
       }
     | Func of {
         id : id option;
-        typ : typeuse_with_bindings;
+        typ : typeuse;
         locals : (id option * valtype) list;
         instrs : instr list;
         exports : string list;

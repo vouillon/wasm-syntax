@@ -17,6 +17,7 @@ let rec token lexbuf =
   match%sedlex lexbuf with
   | white | newline -> token lexbuf
   | ';' -> SEMI
+  | '#' -> SHARP
   | '&' -> AMPERSAND
   | '|' -> PIPE
   | '?' -> QUESTIONMARK
