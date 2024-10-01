@@ -105,17 +105,17 @@ let binop f op =
 type prec =
   | Instruction
   | Let
-  | Branch
-  | Block
   | Assignement
   | Comparison
   | LogicalOr
   | LogicalAnd
   | Addition
   | Multiplication
+  | Branch
   | Cast
   | Call
   | FieldAccess
+  | Block
 
 let parentheses expected actual f g =
   if expected > actual then (
@@ -133,20 +133,50 @@ let prec_op op =
   | Or -> (LogicalOr, LogicalOr, LogicalAnd)
   | And -> (LogicalAnd, Addition, Addition)
 
-(* precedence, labels *)
+let long_block l =
+  let rec loop l n =
+    if n <= 0 then 0
+    else
+      match l with
+      | [] -> n
+      | { descr = Ast.Block (_, l); _ } :: rem -> loop rem (loop l (n - 2))
+      | { descr = Ast.Loop (_, l); _ } :: rem -> loop rem (loop l (n - 2))
+      | { descr = Ast.If (_, _, l1, l2); _ } :: rem ->
+          let n = loop l1 (n - 2) in
+          let n = match l2 with None -> n | Some l2 -> loop l2 (n - 1) in
+          loop rem n
+      | _ :: rem -> loop rem (n - 1)
+  in
+  loop l 5 <= 0
+
+let block_label f label =
+  Option.iter (fun label -> Format.fprintf f "'%s:@ " label) label
+
+let label_comment f (l, label) =
+  if long_block l then
+    Option.iter (fun label -> Format.fprintf f "@ /* '%s */" label) label
+
+let simple_pat f p =
+  match p with
+  | Some x -> Format.pp_print_string f x
+  | None -> Format.pp_print_string f "_"
+
 let rec instr prec f (i : instr) =
   match i.descr with
-  | Block (label, l) -> parentheses prec Block f @@ fun () -> block f label "" l
+  | Block (label, l) ->
+      parentheses prec Block f @@ fun () -> block f label None l
   | Loop (label, l) ->
-      parentheses prec Block f @@ fun () -> block f label "loop " l
-  | If (_label, i, l1, l2) -> (
+      parentheses prec Block f @@ fun () -> block f label (Some "loop") l
+  | If (label, i, l1, l2) -> (
       parentheses prec Block f @@ fun () ->
-      Format.fprintf f "@[@[<hv>@[if@ %a@ {@]%a" (instr Instruction) i
-        block_contents l1;
+      Format.fprintf f "@[@[<hv>@[%aif@ %a@ {@]%a" block_label label
+        (instr Instruction) i block_contents l1;
       match l2 with
       | Some l2 ->
-          Format.fprintf f "@[<hv>@[}@ else@ {@]%a}@]@]@]" block_contents l2
-      | None -> Format.fprintf f "}@]@]")
+          Format.fprintf f "@[<hv>@[}@ else@ {@]%a@[}%a@]@]@]@]" block_contents
+            l2 label_comment
+            (l1 @ l2, label)
+      | None -> Format.fprintf f "@[}%a@]@]@]" label_comment (l1, label))
   | Unreachable -> Format.pp_print_string f "unreachable"
   | Nop -> Format.pp_print_string f "nop"
   | Get x -> Format.pp_print_string f x
@@ -158,7 +188,7 @@ let rec instr prec f (i : instr) =
       Format.fprintf f "@[<2>%s@ =@ %a@]" x (instr Assignement) i
   | Call (i, l) ->
       parentheses prec Call f @@ fun () ->
-      Format.fprintf f "@[<2>%a@[(%a)@]@]" (instr Call) i
+      Format.fprintf f "@[<2>%a@,@[<1>(%a)@]@]" (instr Call) i
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))
@@ -172,14 +202,14 @@ let rec instr prec f (i : instr) =
            (fun f (nm, i) ->
              Format.fprintf f "@[<2>%s:@ %a@]" nm (instr Instruction) i))
         l
-  | String s -> Format.fprintf f "\"%s\"" s (* Escape *)
+  | String s -> Format.fprintf f "\"%s\"" (String.escaped s) (*ZZZ Escape *)
   | Int s | Float s -> Format.pp_print_string f s
   | Cast (i, t) ->
       parentheses prec Cast f @@ fun () ->
-      Format.fprintf f "@[<2>%a@ as@ %a@]" (instr Cast) i reftype t
+      Format.fprintf f "@[<2>%a@ @[as@ %a@]@]" (instr Cast) i valtype t
   | Test (i, t) ->
       parentheses prec Cast f @@ fun () ->
-      Format.fprintf f "@[<2>%a@ is@ %a@]" (instr Cast) i reftype t
+      Format.fprintf f "@[<2>%a@ @[is@ %a@]@]" (instr Cast) i reftype t
   | StructGet (i, s) ->
       parentheses prec FieldAccess f @@ fun () ->
       Format.fprintf f "%a.%s" (instr FieldAccess) i s
@@ -192,44 +222,58 @@ let rec instr prec f (i : instr) =
       parentheses prec out f @@ fun () ->
       Format.fprintf f "@[<2>%a@ %a@ %a@]" (instr left) i binop op (instr right)
         i'
-  | Local (x, t, i) ->
+  | Let (l, i) ->
       parentheses prec Let f @@ fun () ->
-      Format.fprintf f "@[let@ %s" x;
-      Option.iter (fun t -> Format.fprintf f "@ :@ %a" valtype t) t;
+      let single f (x, t) =
+        Format.fprintf f "@[<2>%a" simple_pat x;
+        Option.iter (fun t -> Format.fprintf f "@ :@ %a" valtype t) t;
+        Format.fprintf f "@]"
+      in
+      Format.fprintf f "@[<2>let@ %a"
+        (fun f l ->
+          match l with
+          | [ p ] -> single f p
+          | l ->
+              Format.fprintf f "@[<1>(%a)]"
+                (Format.pp_print_list
+                   ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+                   single)
+                l)
+        l;
       Option.iter (fun i -> Format.fprintf f "@ =@ %a" (instr Assignement) i) i;
       Format.fprintf f "@]"
   | Br (label, i) ->
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[<2>br@ %s" label;
+      Format.fprintf f "@[<2>br@ '%s" label;
       Option.iter (fun i -> Format.fprintf f "@ %a" (instr Branch) i) i;
       Format.fprintf f "@]"
   | Br_if (label, i) ->
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[<2>br_if@ %s@ %a@]" label (instr Branch) i
+      Format.fprintf f "@[<2>br_if@ '%s@ %a@]" label (instr Branch) i
   | Br_on_null (label, i) ->
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[<2>br_on_null@ %s@ %a@]" label (instr Branch) i
+      Format.fprintf f "@[<2>br_on_null@ '%s@ %a@]" label (instr Branch) i
   | Br_on_non_null (label, i) ->
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[<2>br_on_non_null@ %s@ %a@]" label (instr Branch) i
+      Format.fprintf f "@[<2>br_on_non_null@ '%s@ %a@]" label (instr Branch) i
   | Br_on_cast (label, ty, i) ->
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[<2>br_on_cast@ %s@ %a@ %a@]" label reftype ty
+      Format.fprintf f "@[<2>br_on_cast@ '%s@ %a@ %a@]" label reftype ty
         (instr Branch) i
   | Br_on_cast_fail (label, ty, i) ->
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[<2>br_on_cast_fail@ %s@ %a@ %a@]" label reftype ty
+      Format.fprintf f "@[<2>br_on_cast_fail@ '%s@ %a@ %a@]" label reftype ty
         (instr Branch) i
   | Br_table (labels, i) ->
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[<2>@[<hv>@[br_table@ {@]{@;<1 2>%a@ }@]@ %a@]"
+      Format.fprintf f "@[<2>br_table@ @[<2>{@ %a@ }@]@ %a@]"
         (Format.pp_print_list
-           ~pp_sep:(fun f () -> Format.fprintf f ",@;<1 2>")
-           Format.pp_print_string)
+           ~pp_sep:(fun f () -> Format.fprintf f "@ ")
+           (fun f label -> Format.fprintf f "'%s" label))
         labels (instr Branch) i
   | Return i ->
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[return";
+      Format.fprintf f "@[<2>return";
       Option.iter (fun i -> Format.fprintf f "@ %a" (instr Branch) i) i;
       Format.fprintf f "@]"
   | Sequence l ->
@@ -240,15 +284,17 @@ let rec instr prec f (i : instr) =
         l
   | Null -> Format.pp_print_string f "null"
 
-and block f _label kind l =
-  Format.fprintf f "@[<hv>@[%s{@]%a}@]" kind block_contents l
+and block f label kind l =
+  Format.fprintf f "@[<hv>@[%a%a{@]%a@[}%a@]@]" block_label label
+    (fun f kind -> Option.iter (fun kind -> Format.fprintf f "%s@ " kind) kind)
+    kind block_contents l label_comment (l, label)
 
 and deliminated_instr f (i : instr) =
   match i.descr with
   | Block _ | Loop _ | If _ -> instr Instruction f i
   | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | Struct _ | String _
   | Int _ | Float _ | Cast _ | Test _ | StructGet _ | StructSet _ | BinOp _
-  | Local _ | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _
+  | Let _ | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _
   | Br_on_cast _ | Br_on_cast_fail _ | Return _ | Sequence _ | Null ->
       Format.fprintf f "@[%a;@]" (instr Instruction) i
 
@@ -271,9 +317,7 @@ let fundecl f (name, typ, sign) =
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (fun f (id, t) ->
-             match id with
-             | None -> valtype f t
-             | Some id -> Format.fprintf f "@[<2>%s:@ %a@]" id valtype t))
+             Format.fprintf f "@[<2>%a:@ %a@]" simple_pat id valtype t))
         named_params;
       if results <> [] then Format.fprintf f "@ ->@ %a" tuple results)
     sign

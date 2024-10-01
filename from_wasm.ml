@@ -148,6 +148,14 @@ let string_args n args =
     if String.is_valid_utf_8 s then Some s else None
   with Exit -> None
 
+let rec split_last l =
+  match l with
+  | [] -> assert false
+  | [ x ] -> (x, [])
+  | y :: r ->
+      let x, l = split_last r in
+      (x, y :: l)
+
 let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
   match i with
@@ -156,7 +164,7 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
       no_loc (Block (label, List.map (fun i -> instr st i []) block))
   | Loop { label; typ = _; block } ->
       assert (args = []);
-      no_loc (Block (label, List.map (fun i -> instr st i []) block))
+      no_loc (Loop (label, List.map (fun i -> instr st i []) block))
   | If { label; typ = _; if_block; else_block } ->
       no_loc
         (If
@@ -167,8 +175,22 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
              else Some (List.map (fun i -> instr st i []) else_block) ))
   | Unreachable -> sequence (args @ [ no_loc Unreachable ])
   | Nop -> sequence (args @ [ no_loc Nop ])
+  | Drop -> no_loc (Let ([ (None, None) ], Some (sequence args)))
   | Br i -> no_loc (Br (idx st `Label i, sequence_opt args))
   | Br_if i -> no_loc (Br_if (idx st `Label i, sequence args))
+  | Br_on_null i -> no_loc (Br_on_null (idx st `Label i, sequence args))
+  | Br_on_non_null i -> no_loc (Br_on_null (idx st `Label i, sequence args))
+  | Br_on_cast (i, _, t) ->
+      (* ZZZ cast? *)
+      no_loc (Br_on_cast (idx st `Label i, reftype st t, sequence args))
+  | Br_on_cast_fail (i, _, t) ->
+      (* ZZZ cast? *)
+      no_loc (Br_on_cast_fail (idx st `Label i, reftype st t, sequence args))
+  | Br_table (labels, label) ->
+      no_loc
+        (Br_table
+           ( List.map (fun i -> idx st `Label i) (labels @ [ label ]),
+             sequence args ))
   | Folded (i, args') ->
       assert (args = []);
       instr st i (List.map (fun i -> instr st i []) args')
@@ -177,7 +199,7 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | LocalSet x -> no_loc (Set (idx st `Local x, sequence args))
   | GlobalSet x -> no_loc (Set (idx st `Global x, sequence args))
   | LocalTee x -> no_loc (Tee (idx st `Local x, sequence args))
-  | RefCast t -> no_loc (Cast (sequence args, reftype st t))
+  | RefCast t -> no_loc (Cast (sequence args, Ref (reftype st t)))
   | BinOp (I32 Add) ->
       let e1, e2 = two_args args in
       no_loc (BinOp (Add, e1, e2))
@@ -202,13 +224,32 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | BinOp (I32 Ne) ->
       let e1, e2 = two_args args in
       no_loc (BinOp (Ne, e1, e2))
+  | RefEq ->
+      let e1, e2 = two_args args in
+      no_loc (BinOp (Eq, e1, e2))
   | BinOp (I32 Rotr) -> no_loc (Call (no_loc (Get "rotr"), args))
   | BinOp (I32 Rotl) -> no_loc (Call (no_loc (Get "rotl"), args))
   | StructGet (_s, _t, _f) -> no_loc (StructGet (sequence args, "f"))
   | Call x -> no_loc (Call (no_loc (Get (idx st `Func x)), args))
+  | CallRef _ ->
+      (* ZZZ cast? *)
+      if args = [] then no_loc (Call (unit, []))
+      else
+        let f, l = split_last args in
+        no_loc (Call (f, l))
   | ReturnCall x ->
       no_loc
         (Return (Some (no_loc (Call (no_loc (Get (idx st `Func x)), args)))))
+  | ReturnCallRef _ ->
+      (* ZZZ cast? *)
+      no_loc
+        (Return
+           (Some
+              (if args = [] then no_loc (Call (unit, []))
+               else
+                 let f, l = split_last args in
+                 no_loc (Call (f, l)))))
+  | Return -> no_loc (Return (sequence_opt args))
   | TupleMake _ -> no_loc (Sequence args)
   | Const (I32 n) | Const (I64 n) ->
       no_loc (Int n) (*ZZZ Negative ints / floats *)
@@ -218,25 +259,37 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | StructNew i ->
       (*ZZZZ Use type *)
       no_loc (Struct (Some (idx st `Type i), List.map (fun i -> ("f", i)) args))
-  | RefI31 -> no_loc (Cast (sequence args, { nullable = false; typ = I31 }))
+  | RefI31 -> no_loc (Cast (sequence args, Ref { nullable = false; typ = I31 }))
+  | I31Get s ->
+      no_loc
+        (Call
+           ( no_loc
+               (Get (match s with Signed -> "signed" | Unsigned -> "unsigned")),
+             args ))
+  | UnOp (I64 Eqz) | UnOp (I32 Eqz) ->
+      no_loc (BinOp (Eq, sequence args, no_loc (Int "0")))
+  | UnOp (I64 Reinterpret) -> no_loc (Cast (sequence args, I64))
+  | UnOp (I32 Reinterpret) | I32WrapI64 -> no_loc (Cast (sequence args, I32))
   | ArrayNewData _ -> no_loc (String "foo")
+  | ArrayLen -> no_loc (Call (no_loc (Get "array_len"), args))
   | RefFunc f -> no_loc (Get (idx st `Func f))
   | RefNull t ->
-      no_loc (Cast (no_loc Null, { nullable = true; typ = heaptype st t }))
+      no_loc (Cast (no_loc Null, Ref { nullable = true; typ = heaptype st t }))
   | ArrayNewFixed (t, n) -> (
       match string_args n args with
       | Some s ->
           no_loc
             (Cast
                ( no_loc (String s),
-                 { nullable = false; typ = Type (idx st `Type t) } ))
+                 Ref { nullable = false; typ = Type (idx st `Type t) } ))
       | None -> no_loc Unreachable)
   | _ -> no_loc Unreachable (* ZZZ *)
 
 let bind_locals st l =
   List.map
     (fun (id, t) ->
-      Ast.no_loc (Ast.Local (name_local st id, Some (valtype st t), None)))
+      Ast.no_loc
+        (Ast.Let ([ (Some (name_local st id), Some (valtype st t)) ], None)))
     l
 
 let typeuse st (typ, sign) =
@@ -307,3 +360,22 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
     | Data of { id : id option; init : string; mode : datamode }
 *)
 let module_ (_, fields) = List.map (fun f -> modulefield () f) fields
+
+(*
+Use imports and exports as hints
+Collect exports to associate them to the corresponding module field
+
+- get existing type names
+- scan types, allocating new types + build array of type definitions
+  rename if not valid identifier
+  + mapping name -> index / index -> name / name -> new_name
+- get existing function names
+- get existing names for other components; rename if already used
+- build mappings: name -> new_name / index -> name
+- get existing local names
+
+
+List of reserved names:
+- all keywords
+- signed, unsigned, array_len ...
+*)

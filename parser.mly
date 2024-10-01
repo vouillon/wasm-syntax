@@ -212,7 +212,7 @@ plaininstr:
   { with_loc $sloc (Struct (Some x, l)) }
 | "{" l = separated_nonempty_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
   { with_loc $sloc (Struct (None, l)) }
-| i = instr AS t = reftype { with_loc $sloc (Cast(i, t)) }
+| i = instr AS t = valtype { with_loc $sloc (Cast(i, t)) }
 | i = instr IS t = reftype { with_loc $sloc (Test(i, t)) }
 | i = instr "." x = IDENT { with_loc $sloc (StructGet(i, x)) }
 | i = instr "." x = IDENT "=" j = instr { with_loc $sloc (StructSet(i, x, j)) }
@@ -224,16 +224,24 @@ plaininstr:
 | i = instr ">u" j = instr { with_loc $sloc (BinOp(Gt Unsigned, i, j)) }
 | i = instr "&" j = instr { with_loc $sloc (BinOp(And, i, j)) }
 | i = instr "|" j = instr { with_loc $sloc (BinOp(Or, i, j)) }
-| LET x = IDENT t = option(":" t = valtype {t}) i = option("=" i = instr {i})
-  { with_loc $sloc (Local (x, t, i)) }
-| BR l = IDENT i = ioption(instr) { with_loc $sloc (Br (l, i)) } %prec prec_branch
-| BR_IF l = IDENT i = instr { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
-| BR_TABLE "{" l = nonempty_list(IDENT) "}" i = instr
+| LET x = simple_pat t = option(":" t = valtype {t})
+  i = option("=" i = instr {i})
+  { with_loc $sloc (Let ([(x, t)], i)) }
+| LET
+  "(" l = separated_list(",", p = simple_pat t = option(":" t = valtype {t})
+                                { (p, t) })
+  ")" i = option("=" i = instr {i})
+  { with_loc $sloc (Let (l, i)) }
+| BR "'" l = IDENT i = ioption(instr)
+  { with_loc $sloc (Br (l, i)) } %prec prec_branch
+| BR_IF "'" l = IDENT i = instr
+  { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
+| BR_TABLE "{" l = nonempty_list("'" i = IDENT { i }) "}" i = instr
   { with_loc $sloc (Br_table (l, i)) } %prec prec_branch
-| BR_ON_NULL l = IDENT i = instr { with_loc $sloc (Br_on_null (l, i)) } %prec prec_branch
-| BR_ON_NON_NULL l = IDENT i = instr { with_loc $sloc (Br_on_non_null (l, i)) } %prec prec_branch
-| BR_ON_CAST l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
-| BR_ON_CAST_FAIL l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
+| BR_ON_NULL "'" l = IDENT i = instr { with_loc $sloc (Br_on_null (l, i)) } %prec prec_branch
+| BR_ON_NON_NULL "'" l = IDENT i = instr { with_loc $sloc (Br_on_non_null (l, i)) } %prec prec_branch
+| BR_ON_CAST "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
+| BR_ON_CAST_FAIL "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec prec_branch
 | "[" separated_list(",", instr) "]" { assert false } (* array.new *)
 | "[" instr ";" instr "]" { assert false } (* array.new_fixed *)

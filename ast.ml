@@ -28,12 +28,12 @@ type instr_descr =
   | String of string
   | Int of string
   | Float of string
-  | Cast of instr * reftype
+  | Cast of instr * valtype
   | Test of instr * reftype
   | StructGet of instr * string
   | StructSet of instr * string * instr
   | BinOp of binop * instr * instr
-  | Local of string * valtype option * instr option
+  | Let of (string option * valtype option) list * instr option
   | Br of string * instr option
   | Br_if of string * instr
   | Br_table of string list * instr

@@ -56,3 +56,26 @@ Use typechecking to eliminate unnecessary type annotations
 Two-step inference?
   - preserve overloading of number functions
   - propagate type in all directions (simple unification / union find?)
+
+============
+
+br 'foo ...
+labels
+array operations (array.new, array.new_fixed, array.get, array.set)
+drop instruction (==> let _ =)
+ref.as_non_null (need types?)
+more ops: shr, ...
+we need to put constraints on integer/float constants and eliminate afterwards
+=====
+
+fn caml_string_equal(p1: &eq, p2: &eq) -> &eq {
+  if p1 == p2 { return 1 }
+  let s1 = p1 as &string;
+  let s2 = p2 as &string;
+  let len = array_len(s1);
+  if len != array_len(s2) { return 0 }
+  for (let i; i++; i <s len) {
+    if unsigned(s1[i]) != unsigned(s2[i]) { return 0 }
+  }
+  1
+}
