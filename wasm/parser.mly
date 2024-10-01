@@ -135,15 +135,15 @@ let map_fst f (x, y) = (f x, y)
 
 %%
 
-u32: n = NAT { Int32.of_string n (*ZZZ overflow / unsigned*) }
+u32: n = NAT { n (*ZZZ overflow / unsigned*) }
 
 i32:
-  n = NAT { Int32.of_string n }
-| i = INT { Int32.of_string i }
+  n = NAT { n }
+| i = INT { i }
 
 i64:
-  n = NAT { Int64.of_string n }
-| i = INT { Int64.of_string i }
+  n = NAT { n }
+| i = INT { i }
 
 f32:
   n = NAT { n }
@@ -156,7 +156,7 @@ f64:
 | f = FLOAT { f }
 
 idx:
-| n = u32 { Num n }
+| n = u32 { Num (Int32.of_string n) }
 | i = ID { Id i }
 
 name: s = STRING
@@ -265,8 +265,8 @@ subtype:
 | typ = comptype { {final = true; supertype = None; typ } }
 
 limits:
-| mi = u32 { {mi; ma = None} }
-| mi = u32 ma = u32 { {mi; ma = Some ma} }
+| mi = u32 { {mi = Int32.of_string mi; ma = None} }
+| mi = u32 ma = u32 { {mi = Int32.of_string mi; ma = Some (Int32.of_string ma)} }
 
 memtype:
 | l = limits { l }
@@ -340,7 +340,7 @@ plaininstr:
 | STRUCT_SET i1 = idx i2 = idx { StructSet (i1, i2) }
 | ARRAY_NEW i = idx { ArrayNew i }
 | ARRAY_NEW_DEFAULT i = idx { ArrayNewDefault i }
-| ARRAY_NEW_FIXED i = idx l = u32 { ArrayNewFixed (i, l) }
+| ARRAY_NEW_FIXED i = idx l = u32 { ArrayNewFixed (i, Int32.of_string l) }
 | ARRAY_NEW_DATA i1 = idx i2 = idx { ArrayNewData (i1, i2) }
 | ARRAY_NEW_ELEM i1 = idx i2 = idx { ArrayNewElem (i1, i2) }
 | s = ARRAY_GET i = idx { ArrayGet (s, i) }
@@ -353,8 +353,8 @@ plaininstr:
 | I64_CONST i = i64 { Const (I64 i) }
 | F32_CONST f = f32 { Const (F64 f) }
 | F64_CONST f = f64 { Const (F64 f) }
-| TUPLE_MAKE l = u32 { TupleMake l }
-| TUPLE_EXTRACT l = u32 i = u32 { TupleExtract (l, i) }
+| TUPLE_MAKE l = u32 { TupleMake (Int32.of_string l) }
+| TUPLE_EXTRACT l = u32 i = u32 { TupleExtract (Int32.of_string l, Int32.of_string i) }
 | i = INSTR { i }
 
 memarg:

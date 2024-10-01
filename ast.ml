@@ -27,6 +27,7 @@ type instr_descr =
   | Struct of string option * (string * instr) list
   | String of string
   | Int of string
+  | Float of string
   | Cast of instr * reftype
   | Test of instr * reftype
   | StructGet of instr * string

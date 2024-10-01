@@ -61,6 +61,9 @@ module Instructions (X : sig
   type heaptype
   type reftype
   type valtype
+  type int32_t
+  type int64_t
+  type float_t
 end) =
 struct
   type ('i32, 'i64, 'f32, 'f64) op =
@@ -197,7 +200,7 @@ struct
     | ArrayInitElem of X.idx * X.idx
     | RefI31
     | I31Get of signage
-    | Const of (Int32.t, Int64.t, string, string) op
+    | Const of (X.int32_t, X.int64_t, X.float_t, X.float_t) op
     | UnOp of (int_un_op, int_un_op, float_un_op, float_un_op) op
     | BinOp of (int_bin_op, int_bin_op, float_bin_op, float_bin_op) op
     | I32WrapI64
@@ -238,6 +241,9 @@ module Text = struct
     include Types
 
     type nonrec typeuse = typeuse_no_bindings
+    type int32_t = string
+    type int64_t = string
+    type float_t = string
   end)
 
   type importdesc =
@@ -304,6 +310,9 @@ module Binary = struct
     include Types
 
     type nonrec typeuse = typeuse
+    type int32_t = Int32.t
+    type int64_t = Int32.t
+    type float_t = float
   end)
 
   type importdesc =

@@ -99,6 +99,23 @@ Step 2: use this info to generate using names without reusing existing names
 let unit = Ast.no_loc (Ast.Sequence [])
 let sequence l = match l with [ i ] -> i | _ -> unit
 
+let is_integer =
+  let int_re =
+    Re.(
+      compile
+        (whole_string
+           (alt
+              [
+                rep1 (alt [ rg '0' '9'; char '_' ]);
+                seq
+                  [
+                    str "0x";
+                    rep1 (alt [ rg '0' '9'; rg 'a' 'f'; rg 'A' 'F'; char '_' ]);
+                  ];
+              ])))
+  in
+  fun s -> Re.execp int_re s
+
 let sequence_opt l =
   match l with
   | [] -> None
@@ -193,7 +210,10 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
       no_loc
         (Return (Some (no_loc (Call (no_loc (Get (idx st `Func x)), args)))))
   | TupleMake _ -> no_loc (Sequence args)
-  | Const (I32 n) -> no_loc (Int (Int32.to_string n))
+  | Const (I32 n) | Const (I64 n) -> no_loc (Int n)
+  | Const (F32 f) | Const (F64 f) ->
+      let f = if is_integer f then f ^ "." else f in
+      no_loc (Float f)
   | StructNew i ->
       (*ZZZZ Use type *)
       no_loc (Struct (Some (idx st `Type i), List.map (fun i -> ("f", i)) args))

@@ -8,10 +8,24 @@ let ident =
     ('a' .. 'z' | 'A' .. 'Z'), Star ('a' .. 'z' | 'A' .. 'Z' | '_' | '0' .. '9')]
 
 let string = [%sedlex.regexp? '"', Star (Sub (any, '"')), '"']
+let sign = [%sedlex.regexp? Opt ('+' | '-')]
+let digit = [%sedlex.regexp? '0' .. '9']
+let hexdigit = [%sedlex.regexp? '0' .. '9' | 'a' .. 'f' | 'A' .. 'F']
+let num = [%sedlex.regexp? digit, Star (Opt '_', digit)]
+let hexnum = [%sedlex.regexp? hexdigit, Star (Opt '_', hexdigit)]
+let int = [%sedlex.regexp? num | "0x", hexnum]
 
-let int =
+let decfloat =
   [%sedlex.regexp?
-    Plus '0' .. '9' | "0x", Plus ('0' .. '9' | 'a' .. 'f' | 'A' .. 'F')]
+    num, Opt ('.', Opt num), (('e' | 'E'), sign, num) | num, '.', Opt num]
+
+let hexfloat =
+  [%sedlex.regexp?
+    ( "0x", hexnum, Opt ('.', Opt hexnum), (('p' | 'P'), sign, num)
+    | "0x", hexnum, '.', Opt hexnum )]
+
+let float =
+  [%sedlex.regexp? decfloat | hexfloat | "inf" | "nan" | "nan:", hexnum]
 
 let rec token lexbuf =
   match%sedlex lexbuf with
@@ -65,6 +79,7 @@ let rec token lexbuf =
   | "return" -> RETURN
   | ident -> IDENT (Sedlexing.Utf8.lexeme lexbuf)
   | int -> INT (Sedlexing.Utf8.lexeme lexbuf)
+  | float -> FLOAT (Sedlexing.Utf8.lexeme lexbuf)
   | string -> STRING (Sedlexing.Utf8.lexeme lexbuf)
   | eof -> EOF
   | _ ->

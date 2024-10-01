@@ -133,7 +133,7 @@ let rec instr f i =
            (fun f (nm, i) -> Format.fprintf f "@[<2>%s:@ %a@]" nm instr i))
         l
   | String s -> Format.fprintf f "\"%s\"" s (* Escape *)
-  | Int s -> Format.pp_print_string f s
+  | Int s | Float s -> Format.pp_print_string f s
   | Cast (i, t) -> Format.fprintf f "@[<2>%a@ as@ %a@]" instr i reftype t
   | Test (i, t) -> Format.fprintf f "@[<2>%a@ is@ %a@]" instr i reftype t
   | StructGet (i, s) -> Format.fprintf f "%a.%s" instr i s
@@ -185,9 +185,9 @@ and deliminated_instr f i =
   match i.descr with
   | Block _ | Loop _ | If _ -> instr f i
   | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | Struct _ | String _
-  | Int _ | Cast _ | Test _ | StructGet _ | StructSet _ | BinOp _ | Local _
-  | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
-  | Br_on_cast_fail _ | Return _ | Sequence _ | Null ->
+  | Int _ | Float _ | Cast _ | Test _ | StructGet _ | StructSet _ | BinOp _
+  | Local _ | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _
+  | Br_on_cast _ | Br_on_cast_fail _ | Return _ | Sequence _ | Null ->
       Format.fprintf f "@[%a;@]" instr i
 
 and block_instrs f l =

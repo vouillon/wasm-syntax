@@ -1,5 +1,6 @@
 %token <string> IDENT
 %token <string> INT
+%token <string> FLOAT
 %token <string> STRING
 
 %token EOF
@@ -206,6 +207,7 @@ plaininstr:
    { with_loc $sloc (Call(i, l)) }
 | s = STRING { with_loc $sloc (String s) }
 | i = INT { with_loc $sloc (Int i) }
+| f = FLOAT { with_loc $sloc (Float f) }
 | x = IDENT "{" l = separated_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
   { with_loc $sloc (Struct (Some x, l)) }
 | "{" l = separated_nonempty_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
