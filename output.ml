@@ -2,17 +2,17 @@ open Ast
 
 let heaptype f (t : heaptype) =
   match t with
-  | Func -> Format.fprintf f "func"
-  | NoFunc -> Format.fprintf f "nofunc"
-  | Extern -> Format.fprintf f "extern"
-  | NoExtern -> Format.fprintf f "noextern"
-  | Any -> Format.fprintf f "any"
-  | Eq -> Format.fprintf f "eq"
-  | I31 -> Format.fprintf f "i31"
-  | Struct -> Format.fprintf f "struct"
-  | Array -> Format.fprintf f "array"
-  | None_ -> Format.fprintf f "none"
-  | Type s -> Format.fprintf f "%s" s
+  | Func -> Format.pp_print_string f "func"
+  | NoFunc -> Format.pp_print_string f "nofunc"
+  | Extern -> Format.pp_print_string f "extern"
+  | NoExtern -> Format.pp_print_string f "noextern"
+  | Any -> Format.pp_print_string f "any"
+  | Eq -> Format.pp_print_string f "eq"
+  | I31 -> Format.pp_print_string f "i31"
+  | Struct -> Format.pp_print_string f "struct"
+  | Array -> Format.pp_print_string f "array"
+  | None_ -> Format.pp_print_string f "none"
+  | Type s -> Format.pp_print_string f s
 
 let reftype f { nullable; typ } =
   if nullable then Format.fprintf f "&?%a" heaptype typ
@@ -20,11 +20,11 @@ let reftype f { nullable; typ } =
 
 let rec valtype f t =
   match t with
-  | I32 -> Format.fprintf f "i32"
-  | I64 -> Format.fprintf f "i64"
-  | F32 -> Format.fprintf f "f32"
-  | F64 -> Format.fprintf f "f64"
-  | V128 -> Format.fprintf f "v128"
+  | I32 -> Format.pp_print_string f "i32"
+  | I64 -> Format.pp_print_string f "i64"
+  | F32 -> Format.pp_print_string f "f32"
+  | F64 -> Format.pp_print_string f "f64"
+  | V128 -> Format.pp_print_string f "v128"
   | Ref t -> reftype f t
   | Tuple l -> tuple f l
 
@@ -46,7 +46,9 @@ let functype f { params; results } =
       (Array.to_list results)
 
 let packedtype f t =
-  match t with I8 -> Format.fprintf f "i8" | I16 -> Format.fprintf f "i16"
+  match t with
+  | I8 -> Format.pp_print_string f "i8"
+  | I16 -> Format.pp_print_string f "i16"
 
 let storagetype f t =
   match t with Value t -> valtype f t | Packed t -> packedtype f t
@@ -87,7 +89,7 @@ let rectype f t =
 let globaltype = muttype valtype
 
 let binop f op =
-  Format.fprintf f "%s"
+  Format.pp_print_string f
     (match op with
     | Add -> "+"
     | Sub -> "-"
@@ -111,9 +113,9 @@ let rec instr f i =
       | Some l2 ->
           Format.fprintf f "@[<hv>@[}@ else@ {@]%a}@]@]@]" block_contents l2
       | None -> Format.fprintf f "}@]@]")
-  | Unreachable -> Format.fprintf f "unreachable"
-  | Nop -> Format.fprintf f "nop"
-  | Get x -> Format.fprintf f "%s" x
+  | Unreachable -> Format.pp_print_string f "unreachable"
+  | Nop -> Format.pp_print_string f "nop"
+  | Get x -> Format.pp_print_string f x
   | Set (x, i) -> Format.fprintf f "@[<2>%s@ :=@ %a@]" x instr i
   | Tee (x, i) -> Format.fprintf f "@[<2>%s@ =@ %a@]" x instr i
   | Call (i, l) ->
@@ -131,7 +133,7 @@ let rec instr f i =
            (fun f (nm, i) -> Format.fprintf f "@[<2>%s:@ %a@]" nm instr i))
         l
   | String s -> Format.fprintf f "\"%s\"" s (* Escape *)
-  | Int s -> Format.fprintf f "%s" s
+  | Int s -> Format.pp_print_string f s
   | Cast (i, t) -> Format.fprintf f "@[<2>%a@ as@ %a@]" instr i reftype t
   | Test (i, t) -> Format.fprintf f "@[<2>%a@ is@ %a@]" instr i reftype t
   | StructGet (i, s) -> Format.fprintf f "%a.%s" instr i s
@@ -145,13 +147,25 @@ let rec instr f i =
       Option.iter (fun i -> Format.fprintf f "@ =@ %a" instr i) i;
       Format.fprintf f "@]"
   | Br (label, i) ->
-      Format.fprintf f "@[br@ %s" label;
+      Format.fprintf f "@[<2>br@ %s" label;
       Option.iter (fun i -> Format.fprintf f "@ %a" instr i) i;
       Format.fprintf f "@]"
-  | Br_if (label, i) ->
-      Format.fprintf f "@[br_if@ %s" label;
-      Format.fprintf f "@ =@ %a" instr i;
-      Format.fprintf f "@]"
+  | Br_if (label, i) -> Format.fprintf f "@[<2>br_if@ %s@ %a@]" label instr i
+  | Br_on_null (label, i) ->
+      Format.fprintf f "@[<2>br_on_null@ %s@ %a@]" label instr i
+  | Br_on_non_null (label, i) ->
+      Format.fprintf f "@[<2>br_on_non_null@ %s@ %a@]" label instr i
+  | Br_on_cast (label, ty, i) ->
+      Format.fprintf f "@[<2>br_on_cast@ %s@ %a@ %a@]" label reftype ty instr i
+  | Br_on_cast_fail (label, ty, i) ->
+      Format.fprintf f "@[<2>br_on_cast_fail@ %s@ %a@ %a@]" label reftype ty
+        instr i
+  | Br_table (labels, i) ->
+      Format.fprintf f "@[<2>@[<hv>@[br_table@ {@]{@;<1 2>%a@ }@]@ %a@]"
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f ",@;<1 2>")
+           Format.pp_print_string)
+        labels instr i
   | Return i ->
       Format.fprintf f "@[return";
       Option.iter (fun i -> Format.fprintf f "@ %a" instr i) i;
@@ -162,22 +176,14 @@ let rec instr f i =
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            instr)
         l
-  | Null -> Format.fprintf f "null"
-  | _ -> Format.fprintf f "/* instr */"
+  | Null -> Format.pp_print_string f "null"
 
-(*
-  | Br_table of string list * instr
-  | Br_on_null of string * instr
-  | Br_on_non_null of string * instr
-  | Br_on_cast of string * reftype * instr
-  | Br_on_cast_fail of string * reftype * instr
-*)
 and block f _label kind l =
   Format.fprintf f "@[<hv>@[%s{@]%a}@]" kind block_contents l
 
 and deliminated_instr f i =
   match i.descr with
-  | Block _ | Loop _ | If _ -> Format.fprintf f "%a" instr i
+  | Block _ | Loop _ | If _ -> instr f i
   | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | Struct _ | String _
   | Int _ | Cast _ | Test _ | StructGet _ | StructSet _ | BinOp _ | Local _
   | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
