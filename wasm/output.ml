@@ -32,15 +32,18 @@ let rec format_sexp f s =
               if i > 0 then Format.fprintf f "@ ";
               Format.fprintf f "%a" format_sexp d
           | Contents l ->
-              Format.fprintf f "@<1 2>@[<hv>%a@]"
-                (Format.pp_print_list
-                   ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-                   format_sexp)
-                l)
+              if l <> [] then
+                Format.fprintf f "@;<1 2>@[<hv>%a@]"
+                  (Format.pp_print_list
+                     ~pp_sep:(fun f () -> Format.fprintf f "@ ")
+                     format_sexp)
+                  l)
         l;
       Format.fprintf f "@]"
 
+let option f x = match x with None -> [] | Some x -> f x
 let id x = Atom (Printf.sprintf "$%s" x)
+let opt_id = option (fun i -> [ id i ])
 
 let index x =
   match x with Num i -> Atom (Printf.sprintf "%ld" i) | Id s -> id s
@@ -90,11 +93,11 @@ let packedtype t = match t with I8 -> Atom "i8" | I16 -> Atom "i16"
 let list ?(always = false) name f l =
   if (not always) && l = [] then [] else [ List (Atom name :: f l) ]
 
-let valtype_list name tl =
-  list name (fun tl -> List.map valtype tl) (Array.to_list tl)
+let valtype_list name tl = list name (fun tl -> List.map valtype tl) tl
 
 let functype { params; results } =
-  valtype_list "param" params @ valtype_list "result" results
+  valtype_list "param" (Array.to_list params)
+  @ valtype_list "result" (Array.to_list results)
 
 let storagetype typ =
   match typ with Value typ -> valtype typ | Packed typ -> packedtype typ
@@ -102,7 +105,6 @@ let storagetype typ =
 let mut_type f { mut; typ } = if mut then List [ Atom "mut"; f typ ] else f typ
 let fieldtype typ = mut_type (fun t -> storagetype t) typ
 let globaltype typ = mut_type (fun t -> valtype t) typ
-let option f x = match x with None -> [] | Some x -> f x
 
 let comptype (typ : comptype) =
   match typ with
@@ -112,21 +114,30 @@ let comptype (typ : comptype) =
         (Atom "struct"
         :: List.map
              (fun (nm, f) ->
-               List
-                 (Atom "field"
-                 :: (option (fun i -> [ id i ]) nm @ [ fieldtype f ])))
+               List (Atom "field" :: (opt_id nm @ [ fieldtype f ])))
              (Array.to_list l))
   | Array ty -> List [ Atom "array"; fieldtype ty ]
 
-let typeuse (idx, typ) =
-  option (fun i -> [ List [ Atom "type"; index i ] ]) idx @ option functype typ
+let typeuse idx = [ List [ Atom "type"; index idx ] ]
+let typeuse' (idx, typ) = option typeuse idx @ option functype typ
 
 let blocktype =
   option @@ fun t ->
-  match t with Valtype t -> [ valtype t ] | Typeuse t -> typeuse t
+  match t with Valtype t -> [ valtype t ] | Typeuse t -> typeuse' t
 
-let quoted_name name = Atom ("\"" ^ name ^ "\"")
-let export = option @@ fun name -> [ List [ Atom "export"; quoted_name name ] ]
+let escape_string s =
+  let b = Buffer.create (String.length s + 2) in
+  for i = 0 to String.length s - 1 do
+    let c = s.[i] in
+    if c >= ' ' && c <= '~' && c <> '"' && c <> '\\' then Buffer.add_char b c
+    else Printf.bprintf b "\\%02x" (Char.code c)
+  done;
+  Buffer.contents b
+
+let quoted_string s = Atom ("\"" ^ escape_string s ^ "\"")
+
+let exports l =
+  List.map (fun name -> List [ Atom "export"; quoted_string name ]) l
 
 let type_prefix op nm =
   (match op with
@@ -214,8 +225,6 @@ let select i32 i64 f32 f64 op =
   | F32 x -> f32 "32" x
   | F64 x -> f64 "64" x
 
-let label = option @@ fun l -> [ Atom l ]
-
 let memarg align' { offset; align } =
   (if offset = 0l then [] else [ Atom (Printf.sprintf "offset=%ld" offset) ])
   @ if align = align' then [] else [ Atom (Printf.sprintf "align=%ld" align) ]
@@ -256,11 +265,11 @@ let rec instr i =
   | CallIndirect (id, typ) ->
       Block
         (Atom "call_indirect"
-        :: ((if id = Num 0l then [] else [ index id ]) @ typeuse typ))
+        :: ((if id = Num 0l then [] else [ index id ]) @ typeuse' typ))
   | ReturnCallIndirect (id, typ) ->
       Block
         (Atom "return_call_indirect"
-        :: ((if id = Num 0l then [] else [ index id ]) @ typeuse typ))
+        :: ((if id = Num 0l then [] else [ index id ]) @ typeuse' typ))
   | Call f -> Block [ Atom "call"; index f ]
   | Select t -> Block (Atom "select" :: option (fun t -> [ valtype t ]) t)
   | Pop ty -> Block [ Atom "pop"; valtype ty ]
@@ -292,51 +301,39 @@ let rec instr i =
   | RefTest ty -> Block [ Atom "ref.test"; reftype ty ]
   | RefEq -> Atom "ref.eq"
   | RefNull ty -> Block [ Atom "ref.null"; heaptype ty ]
-  | If { label = l; typ; if_block; else_block } ->
+  | If { label; typ; if_block; else_block } ->
       StructuredBlock
-        [
-          Delimiter (Block (Atom "if" :: (label l @ blocktype typ)));
-          Contents (List.map instr if_block);
-          Delimiter (Atom "else");
-          Contents (List.map instr else_block);
-          Delimiter (Atom "end");
-        ]
+        (Delimiter (Block (Atom "if" :: (opt_id label @ blocktype typ)))
+        :: Contents (List.map instr if_block)
+        ::
+        (if else_block = [] then [ Delimiter (Atom "end") ]
+         else
+           [
+             Delimiter (Atom "else");
+             Contents (List.map instr else_block);
+             Delimiter (Atom "end");
+           ]))
   | Drop -> Atom "drop"
   | I32Store8 m -> Block (Atom "i32store8" :: memarg 1l m)
   | LocalSet i -> Block [ Atom "local.set"; index i ]
   | GlobalSet i -> Block [ Atom "global.set"; index i ]
-  | Loop { label = l; typ; block } ->
+  | Block { label; typ; block } ->
       StructuredBlock
         [
-          Delimiter (Block (Atom "loop" :: (label l @ blocktype typ)));
+          Delimiter (Block (Atom "block" :: (opt_id label @ blocktype typ)));
           Contents (List.map instr block);
           Delimiter (Atom "end");
+          (*ZZZ Comment?*)
         ]
-  | Block { label = l; typ; block } ->
+  | Loop { label; typ; block } ->
       StructuredBlock
         [
-          Delimiter (Block (Atom "block" :: (label l @ blocktype typ)));
+          Delimiter (Block (Atom "loop" :: (opt_id label @ blocktype typ)));
           Contents (List.map instr block);
           Delimiter (Atom "end");
+          (*ZZZ Comment?*)
         ]
-  (* | Try (ty, body, catches, catch_all) ->
-       [
-         List
-           (Atom "try"
-           :: (block_type st ty
-              @ List (Atom "do" :: instructions body)
-                :: (List.map
-                      ~f:(fun (tag, l) ->
-                        List
-                          (Atom "catch" :: index st.tag_names tag
-                         :: instructions l))
-                      catches
-                   @
-                   match catch_all with
-                   | None -> []
-                   | Some l -> [ List (Atom "catch_all" :: instructions l) ])));
-       ]
-  *)
+  | Try _ -> Atom "unreachable" (*ZZZ*)
   | Br_table (l, i) ->
       Block (Atom "br_table" :: List.map (fun i -> index i) (l @ [ i ]))
   | Br i -> Block [ Atom "br"; index i ]
@@ -357,206 +354,97 @@ let rec instr i =
   | ReturnCallRef typ -> Block [ Atom "return_call_ref"; index typ ]
   | TupleMake i -> Block [ Atom "tuple.make"; integer i ]
   | TupleExtract (i, j) -> Block [ Atom "tuple.make"; integer i; integer j ]
+  | Folded (If { label; typ; if_block; else_block }, l) ->
+      List
+        (Atom "if"
+        :: (opt_id label @ blocktype typ @ List.map instr l
+           @ [ List (Atom "then" :: List.map instr if_block) ]
+           @
+           if else_block = [] then []
+           else [ List (Atom "else" :: List.map instr else_block) ]))
+  | Folded (Block { label; typ; block }, l) ->
+      assert (l = []);
+      List
+        (Atom "block" :: (opt_id label @ blocktype typ @ List.map instr block))
+      (*ZZZ Comment?*)
+  | Folded (Loop { label; typ; block }, l) ->
+      assert (l = []);
+      List (Atom "loop" :: (opt_id label @ blocktype typ @ List.map instr block))
+      (*ZZZ Comment?*)
   | Folded (i, l) -> List (instr i :: List.map instr l)
 
-let funct ctx st name exported_name typ param_names locals body =
-  List
-    ((Atom "func" :: index st.func_names name :: export exported_name)
-    @ func_type st ~param_names typ
-    @ List.map
-        ~f:(fun (i, t) ->
-          List [ Atom "local"; index st.local_names i; value_type st t ])
-        locals
-    @ instructions ctx st body)
-
-let import st f =
-  match f with
-  | Function _ | Global _ | Data _ | Tag _ | Type _ -> []
-  | Import { import_module; import_name; name; desc } ->
-      [
-        List
-          [
-            Atom "import";
-            quoted_name import_module;
-            quoted_name import_name;
-            List
-              (match desc with
-              | Fun typ ->
-                  Atom "func" :: index st.func_names name :: func_type st typ
-              | Global ty ->
-                  [ Atom "global"; symbol st (V name); global_type st ty ]
-              | Tag ty ->
-                  [
-                    Atom "tag";
-                    index st.tag_names name;
-                    List [ Atom "param"; value_type st ty ];
-                  ]);
-          ];
-      ]
-
-let escape_string s =
-  let b = Buffer.create (String.length s + 2) in
-  for i = 0 to String.length s - 1 do
-    let c = s.[i] in
-    if Poly.(c >= ' ' && c <= '~' && c <> '"' && c <> '\\') then
-      Buffer.add_char b c
-    else Printf.bprintf b "\\%02x" (Char.code c)
-  done;
-  Buffer.contents b
-
-let data_contents ctx contents =
-  let b = Buffer.create 16 in
-  List.iter
-    ~f:(fun d ->
-      match d with
-      | DataI8 c -> Buffer.add_uint8 b c
-      | DataI32 i -> Buffer.add_int32_le b i
-      | DataI64 i -> Buffer.add_int64_le b i
-      | DataBytes s -> Buffer.add_string b s
-      | DataSym (symb, ofs) ->
-          Buffer.add_int32_le b (Int32.of_int (lookup_symbol ctx symb + ofs))
-      | DataSpace n -> Buffer.add_string b (String.make n '\000'))
-    contents;
-  escape_string (Buffer.contents b)
-
-let type_field st { name; typ; supertype; final } =
+let subtype (id, { typ; supertype; final }) =
   if final && Option.is_none supertype then
-    List [ Atom "type"; index st.type_names name; str_type st typ ]
+    List (Atom "type" :: (opt_id id @ [ comptype typ ]))
   else
     List
-      [
-        Atom "type";
-        index st.type_names name;
-        List
-          (Atom "sub"
-          :: ((if final then [ Atom "final" ] else [])
-             @ (match supertype with
-               | Some supertype -> [ index st.type_names supertype ]
-               | None -> [])
-             @ [ str_type st typ ]));
-      ]
+      (Atom "type"
+      :: (opt_id id
+         @ [
+             List
+               (Atom "sub"
+               :: ((if final then [ Atom "final" ] else [])
+                  @ option (fun i -> [ index i ]) supertype
+                  @ [ comptype typ ]));
+           ]))
 
-let field ctx st f =
+let fundecl (idx, typ) =
+  option typeuse idx
+  @ option
+      (fun (params, results) ->
+        List.map
+          (fun (i, t) -> List (Atom "param" :: (opt_id i @ [ valtype t ])))
+          params
+        @ valtype_list "result" results)
+      typ
+
+let modulefield f =
   match f with
-  | Function { name; exported_name; typ; param_names; locals; body } ->
-      [ funct ctx st name exported_name typ param_names locals body ]
-  | Global { name; exported_name; typ; init } ->
-      [
-        List
-          (Atom "global" :: symbol st name
-          :: (export exported_name
-             @ (global_type st typ :: expression ctx st init)));
-      ]
-  | Tag { name; typ } ->
-      [
-        List
-          [
-            Atom "tag";
-            index st.tag_names name;
-            List [ Atom "param"; value_type st typ ];
-          ];
-      ]
-  | Import _ -> []
-  | Data { name; active; contents; _ } ->
-      [
-        List
-          (Atom "data" :: index st.data_names name
-          :: ((if active then
-                 expression ctx st
-                   (Const (I32 (Int32.of_int (lookup_symbol ctx (V name)))))
-               else [])
-             @ [ Atom ("\"" ^ data_contents ctx contents ^ "\"") ]));
-      ]
-  | Type [ t ] -> [ type_field st t ]
-  | Type l -> [ List (Atom "rec" :: List.map ~f:(type_field st) l) ]
+  | Types [| t |] -> subtype t
+  | Types l -> List (Atom "rec" :: List.map subtype (Array.to_list l))
+  | Func { id; typ; locals; instrs; exports = e } ->
+      List
+        (Atom "func"
+        :: (opt_id id @ exports e @ fundecl typ
+           @ List.map
+               (fun (i, t) -> List (Atom "local" :: (opt_id i @ [ valtype t ])))
+               locals
+           @ List.map instr instrs))
+  | Import { module_; name; id; desc; exports = e } ->
+      List
+        (Atom "import" :: quoted_string module_ :: quoted_string name
+        :: (exports e
+           @ [
+               List
+                 (match desc with
+                 | Func typ -> Atom "func" :: (opt_id id @ fundecl typ)
+                 | Global ty -> Atom "global" :: (opt_id id @ [ globaltype ty ])
+                 | Tag typ -> Atom "tag" :: (opt_id id @ fundecl typ)
+                 | Memory _ -> [ Atom "memory" ] (*ZZZ*));
+             ]))
+  | Global { id; typ; init; exports = e } ->
+      List
+        (Atom "global"
+        :: (opt_id id @ exports e @ (globaltype typ :: List.map instr init)))
+  | Tag { id; typ; exports = e } ->
+      List (Atom "tag" :: (opt_id id @ exports e @ fundecl typ))
+  | Data { id; init; mode } ->
+      List
+        (Atom "data"
+        :: (opt_id id
+           @ (match mode with
+             | Passive -> []
+             | Active (i, e) ->
+                 [
+                   List [ Atom "memory"; index i ];
+                   List (Atom "offset" :: List.map instr e);
+                 ])
+           @ [ quoted_string init ]))
+      (*ZZZ Abbreviation*)
+  | Start idx -> List [ Atom "start"; index idx ]
+  | _ -> List [ Atom "other" ]
+(*ZZZ*)
 
-let data_size contents =
-  List.fold_left
-    ~f:(fun sz d ->
-      sz
-      +
-      match d with
-      | DataI8 _ -> 1
-      | DataI32 _ -> 4
-      | DataI64 _ -> 8
-      | DataBytes s -> String.length s
-      | DataSym _ -> 4
-      | DataSpace n -> n)
-    ~init:0 contents
-
-let data_offsets fields =
-  List.fold_left
-    ~f:(fun (i, addresses) f ->
-      match f with
-      | Data { name; contents; active = true; _ } ->
-          (i + data_size contents, Code.Var.Map.add name i addresses)
-      | Function _ | Global _ | Tag _ | Import _
-      | Data { active = false; _ }
-      | Type _ ->
-          (i, addresses))
-    ~init:(0, Code.Var.Map.empty) fields
-
-let f ~debug ch fields =
-  let st = build_name_tables fields in
-  let heap_base, addresses = data_offsets fields in
-  let ctx =
-    {
-      addresses;
-      functions = Code.Var.Map.empty;
-      function_refs = Code.Var.Set.empty;
-      function_count = 0;
-      debug;
-    }
-  in
-  let other_fields =
-    List.concat (List.map ~f:(fun f -> field ctx st f) fields)
-  in
-  let funct_table =
-    let functions =
-      List.map ~f:fst
-        (List.sort
-           ~cmp:(fun (_, i) (_, j) -> compare i j)
-           (Code.Var.Map.bindings ctx.functions))
-    in
-    if List.is_empty functions then []
-    else
-      [
-        List
-          [
-            Atom "table";
-            Atom "funcref";
-            List (Atom "elem" :: List.map ~f:(index st.func_names) functions);
-          ];
-      ]
-  in
-  let funct_decl =
-    let functions =
-      Code.Var.Set.elements
-        (Code.Var.Set.filter
-           (fun f -> not (Code.Var.Map.mem f ctx.functions))
-           ctx.function_refs)
-    in
-    if List.is_empty functions then []
-    else
-      [
-        List
-          (Atom "elem" :: Atom "declare" :: Atom "func"
-          :: List.map ~f:(index st.func_names) functions);
-      ]
-  in
-  Format.fprintf
-    (Format.formatter_of_out_channel ch)
-    "%a@." format_sexp
-    (List
-       (Atom "module"
-       :: (List.concat (List.map ~f:(fun i -> import st i) fields)
-          @ (if Code.Var.Map.is_empty addresses then []
-             else
-               [
-                 List
-                   [
-                     Atom "memory";
-                     Atom (string_of_int ((heap_base + 0xffff) / 0x10000));
-                   ];
-               ])
-          @ funct_table @ funct_decl @ other_fields)))
+let module_ f (id, fields) =
+  Format.fprintf f "%a@." format_sexp
+    (List (Atom "module" :: (opt_id id @ List.map modulefield fields)))

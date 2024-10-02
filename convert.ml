@@ -1,13 +1,11 @@
-open Wasm
-
 module P =
-  Parsing.Make_parser
+  Wasm.Parsing.Make_parser
     (struct
-      type t = string option * Ast.Text.modulefield list
+      type t = string option * Wasm.Ast.Text.modulefield list
     end)
-    (Parser)
-    (Fast_parser)
-    (Lexer)
+    (Wasm.Parser)
+    (Wasm.Fast_parser)
+    (Wasm.Lexer)
 
 let convert ~filename =
   let ast = P.parse ~filename in
