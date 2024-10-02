@@ -83,3 +83,19 @@ fn caml_string_equal(p1: &eq, p2: &eq) -> &eq {
   }
   1
 }
+
+i = ..
+loop {
+  if e {
+    ...
+    i = ...;
+    br loop
+  }
+}
+===>
+for (i = ...; e; i = ...) { ... }
+
+=============================
+
+Attaching comments: https://jayconrod.com/
+https://journal.stuffwithstuff.com/2015/09/08/the-hardest-program-ive-ever-written/#4-note

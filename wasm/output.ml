@@ -86,7 +86,7 @@ let rec valtype (t : valtype) =
   | F64 -> Atom "f64"
   | V128 -> Atom "v128"
   | Ref ty -> reftype ty
-  | Tuple l -> List (List.map valtype l)
+  | Tuple l -> List (Atom "tuple" :: List.map valtype l)
 
 let packedtype t = match t with I8 -> Atom "i8" | I16 -> Atom "i16"
 
@@ -358,10 +358,8 @@ let rec instr i =
       List
         (Atom "if"
         :: (opt_id label @ blocktype typ @ List.map instr l
-           @ [ List (Atom "then" :: List.map instr if_block) ]
-           @
-           if else_block = [] then []
-           else [ List (Atom "else" :: List.map instr else_block) ]))
+           @ list ~always:true "then" (List.map instr) if_block
+           @ list "else" (List.map instr) else_block))
   | Folded (Block { label; typ; block }, l) ->
       assert (l = []);
       List
@@ -392,9 +390,12 @@ let fundecl (idx, typ) =
   option typeuse idx
   @ option
       (fun (params, results) ->
-        List.map
-          (fun (i, t) -> List (Atom "param" :: (opt_id i @ [ valtype t ])))
-          params
+        (if List.for_all (fun (i, _) -> i = None) params then
+           list "param" (fun tl -> List.map valtype tl) (List.map snd params)
+         else
+           List.map
+             (fun (i, t) -> List (Atom "param" :: (opt_id i @ [ valtype t ])))
+             params)
         @ valtype_list "result" results)
       typ
 
@@ -436,11 +437,11 @@ let modulefield f =
              | Passive -> []
              | Active (i, e) ->
                  [
+                   (*ZZZ Abbreviation*)
                    List [ Atom "memory"; index i ];
                    List (Atom "offset" :: List.map instr e);
                  ])
            @ [ quoted_string init ]))
-      (*ZZZ Abbreviation*)
   | Start idx -> List [ Atom "start"; index idx ]
   | _ -> List [ Atom "other" ]
 (*ZZZ*)
