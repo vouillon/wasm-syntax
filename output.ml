@@ -215,7 +215,10 @@ let rec instr prec f (i : instr) =
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))
         l
-  | String s -> Format.fprintf f "\"%s\"" (String.escaped s) (*ZZZ Escape *)
+  | String (t, s) ->
+      Format.fprintf f "@[";
+      Option.iter (fun t -> Format.fprintf f "%s#" t) t;
+      Format.fprintf f "\"%s\"@]" (String.escaped s) (*ZZZ Escape *)
   | Int s | Float s -> Format.pp_print_string f s
   | Cast (i, t) ->
       parentheses prec Cast f @@ fun () ->
@@ -224,9 +227,9 @@ let rec instr prec f (i : instr) =
       parentheses prec Cast f @@ fun () ->
       Format.fprintf f "@[<2>%a@ @[is@ %a@]@]" (instr Cast) i reftype t
   | Struct (nm, l) ->
-      Format.fprintf f "@[<hv>@[";
-      Option.iter (fun nm -> Format.fprintf f "%s@ " nm) nm;
-      Format.fprintf f "{@]@;<1 2>%a@ }@]"
+      Format.fprintf f "@[<hv>@[{";
+      Option.iter (fun nm -> Format.fprintf f "%s|" nm) nm;
+      Format.fprintf f "@]@;<1 2>%a@ }@]"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@;<1 2>")
            (fun f (nm, i) ->
@@ -239,11 +242,14 @@ let rec instr prec f (i : instr) =
       parentheses prec FieldAccess f @@ fun () ->
       Format.fprintf f "@[<2>%a.%s@ =@ %a@]" (instr FieldAccess) i s
         (instr Assignement) i'
-  | Array (i, n) ->
-      Format.fprintf f "@[<1>[%a;@ %a]@]" (instr Instruction) i
-        (instr Instruction) n
-  | ArrayFixed l ->
-      Format.fprintf f "@[<1>[%a]@]"
+  | Array (t, i, n) ->
+      Format.fprintf f "@[<1>[";
+      Option.iter (fun t -> Format.fprintf f "%s|@ " t) t;
+      Format.fprintf f "%a;@ %a]@]" (instr Instruction) i (instr Instruction) n
+  | ArrayFixed (t, l) ->
+      Format.fprintf f "@[<1>[";
+      Option.iter (fun t -> Format.fprintf f "%s|@ " t) t;
+      Format.fprintf f "%a]@]"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))

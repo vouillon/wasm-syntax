@@ -281,7 +281,7 @@ Expecting a result type.
 
 parse: REC UNREACHABLE
 ##
-## Ends in an error in state: 307.
+## Ends in an error in state: 309.
 ##
 ## rectype -> REC . LBRACE list(typedef) RBRACE [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -293,7 +293,7 @@ Expecting a character '{'.
 
 parse: REC LBRACE UNREACHABLE
 ##
-## Ends in an error in state: 308.
+## Ends in an error in state: 310.
 ##
 ## rectype -> REC LBRACE . list(typedef) RBRACE [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -317,7 +317,7 @@ Expecting keyword 'type', or character '}'.
 
 parse: LET UNREACHABLE
 ##
-## Ends in an error in state: 319.
+## Ends in an error in state: 321.
 ##
 ## global -> list(attribute) LET . IDENT option(__anonymous_16) EQUAL instr option(SEMI) [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -329,7 +329,7 @@ Expecting the name of the global variable.
 
 parse: LET IDENT UNREACHABLE
 ##
-## Ends in an error in state: 320.
+## Ends in an error in state: 322.
 ##
 ## global -> list(attribute) LET IDENT . option(__anonymous_16) EQUAL instr option(SEMI) [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -341,7 +341,7 @@ Expecting a colon ':' followed by the type of the global, or an equal sign '=' f
 
 parse: LET IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 321.
+## Ends in an error in state: 323.
 ##
 ## option(__anonymous_16) -> COLON . boption(MUT) valtype [ EQUAL ]
 ##
@@ -353,7 +353,7 @@ Expecting a global type.
 
 parse: LET IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 324.
+## Ends in an error in state: 326.
 ##
 ## global -> list(attribute) LET IDENT option(__anonymous_16) . EQUAL instr option(SEMI) [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -365,7 +365,7 @@ Expecting an equal sign '=' followed by an instruction.
 
 parse: LET IDENT EQUAL UNDERSCORE
 ##
-## Ends in an error in state: 325.
+## Ends in an error in state: 327.
 ##
 ## global -> list(attribute) LET IDENT option(__anonymous_16) EQUAL . instr option(SEMI) [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -492,7 +492,7 @@ Expecting a local variable name.
 
 parse: LET IDENT EQUAL LET IDENT UNDERSCORE
 ##
-## Ends in an error in state: 265.
+## Ends in an error in state: 267.
 ##
 ## plaininstr -> LET simple_pat . option(__anonymous_9) option(__anonymous_10) [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -504,7 +504,7 @@ Missing semincolon ';'.
 
 parse: LET IDENT EQUAL LET IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 266.
+## Ends in an error in state: 268.
 ##
 ## option(__anonymous_9) -> COLON . valtype [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -516,7 +516,7 @@ Expecting a value type.
 
 parse: LET IDENT EQUAL LET IDENT COLON IDENT UNDERSCORE
 ##
-## Ends in an error in state: 268.
+## Ends in an error in state: 270.
 ##
 ## plaininstr -> LET simple_pat option(__anonymous_9) . option(__anonymous_10) [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -528,7 +528,7 @@ Missing semicolon ';'.
 
 parse: LET IDENT EQUAL LET IDENT EQUAL UNDERSCORE
 ##
-## Ends in an error in state: 269.
+## Ends in an error in state: 271.
 ##
 ## option(__anonymous_10) -> EQUAL . instr [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -540,9 +540,10 @@ Expecting an instruction, or the character '}'.
 
 parse: LET IDENT EQUAL LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 90.
+## Ends in an error in state: 92.
 ##
 ## instr -> LBRACE . delimited_instr_list RBRACE [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> LBRACE . IDENT PIPE loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> LBRACE . separated_nonempty_list(COMMA,__anonymous_8) RBRACE [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
@@ -553,7 +554,7 @@ Expecting an instruction
 
 parse: FN IDENT LPAREN IDENT COLON IDENT COMMA UNREACHABLE
 ##
-## Ends in an error in state: 334.
+## Ends in an error in state: 336.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON valtype COMMA . separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
 ##
@@ -565,7 +566,7 @@ Expecting a parameter name or an underscore '_'.
 
 parse: FN IDENT LPAREN RPAREN UNREACHABLE
 ##
-## Ends in an error in state: 339.
+## Ends in an error in state: 341.
 ##
 ## option(__anonymous_4) -> LPAREN funcparams RPAREN . ARROW resulttype [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -577,7 +578,7 @@ Expecting an arrow '->'.
 
 parse: LET IDENT COLON MUT UNREACHABLE
 ##
-## Ends in an error in state: 322.
+## Ends in an error in state: 324.
 ##
 ## option(__anonymous_16) -> COLON boption(MUT) . valtype [ EQUAL ]
 ##
@@ -647,47 +648,12 @@ parse: LET IDENT EQUAL LPAREN IDENT COMMA UNDERSCORE
 
 Expecting an instruction, or a closing parenthesis '('.
 
-parse: LET IDENT EQUAL IDENT LBRACE IDENT UNREACHABLE
-##
-## Ends in an error in state: 97.
-##
-## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT . COLON instr [ RBRACE ]
-## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT . COLON instr COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
-##
-## The known suffix of the stack is as follows:
-## IDENT
-##
 
-Expecting a colon ':' after the field name of a structure.
 
-parse: LET IDENT EQUAL IDENT LBRACE IDENT COLON UNDERSCORE
-##
-## Ends in an error in state: 98.
-##
-## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON . instr [ RBRACE ]
-## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON . instr COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
-##
-## The known suffix of the stack is as follows:
-## IDENT COLON
-##
-
-Expecting an instruction.
-
-parse: LET IDENT EQUAL IDENT LBRACE IDENT COLON IDENT COMMA UNREACHABLE
-##
-## Ends in an error in state: 212.
-##
-## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON instr COMMA . separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
-##
-## The known suffix of the stack is as follows:
-## IDENT COLON instr COMMA
-##
-
-Expecting a field definition, or a character '}'.
 
 parse: LET IDENT EQUAL IDENT EQUAL UNDERSCORE
 ##
-## Ends in an error in state: 217.
+## Ends in an error in state: 98.
 ##
 ## plaininstr -> IDENT EQUAL . instr [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -699,7 +665,7 @@ Expecting an instruction.
 
 parse: LET IDENT EQUAL LBRACE IDENT COLON UNDERSCORE
 ##
-## Ends in an error in state: 241.
+## Ends in an error in state: 243.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON . instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON . instr COMMA separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
@@ -712,7 +678,7 @@ Expecting an instruction.
 
 parse: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 ##
-## Ends in an error in state: 243.
+## Ends in an error in state: 245.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT COLON instr COMMA . separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
 ##
@@ -724,7 +690,7 @@ Expecting a field definition, or a character '}'.
 
 parse: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA IDENT UNREACHABLE
 ##
-## Ends in an error in state: 244.
+## Ends in an error in state: 246.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT . COLON instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT . COLON instr COMMA separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
@@ -737,7 +703,7 @@ Expecting a colon ':'.
 
 parse: LET IDENT EQUAL QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 295.
+## Ends in an error in state: 297.
 ##
 ## instr -> QUOTE IDENT COLON LBRACE . delimited_instr_list RBRACE [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -749,7 +715,7 @@ Expecting an instruction, or a character '}'.
 
 parse: FN IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 343.
+## Ends in an error in state: 345.
 ##
 ## fundecl -> FN IDENT COLON IDENT . option(__anonymous_4) [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
 ## valtype -> IDENT . [ ARROW ]
@@ -762,7 +728,7 @@ Expecting a list of function parameters.
 
 parse: FN IDENT LPAREN UNREACHABLE
 ##
-## Ends in an error in state: 330.
+## Ends in an error in state: 332.
 ##
 ## option(__anonymous_4) -> LPAREN . funcparams RPAREN ARROW resulttype [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -774,7 +740,7 @@ Expecting a list of function parameters.
 
 parse: FN IDENT LPAREN IDENT UNREACHABLE
 ##
-## Ends in an error in state: 331.
+## Ends in an error in state: 333.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat . COLON valtype [ RPAREN ]
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat . COLON valtype COMMA separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
@@ -787,7 +753,7 @@ Expecting a colon ':' followed by a value type.
 
 parse: FN IDENT LPAREN IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 332.
+## Ends in an error in state: 334.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON . valtype [ RPAREN ]
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON . valtype COMMA separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
@@ -800,7 +766,7 @@ Expecting a value type.
 
 parse: FN IDENT LPAREN IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 333.
+## Ends in an error in state: 335.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON valtype . [ RPAREN ]
 ## separated_nonempty_list(COMMA,__anonymous_2) -> simple_pat COLON valtype . COMMA separated_nonempty_list(COMMA,__anonymous_2) [ RPAREN ]
@@ -813,7 +779,7 @@ Expecting a comma ',' followed by a parameter declaration, or a closing parenthe
 
 parse: FN IDENT LPAREN RPAREN ARROW UNREACHABLE
 ##
-## Ends in an error in state: 340.
+## Ends in an error in state: 342.
 ##
 ## option(__anonymous_4) -> LPAREN funcparams RPAREN ARROW . resulttype [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -825,7 +791,7 @@ Expecting a result type.
 
 parse: REC LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 316.
+## Ends in an error in state: 318.
 ##
 ## list(modulefield) -> modulefield . list(modulefield) [ EOF ]
 ##
@@ -837,7 +803,7 @@ Expecting a module field.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 ##
-## Ends in an error in state: 349.
+## Ends in an error in state: 351.
 ##
 ## func -> list(attribute) fundecl . LBRACE delimited_instr_list RBRACE [ TYPE SHARP REC LET FN EOF ]
 ## func -> list(attribute) fundecl . QUOTE IDENT COLON LBRACE delimited_instr_list RBRACE [ TYPE SHARP REC LET FN EOF ]
@@ -851,7 +817,7 @@ Expecting a label, the start of the function body, or another module field.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE UNREACHABLE
 ##
-## Ends in an error in state: 350.
+## Ends in an error in state: 352.
 ##
 ## func -> list(attribute) fundecl QUOTE . IDENT COLON LBRACE delimited_instr_list RBRACE [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -863,7 +829,7 @@ Expecting a label name.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 351.
+## Ends in an error in state: 353.
 ##
 ## func -> list(attribute) fundecl QUOTE IDENT . COLON LBRACE delimited_instr_list RBRACE [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -875,7 +841,7 @@ Expecting a colon ':' after the label name.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 352.
+## Ends in an error in state: 354.
 ##
 ## func -> list(attribute) fundecl QUOTE IDENT COLON . LBRACE delimited_instr_list RBRACE [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -887,7 +853,7 @@ Expecting a block starting with character '{'.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 353.
+## Ends in an error in state: 355.
 ##
 ## func -> list(attribute) fundecl QUOTE IDENT COLON LBRACE . delimited_instr_list RBRACE [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -899,7 +865,7 @@ Expecting an instruction, or a character '}'.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 356.
+## Ends in an error in state: 358.
 ##
 ## func -> list(attribute) fundecl LBRACE . delimited_instr_list RBRACE [ TYPE SHARP REC LET FN EOF ]
 ##
@@ -972,21 +938,10 @@ parse: FN IDENT LBRACE IDENT DOT IDENT EQUAL UNDERSCORE
 
 Expecting an instruction.
 
-parse: FN IDENT LBRACE IDENT LBRACE UNREACHABLE
-##
-## Ends in an error in state: 96.
-##
-## plaininstr -> IDENT LBRACE . loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-##
-## The known suffix of the stack is as follows:
-## IDENT LBRACE
-##
-
-Expecting a field definition, or a character '}'.
 
 parse: FN IDENT LBRACE IDENT TYPE
 ##
-## Ends in an error in state: 223.
+## Ends in an error in state: 216.
 ##
 ## delimited_instr_list -> plaininstr . [ RBRACE ]
 ## delimited_instr_list -> plaininstr . SEMI delimited_instr_list [ RBRACE ]
@@ -1001,14 +956,14 @@ parse: FN IDENT LBRACE IDENT TYPE
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 95, spurious reduction of production plaininstr -> IDENT
+## In state 97, spurious reduction of production plaininstr -> IDENT
 ##
 
 Missing semicolon ';'.
 
 parse: REC LBRACE TYPE IDENT EQUAL LBRACE RBRACE REC
 ##
-## Ends in an error in state: 309.
+## Ends in an error in state: 311.
 ##
 ## list(typedef) -> typedef . list(typedef) [ RBRACE ]
 ##
@@ -1027,7 +982,7 @@ Expecting keyword 'type', or character '}'.
 
 parse: FN IDENT LBRACE IF UNDERSCORE
 ##
-## Ends in an error in state: 93.
+## Ends in an error in state: 95.
 ##
 ## delimited_instr_list -> IF . instr LBRACE delimited_instr_list RBRACE option(__anonymous_6) delimited_instr_list [ RBRACE ]
 ## instr -> IF . instr LBRACE delimited_instr_list RBRACE option(__anonymous_6) [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -1040,12 +995,11 @@ Expecting an instruction.
 
 parse: FN IDENT LBRACE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 95.
+## Ends in an error in state: 97.
 ##
 ## plaininstr -> IDENT . [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> IDENT . COLONEQUAL instr [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> IDENT . EQUAL instr [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> IDENT . LBRACE loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## IDENT
@@ -1119,7 +1073,7 @@ Expecting an instruction.
 
 parse: FN IDENT LBRACE IF INT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 235.
+## Ends in an error in state: 228.
 ##
 ## delimited_instr_list -> IF instr LBRACE . delimited_instr_list RBRACE option(__anonymous_6) delimited_instr_list [ RBRACE ]
 ## instr -> IF instr LBRACE . delimited_instr_list RBRACE option(__anonymous_6) [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -1132,7 +1086,7 @@ Expecting an instruction, or the character '}'.
 
 parse: FN IDENT LBRACE IF INT LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 237.
+## Ends in an error in state: 230.
 ##
 ## delimited_instr_list -> IF instr LBRACE delimited_instr_list RBRACE . option(__anonymous_6) delimited_instr_list [ RBRACE ]
 ## instr -> IF instr LBRACE delimited_instr_list RBRACE . option(__anonymous_6) [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -1145,7 +1099,7 @@ Expecting an 'else' branch, another instruction, or a character '}'.
 
 parse: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE UNREACHABLE
 ##
-## Ends in an error in state: 229.
+## Ends in an error in state: 222.
 ##
 ## option(__anonymous_6) -> ELSE . LBRACE delimited_instr_list RBRACE [ UNREACHABLE TYPE STRING STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN RETURN REC RBRACKET RBRACE QUOTE PLUS PIPE PERCENTU PERCENTS NULL NOP MINUS LTU LTS LT LPAREN LOOP LEU LET LES LE LBRACKET LBRACE IS INT IF IDENT GTU GTS GT GEU GES GE FN FLOAT EQUALEQUAL EOF DOT COMMA CARET BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR BANGEQUAL AS AMPERSAND ]
 ##
@@ -1157,7 +1111,7 @@ Expecting a character '{'.
 
 parse: FN IDENT LBRACE IF INT LBRACE RBRACE ELSE LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 230.
+## Ends in an error in state: 223.
 ##
 ## option(__anonymous_6) -> ELSE LBRACE . delimited_instr_list RBRACE [ UNREACHABLE TYPE STRING STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN RETURN REC RBRACKET RBRACE QUOTE PLUS PIPE PERCENTU PERCENTS NULL NOP MINUS LTU LTS LT LPAREN LOOP LEU LET LES LE LBRACKET LBRACE IS INT IF IDENT GTU GTS GT GEU GES GE FN FLOAT EQUALEQUAL EOF DOT COMMA CARET BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR BANGEQUAL AS AMPERSAND ]
 ##
@@ -1169,7 +1123,7 @@ Expecting an instruction or the character '}'.
 
 parse: FN IDENT LBRACE IDENT SEMI UNDERSCORE
 ##
-## Ends in an error in state: 224.
+## Ends in an error in state: 217.
 ##
 ## delimited_instr_list -> plaininstr SEMI . delimited_instr_list [ RBRACE ]
 ##
@@ -1181,7 +1135,7 @@ Expecting an instruction or the character '}'.
 
 parse: FN IDENT LBRACE LBRACE RBRACE TYPE
 ##
-## Ends in an error in state: 249.
+## Ends in an error in state: 251.
 ##
 ## delimited_instr_list -> LBRACE delimited_instr_list RBRACE . delimited_instr_list [ RBRACE ]
 ## instr -> LBRACE delimited_instr_list RBRACE . [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -1208,7 +1162,7 @@ Missing semicolon ';'
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON IF UNDERSCORE
 ##
-## Ends in an error in state: 286.
+## Ends in an error in state: 288.
 ##
 ## delimited_instr_list -> QUOTE IDENT COLON IF . instr LBRACE delimited_instr_list RBRACE option(__anonymous_6) delimited_instr_list [ RBRACE ]
 ## instr -> QUOTE IDENT COLON IF . instr LBRACE delimited_instr_list RBRACE option(__anonymous_6) [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -1221,7 +1175,7 @@ Expecting an instruction.
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 288.
+## Ends in an error in state: 290.
 ##
 ## delimited_instr_list -> QUOTE IDENT COLON IF instr LBRACE . delimited_instr_list RBRACE option(__anonymous_6) delimited_instr_list [ RBRACE ]
 ## instr -> QUOTE IDENT COLON IF instr LBRACE . delimited_instr_list RBRACE option(__anonymous_6) [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -1234,7 +1188,7 @@ Expecting an instruction or the character '}'.
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON IF INT LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 290.
+## Ends in an error in state: 292.
 ##
 ## delimited_instr_list -> QUOTE IDENT COLON IF instr LBRACE delimited_instr_list RBRACE . option(__anonymous_6) delimited_instr_list [ RBRACE ]
 ## instr -> QUOTE IDENT COLON IF instr LBRACE delimited_instr_list RBRACE . option(__anonymous_6) [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -1247,7 +1201,7 @@ Expecting an 'else' branch, another instruction, or a character '}'.
 
 parse: FN UNREACHABLE
 ##
-## Ends in an error in state: 328.
+## Ends in an error in state: 330.
 ##
 ## fundecl -> FN . IDENT option(__anonymous_4) [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
 ## fundecl -> FN . IDENT COLON IDENT option(__anonymous_4) [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
@@ -1261,7 +1215,7 @@ Expecting a function name.
 
 parse: FN IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 342.
+## Ends in an error in state: 344.
 ##
 ## fundecl -> FN IDENT COLON . IDENT option(__anonymous_4) [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
 ## fundecl -> FN IDENT COLON . resulttype ARROW resulttype [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
@@ -1274,7 +1228,7 @@ Expecting a type name or a function type.
 
 parse: FN IDENT COLON AMPERSAND IDENT UNREACHABLE
 ##
-## Ends in an error in state: 345.
+## Ends in an error in state: 347.
 ##
 ## fundecl -> FN IDENT COLON resulttype . ARROW resulttype [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -1286,7 +1240,7 @@ Expecting an arrow '->'.
 
 parse: FN IDENT COLON IDENT ARROW UNREACHABLE
 ##
-## Ends in an error in state: 346.
+## Ends in an error in state: 348.
 ##
 ## fundecl -> FN IDENT COLON resulttype ARROW . resulttype [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
 ##
@@ -1546,12 +1500,12 @@ parse: FN IDENT LBRACE LET LPAREN RPAREN EQUAL UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: FN IDENT LBRACE LBRACKET UNDERSCORE
+parse: FN IDENT LBRACE LBRACKET UNREACHABLE
 ##
 ## Ends in an error in state: 89.
 ##
-## plaininstr -> LBRACKET . loption(separated_nonempty_list(COMMA,__anonymous_15)) RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> LBRACKET . instr SEMI instr RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> LBRACKET . IDENT PIPE loption(separated_nonempty_list(COMMA,__anonymous_15)) RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> LBRACKET . IDENT PIPE instr SEMI instr RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACKET
@@ -1559,12 +1513,39 @@ parse: FN IDENT LBRACE LBRACKET UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: FN IDENT LBRACE LBRACE UNDERSCORE
+parse: FN IDENT LBRACE LBRACKET IDENT UNREACHABLE
+##
+## Ends in an error in state: 90.
+##
+## plaininstr -> LBRACKET IDENT . PIPE loption(separated_nonempty_list(COMMA,__anonymous_15)) RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> LBRACKET IDENT . PIPE instr SEMI instr RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## LBRACKET IDENT
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT LBRACE LBRACKET IDENT PIPE UNDERSCORE
 ##
 ## Ends in an error in state: 91.
 ##
+## plaininstr -> LBRACKET IDENT PIPE . loption(separated_nonempty_list(COMMA,__anonymous_15)) RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> LBRACKET IDENT PIPE . instr SEMI instr RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## LBRACKET IDENT PIPE
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT LBRACE LBRACE UNDERSCORE
+##
+## Ends in an error in state: 93.
+##
 ## delimited_instr_list -> LBRACE . delimited_instr_list RBRACE delimited_instr_list [ RBRACE ]
 ## instr -> LBRACE . delimited_instr_list RBRACE [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> LBRACE . IDENT PIPE loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> LBRACE . separated_nonempty_list(COMMA,__anonymous_8) RBRACE [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
@@ -1575,7 +1556,7 @@ parse: FN IDENT LBRACE LBRACE UNDERSCORE
 
 parse: LET IDENT EQUAL IF UNDERSCORE
 ##
-## Ends in an error in state: 94.
+## Ends in an error in state: 96.
 ##
 ## instr -> IF . instr LBRACE delimited_instr_list RBRACE option(__anonymous_6) [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -4020,61 +4001,9 @@ parse: FN IDENT LBRACE BR_TABLE LBRACE QUOTE IDENT RBRACE LBRACE RBRACE UNREACHA
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: FN IDENT LBRACE IDENT LBRACE IDENT COLON FLOAT TYPE
-##
-## Ends in an error in state: 211.
-##
-## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . AS valtype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . IS reftype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . DOT IDENT EQUAL instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . PLUS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . MINUS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . STAR instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . SLASH instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . SLASHS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . SLASHU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . PERCENTS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . PERCENTU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . AMPERSAND instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . CARET instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . PIPE instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . SHL instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . SHRS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . SHRU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . EQUALEQUAL instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . BANGEQUAL instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . GT instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . GTS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . GTU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . LT instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . LTS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . LTU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . GE instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . GES instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . GEU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . LE instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . LES instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> instr . LEU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON instr . [ RBRACE ]
-## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON instr . COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
-##
-## The known suffix of the stack is as follows:
-## IDENT COLON instr
-##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 127, spurious reduction of production instr -> plaininstr
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 parse: FN IDENT LBRACE IDENT EQUAL LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 218.
+## Ends in an error in state: 211.
 ##
 ## plaininstr -> IDENT EQUAL instr . [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
@@ -4119,7 +4048,7 @@ parse: FN IDENT LBRACE IDENT EQUAL LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE IDENT COLONEQUAL UNDERSCORE
 ##
-## Ends in an error in state: 219.
+## Ends in an error in state: 212.
 ##
 ## plaininstr -> IDENT COLONEQUAL . instr [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -4131,7 +4060,7 @@ parse: FN IDENT LBRACE IDENT COLONEQUAL UNDERSCORE
 
 parse: FN IDENT LBRACE IDENT COLONEQUAL LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 220.
+## Ends in an error in state: 213.
 ##
 ## plaininstr -> IDENT COLONEQUAL instr . [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
@@ -4176,7 +4105,7 @@ parse: FN IDENT LBRACE IDENT COLONEQUAL LBRACE RBRACE UNREACHABLE
 
 parse: LET IDENT EQUAL IF FLOAT TYPE
 ##
-## Ends in an error in state: 221.
+## Ends in an error in state: 214.
 ##
 ## instr -> IF instr . LBRACE delimited_instr_list RBRACE option(__anonymous_6) [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4227,7 +4156,7 @@ parse: LET IDENT EQUAL IF FLOAT TYPE
 
 parse: LET IDENT EQUAL IF FLOAT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 222.
+## Ends in an error in state: 215.
 ##
 ## instr -> IF instr LBRACE . delimited_instr_list RBRACE option(__anonymous_6) [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -4239,7 +4168,7 @@ parse: LET IDENT EQUAL IF FLOAT LBRACE UNDERSCORE
 
 parse: LET IDENT EQUAL IF FLOAT LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 228.
+## Ends in an error in state: 221.
 ##
 ## instr -> IF instr LBRACE delimited_instr_list RBRACE . option(__anonymous_6) [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -4251,7 +4180,7 @@ parse: LET IDENT EQUAL IF FLOAT LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE IF FLOAT TYPE
 ##
-## Ends in an error in state: 234.
+## Ends in an error in state: 227.
 ##
 ## delimited_instr_list -> IF instr . LBRACE delimited_instr_list RBRACE option(__anonymous_6) delimited_instr_list [ RBRACE ]
 ## instr -> IF instr . LBRACE delimited_instr_list RBRACE option(__anonymous_6) [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4303,7 +4232,7 @@ parse: FN IDENT LBRACE IF FLOAT TYPE
 
 parse: FN IDENT LBRACE IF FLOAT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 238.
+## Ends in an error in state: 231.
 ##
 ## delimited_instr_list -> IF instr LBRACE delimited_instr_list RBRACE option(__anonymous_6) . delimited_instr_list [ RBRACE ]
 ## instr -> IF instr LBRACE delimited_instr_list RBRACE option(__anonymous_6) . [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4316,14 +4245,39 @@ parse: FN IDENT LBRACE IF FLOAT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
 
 parse: FN IDENT LBRACE LBRACE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 240.
+## Ends in an error in state: 233.
 ##
 ## plaininstr -> IDENT . [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> IDENT . COLONEQUAL instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> IDENT . EQUAL instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> IDENT . LBRACE loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> LBRACE IDENT . PIPE loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT . COLON instr [ RBRACE ]
 ## separated_nonempty_list(COMMA,__anonymous_8) -> IDENT . COLON instr COMMA separated_nonempty_list(COMMA,__anonymous_8) [ RBRACE ]
+##
+## The known suffix of the stack is as follows:
+## LBRACE IDENT
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT LBRACE LBRACE IDENT PIPE UNREACHABLE
+##
+## Ends in an error in state: 234.
+##
+## plaininstr -> LBRACE IDENT PIPE . loption(separated_nonempty_list(COMMA,__anonymous_7)) RBRACE [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+##
+## The known suffix of the stack is as follows:
+## LBRACE IDENT PIPE
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT LBRACE LBRACE IDENT PIPE IDENT UNREACHABLE
+##
+## Ends in an error in state: 235.
+##
+## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT . COLON instr [ RBRACE ]
+## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT . COLON instr COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
 ##
 ## The known suffix of the stack is as follows:
 ## IDENT
@@ -4331,9 +4285,86 @@ parse: FN IDENT LBRACE LBRACE IDENT UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
+parse: FN IDENT LBRACE LBRACE IDENT PIPE IDENT COLON UNDERSCORE
+##
+## Ends in an error in state: 236.
+##
+## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON . instr [ RBRACE ]
+## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON . instr COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
+##
+## The known suffix of the stack is as follows:
+## IDENT COLON
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT LBRACE LBRACE IDENT PIPE IDENT COLON FLOAT TYPE
+##
+## Ends in an error in state: 237.
+##
+## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . AS valtype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . IS reftype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . DOT IDENT EQUAL instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . PLUS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . MINUS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . STAR instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . SLASH instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . SLASHS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . SLASHU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . PERCENTS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . PERCENTU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . AMPERSAND instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . CARET instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . PIPE instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . SHL instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . SHRS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . SHRU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . EQUALEQUAL instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . BANGEQUAL instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . GT instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . GTS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . GTU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . LT instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . LTS instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . LTU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . GE instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . GES instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . GEU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . LE instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . LES instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> instr . LEU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON instr . [ RBRACE ]
+## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON instr . COMMA separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
+##
+## The known suffix of the stack is as follows:
+## IDENT COLON instr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 127, spurious reduction of production instr -> plaininstr
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT LBRACE LBRACE IDENT PIPE IDENT COLON FLOAT COMMA UNREACHABLE
+##
+## Ends in an error in state: 238.
+##
+## separated_nonempty_list(COMMA,__anonymous_7) -> IDENT COLON instr COMMA . separated_nonempty_list(COMMA,__anonymous_7) [ RBRACE ]
+##
+## The known suffix of the stack is as follows:
+## IDENT COLON instr COMMA
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
 parse: FN IDENT LBRACE LBRACE IDENT COLON FLOAT TYPE
 ##
-## Ends in an error in state: 242.
+## Ends in an error in state: 244.
 ##
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . AS valtype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
@@ -4383,9 +4414,9 @@ parse: FN IDENT LBRACE LBRACE IDENT COLON FLOAT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: FN IDENT LBRACE LBRACKET FLOAT TYPE
+parse: FN IDENT LBRACE LBRACKET IDENT PIPE FLOAT TYPE
 ##
-## Ends in an error in state: 256.
+## Ends in an error in state: 258.
 ##
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . AS valtype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
@@ -4420,12 +4451,12 @@ parse: FN IDENT LBRACE LBRACKET FLOAT TYPE
 ## plaininstr -> instr . LE instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . LES instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . LEU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> LBRACKET instr . SEMI instr RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> LBRACKET IDENT PIPE instr . SEMI instr RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## separated_nonempty_list(COMMA,__anonymous_15) -> instr . [ RBRACKET ]
 ## separated_nonempty_list(COMMA,__anonymous_15) -> instr . COMMA separated_nonempty_list(COMMA,__anonymous_15) [ RBRACKET ]
 ##
 ## The known suffix of the stack is as follows:
-## LBRACKET instr
+## LBRACKET IDENT PIPE instr
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
@@ -4436,21 +4467,21 @@ parse: FN IDENT LBRACE LBRACKET FLOAT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: FN IDENT LBRACE LBRACKET FLOAT SEMI UNDERSCORE
+parse: FN IDENT LBRACE LBRACKET IDENT PIPE FLOAT SEMI UNDERSCORE
 ##
-## Ends in an error in state: 257.
+## Ends in an error in state: 259.
 ##
-## plaininstr -> LBRACKET instr SEMI . instr RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> LBRACKET IDENT PIPE instr SEMI . instr RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
-## LBRACKET instr SEMI
+## LBRACKET IDENT PIPE instr SEMI
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: FN IDENT LBRACE LBRACKET FLOAT SEMI FLOAT TYPE
+parse: FN IDENT LBRACE LBRACKET IDENT PIPE FLOAT SEMI FLOAT TYPE
 ##
-## Ends in an error in state: 258.
+## Ends in an error in state: 260.
 ##
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . AS valtype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4485,10 +4516,10 @@ parse: FN IDENT LBRACE LBRACKET FLOAT SEMI FLOAT TYPE
 ## plaininstr -> instr . LE instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . LES instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . LEU instr [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
-## plaininstr -> LBRACKET instr SEMI instr . RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
+## plaininstr -> LBRACKET IDENT PIPE instr SEMI instr . RBRACKET [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
 ## The known suffix of the stack is as follows:
-## LBRACKET instr SEMI instr
+## LBRACKET IDENT PIPE instr SEMI instr
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
@@ -4499,9 +4530,9 @@ parse: FN IDENT LBRACE LBRACKET FLOAT SEMI FLOAT TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: FN IDENT LBRACE LBRACKET FLOAT COMMA UNDERSCORE
+parse: FN IDENT LBRACE LBRACKET IDENT PIPE FLOAT COMMA UNDERSCORE
 ##
-## Ends in an error in state: 260.
+## Ends in an error in state: 262.
 ##
 ## separated_nonempty_list(COMMA,__anonymous_15) -> instr COMMA . separated_nonempty_list(COMMA,__anonymous_15) [ RBRACKET ]
 ##
@@ -4511,9 +4542,9 @@ parse: FN IDENT LBRACE LBRACKET FLOAT COMMA UNDERSCORE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: FN IDENT LBRACE LBRACKET FLOAT COMMA FLOAT TYPE
+parse: FN IDENT LBRACE LBRACKET IDENT PIPE FLOAT COMMA FLOAT TYPE
 ##
-## Ends in an error in state: 262.
+## Ends in an error in state: 264.
 ##
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . AS valtype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
@@ -4565,7 +4596,7 @@ parse: FN IDENT LBRACE LBRACKET FLOAT COMMA FLOAT TYPE
 
 parse: FN IDENT LBRACE LET LPAREN RPAREN EQUAL LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 263.
+## Ends in an error in state: 265.
 ##
 ## option(__anonymous_13) -> EQUAL instr . [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
@@ -4610,7 +4641,7 @@ parse: FN IDENT LBRACE LET LPAREN RPAREN EQUAL LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE LET IDENT EQUAL LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 270.
+## Ends in an error in state: 272.
 ##
 ## option(__anonymous_10) -> EQUAL instr . [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
@@ -4655,7 +4686,7 @@ parse: FN IDENT LBRACE LET IDENT EQUAL LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE LOOP LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 273.
+## Ends in an error in state: 275.
 ##
 ## delimited_instr_list -> LOOP LBRACE delimited_instr_list RBRACE . delimited_instr_list [ RBRACE ]
 ## instr -> LOOP LBRACE delimited_instr_list RBRACE . [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4668,7 +4699,7 @@ parse: FN IDENT LBRACE LOOP LBRACE RBRACE UNDERSCORE
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 280.
+## Ends in an error in state: 282.
 ##
 ## delimited_instr_list -> QUOTE IDENT COLON LOOP LBRACE delimited_instr_list RBRACE . delimited_instr_list [ RBRACE ]
 ## instr -> QUOTE IDENT COLON LOOP LBRACE delimited_instr_list RBRACE . [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4681,7 +4712,7 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON LOOP LBRACE RBRACE UNDERSCORE
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 282.
+## Ends in an error in state: 284.
 ##
 ## delimited_instr_list -> QUOTE IDENT COLON LBRACE . delimited_instr_list RBRACE delimited_instr_list [ RBRACE ]
 ## instr -> QUOTE IDENT COLON LBRACE . delimited_instr_list RBRACE [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4694,7 +4725,7 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON LBRACE UNDERSCORE
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 284.
+## Ends in an error in state: 286.
 ##
 ## delimited_instr_list -> QUOTE IDENT COLON LBRACE delimited_instr_list RBRACE . delimited_instr_list [ RBRACE ]
 ## instr -> QUOTE IDENT COLON LBRACE delimited_instr_list RBRACE . [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4707,7 +4738,7 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON LBRACE RBRACE UNDERSCORE
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON IF FLOAT TYPE
 ##
-## Ends in an error in state: 287.
+## Ends in an error in state: 289.
 ##
 ## delimited_instr_list -> QUOTE IDENT COLON IF instr . LBRACE delimited_instr_list RBRACE option(__anonymous_6) delimited_instr_list [ RBRACE ]
 ## instr -> QUOTE IDENT COLON IF instr . LBRACE delimited_instr_list RBRACE option(__anonymous_6) [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4759,7 +4790,7 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON IF FLOAT TYPE
 
 parse: FN IDENT LBRACE QUOTE IDENT COLON IF FLOAT LBRACE RBRACE ELSE LBRACE RBRACE UNDERSCORE
 ##
-## Ends in an error in state: 291.
+## Ends in an error in state: 293.
 ##
 ## delimited_instr_list -> QUOTE IDENT COLON IF instr LBRACE delimited_instr_list RBRACE option(__anonymous_6) . delimited_instr_list [ RBRACE ]
 ## instr -> QUOTE IDENT COLON IF instr LBRACE delimited_instr_list RBRACE option(__anonymous_6) . [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4772,7 +4803,7 @@ parse: FN IDENT LBRACE QUOTE IDENT COLON IF FLOAT LBRACE RBRACE ELSE LBRACE RBRA
 
 parse: LET IDENT EQUAL QUOTE IDENT COLON IF UNDERSCORE
 ##
-## Ends in an error in state: 298.
+## Ends in an error in state: 300.
 ##
 ## instr -> QUOTE IDENT COLON IF . instr LBRACE delimited_instr_list RBRACE option(__anonymous_6) [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -4784,7 +4815,7 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON IF UNDERSCORE
 
 parse: LET IDENT EQUAL QUOTE IDENT COLON IF FLOAT TYPE
 ##
-## Ends in an error in state: 299.
+## Ends in an error in state: 301.
 ##
 ## instr -> QUOTE IDENT COLON IF instr . LBRACE delimited_instr_list RBRACE option(__anonymous_6) [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4835,7 +4866,7 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON IF FLOAT TYPE
 
 parse: LET IDENT EQUAL QUOTE IDENT COLON IF FLOAT LBRACE UNDERSCORE
 ##
-## Ends in an error in state: 300.
+## Ends in an error in state: 302.
 ##
 ## instr -> QUOTE IDENT COLON IF instr LBRACE . delimited_instr_list RBRACE option(__anonymous_6) [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -4847,7 +4878,7 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON IF FLOAT LBRACE UNDERSCORE
 
 parse: LET IDENT EQUAL QUOTE IDENT COLON IF FLOAT LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 302.
+## Ends in an error in state: 304.
 ##
 ## instr -> QUOTE IDENT COLON IF instr LBRACE delimited_instr_list RBRACE . option(__anonymous_6) [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ##
@@ -4859,7 +4890,7 @@ parse: LET IDENT EQUAL QUOTE IDENT COLON IF FLOAT LBRACE RBRACE UNREACHABLE
 
 parse: FN IDENT LBRACE RETURN LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 304.
+## Ends in an error in state: 306.
 ##
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
 ## plaininstr -> instr . AS valtype [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI RPAREN REC RBRACKET RBRACE PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET LBRACE IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT COMMA CARET BANGEQUAL AS AMPERSAND ]
@@ -4904,7 +4935,7 @@ parse: FN IDENT LBRACE RETURN LBRACE RBRACE UNREACHABLE
 
 parse: SHARP LBRACKET IDENT EQUAL FLOAT TYPE
 ##
-## Ends in an error in state: 305.
+## Ends in an error in state: 307.
 ##
 ## attribute -> SHARP LBRACKET IDENT EQUAL instr . RBRACKET [ SHARP LET FN ]
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -4955,7 +4986,7 @@ parse: SHARP LBRACKET IDENT EQUAL FLOAT TYPE
 
 parse: LET IDENT EQUAL FLOAT RPAREN
 ##
-## Ends in an error in state: 326.
+## Ends in an error in state: 328.
 ##
 ## global -> list(attribute) LET IDENT option(__anonymous_16) EQUAL instr . option(SEMI) [ TYPE SHARP REC LET FN EOF ]
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ TYPE STAR SLASHU SLASHS SLASH SHRU SHRS SHL SHARP SEMI REC PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LET LES LE LBRACKET IS GTU GTS GT GEU GES GE FN EQUALEQUAL EOF DOT CARET BANGEQUAL AS AMPERSAND ]
@@ -5006,7 +5037,7 @@ parse: LET IDENT EQUAL FLOAT RPAREN
 
 parse: FN IDENT UNREACHABLE
 ##
-## Ends in an error in state: 329.
+## Ends in an error in state: 331.
 ##
 ## fundecl -> FN IDENT . option(__anonymous_4) [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
 ## fundecl -> FN IDENT . COLON IDENT option(__anonymous_4) [ TYPE SHARP SEMI REC QUOTE LET LBRACE FN EOF ]
@@ -5020,7 +5051,7 @@ parse: FN IDENT UNREACHABLE
 
 parse: SHARP LBRACKET IDENT EQUAL FLOAT RBRACKET UNREACHABLE
 ##
-## Ends in an error in state: 362.
+## Ends in an error in state: 364.
 ##
 ## list(attribute) -> attribute . list(attribute) [ LET FN ]
 ##

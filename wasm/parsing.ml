@@ -51,7 +51,11 @@ struct
       Format.sprintf "Syntax error %s.\n" (E.show (show text) buffer)
     in
     (* Fetch an error message from the database. *)
-    let message = Parser_messages.message (state checkpoint) in
+    let message =
+      try Parser_messages.message (state checkpoint)
+      with Not_found ->
+        Printf.sprintf "Syntax error (%d)\n" (state checkpoint)
+    in
     let message =
       if message = "<YOUR SYNTAX ERROR MESSAGE HERE>\n" then
         Printf.sprintf "Syntax error (%d)\n" (state checkpoint)

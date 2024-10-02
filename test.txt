@@ -31,12 +31,12 @@ type custom_operations = {
 type custom open = { ops : &custom_operations }
 
 let int32_ops : &custom_operations =
-  custom_operations {
+  {custom_operations|
     id :"_i",
     compare : int32_cmp,
     compare_ext : null,
     hash : int32_hash,
-    fixed_length : fixed_length {bsize_32 :4, bsize_64 : 4},
+    fixed_length : {fixed_length| bsize_32 :4, bsize_64 : 4 },
     serialize: int32_serialize,
     deserialize: int32_deserialize,
     dup: int32_dup
@@ -60,16 +60,16 @@ fn int32_serialize(s : &eq, v : &eq) -> (i32, i32) {
 }
 
 fn int32_deserialize(s : &eq) -> (&eq, i32) {
-  (int32 { ops:int32_ops, value:caml_deserialize_int_4(s) }, 4)
+  ({int32| ops:int32_ops, value:caml_deserialize_int_4(s) }, 4)
 }
 
 fn int32_dup (v : &eq) -> &eq {
   let d = v as &int32;
-  int32 { ops : d.ops, value : d.value }
+  {int32| ops : d.ops, value : d.value }
 }
 
 fn caml_copy_int32(i : i32) -> &eq {
-  int32 { ops : int32_ops, value : i }
+  {int32| ops : int32_ops, value : i }
 }
 
 fn Int32_val(i : &eq) -> i32 {
@@ -92,3 +92,4 @@ fn caml_int32_of_string(v: &eq) -> &eq {
   caml_copy_int32(parse_int(v, i32, INT32_ERRMSG))
 }
 
+let foo = [block|1,2]

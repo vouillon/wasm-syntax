@@ -76,14 +76,16 @@
 %left STAR SLASH SLASHS SLASHU PERCENTS PERCENTU
 %left AS IS
 %left DOT LPAREN
+%left SHARP
 
 (* BR foo 1 + 2 understood as BR foo (1 + 2)
    BR_TABLE { ...} 1 + 2 understood as BR_TABLE { ...} (1 + 2)
    BR foo { ... } understood as a single instruction
    LET x = br foo LET --> LET x = (br foo) LET  (LET < branch)
    IF BR_TABLE {...} { ... } --> IF (BR_TABLE {...}) { ... } (br < LBRACE)
-   IF foo { ... } --> IF (foo) { ... }    (not a struct)  (IDENT < LBRACE)
    { ... } ( ... } --> sequence (instr < LPAREN)
+   {a| b:}  ==> struct; {a|b} should need parenthesis <<< special case??
+                            (IDENT < PIPE)
 *)
 
 %{
@@ -228,10 +230,10 @@ plaininstr:
 | "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
 | i = instr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (Call(i, l)) }
-| s = STRING { with_loc $sloc (String s) }
+| t  = option(t = IDENT "#" { t }) s = STRING { with_loc $sloc (String (t, s)) }
 | i = INT { with_loc $sloc (Int i) }
 | f = FLOAT { with_loc $sloc (Float f) }
-| x = IDENT "{" l = separated_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
+| "{" x = IDENT "|" l = separated_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
   { with_loc $sloc (Struct (Some x, l)) }
 | "{" l = separated_nonempty_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
   { with_loc $sloc (Struct (None, l)) }
@@ -287,8 +289,13 @@ plaininstr:
 | BR_ON_CAST_FAIL "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec prec_branch
 | "[" l = separated_list(",", i = instr { i }) "]"
-  { with_loc $sloc (ArrayFixed l) }
-| "[" i1 = instr ";" i2 = instr "]" { with_loc $sloc (Array (i1, i2)) }
+  { with_loc $sloc (ArrayFixed (None, l)) }
+| "[" i1 = instr ";" i2 = instr "]"
+  { with_loc $sloc (Array (None, i1, i2)) }
+| "[" t = IDENT "|" l = separated_list(",", i = instr { i }) "]"
+  { with_loc $sloc (ArrayFixed (Some t, l)) }
+| "[" t = IDENT "|" i1 = instr ";" i2 = instr "]"
+  { with_loc $sloc (Array (Some t, i1, i2)) }
 | i1 = plaininstr "[" i2 = instr "]" { with_loc $sloc (ArrayGet (i1, i2)) }
 | i1 = plaininstr "[" i2 = instr "]" "=" i3 = instr
   { with_loc $sloc (ArraySet (i1, i2, i3)) }

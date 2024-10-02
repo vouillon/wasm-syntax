@@ -280,19 +280,19 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | StructSet (_t, _f) ->
       let e1, e2 = two_args args in
       no_loc (StructSet (e1, "f", e2))
-  | ArrayNew _t ->
+  | ArrayNew t ->
       let e1, e2 = two_args args in
-      no_loc (Array (e1, e2))
+      no_loc (Array (Some (idx st `Type t), e1, e2))
   | ArrayNewFixed (t, n) -> (
       match string_args n args with
       | Some s ->
           no_loc
             (Cast
-               ( no_loc (String s),
+               ( no_loc (String (Some (idx st `Type t), s)),
                  Ref { nullable = false; typ = Type (idx st `Type t) } ))
       | None ->
           (*ZZZ take n into account *)
-          no_loc (ArrayFixed args))
+          no_loc (ArrayFixed (Some (idx st `Type t), args)))
   | ArrayGet (s, _t) ->
       let e1, e2 = two_args args in
       signage s [ no_loc (ArrayGet (e1, e2)) ]
@@ -346,7 +346,8 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
       no_loc (Cast (sequence args, Ref { nullable = true; typ = Extern }))
   | AnyConvertExtern ->
       no_loc (Cast (sequence args, Ref { nullable = true; typ = Any }))
-  | ArrayNewData _ -> no_loc (String "foo")
+  | ArrayNewData (t, _) ->
+      no_loc (String (Some (idx st `Type t), "foo")) (*ZZZ*)
   | ArrayLen -> no_loc (Call (no_loc (Get "array_len"), args))
   | RefCast t -> no_loc (Cast (sequence args, Ref (reftype st t)))
   | RefTest t -> no_loc (Test (sequence args, reftype st t))
@@ -387,13 +388,17 @@ let typeuse st (typ, sign) =
         })
       sign )
 
-let exports e = List.map (fun nm -> ("export", Ast.no_loc (Ast.String nm))) e
+let exports e =
+  List.map (fun nm -> ("export", Ast.no_loc (Ast.String (None, nm)))) e
 
 let import (module_, name) =
   ( "import",
     Ast.no_loc
       (Ast.Sequence
-         [ Ast.no_loc (Ast.String module_); Ast.no_loc (Ast.String name) ]) )
+         [
+           Ast.no_loc (Ast.String (None, module_));
+           Ast.no_loc (Ast.String (None, name));
+         ]) )
 
 let modulefield st (f : Src.modulefield) : Ast.modulefield option =
   match f with

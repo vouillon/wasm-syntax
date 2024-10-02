@@ -31,10 +31,12 @@ type 'a with_loc = { descr : 'a; loc : location }
 let no_loc descr =
   { descr; loc = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos } }
 
+type label = string
+
 type instr_descr =
-  | Block of string option * instr list
-  | Loop of string option * instr list
-  | If of string option * instr * instr list * instr list option
+  | Block of label option * instr list
+  | Loop of label option * instr list
+  | If of label option * instr * instr list * instr list option
   | Unreachable
   | Nop
   | Null
@@ -42,27 +44,27 @@ type instr_descr =
   | Set of idx * instr
   | Tee of idx * instr
   | Call of instr * instr list
-  | String of string
+  | String of idx option * string
   | Int of string
   | Float of string
   | Cast of instr * valtype
   | Test of instr * reftype
-  | Struct of string option * (string * instr) list
+  | Struct of idx option * (string * instr) list
   | StructGet of instr * string
   | StructSet of instr * string * instr
-  | Array of instr * instr
-  | ArrayFixed of instr list
+  | Array of idx option * instr * instr
+  | ArrayFixed of idx option * instr list
   | ArrayGet of instr * instr
   | ArraySet of instr * instr * instr
   | BinOp of binop * instr * instr
-  | Let of (string option * valtype option) list * instr option
-  | Br of string * instr option
-  | Br_if of string * instr
-  | Br_table of string list * instr
-  | Br_on_null of string * instr
-  | Br_on_non_null of string * instr
-  | Br_on_cast of string * reftype * instr
-  | Br_on_cast_fail of string * reftype * instr
+  | Let of (idx option * valtype option) list * instr option
+  | Br of label * instr option
+  | Br_if of label * instr
+  | Br_table of label list * instr
+  | Br_on_null of label * instr
+  | Br_on_non_null of label * instr
+  | Br_on_cast of label * reftype * instr
+  | Br_on_cast_fail of label * reftype * instr
   | Return of instr option
   | Sequence of instr list
 
