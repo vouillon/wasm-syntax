@@ -1,6 +1,12 @@
 open Ast.Text
 
-type sexp = Atom of string | List of sexp list | Block of sexp list
+type sexp =
+  | Atom of string
+  | List of sexp list
+  | Block of sexp list
+  | StructuredBlock of structure list
+
+and structure = Delimiter of sexp | Contents of sexp list
 
 let rec format_sexp f s =
   match s with
@@ -17,11 +23,27 @@ let rec format_sexp f s =
            ~pp_sep:(fun f () -> Format.fprintf f "@ ")
            format_sexp)
         l
+  | StructuredBlock l ->
+      Format.fprintf f "@[";
+      List.iteri
+        (fun i s ->
+          match s with
+          | Delimiter d ->
+              if i > 0 then Format.fprintf f "@ ";
+              Format.fprintf f "%a" format_sexp d
+          | Contents l ->
+              Format.fprintf f "@<1 2>@[<hv>%a@]"
+                (Format.pp_print_list
+                   ~pp_sep:(fun f () -> Format.fprintf f "@ ")
+                   format_sexp)
+                l)
+        l;
+      Format.fprintf f "@]"
 
 let id x = Atom (Printf.sprintf "$%s" x)
 
 let index x =
-  Atom (match x with Num i -> Printf.sprintf "%ld" i | Id s -> id s)
+  match x with Num i -> Atom (Printf.sprintf "%ld" i) | Id s -> id s
 
 let heaptype (ty : heaptype) =
   match ty with
@@ -198,8 +220,12 @@ let memarg align' { offset; align } =
   (if offset = 0l then [] else [ Atom (Printf.sprintf "offset=%ld" offset) ])
   @ if align = align' then [] else [ Atom (Printf.sprintf "align=%ld" align) ]
 
+let integer i = Atom (Int32.to_string i)
+
 let rec instr i =
   match i with
+  | ExternConvertAny -> Atom "extern.convert_any"
+  | AnyConvertExtern -> Atom "any.convert_extern"
   | Const op ->
       Block
         [
@@ -227,15 +253,16 @@ let rec instr i =
   | LocalGet i -> Block [ Atom "local.get"; index i ]
   | LocalTee i -> Block [ Atom "local.tee"; index i ]
   | GlobalGet i -> Block [ Atom "global.get"; index i ]
-  (*
-  | CallIndirect (id, typeuse) ->
-      [
-        Block
-          (Atom "call_indirect" :: func_type st typ)
-        );
-      ]
-*)
+  | CallIndirect (id, typ) ->
+      Block
+        (Atom "call_indirect"
+        :: ((if id = Num 0l then [] else [ index id ]) @ typeuse typ))
+  | ReturnCallIndirect (id, typ) ->
+      Block
+        (Atom "return_call_indirect"
+        :: ((if id = Num 0l then [] else [ index id ]) @ typeuse typ))
   | Call f -> Block [ Atom "call"; index f ]
+  | Select t -> Block (Atom "select" :: option (fun t -> [ valtype t ]) t)
   | Pop ty -> Block [ Atom "pop"; valtype ty ]
   | RefFunc i -> Block [ Atom "ref.func"; index i ]
   | RefIsNull -> Block [ Atom "ref.is_null" ]
@@ -244,14 +271,20 @@ let rec instr i =
   | RefI31 -> Atom "ref.i31"
   | I31Get s -> Atom (signage "i31.get" s)
   | ArrayNew t -> Block [ Atom "array.new"; index t ]
-  | ArrayNewFixed (t, i) ->
-      Block [ Atom "array.new_fixed"; index t; Atom (Int32.to_string i) ]
+  | ArrayNewDefault t -> Block [ Atom "array.new_default"; index t ]
+  | ArrayNewFixed (t, i) -> Block [ Atom "array.new_fixed"; index t; integer i ]
+  | ArrayNewElem (i, i') -> Block [ Atom "array.new_fixed"; index i; index i' ]
   | ArrayNewData (typ, data) ->
       Block [ Atom "array.new_data"; index typ; index data ]
+  | ArrayInitData (i, i') -> Block [ Atom "array.init_data"; index i; index i' ]
+  | ArrayInitElem (i, i') -> Block [ Atom "array.init_elem"; index i; index i' ]
   | ArrayGet (None, typ) -> Block [ Atom "array.get"; index typ ]
   | ArrayGet (Some s, typ) -> Block [ Atom (signage "array.get" s); index typ ]
   | ArrayLen -> Atom "array.len"
+  | ArrayCopy (i, i') -> Block [ Atom "array.copy"; index i; index i' ]
+  | ArrayFill i -> Block [ Atom "array.fill"; index i ]
   | StructNew typ -> Block [ Atom "struct.new"; index typ ]
+  | StructNewDefault typ -> Block [ Atom "struct.new_default"; index typ ]
   | StructGet (None, typ, f) -> Block [ Atom "struct.get"; index typ; index f ]
   | StructGet (Some s, typ, f) ->
       Block [ Atom (signage "struct.get" s); index typ; index f ]
@@ -259,29 +292,33 @@ let rec instr i =
   | RefTest ty -> Block [ Atom "ref.test"; reftype ty ]
   | RefEq -> Atom "ref.eq"
   | RefNull ty -> Block [ Atom "ref.null"; heaptype ty ]
-  | Br_on_cast (i, ty, ty') ->
-      Block [ Atom "br_on_cast"; index i; reftype ty; reftype ty' ]
-  | Br_on_cast (i, ty, ty') ->
-      Block [ Atom "br_on_cast_fail"; index i; reftype ty; reftype ty' ]
   | If { label = l; typ; if_block; else_block } ->
-      Block
-        (Atom "if"
-        :: (label l @ blocktype typ
-           @ (Atom "then" :: List.map instr if_block)
-           @ (Atom "else" :: List.map instr else_block)
-           @ [ Atom "end" ]))
+      StructuredBlock
+        [
+          Delimiter (Block (Atom "if" :: (label l @ blocktype typ)));
+          Contents (List.map instr if_block);
+          Delimiter (Atom "else");
+          Contents (List.map instr else_block);
+          Delimiter (Atom "end");
+        ]
   | Drop -> Atom "drop"
   | I32Store8 m -> Block (Atom "i32store8" :: memarg 1l m)
   | LocalSet i -> Block [ Atom "local.set"; index i ]
   | GlobalSet i -> Block [ Atom "global.set"; index i ]
   | Loop { label = l; typ; block } ->
-      Block
-        (Atom "loop"
-        :: (label l @ blocktype typ @ List.map instr block @ [ Atom "end" ]))
+      StructuredBlock
+        [
+          Delimiter (Block (Atom "loop" :: (label l @ blocktype typ)));
+          Contents (List.map instr block);
+          Delimiter (Atom "end");
+        ]
   | Block { label = l; typ; block } ->
-      Block
-        (Atom "block"
-        :: (label l @ blocktype typ @ List.map instr block @ [ Atom "end" ]))
+      StructuredBlock
+        [
+          Delimiter (Block (Atom "block" :: (label l @ blocktype typ)));
+          Contents (List.map instr block);
+          Delimiter (Atom "end");
+        ]
   (* | Try (ty, body, catches, catch_all) ->
        [
          List
@@ -304,22 +341,22 @@ let rec instr i =
       Block (Atom "br_table" :: List.map (fun i -> index i) (l @ [ i ]))
   | Br i -> Block [ Atom "br"; index i ]
   | Br_if i -> Block [ Atom "br_if"; index i ]
+  | Br_on_null i -> Block [ Atom "br_on_null"; index i ]
+  | Br_on_non_null i -> Block [ Atom "br_on_non_null"; index i ]
+  | Br_on_cast (i, ty, ty') ->
+      Block [ Atom "br_on_cast"; index i; reftype ty; reftype ty' ]
+  | Br_on_cast_fail (i, ty, ty') ->
+      Block [ Atom "br_on_cast_fail"; index i; reftype ty; reftype ty' ]
   | Return -> Atom "return"
   | Throw tag -> Block [ Atom "throw"; index tag ]
   | Nop -> Atom "nop"
   | Unreachable -> Atom "unreachable"
   | ArraySet typ -> Block [ Atom "array.set"; index typ ]
   | StructSet (typ, i) -> Block [ Atom "struct.set"; index typ; index i ]
-  (*
-  | ReturnCallIndirect (typ, e, l) ->
-      [
-        List
-          ((Atom "return_call_indirect" :: func_type st typ)
-          @ List.concat (List.map ~f:expression (l @ [ e ])));
-      ]
-*)
   | ReturnCall f -> Block [ Atom "return_call"; index f ]
   | ReturnCallRef typ -> Block [ Atom "return_call_ref"; index typ ]
+  | TupleMake i -> Block [ Atom "tuple.make"; integer i ]
+  | TupleExtract (i, j) -> Block [ Atom "tuple.make"; integer i; integer j ]
   | Folded (i, l) -> List (instr i :: List.map instr l)
 
 let funct ctx st name exported_name typ param_names locals body =
