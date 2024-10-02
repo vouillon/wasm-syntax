@@ -124,6 +124,7 @@ type prec =
   | Instruction
   | Let
   | Assignement
+  | Select
   | Comparison
   | LogicalOr
   | LogicalXor
@@ -325,6 +326,10 @@ let rec instr prec f (i : instr) =
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))
         l
+  | Select (i1, i2, i3) ->
+      parentheses prec Select f @@ fun () ->
+      Format.fprintf f "@[@<2>%a@,?%a@,:%a@]" (instr Select) i1 (instr Select)
+        i2 (instr Select) i3
   | Null -> Format.pp_print_string f "null"
 
 and block f label kind l =
@@ -339,7 +344,7 @@ and deliminated_instr f (i : instr) =
   | Float _ | Cast _ | Test _ | Struct _ | StructGet _ | StructSet _ | Array _
   | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | Let _ | Br _ | Br_if _
   | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
-  | Br_on_cast_fail _ | Return _ | Sequence _ | Null ->
+  | Br_on_cast_fail _ | Return _ | Sequence _ | Null | Select _ ->
       Format.fprintf f "@[%a;@]" (instr Instruction) i
 
 and block_instrs f l =

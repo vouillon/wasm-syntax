@@ -141,6 +141,14 @@ let three_args l : Ast.instr * Ast.instr * Ast.instr =
       (*ZZZ Should take arity into account *)
       (x, y, Ast.no_loc (Ast.Sequence r))
 
+let reasonable_string =
+  Re.(
+    compile
+      (whole_string
+         (rep
+            (alt
+               [ diff any (rg '\000' '\031'); char '\n'; char '\r'; char '\t' ]))))
+
 let string_args n args =
   try
     if Int32.of_int (List.length args) <> n then raise Exit;
@@ -155,7 +163,8 @@ let string_args n args =
         | _ -> raise Exit)
       args;
     let s = Bytes.to_string b in
-    if String.is_valid_utf_8 s then Some s else None
+    if String.is_valid_utf_8 s && Re.execp reasonable_string s then Some s
+    else None
   with Exit -> None
 
 let rec split_last l =
@@ -358,8 +367,11 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | RefNull t ->
       no_loc (Cast (no_loc Null, Ref { nullable = true; typ = heaptype st t }))
   | RefIsNull -> no_loc (BinOp (Eq, sequence args, no_loc Null))
+  | Select _ ->
+      let e1, e2, e = three_args args in
+      no_loc (Select (e, e1, e2))
   (* To implement now *)
-  | Try _ | Throw _ | Select _ | TupleExtract _ | ArrayFill _ | ArrayCopy _
+  | Try _ | Throw _ | TupleExtract _ | ArrayFill _ | ArrayCopy _
   | UnOp (F64 _)
   | UnOp (F32 _)
   | UnOp (I64 (Clz | Ctz | Popcnt | Trunc _ | ExtendS _))

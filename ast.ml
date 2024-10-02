@@ -67,6 +67,7 @@ type instr_descr =
   | Br_on_cast_fail of label * reftype * instr
   | Return of instr option
   | Sequence of instr list
+  | Select of instr * instr * instr
 
 and instr = instr_descr with_loc
 

@@ -64,9 +64,10 @@
 %token BR_ON_NULL BR_ON_NON_NULL
 
 %nonassoc LET
-%nonassoc IDENT prec_branch prec_instr
+%nonassoc IDENT prec_branch RBRACE
 %nonassoc LBRACE LBRACKET
 %right EQUAL COLONEQUAL
+%right QUESTIONMARK COLON
 %nonassoc EQUALEQUAL BANGEQUAL GT GTU GTS LT LTU LTS GE GES GEU LE LES LEU
 %left PIPE
 %left CARET
@@ -269,9 +270,12 @@ plaininstr:
 | i = instr "<=" j = instr { with_loc $sloc (BinOp(Le None, i, j)) }
 | i = instr "<=s" j = instr { with_loc $sloc (BinOp(Le (Some Signed), i, j)) }
 | i = instr "<=u" j = instr { with_loc $sloc (BinOp(Le (Some Unsigned), i, j)) }
-| LET x = simple_pat t = option(":" t = valtype {t})
-  i = option("=" i = instr {i})
-  { with_loc $sloc (Let ([(x, t)], i)) }
+| LET x = simple_pat
+  { with_loc $sloc (Let ([(x, None)], None)) }
+| LET x = simple_pat "=" i = instr
+  { with_loc $sloc (Let ([(x, None)], Some i)) }
+| LET x = simple_pat ":" t = valtype i = option("=" i = instr {i})
+  { with_loc $sloc (Let ([(x, Some t)], i)) }
 | LET
   "(" l = separated_list(",", p = simple_pat t = option(":" t = valtype {t})
                                 { (p, t) })
@@ -296,13 +300,15 @@ plaininstr:
   { with_loc $sloc (ArrayFixed (Some t, l)) }
 | "[" t = IDENT "|" i1 = instr ";" i2 = instr "]"
   { with_loc $sloc (Array (Some t, i1, i2)) }
-| i1 = plaininstr "[" i2 = instr "]" { with_loc $sloc (ArrayGet (i1, i2)) }
-| i1 = plaininstr "[" i2 = instr "]" "=" i3 = instr
+| i1 = instr "[" i2 = instr "]" { with_loc $sloc (ArrayGet (i1, i2)) }
+| i1 = instr "[" i2 = instr "]" "=" i3 = instr
   { with_loc $sloc (ArraySet (i1, i2, i3)) }
+| i1 = instr "?" i2 = instr ":" i3 = instr
+  { with_loc $sloc (Select (i1, i2, i3)) }
 
 instr:
-| i = blockinstr { i } %prec prec_instr
-| i = plaininstr { i } %prec prec_instr
+| i = blockinstr { i }
+| i = plaininstr { i }
 
 delimited_instr_list:
 | { [] }
