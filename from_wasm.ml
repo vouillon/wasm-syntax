@@ -175,6 +175,32 @@ let rec split_last l =
       let x, l = split_last r in
       (x, y :: l)
 
+let signage s args =
+  match s with
+  | None -> sequence args
+  | Some s ->
+      Ast.no_loc
+        (Ast.Call
+           ( Ast.no_loc
+               (Ast.Get
+                  (match s with
+                  | Ast.Signed -> "signed"
+                  | Unsigned -> "unsigned")),
+             [ sequence args ] ))
+
+let int_un_op sz (op : Src.int_un_op) args =
+  let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
+  match op with
+  | Clz -> no_loc (Call (no_loc (Get "clz"), [ sequence args ]))
+  | Ctz -> no_loc (Call (no_loc (Get "ctz"), [ sequence args ]))
+  | Popcnt -> no_loc (Call (no_loc (Get "popcnt"), [ sequence args ]))
+  | Eqz -> no_loc (UnOp (Not, sequence args))
+  | Trunc (_, s) ->
+      no_loc (Call (no_loc (Get "truncate"), [ signage (Some s) args ]))
+  | TruncSat (_, s) -> no_loc (Cast (signage (Some s) args, sz))
+  | Reinterpret -> no_loc (Call (no_loc (Get "reinterpret"), [ sequence args ]))
+  | ExtendS _ -> no_loc Unreachable (* ZZZ *)
+
 let int_bin_op (op : Src.int_bin_op) args =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
   let symbol op =
@@ -192,14 +218,27 @@ let int_bin_op (op : Src.int_bin_op) args =
   | Xor -> symbol Xor
   | Shl -> symbol Shl
   | Shr s -> symbol (Shr s)
-  | Rotl -> no_loc (Call (no_loc (Get "rotl"), args))
-  | Rotr -> no_loc (Call (no_loc (Get "rotr"), args))
+  | Rotl -> no_loc (Call (no_loc (Get "rotl"), [ sequence args ]))
+  | Rotr -> no_loc (Call (no_loc (Get "rotr"), [ sequence args ]))
   | Eq -> symbol Eq
   | Ne -> symbol Ne
   | Lt s -> symbol (Lt (Some s))
   | Gt s -> symbol (Gt (Some s))
   | Le s -> symbol (Le (Some s))
   | Ge s -> symbol (Ge (Some s))
+
+let float_un_op sz (op : Src.float_un_op) args =
+  let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
+  match op with
+  | Neg -> no_loc (UnOp (Neg, sequence args))
+  | Abs -> no_loc (Call (no_loc (Get "abs"), [ sequence args ]))
+  | Ceil -> no_loc (Call (no_loc (Get "ceil"), [ sequence args ]))
+  | Floor -> no_loc (Call (no_loc (Get "floor"), [ sequence args ]))
+  | Trunc -> no_loc (Call (no_loc (Get "trunc"), [ sequence args ]))
+  | Nearest -> no_loc (Call (no_loc (Get "nearest"), [ sequence args ]))
+  | Sqrt -> no_loc (Call (no_loc (Get "sqrt"), [ sequence args ]))
+  | Convert (_, s) -> no_loc (Cast (signage (Some s) args, sz))
+  | Reinterpret -> no_loc (Call (no_loc (Get "reinterpret"), [ sequence args ]))
 
 let float_bin_op (op : Src.float_bin_op) args =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
@@ -212,28 +251,15 @@ let float_bin_op (op : Src.float_bin_op) args =
   | Sub -> symbol Sub
   | Mul -> symbol Mul
   | Div -> symbol (Div None)
-  | Min -> no_loc (Call (no_loc (Get "min"), args))
-  | Max -> no_loc (Call (no_loc (Get "max"), args))
-  | CopySign -> no_loc (Call (no_loc (Get "copysign"), args))
+  | Min -> no_loc (Call (no_loc (Get "min"), [ sequence args ]))
+  | Max -> no_loc (Call (no_loc (Get "max"), [ sequence args ]))
+  | CopySign -> no_loc (Call (no_loc (Get "copysign"), [ sequence args ]))
   | Eq -> symbol Eq
   | Ne -> symbol Ne
   | Lt -> symbol (Lt None)
   | Gt -> symbol (Gt None)
   | Le -> symbol (Le None)
   | Ge -> symbol (Ge None)
-
-let signage s args =
-  match s with
-  | None -> sequence args
-  | Some s ->
-      Ast.no_loc
-        (Ast.Call
-           ( Ast.no_loc
-               (Ast.Get
-                  (match s with
-                  | Ast.Signed -> "signed"
-                  | Unsigned -> "unsigned")),
-             args ))
 
 let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
@@ -281,6 +307,10 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | LocalTee x -> no_loc (Tee (idx st `Local x, sequence args))
   | BinOp (I32 op) | BinOp (I64 op) -> int_bin_op op args
   | BinOp (F32 op) | BinOp (F64 op) -> float_bin_op op args
+  | UnOp (I64 op) -> int_un_op I64 op args
+  | UnOp (I32 op) -> int_un_op I32 op args
+  | UnOp (F64 op) -> float_un_op F64 op args
+  | UnOp (F32 op) -> float_un_op F32 op args
   | StructNew i ->
       (*ZZZZ Use type *)
       no_loc (Struct (Some (idx st `Type i), List.map (fun i -> ("f", i)) args))
@@ -341,12 +371,6 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
            ( no_loc
                (Get (match s with Signed -> "signed" | Unsigned -> "unsigned")),
              args ))
-  | UnOp (I64 Eqz) | UnOp (I32 Eqz) ->
-      no_loc (BinOp (Eq, sequence args, no_loc (Int "0")))
-  | UnOp (I64 Reinterpret) | UnOp (I32 Reinterpret) ->
-      no_loc (Call (no_loc (Get "reinterpret"), args))
-  | UnOp (I32 (TruncSat (_, s))) -> no_loc (Cast (signage (Some s) args, I32))
-  | UnOp (I64 (TruncSat (_, s))) -> no_loc (Cast (signage (Some s) args, I64))
   | I64ExtendI32 s -> no_loc (Cast (signage (Some s) args, I64))
   | I32WrapI64 -> no_loc (Cast (sequence args, I32))
   | F64PromoteF32 -> no_loc (Cast (sequence args, F64))
@@ -366,16 +390,12 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | RefFunc f -> no_loc (Get (idx st `Func f))
   | RefNull t ->
       no_loc (Cast (no_loc Null, Ref { nullable = true; typ = heaptype st t }))
-  | RefIsNull -> no_loc (BinOp (Eq, sequence args, no_loc Null))
+  | RefIsNull -> no_loc (UnOp (Not, sequence args))
   | Select _ ->
       let e1, e2, e = three_args args in
       no_loc (Select (e, e1, e2))
   (* To implement now *)
   | Try _ | Throw _ | TupleExtract _ | ArrayFill _ | ArrayCopy _
-  | UnOp (F64 _)
-  | UnOp (F32 _)
-  | UnOp (I64 (Clz | Ctz | Popcnt | Trunc _ | ExtendS _))
-  | UnOp (I32 (Clz | Ctz | Popcnt | Trunc _ | ExtendS _))
   (* signed(x as i8) as i32 ? *)
   (* Later *)
   | ReturnCallIndirect _ | CallIndirect _ | RefAsNonNull | ArrayInitElem _

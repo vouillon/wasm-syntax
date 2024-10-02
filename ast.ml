@@ -6,6 +6,7 @@ include Wasm.Ast.Types (struct
 end)
 
 type signage = Wasm.Ast.signage = Signed | Unsigned
+type unop = Neg | Pos | Not
 
 type binop =
   | Add
@@ -57,6 +58,7 @@ type instr_descr =
   | ArrayGet of instr * instr
   | ArraySet of instr * instr * instr
   | BinOp of binop * instr * instr
+  | UnOp of unop * instr
   | Let of (idx option * valtype option) list * instr option
   | Br of label * instr option
   | Br_if of label * instr

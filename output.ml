@@ -88,37 +88,38 @@ let rectype f t =
 
 let globaltype = muttype valtype
 
-let binop f op =
-  Format.pp_print_string f
-    (match op with
-    | Add -> "+"
-    | Sub -> "-"
-    | Mul -> "*"
-    | Div None -> "/"
-    | Div (Some Signed) -> "/s"
-    | Div (Some Unsigned) -> "/u"
-    | Rem Signed -> "%s"
-    | Rem Unsigned -> "%u"
-    | And -> "&"
-    | Or -> "|"
-    | Xor -> "^"
-    | Shl -> "<<"
-    | Shr Signed -> ">>s"
-    | Shr Unsigned -> ">>u"
-    | Eq -> "=="
-    | Ne -> "!="
-    | Lt None -> "<"
-    | Lt (Some Signed) -> "<s"
-    | Lt (Some Unsigned) -> "<u"
-    | Gt None -> ">"
-    | Gt (Some Signed) -> ">s"
-    | Gt (Some Unsigned) -> ">u"
-    | Le None -> "<="
-    | Le (Some Signed) -> "<=s"
-    | Le (Some Unsigned) -> "<=u"
-    | Ge None -> ">="
-    | Ge (Some Signed) -> ">=s"
-    | Ge (Some Unsigned) -> ">=u")
+let binop op =
+  match op with
+  | Add -> "+"
+  | Sub -> "-"
+  | Mul -> "*"
+  | Div None -> "/"
+  | Div (Some Signed) -> "/s"
+  | Div (Some Unsigned) -> "/u"
+  | Rem Signed -> "%s"
+  | Rem Unsigned -> "%u"
+  | And -> "&"
+  | Or -> "|"
+  | Xor -> "^"
+  | Shl -> "<<"
+  | Shr Signed -> ">>s"
+  | Shr Unsigned -> ">>u"
+  | Eq -> "=="
+  | Ne -> "!="
+  | Lt None -> "<"
+  | Lt (Some Signed) -> "<s"
+  | Lt (Some Unsigned) -> "<u"
+  | Gt None -> ">"
+  | Gt (Some Signed) -> ">s"
+  | Gt (Some Unsigned) -> ">u"
+  | Le None -> "<="
+  | Le (Some Signed) -> "<=s"
+  | Le (Some Unsigned) -> "<=u"
+  | Ge None -> ">="
+  | Ge (Some Signed) -> ">=s"
+  | Ge (Some Unsigned) -> ">=u"
+
+let unop op = match op with Neg -> "-" | Pos -> "+" | Not -> "!"
 
 type prec =
   | Instruction
@@ -134,6 +135,7 @@ type prec =
   | Multiplication
   | Branch
   | Cast
+  | UnaryOp
   | Call
   | FieldAccess
   | Block
@@ -264,8 +266,11 @@ let rec instr prec f (i : instr) =
   | BinOp (op, i, i') ->
       let out, left, right = prec_op op in
       parentheses prec out f @@ fun () ->
-      Format.fprintf f "@[<2>%a@ %a@ %a@]" (instr left) i binop op (instr right)
-        i'
+      Format.fprintf f "@[<2>%a@ %s@ %a@]" (instr left) i (binop op)
+        (instr right) i'
+  | UnOp (op, i) ->
+      parentheses prec UnaryOp f @@ fun () ->
+      Format.fprintf f "@[%s%a@]" (unop op) (instr UnaryOp) i
   | Let (l, i) ->
       parentheses prec Let f @@ fun () ->
       let single f (x, t) =
@@ -342,8 +347,8 @@ and deliminated_instr f (i : instr) =
   | Block _ | Loop _ | If _ -> instr Instruction f i
   | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | String _ | Int _
   | Float _ | Cast _ | Test _ | Struct _ | StructGet _ | StructSet _ | Array _
-  | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | Let _ | Br _ | Br_if _
-  | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _ | Let _ | Br _
+  | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
   | Br_on_cast_fail _ | Return _ | Sequence _ | Null | Select _ ->
       Format.fprintf f "@[%a;@]" (instr Instruction) i
 

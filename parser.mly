@@ -21,6 +21,7 @@
 %token COLONEQUAL ":="
 %token QUOTE "'"
 %token DOT "."
+%token BANG "!"
 %token PLUS "+"
 %token MINUS "-"
 %token STAR "*"
@@ -76,6 +77,7 @@
 %left MINUS PLUS
 %left STAR SLASH SLASHS SLASHU PERCENTS PERCENTU
 %left AS IS
+%right prec_unary
 %left DOT LPAREN
 %left SHARP
 
@@ -305,6 +307,9 @@ plaininstr:
   { with_loc $sloc (ArraySet (i1, i2, i3)) }
 | i1 = instr "?" i2 = instr ":" i3 = instr
   { with_loc $sloc (Select (i1, i2, i3)) }
+| "!" i = instr { with_loc $sloc (UnOp (Not, i)) } %prec prec_unary
+| "+" i = instr { with_loc $sloc (UnOp (Pos, i)) } %prec prec_unary
+| "-" i = instr { with_loc $sloc (UnOp (Neg, i)) } %prec prec_unary
 
 instr:
 | i = blockinstr { i }
