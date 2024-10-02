@@ -288,6 +288,8 @@ module Text = struct
     | Start of idx
     | Elem of { id : id option; typ : reftype; init : expr list }
     | Data of { id : id option; init : string; mode : datamode }
+
+  type module_ = string option * modulefield list
 end
 
 module Binary = struct

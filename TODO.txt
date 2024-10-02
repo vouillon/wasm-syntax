@@ -52,13 +52,10 @@ Two-step inference?
 ============
 
 ref.as_non_null (need types?)
-unary ops (fxx.abs, ...)
-select
 we need to put constraints on integer/float constants and eliminate afterwards
 exceptions
 tuples
 array.copy/fill
-! for eqz / ref.null
 block types? |t1,..,t2| -> t { ... }
 
 desugar tuples
