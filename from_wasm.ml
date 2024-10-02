@@ -484,7 +484,7 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
 let module_ (_, fields) = List.map (fun f -> modulefield () f) fields
 
 (*
-Use imports and exports as hints
+Use imports and exports as hints for naming functions
 Collect exports to associate them to the corresponding module field
 
 - get existing type names

@@ -303,8 +303,11 @@ label:
 
 blocktype(cont):
 | r = typeuse_no_bindings(cont)
-  { map_fst (fun t -> Option.map (fun v -> Idx v) (fst t)) r }
-  (*ZZZ single result / implicit? validate?*)
+  { (match fst r with
+     | None, Some {params = [||]; results = [|typ|]} -> Some (Valtype typ)
+     | None, None -> None
+     | _ -> Some (Typeuse (fst r))),
+    snd r }
 
 plaininstr:
 | THROW i = idx { Throw i }

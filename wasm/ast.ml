@@ -130,7 +130,7 @@ struct
     | Le
     | Ge
 
-  type blocktype = Idx of X.idx | ValType of X.valtype
+  type blocktype = Typeuse of X.typeuse | Valtype of X.valtype
   type memarg = { offset : Int32.t; align : Int32.t }
 
   type instr =
