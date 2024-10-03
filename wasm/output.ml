@@ -178,7 +178,7 @@ let escape_string s =
 
 let quoted_string s =
   let i, s = escape_string s in
-  Atom' { len = i + 2; s }
+  Atom' { len = i + 2; s = "\"" ^ s ^ "\"" }
 
 let exports l =
   List.map (fun name -> List [ Atom "export"; quoted_string name ]) l
@@ -481,12 +481,13 @@ let modulefield f =
         :: (opt_id id
            @ (match mode with
              | Passive -> []
-             | Active (i, e) ->
-                 [
-                   (*ZZZ Abbreviation*)
-                   List [ Atom "memory"; index i ];
-                   List [ Atom "offset"; instrs e ];
-                 ])
+             | Active (i, e) -> (
+                 (*ZZZ Abbreviation*)
+                 (if i = Num 0l then [] else [ List [ Atom "memory"; index i ] ])
+                 @
+                 match e with
+                 | [ i ] -> [ instr i ]
+                 | _ -> [ List [ Atom "offset"; instrs e ] ]))
            @ [ quoted_string init ]))
   | Start idx -> List [ Atom "start"; index idx ]
   | _ -> List [ Atom "other" ]
