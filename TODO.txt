@@ -23,14 +23,6 @@ syntaxic sugar:
 
 collect constraints on untyped variables while parsing
 
-Folding:
-- stack with placeholders for value that do not correspond
-  to an expression (multiple returns / block inputs)
-- peek an instruction; compute its arity and peek arguments from the stack
-  if no return value, emit instruction; otherwise;
-  push on the stack with count of return values
-- at end of block; write stack contents
-
 Keep strings as strings
 
 Precedence tests (read and write text and check unchanged)
@@ -99,3 +91,14 @@ for (i = ...; e; i = ...) { ... }
 
 Attaching comments: https://jayconrod.com/
 https://journal.stuffwithstuff.com/2015/09/08/the-hardest-program-ive-ever-written/#4-note
+
+
+Track empty lines?
+Two kind of comments : inline / line
+Distinguish comment on its own line?
+
+- Get all expr locations
+- Sort tokens
+- Attach comments
+
+line comments are before except if there is a blank line inbetween

@@ -4,6 +4,7 @@ type sexp =
   | Atom of string
   | List of sexp list
   | Block of sexp list
+  | VerticalBlock of sexp list
   | StructuredBlock of structure list
 
 and structure = Delimiter of sexp | Contents of sexp list
@@ -23,8 +24,14 @@ let rec format_sexp f s =
            ~pp_sep:(fun f () -> Format.fprintf f "@ ")
            format_sexp)
         l
+  | VerticalBlock l ->
+      Format.fprintf f "@[<v>%a@]"
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f "@ ")
+           format_sexp)
+        l
   | StructuredBlock l ->
-      Format.fprintf f "@[";
+      Format.fprintf f "@[<hv>";
       List.iteri
         (fun i s ->
           match s with
@@ -371,6 +378,8 @@ let rec instr i =
       (*ZZZ Comment?*)
   | Folded (i, l) -> List (instr i :: List.map instr l)
 
+let instrs l = VerticalBlock (List.map instr l)
+
 let subtype (id, { typ; supertype; final }) =
   if final && Option.is_none supertype then
     List (Atom "type" :: (opt_id id @ [ comptype typ ]))
@@ -403,14 +412,14 @@ let modulefield f =
   match f with
   | Types [| t |] -> subtype t
   | Types l -> List (Atom "rec" :: List.map subtype (Array.to_list l))
-  | Func { id; typ; locals; instrs; exports = e } ->
+  | Func { id; typ; locals; instrs = i; exports = e } ->
       List
         (Atom "func"
         :: (opt_id id @ exports e @ fundecl typ
            @ List.map
                (fun (i, t) -> List (Atom "local" :: (opt_id i @ [ valtype t ])))
                locals
-           @ List.map instr instrs))
+           @ [ instrs i ]))
   | Import { module_; name; id; desc; exports = e } ->
       List
         (Atom "import" :: quoted_string module_ :: quoted_string name
@@ -426,7 +435,7 @@ let modulefield f =
   | Global { id; typ; init; exports = e } ->
       List
         (Atom "global"
-        :: (opt_id id @ exports e @ (globaltype typ :: List.map instr init)))
+        :: (opt_id id @ exports e @ [ globaltype typ; instrs init ]))
   | Tag { id; typ; exports = e } ->
       List (Atom "tag" :: (opt_id id @ exports e @ fundecl typ))
   | Data { id; init; mode } ->
@@ -439,7 +448,7 @@ let modulefield f =
                  [
                    (*ZZZ Abbreviation*)
                    List [ Atom "memory"; index i ];
-                   List (Atom "offset" :: List.map instr e);
+                   List [ Atom "offset"; instrs e ];
                  ])
            @ [ quoted_string init ]))
   | Start idx -> List [ Atom "start"; index idx ]
