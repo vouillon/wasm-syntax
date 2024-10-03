@@ -32,7 +32,7 @@ and tuple f l =
   match l with
   | [ t ] -> valtype f t
   | _ ->
-      Format.fprintf f "@[<1>(%a)@]"
+      Format.fprintf f "(@[%a@])"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            valtype)
@@ -67,7 +67,7 @@ let comptype f (t : comptype) =
            ~pp_sep:(fun f () -> Format.fprintf f ",@;<1 2>")
            (fun f (nm, t) -> Format.fprintf f "@[<2>%s:@ %a@]" nm fieldtype t))
         (Array.to_list l)
-  | Array t -> Format.fprintf f "@]@ @[<1>[%a]@]" fieldtype t
+  | Array t -> Format.fprintf f "@]@ [@[%a@]]" fieldtype t
 
 let subtype f (nm, { typ; supertype; final }) =
   Format.fprintf f "@[<hv>@[type@ %s%s" nm (if final then "" else " open");
@@ -142,9 +142,9 @@ type prec =
 
 let parentheses expected actual f g =
   if expected > actual then (
-    Format.fprintf f "@[<1>(";
+    Format.fprintf f "(@[(";
     g ();
-    Format.fprintf f ")@]")
+    Format.fprintf f "@])")
   else g ()
 
 let prec_op op =
@@ -213,7 +213,7 @@ let rec instr prec f (i : instr) =
       Format.fprintf f "@[<2>%s@ =@ %a@]" x (instr Assignement) i
   | Call (i, l) ->
       parentheses prec Call f @@ fun () ->
-      Format.fprintf f "@[<2>%a@,@[<1>(%a)@]@]" (instr Call) i
+      Format.fprintf f "@[<2>%a@,(@[%a@])@]" (instr Call) i
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))
@@ -246,13 +246,13 @@ let rec instr prec f (i : instr) =
       Format.fprintf f "@[<2>%a.%s@ =@ %a@]" (instr FieldAccess) i s
         (instr Assignement) i'
   | Array (t, i, n) ->
-      Format.fprintf f "@[<1>[";
+      Format.fprintf f "[@[";
       Option.iter (fun t -> Format.fprintf f "%s|@ " t) t;
-      Format.fprintf f "%a;@ %a]@]" (instr Instruction) i (instr Instruction) n
+      Format.fprintf f "%a;@ %a@]]" (instr Instruction) i (instr Instruction) n
   | ArrayFixed (t, l) ->
-      Format.fprintf f "@[<1>[";
+      Format.fprintf f "[@[";
       Option.iter (fun t -> Format.fprintf f "%s|@ " t) t;
-      Format.fprintf f "%a]@]"
+      Format.fprintf f "%a@]]"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))
@@ -283,7 +283,7 @@ let rec instr prec f (i : instr) =
           match l with
           | [ p ] -> single f p
           | l ->
-              Format.fprintf f "@[<1>(%a)]"
+              Format.fprintf f "(@[%a@])"
                 (Format.pp_print_list
                    ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
                    single)
@@ -326,7 +326,7 @@ let rec instr prec f (i : instr) =
       Option.iter (fun i -> Format.fprintf f "@ %a" (instr Branch) i) i;
       Format.fprintf f "@]"
   | Sequence l ->
-      Format.fprintf f "@[<1>(%a)@]"
+      Format.fprintf f "(@[%a@])"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))
@@ -367,7 +367,7 @@ let fundecl f (name, typ, sign) =
   Option.iter (fun typ -> Format.fprintf f "@ : %s@ " typ) typ;
   Option.iter
     (fun { named_params; results } ->
-      Format.fprintf f "@,@[<1>(%a)@]"
+      Format.fprintf f "@,(@[%a@])"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (fun f (id, t) ->
