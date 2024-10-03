@@ -50,9 +50,7 @@ tuples
 array.copy/fill
 block types? |t1,..,t2| -> t { ... }
 
-let utf8_length s =
-  Uuseg_string.fold_utf_8 `Grapheme_cluster (fun n _ -> n + 1) 0 s
-==> Format_.pp_print_as fs n s)
+strings: we should probably not escape them as much as we do
 
 desugar tuples
 ==============

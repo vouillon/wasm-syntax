@@ -221,7 +221,11 @@ let rec instr prec f (i : instr) =
   | String (t, s) ->
       Format.fprintf f "@[";
       Option.iter (fun t -> Format.fprintf f "%s#" t) t;
-      Format.fprintf f "\"%s\"@]" (String.escaped s) (*ZZZ Escape *)
+      Format.fprintf f "\"%a\"@]"
+        (fun f s ->
+          let len, s = Wasm.Output.escape_string s in
+          Format.pp_print_as f len s)
+        s
   | Int s | Float s -> Format.pp_print_string f s
   | Cast (i, t) ->
       parentheses prec Cast f @@ fun () ->

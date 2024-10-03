@@ -2,6 +2,7 @@ open Ast.Text
 
 type sexp =
   | Atom of string
+  | Atom' of { len : int; s : string }
   | List of sexp list
   | Block of sexp list
   | VerticalBlock of sexp list
@@ -12,6 +13,7 @@ and structure = Delimiter of sexp | Contents of sexp list
 let rec format_sexp f s =
   match s with
   | Atom s -> Format.pp_print_string f s
+  | Atom' { len; s } -> Format.pp_print_as f len s
   | List l ->
       Format.fprintf f "@[<2>(%a)@]"
         (Format.pp_print_list
@@ -132,16 +134,51 @@ let blocktype =
   option @@ fun t ->
   match t with Valtype t -> [ valtype t ] | Typeuse t -> typeuse' t
 
+let utf8_length s =
+  let segmenter = Uuseg.create `Grapheme_cluster in
+  let has_grapheme = ref false in
+  let flush_segment acc =
+    let acc = if !has_grapheme then acc + 1 else acc in
+    has_grapheme := false;
+    acc
+  in
+  let rec add acc v =
+    match Uuseg.add segmenter v with
+    | `Uchar _ ->
+        has_grapheme := true;
+        add acc `Await
+    | `Boundary -> add (flush_segment acc) `Await
+    | `Await | `End -> acc
+  in
+  let rec loop acc i len =
+    if i >= len then flush_segment (add acc `End)
+    else
+      let dec = String.get_utf_8_uchar s i in
+      let acc = add acc (`Uchar (Uchar.utf_decode_uchar dec)) in
+      loop acc (i + Uchar.utf_decode_length dec) len
+  in
+  loop 0 0 (String.length s)
+
 let escape_string s =
   let b = Buffer.create (String.length s + 2) in
   for i = 0 to String.length s - 1 do
     let c = s.[i] in
-    if c >= ' ' && c <= '~' && c <> '"' && c <> '\\' then Buffer.add_char b c
-    else Printf.bprintf b "\\%02x" (Char.code c)
+    if c >= ' ' && c <> '\x7f' && c <> '"' && c <> '\\' then Buffer.add_char b c
+    else
+      match c with
+      | '\t' -> Buffer.add_string b "\\t"
+      | '\n' -> Buffer.add_string b "\\n"
+      | '\r' -> Buffer.add_string b "\\r"
+      | '"' -> Buffer.add_string b "\\\""
+      | '\\' -> Buffer.add_string b "\\\\"
+      | _ -> Printf.bprintf b "\\%02x" (Char.code c)
   done;
-  Buffer.contents b
+  let s = Buffer.contents b in
+  (utf8_length s, s)
 
-let quoted_string s = Atom ("\"" ^ escape_string s ^ "\"")
+let quoted_string s =
+  let i, s = escape_string s in
+  Atom' { len = i + 2; s }
 
 let exports l =
   List.map (fun name -> List [ Atom "export"; quoted_string name ]) l
