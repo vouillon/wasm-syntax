@@ -14,16 +14,41 @@ let map_instrs func (name, fields) =
 
 (****)
 
+let functype_arity { params; results } =
+  (Array.length params, Array.length results)
+
+let typeuse_arity (i, ty) =
+  match (i, ty) with
+  | _, Some t -> functype_arity t
+  | Some _, None -> assert false (* ZZZ lookup type in env *)
+  | None, None -> assert false
+
+let blocktype_arity t =
+  match t with
+  | None -> (0, 0)
+  | Some (Valtype _) -> (0, 1)
+  | Some (Typeuse t) -> typeuse_arity t
+
+let unreachable = 100_000
+
 let arity i =
   match i with
-  | Block _ | Loop _ | If _ | Try _ | Br _ | Br_if _ | Br_table _ | Br_on_null _
-  | Br_on_non_null _ | Br_on_cast _ | Br_on_cast_fail _ | Return | Call _
-  | CallRef _ | CallIndirect _ | ReturnCall _ | ReturnCallRef _
-  | ReturnCallIndirect _ | StructNew _ | StructNewDefault _ ->
+  | Block { typ; _ } | Loop { typ; _ } | If { typ; _ } | Try { typ; _ } ->
+      blocktype_arity typ
+  | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | Br_on_cast_fail _ | Return (* Label type *)
+  | Call _ | ReturnCall _ (* Function type *) | CallRef _ | ReturnCallRef _
+  | StructNew _ | StructNewDefault _ (* Types *) ->
       assert false
-  | Unreachable -> (0, 0)
+  | ReturnCallIndirect (_, ty) ->
+      let i, _ = typeuse_arity ty in
+      (i + 1, unreachable)
+  | CallIndirect (_, ty) ->
+      let i, o = typeuse_arity ty in
+      (i + 1, o)
+  | Unreachable -> (0, unreachable)
   | Nop -> (0, 0)
-  | Throw _ -> (1, 0)
+  | Throw _ -> (1, unreachable)
   | Drop -> (1, 0)
   | Select _ -> (3, 1)
   | LocalGet _ -> (0, 1)
@@ -67,7 +92,7 @@ let arity i =
   | AnyConvertExtern -> (1, 1)
   | Folded _ -> assert false
   (* Binaryen extensions *)
-  | Pop _ -> (1, 1)
+  | Pop _ -> (0, 1)
   | TupleMake n -> (Int32.to_int n, 1)
   | TupleExtract _ -> (1, 1)
 
