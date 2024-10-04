@@ -482,7 +482,6 @@ let modulefield f =
            @ (match mode with
              | Passive -> []
              | Active (i, e) -> (
-                 (*ZZZ Abbreviation*)
                  (if i = Num 0l then [] else [ List [ Atom "memory"; index i ] ])
                  @
                  match e with

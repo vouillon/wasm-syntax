@@ -14,37 +14,74 @@ let map_instrs func (name, fields) =
 
 (****)
 
+module Int32Map = Map.Make (Int32)
+module StringMap = Map.Make (String)
+
+module Tbl = struct
+  type 'a t = { by_index : 'a Int32Map.t; by_name : 'a StringMap.t }
+
+  let empty = { by_index = Int32Map.empty; by_name = StringMap.empty }
+end
+
+let lookup (tbl : _ Tbl.t) idx =
+  try
+    match idx with
+    | Num i -> Int32Map.find i tbl.by_index
+    | Id i -> StringMap.find i tbl.by_name
+  with Not_found -> assert false (*ZZZ *)
+
+type module_env = {
+  types : subtype Tbl.t;
+  functions : typeuse_no_bindings Tbl.t;
+}
+
+type env = { module_env : module_env }
+
+let lookup_type env idx = lookup env.module_env.types idx
+
 let functype_arity { params; results } =
   (Array.length params, Array.length results)
 
-let typeuse_arity (i, ty) =
+let type_arity env idx =
+  match (lookup_type env idx).typ with
+  | Func ty -> functype_arity ty
+  | Struct _ | Array _ -> assert false (*ZZZ*)
+
+let typeuse_arity env (i, ty) =
   match (i, ty) with
   | _, Some t -> functype_arity t
-  | Some _, None -> assert false (* ZZZ lookup type in env *)
+  | Some i, None -> type_arity env i
   | None, None -> assert false
 
-let blocktype_arity t =
+let blocktype_arity env t =
   match t with
   | None -> (0, 0)
   | Some (Valtype _) -> (0, 1)
-  | Some (Typeuse t) -> typeuse_arity t
+  | Some (Typeuse t) -> typeuse_arity env t
 
+let function_arity env f = typeuse_arity env (lookup env.module_env.functions f)
 let unreachable = 100_000
 
-let arity i =
+let arity env i =
   match i with
   | Block { typ; _ } | Loop { typ; _ } | If { typ; _ } | Try { typ; _ } ->
-      blocktype_arity typ
+      blocktype_arity env typ
+  | Call f -> function_arity env f
+  | ReturnCall f ->
+      let i, _ = function_arity env f in
+      (i, unreachable)
+  | CallRef t -> type_arity env t
+  | ReturnCallRef t ->
+      let i, _ = type_arity env t in
+      (i, unreachable)
   | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
-  | Br_on_cast_fail _ | Return (* Label type *)
-  | Call _ | ReturnCall _ (* Function type *) | CallRef _ | ReturnCallRef _
-  | StructNew _ | StructNewDefault _ (* Types *) ->
+  | Br_on_cast_fail _ | Return (* Label type *) ->
       assert false
   | ReturnCallIndirect (_, ty) ->
-      let i, _ = typeuse_arity ty in
+      let i, _ = typeuse_arity env ty in
       (i + 1, unreachable)
   | CallIndirect (_, ty) ->
-      let i, o = typeuse_arity ty in
+      let i, o = typeuse_arity env ty in
       (i + 1, o)
   | Unreachable -> (0, unreachable)
   | Nop -> (0, 0)
@@ -65,6 +102,11 @@ let arity i =
   | RefEq -> (2, 1)
   | RefTest _ -> (1, 1)
   | RefCast _ -> (1, 1)
+  | StructNew t -> (
+      match (lookup_type env t).typ with
+      | Struct f -> (Array.length f, 1)
+      | Func _ | Array _ -> assert false)
+  | StructNewDefault _ -> (0, 1)
   | StructGet _ -> (1, 1)
   | StructSet _ -> (2, 0)
   | ArrayNew _ -> (2, 1)
@@ -110,57 +152,63 @@ let rec consume n folded =
         if n >= n' then (0, i) :: consume (n - n') folded
         else (n' - n, i) :: rem
 
-let rec fold_stream folded stream : Ast.Text.instr list =
+let rec fold_stream env folded stream : Ast.Text.instr list =
   match stream with
   | [] -> List.rev (List.map snd folded)
   | (Block ({ block; _ } as b) as i) :: rem ->
-      let block = fold_stream [] block in
-      let inputs, outputs = arity i in
+      let block = fold_stream env (*ZZZ*) [] block in
+      let inputs, outputs = arity env i in
       let folded = consume inputs folded in
-      fold_stream ((outputs, Folded (Block { b with block }, [])) :: folded) rem
+      fold_stream env
+        ((outputs, Folded (Block { b with block }, [])) :: folded)
+        rem
   | (Loop ({ block; _ } as b) as i) :: rem ->
-      let block = fold_stream [] block in
-      let inputs, outputs = arity i in
+      let block = fold_stream env [] block in
+      let inputs, outputs = arity env i in
       let folded = consume inputs folded in
-      fold_stream ((outputs, Folded (Loop { b with block }, [])) :: folded) rem
+      fold_stream env
+        ((outputs, Folded (Loop { b with block }, [])) :: folded)
+        rem
   | (If ({ if_block; else_block; _ } as b) as i) :: rem ->
-      let if_block = fold_stream [] if_block in
-      let else_block = fold_stream [] else_block in
-      let inputs, outputs = arity i in
-      fold_instr folded [] [] rem
+      let if_block = fold_stream env [] if_block in
+      let else_block = fold_stream env [] else_block in
+      let inputs, outputs = arity env i in
+      fold_instr env folded [] [] rem
         (If { b with if_block; else_block })
         inputs outputs
-  | Folded (i, l) :: rem -> fold_stream folded (l @ (i :: rem))
+  | Folded (i, l) :: rem -> fold_stream env folded (l @ (i :: rem))
   | i :: rem ->
-      let inputs, outputs = arity i in
-      fold_instr folded [] [] rem i inputs outputs
+      let inputs, outputs = arity env i in
+      fold_instr env folded [] [] rem i inputs outputs
 
-and fold_instr folded args tentative_args stream i inputs outputs =
+and fold_instr env folded args tentative_args stream i inputs outputs =
   if inputs = 0 then
-    fold_stream
+    fold_stream env
       ((outputs, Folded (i, args)) :: push_back tentative_args folded)
       stream
   else
     match folded with
     | [] ->
-        fold_stream
+        fold_stream env
           ((outputs, Folded (i, args)) :: push_back tentative_args folded)
           stream
     | (n, i') :: folded' ->
         if n <= inputs then
           if n > 0 then
             let args = (i' :: tentative_args) @ args in
-            fold_instr folded' args [] stream i (inputs - n) outputs
+            fold_instr env folded' args [] stream i (inputs - n) outputs
           else
             let tentative_args = i' :: tentative_args in
-            fold_instr folded' args tentative_args stream i inputs outputs
+            fold_instr env folded' args tentative_args stream i inputs outputs
         else
-          fold_stream
+          fold_stream env
             ((outputs, Folded (i, args))
             :: push_back tentative_args ((n - inputs, i') :: folded'))
             stream
 
-let fold m = map_instrs (fold_stream []) m
+let fold m =
+  let module_env = { types = Tbl.empty; functions = Tbl.empty } in
+  map_instrs (fold_stream { module_env } []) m
 
 (****)
 
