@@ -10,27 +10,34 @@ type sexp =
 
 and structure = Delimiter of sexp | Contents of sexp list
 
-let rec format_sexp f s =
+let rec format_sexp first f s =
   match s with
   | Atom s -> Format.pp_print_string f s
   | Atom' { len; s } -> Format.pp_print_as f len s
   | List l ->
+      let first = ref true in
       Format.fprintf f "(@[<hv1>%a@])"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-           format_sexp)
+           (fun f v ->
+             format_sexp !first f v;
+             first := false))
         l
   | Block l ->
-      Format.fprintf f "@[%a@]"
+      let first = ref first in
+      (if !first then Format.fprintf f "@[<1>%a@]"
+       else Format.fprintf f "@[%a@]")
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-           format_sexp)
+           (fun f v ->
+             format_sexp !first f v;
+             first := false))
         l
   | VerticalBlock l ->
       Format.fprintf f "@[<v>%a@]"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-           format_sexp)
+           (format_sexp false))
         l
   | StructuredBlock l ->
       Format.fprintf f "@[<hv>";
@@ -39,13 +46,13 @@ let rec format_sexp f s =
           match s with
           | Delimiter d ->
               if i > 0 then Format.fprintf f "@ ";
-              Format.fprintf f "%a" format_sexp d
+              Format.fprintf f "%a" (format_sexp false) d
           | Contents l ->
               if l <> [] then
                 Format.fprintf f "@;<1 2>@[<hv>%a@]"
                   (Format.pp_print_list
                      ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-                     format_sexp)
+                     (format_sexp false))
                   l)
         l;
       Format.fprintf f "@]"
@@ -416,10 +423,11 @@ let rec instr i =
   | TupleExtract (i, j) -> Block [ Atom "tuple.extract"; integer i; integer j ]
   | Folded (If { label; typ; if_block; else_block }, l) ->
       List
-        (Block (Atom "if" :: (opt_id label @ blocktype typ))
-         :: List.map instr l
-        @ list ~always:true "then" (List.map instr) if_block
-        @ list "else" (List.map instr) else_block)
+        (Block
+           (Block (Atom "if" :: (opt_id label @ blocktype typ))
+           :: List.map instr l)
+        :: (list ~always:true "then" (List.map instr) if_block
+           @ list "else" (List.map instr) else_block))
   | Folded (Block { label; typ; block }, l) ->
       assert (l = []);
       List
@@ -445,7 +453,7 @@ let rec instr i =
            match catch_all with
            | None -> []
            | Some l -> [ List (Atom "catch_all" :: List.map instr l) ]))
-  | Folded (i, l) -> List (instr i :: List.map instr l)
+  | Folded (i, l) -> List [ Block (instr i :: List.map instr l) ]
 
 let instrs l = VerticalBlock (List.map instr l)
 
@@ -485,15 +493,17 @@ let modulefield f =
   | Types l -> List (Atom "rec" :: List.map subtype (Array.to_list l))
   | Func { id; typ; locals; instrs = i; exports = e } ->
       List
-        [
-          Block
-            (Block (Atom "func" :: (opt_id id @ exports e @ fundecl typ))
-            :: List.map
-                 (fun (i, t) ->
-                   List (Atom "local" :: (opt_id i @ [ valtype t ])))
-                 locals);
-          instrs i;
-        ]
+        (Block (Atom "func" :: (opt_id id @ exports e @ fundecl typ))
+        :: ((if locals = [] then []
+             else
+               [
+                 Block
+                   (List.map
+                      (fun (i, t) ->
+                        List (Atom "local" :: (opt_id i @ [ valtype t ])))
+                      locals);
+               ])
+           @ [ instrs i ]))
   | Import { module_; name; id; desc; exports = e } ->
       List
         [
@@ -536,5 +546,5 @@ let modulefield f =
 (*ZZZ*)
 
 let module_ f (id, fields) =
-  Format.fprintf f "%a@." format_sexp
+  Format.fprintf f "%a@." (format_sexp false)
     (List [ Atom "module"; Block (opt_id id @ List.map modulefield fields) ])
