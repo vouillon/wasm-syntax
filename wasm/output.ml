@@ -413,7 +413,7 @@ let rec instr i =
   | ReturnCall f -> Block [ Atom "return_call"; index f ]
   | ReturnCallRef typ -> Block [ Atom "return_call_ref"; index typ ]
   | TupleMake i -> Block [ Atom "tuple.make"; integer i ]
-  | TupleExtract (i, j) -> Block [ Atom "tuple.make"; integer i; integer j ]
+  | TupleExtract (i, j) -> Block [ Atom "tuple.extract"; integer i; integer j ]
   | Folded (If { label; typ; if_block; else_block }, l) ->
       List
         (Atom "if"

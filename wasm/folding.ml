@@ -5,8 +5,8 @@ let map_instrs func (name, fields) =
     List.map
       (fun f ->
         match f with
-        | Func ({ typ; instrs; _ } as f) ->
-            Func { f with instrs = func (Some typ) instrs }
+        | Func ({ typ; locals; instrs; _ } as f) ->
+            Func { f with instrs = func (Some (typ, locals)) instrs }
         | Global ({ init; _ } as g) -> Global { g with init = func None init }
         | Elem ({ init; _ } as e) ->
             Elem { e with init = List.map (fun l -> func None l) init }
@@ -42,7 +42,12 @@ let lookup (tbl : _ Tbl.t) idx =
     | Id i -> StringMap.find i tbl.by_name
   with Not_found -> assert false (*ZZZ *)
 
-type module_env = { types : subtype Tbl.t; functions : typeuse Tbl.t }
+type outer_env = {
+  types : subtype Tbl.t;
+  functions : typeuse Tbl.t;
+  globals : globaltype Tbl.t;
+  locals : valtype Tbl.t;
+}
 
 let types m =
   List.fold_left
@@ -67,17 +72,53 @@ let functions f =
           tbl)
     Tbl.empty f
 
-let module_env (_, m) = { types = types m; functions = functions m }
+let globals f =
+  List.fold_left
+    (fun tbl f ->
+      match f with
+      | Global { id; typ; _ } | Import { id; desc = Global typ; _ } ->
+          Tbl.add id typ tbl
+      | Import { desc = Func _ | Memory _ | Tag _; _ }
+      | Types _ | Func _ | Memory _ | Tag _ | Export _ | Start _ | Elem _
+      | Data _ ->
+          tbl)
+    Tbl.empty f
+
+let locals env typ l =
+  let tbl =
+    match typ with
+    | _, Some (params, _) ->
+        List.fold_left
+          (fun tbl (id, typ) -> Tbl.add id typ tbl)
+          Tbl.empty params
+    | Some ty, None -> (
+        match (lookup env.types ty).typ with
+        | Func ty ->
+            Array.fold_left
+              (fun tbl typ -> Tbl.add None typ tbl)
+              Tbl.empty ty.params
+        | Struct _ | Array _ -> assert false (*ZZZ*))
+    | None, None -> assert false
+  in
+  List.fold_left (fun tbl (id, typ) -> Tbl.add id typ tbl) tbl l
+
+let module_env (_, m) =
+  {
+    types = types m;
+    functions = functions m;
+    globals = globals m;
+    locals = Tbl.empty;
+  }
 
 (****)
 
 type env = {
-  module_env : module_env;
+  outer_env : outer_env;
   labels : (id option * int) list;
   return_arity : int;
 }
 
-let lookup_type env idx = lookup env.module_env.types idx
+let lookup_type env idx = lookup env.outer_env.types idx
 
 let functype_no_bindings_arity { params; results } =
   (Array.length params, Array.length results)
@@ -107,7 +148,11 @@ let blocktype_arity env t =
   | Some (Valtype _) -> (0, 1)
   | Some (Typeuse t) -> typeuse_no_bindings_arity env t
 
-let function_arity env f = typeuse_arity env (lookup env.module_env.functions f)
+let function_arity env f = typeuse_arity env (lookup env.outer_env.functions f)
+let valtype_arity t = match t with Tuple l -> List.length l | _ -> 1
+let globaltype_arity (t : globaltype) = valtype_arity t.typ
+let global_arity env g = globaltype_arity (lookup env.outer_env.globals g)
+let local_arity env l = valtype_arity (lookup env.outer_env.locals l)
 let unreachable = 100_000
 
 let label_arity env idx =
@@ -166,11 +211,13 @@ let arity env i =
   | Throw _ -> (1, unreachable)
   | Drop -> (1, 0)
   | Select _ -> (3, 1)
-  | LocalGet _ -> (0, 1)
-  | LocalSet _ -> (1, 0)
-  | LocalTee _ -> (1, 1)
-  | GlobalGet _ -> (0, 1)
-  | GlobalSet _ -> (1, 0)
+  | LocalGet l -> (0, local_arity env l)
+  | LocalSet l -> (local_arity env l, 0)
+  | LocalTee l ->
+      let i = local_arity env l in
+      (i, i)
+  | GlobalGet g -> (0, global_arity env g)
+  | GlobalSet g -> (global_arity env g, 0)
   | I32Load8 _ -> (1, 1)
   | I32Store8 _ -> (1, 1)
   | RefNull _ -> (0, 1)
@@ -213,8 +260,8 @@ let arity env i =
   | Folded _ -> assert false
   (* Binaryen extensions *)
   | Pop _ -> (0, 1)
-  | TupleMake n -> (Int32.to_int n, 1)
-  | TupleExtract _ -> (1, 1)
+  | TupleMake n -> (Int32.to_int n, Int32.to_int n)
+  | TupleExtract (n, _) -> (Int32.to_int n, 1)
 
 (****)
 
@@ -313,15 +360,20 @@ and fold_instr env folded args tentative_args stream i inputs outputs =
             stream
 
 let fold m =
-  let env = { module_env = module_env m; labels = []; return_arity = 0 } in
+  let env = { outer_env = module_env m; labels = []; return_arity = 0 } in
   map_instrs
     (fun typ str ->
       let env =
         match typ with
         | None -> env
-        | Some ty ->
+        | Some (ty, l) ->
             let _, i = typeuse_arity env ty in
-            { env with labels = [ (None, i) ]; return_arity = i }
+            {
+              outer_env =
+                { env.outer_env with locals = locals env.outer_env ty l };
+              labels = [ (None, i) ];
+              return_arity = i;
+            }
       in
       fold_stream env [] str)
     m

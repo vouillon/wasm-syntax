@@ -31,7 +31,7 @@ struct
     | F64
     | V128
     | Ref of reftype
-    | Tuple of valtype list
+    | Tuple of valtype list (* Tuples are not nested *)
 
   type functype = { params : valtype array; results : valtype array }
   type nonrec packedtype = packedtype = I8 | I16
