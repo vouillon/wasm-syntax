@@ -15,7 +15,7 @@ let rec format_sexp f s =
   | Atom s -> Format.pp_print_string f s
   | Atom' { len; s } -> Format.pp_print_as f len s
   | List l ->
-      Format.fprintf f "(@[<1>%a@])"
+      Format.fprintf f "(@[<hv1>%a@])"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f "@ ")
            format_sexp)
@@ -416,29 +416,31 @@ let rec instr i =
   | TupleExtract (i, j) -> Block [ Atom "tuple.extract"; integer i; integer j ]
   | Folded (If { label; typ; if_block; else_block }, l) ->
       List
-        (Atom "if"
-        :: (opt_id label @ blocktype typ @ List.map instr l
-           @ list ~always:true "then" (List.map instr) if_block
-           @ list "else" (List.map instr) else_block))
+        (Block (Atom "if" :: (opt_id label @ blocktype typ))
+         :: List.map instr l
+        @ list ~always:true "then" (List.map instr) if_block
+        @ list "else" (List.map instr) else_block)
   | Folded (Block { label; typ; block }, l) ->
       assert (l = []);
       List
-        (Atom "block" :: (opt_id label @ blocktype typ @ List.map instr block))
+        (Block (Atom "block" :: (opt_id label @ blocktype typ))
+        :: List.map instr block)
       (*ZZZ Comment?*)
   | Folded (Loop { label; typ; block }, l) ->
       assert (l = []);
-      List (Atom "loop" :: (opt_id label @ blocktype typ @ List.map instr block))
+      List
+        (Block (Atom "loop" :: (opt_id label @ blocktype typ))
+        :: List.map instr block)
       (*ZZZ Comment?*)
   | Folded (Try { label; typ; block; catches; catch_all }, l) ->
       assert (l = []);
       List
-        (Atom "try"
-        :: (opt_id label @ blocktype typ
-           @ [ List (Atom "do" :: List.map instr block) ]
-           @ List.map
-               (fun (i, l) ->
-                 List (Block [ Atom "catch"; index i ] :: List.map instr l))
-               catches
+        (Block (Atom "try" :: (opt_id label @ blocktype typ))
+        :: List (Atom "do" :: List.map instr block)
+        :: (List.map
+              (fun (i, l) ->
+                List (Block [ Atom "catch"; index i ] :: List.map instr l))
+              catches
            @
            match catch_all with
            | None -> []
@@ -449,18 +451,20 @@ let instrs l = VerticalBlock (List.map instr l)
 
 let subtype (id, { typ; supertype; final }) =
   if final && Option.is_none supertype then
-    List (Atom "type" :: (opt_id id @ [ comptype typ ]))
+    List [ Block (Atom "type" :: opt_id id); comptype typ ]
   else
     List
-      (Atom "type"
-      :: (opt_id id
-         @ [
-             List
-               (Atom "sub"
-               :: ((if final then [ Atom "final" ] else [])
-                  @ option (fun i -> [ index i ]) supertype
-                  @ [ comptype typ ]));
-           ]))
+      [
+        Block (Atom "type" :: opt_id id);
+        List
+          [
+            Block
+              (Atom "sub"
+              :: ((if final then [ Atom "final" ] else [])
+                 @ option (fun i -> [ index i ]) supertype));
+            comptype typ;
+          ];
+      ]
 
 let fundecl (idx, typ) =
   option typeuse idx
@@ -481,28 +485,37 @@ let modulefield f =
   | Types l -> List (Atom "rec" :: List.map subtype (Array.to_list l))
   | Func { id; typ; locals; instrs = i; exports = e } ->
       List
-        (Atom "func"
-        :: (opt_id id @ exports e @ fundecl typ
-           @ List.map
-               (fun (i, t) -> List (Atom "local" :: (opt_id i @ [ valtype t ])))
-               locals
-           @ [ instrs i ]))
+        [
+          Block
+            (Block (Atom "func" :: (opt_id id @ exports e @ fundecl typ))
+            :: List.map
+                 (fun (i, t) ->
+                   List (Atom "local" :: (opt_id i @ [ valtype t ])))
+                 locals);
+          instrs i;
+        ]
   | Import { module_; name; id; desc; exports = e } ->
       List
-        (Atom "import" :: quoted_string module_ :: quoted_string name
-        :: (exports e
-           @ [
-               List
-                 (match desc with
-                 | Func typ -> Atom "func" :: (opt_id id @ fundecl typ)
-                 | Global ty -> Atom "global" :: (opt_id id @ [ globaltype ty ])
-                 | Tag typ -> Atom "tag" :: (opt_id id @ fundecl typ)
-                 | Memory _ -> [ Atom "memory" ] (*ZZZ*));
-             ]))
+        [
+          Block
+            (Block [ Atom "import"; quoted_string module_; quoted_string name ]
+            :: exports e);
+          List
+            [
+              Block
+                (match desc with
+                | Func typ -> Atom "func" :: (opt_id id @ fundecl typ)
+                | Global ty -> Atom "global" :: (opt_id id @ [ globaltype ty ])
+                | Tag typ -> Atom "tag" :: (opt_id id @ fundecl typ)
+                | Memory _ -> [ Atom "memory" ] (*ZZZ*));
+            ];
+        ]
   | Global { id; typ; init; exports = e } ->
       List
-        (Atom "global"
-        :: (opt_id id @ exports e @ [ globaltype typ; instrs init ]))
+        [
+          Block (Atom "global" :: (opt_id id @ exports e @ [ globaltype typ ]));
+          instrs init;
+        ]
   | Tag { id; typ; exports = e } ->
       List (Atom "tag" :: (opt_id id @ exports e @ fundecl typ))
   | Data { id; init; mode } ->
