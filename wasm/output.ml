@@ -377,7 +377,23 @@ let rec instr i =
           Delimiter (Atom "end");
           (*ZZZ Comment?*)
         ]
-  | Try _ -> Atom "unreachable" (*ZZZ*)
+  | Try { label; typ; block; catches; catch_all } ->
+      StructuredBlock
+        (Delimiter (Block (Atom "try" :: (opt_id label @ blocktype typ)))
+        :: Contents (List.map instr block)
+        :: (List.flatten
+              (List.map
+                 (fun (i, l) ->
+                   [
+                     Delimiter (Block [ Atom "catch"; index i ]);
+                     Contents (List.map instr l);
+                   ])
+                 catches)
+           @ (match catch_all with
+             | None -> []
+             | Some c ->
+                 [ Delimiter (Atom "catch_all"); Contents (List.map instr c) ])
+           @ [ Delimiter (Atom "end") (*ZZZ Comment?*) ]))
   | Br_table (l, i) ->
       Block (Atom "br_table" :: List.map (fun i -> index i) (l @ [ i ]))
   | Br i -> Block [ Atom "br"; index i ]
@@ -413,6 +429,20 @@ let rec instr i =
       assert (l = []);
       List (Atom "loop" :: (opt_id label @ blocktype typ @ List.map instr block))
       (*ZZZ Comment?*)
+  | Folded (Try { label; typ; block; catches; catch_all }, l) ->
+      assert (l = []);
+      List
+        (Atom "try"
+        :: (opt_id label @ blocktype typ
+           @ [ List (Atom "do" :: List.map instr block) ]
+           @ List.map
+               (fun (i, l) ->
+                 List (Block [ Atom "catch"; index i ] :: List.map instr l))
+               catches
+           @
+           match catch_all with
+           | None -> []
+           | Some l -> [ List (Atom "catch_all" :: List.map instr l) ]))
   | Folded (i, l) -> List (instr i :: List.map instr l)
 
 let instrs l = VerticalBlock (List.map instr l)

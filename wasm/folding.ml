@@ -183,7 +183,7 @@ let arity env i =
   | StructNew t -> (
       match (lookup_type env t).typ with
       | Struct f -> (Array.length f, 1)
-      | Func _ | Array _ -> assert false)
+      | Func _ | Array _ -> assert false (*ZZZ*))
   | StructNewDefault _ -> (0, 1)
   | StructGet _ -> (1, 1)
   | StructSet _ -> (2, 0)
@@ -266,6 +266,22 @@ let rec fold_stream env folded stream : Ast.Text.instr list =
       fold_instr env folded [] [] rem
         (If { b with if_block; else_block })
         inputs outputs
+  | (Try ({ label; typ; block; catches; catch_all; _ } as b) as i) :: rem ->
+      let env' =
+        let i, _ = blocktype_arity env typ in
+        { env with labels = (label, i) :: env.labels }
+      in
+      let block = fold_stream env' [] block in
+      let catches =
+        List.map (fun (i, l) -> (i, fold_stream env' [] l)) catches
+      in
+      let catch_all = Option.map (fold_stream env' []) catch_all in
+      let inputs, outputs = arity env i in
+      let folded = consume inputs folded in
+      fold_stream env
+        ((outputs, Folded (Try { b with block; catches; catch_all }, []))
+        :: folded)
+        rem
   | Folded (i, l) :: rem -> fold_stream env folded (l @ (i :: rem))
   | i :: rem ->
       let inputs, outputs = arity env i in
@@ -303,13 +319,8 @@ let fold m =
       let env =
         match typ with
         | None -> env
-        | Some (i, ty) ->
-            let i =
-              match (i, ty) with
-              | _, Some (_, t) -> List.length t
-              | Some i, None -> snd (type_arity env i)
-              | None, None -> assert false
-            in
+        | Some ty ->
+            let _, i = typeuse_arity env ty in
             { env with labels = [ (None, i) ]; return_arity = i }
       in
       fold_stream env [] str)
@@ -332,6 +343,14 @@ let rec unfold_stream stream start =
                 b with
                 if_block = unfold_instrs if_block;
                 else_block = unfold_instrs else_block;
+              }
+        | Try ({ block; catches; catch_all; _ } as b) ->
+            Try
+              {
+                b with
+                block = unfold_instrs block;
+                catches = List.map (fun (i, l) -> (i, unfold_instrs l)) catches;
+                catch_all = Option.map unfold_instrs catch_all;
               }
         | Folded _ -> assert false
         | _ -> i
