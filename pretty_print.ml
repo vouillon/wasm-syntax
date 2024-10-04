@@ -10,7 +10,7 @@ module P =
 let convert ~filename =
   let ast = P.parse ~filename in
   Format.printf "/////////// %s //////////@.@.%a" filename Wasm.Output.module_
-    ast
+    (Wasm.Folding.fold (Wasm.Folding.unfold ast))
 
 let _ =
   let p = "/home/jerome/wasm_of_ocaml/runtime/wasm" in

@@ -5,9 +5,11 @@ let map_instrs func (name, fields) =
     List.map
       (fun f ->
         match f with
-        | Func ({ instrs; _ } as f) -> Func { f with instrs = func instrs }
-        | Global ({ init; _ } as g) -> Global { g with init = func init }
-        | Elem ({ init; _ } as e) -> Elem { e with init = List.map func init }
+        | Func ({ typ; instrs; _ } as f) ->
+            Func { f with instrs = func (Some typ) instrs }
+        | Global ({ init; _ } as g) -> Global { g with init = func None init }
+        | Elem ({ init; _ } as e) ->
+            Elem { e with init = List.map (fun l -> func None l) init }
         | Types _ | Import _ | Memory _ | Tag _ | Export _ | Start _ | Data _ ->
             f)
       fields )
@@ -18,9 +20,19 @@ module Int32Map = Map.Make (Int32)
 module StringMap = Map.Make (String)
 
 module Tbl = struct
-  type 'a t = { by_index : 'a Int32Map.t; by_name : 'a StringMap.t }
+  type 'a t = { by_index : 'a Int32Map.t; by_name : 'a StringMap.t; last : int }
 
-  let empty = { by_index = Int32Map.empty; by_name = StringMap.empty }
+  let empty = { by_index = Int32Map.empty; by_name = StringMap.empty; last = 0 }
+
+  let add id v tbl =
+    {
+      by_index = Int32Map.add (Int32.of_int tbl.last) v tbl.by_index;
+      by_name =
+        (match id with
+        | None -> tbl.by_name
+        | Some id -> StringMap.add id v tbl.by_name);
+      last = tbl.last + 1;
+    }
 end
 
 let lookup (tbl : _ Tbl.t) idx =
@@ -30,22 +42,58 @@ let lookup (tbl : _ Tbl.t) idx =
     | Id i -> StringMap.find i tbl.by_name
   with Not_found -> assert false (*ZZZ *)
 
-type module_env = {
-  types : subtype Tbl.t;
-  functions : typeuse_no_bindings Tbl.t;
-}
+type module_env = { types : subtype Tbl.t; functions : typeuse Tbl.t }
 
-type env = { module_env : module_env }
+let types m =
+  List.fold_left
+    (fun tbl f ->
+      match f with
+      | Types l ->
+          Array.fold_left (fun tbl (id, typ) -> Tbl.add id typ tbl) tbl l
+      | Import _ | Func _ | Memory _ | Tag _ | Global _ | Export _ | Start _
+      | Elem _ | Data _ ->
+          tbl)
+    Tbl.empty m
+
+let functions f =
+  List.fold_left
+    (fun tbl f ->
+      match f with
+      | Func { id; typ; _ } | Import { id; desc = Func typ; _ } ->
+          Tbl.add id typ tbl
+      | Import { desc = Memory _ | Global _ | Tag _; _ }
+      | Types _ | Memory _ | Tag _ | Global _ | Export _ | Start _ | Elem _
+      | Data _ ->
+          tbl)
+    Tbl.empty f
+
+let module_env (_, m) = { types = types m; functions = functions m }
+
+(****)
+
+type env = {
+  module_env : module_env;
+  labels : (id option * int) list;
+  return_arity : int;
+}
 
 let lookup_type env idx = lookup env.module_env.types idx
 
-let functype_arity { params; results } =
+let functype_no_bindings_arity { params; results } =
   (Array.length params, Array.length results)
+
+let functype_arity (params, results) = (List.length params, List.length results)
 
 let type_arity env idx =
   match (lookup_type env idx).typ with
-  | Func ty -> functype_arity ty
+  | Func ty -> functype_no_bindings_arity ty
   | Struct _ | Array _ -> assert false (*ZZZ*)
+
+let typeuse_no_bindings_arity env (i, ty) =
+  match (i, ty) with
+  | _, Some t -> functype_no_bindings_arity t
+  | Some i, None -> type_arity env i
+  | None, None -> assert false
 
 let typeuse_arity env (i, ty) =
   match (i, ty) with
@@ -57,31 +105,61 @@ let blocktype_arity env t =
   match t with
   | None -> (0, 0)
   | Some (Valtype _) -> (0, 1)
-  | Some (Typeuse t) -> typeuse_arity env t
+  | Some (Typeuse t) -> typeuse_no_bindings_arity env t
 
 let function_arity env f = typeuse_arity env (lookup env.module_env.functions f)
 let unreachable = 100_000
 
+let label_arity env idx =
+  match idx with
+  | Id id ->
+      snd
+        (List.find
+           (fun e -> match e with Some id', _ -> id = id' | _ -> false)
+           env.labels)
+  | Num i -> snd (List.nth env.labels (Int32.to_int i))
+
 let arity env i =
   match i with
-  | Block { typ; _ } | Loop { typ; _ } | If { typ; _ } | Try { typ; _ } ->
+  | Block { typ; _ } | Loop { typ; _ } | Try { typ; _ } ->
       blocktype_arity env typ
+  | If { typ; _ } ->
+      let i, o = blocktype_arity env typ in
+      (i + 1, o)
   | Call f -> function_arity env f
   | ReturnCall f ->
       let i, _ = function_arity env f in
       (i, unreachable)
-  | CallRef t -> type_arity env t
+  | CallRef t ->
+      let i, o = type_arity env t in
+      (i + 1, o)
   | ReturnCallRef t ->
       let i, _ = type_arity env t in
+      (i + 1, unreachable)
+  | Br l ->
+      let i = label_arity env l in
       (i, unreachable)
-  | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
-  | Br_on_cast_fail _ | Return (* Label type *) ->
-      assert false
+  | Br_if l ->
+      let i = label_arity env l in
+      (i + 1, i)
+  | Br_table (_, l) ->
+      let i = label_arity env l in
+      (i + 1, unreachable)
+  | Br_on_null l ->
+      let i = label_arity env l in
+      (i + 1, i + 1)
+  | Br_on_non_null l ->
+      let i = label_arity env l in
+      (i + 1, i)
+  | Br_on_cast (l, _, _) | Br_on_cast_fail (l, _, _) ->
+      let i = label_arity env l in
+      (i + 1, i + 1)
+  | Return -> (env.return_arity, unreachable)
   | ReturnCallIndirect (_, ty) ->
-      let i, _ = typeuse_arity env ty in
+      let i, _ = typeuse_no_bindings_arity env ty in
       (i + 1, unreachable)
   | CallIndirect (_, ty) ->
-      let i, o = typeuse_arity env ty in
+      let i, o = typeuse_no_bindings_arity env ty in
       (i + 1, o)
   | Unreachable -> (0, unreachable)
   | Nop -> (0, 0)
@@ -124,8 +202,8 @@ let arity env i =
   | RefI31 -> (1, 1)
   | I31Get _ -> (1, 1)
   | Const _ -> (0, 1)
-  | UnOp _ -> (2, 1)
-  | BinOp _ -> (1, 1)
+  | UnOp _ -> (1, 1)
+  | BinOp _ -> (2, 1)
   | I32WrapI64 -> (1, 1)
   | I64ExtendI32 _ -> (1, 1)
   | F32DemoteF64 -> (1, 1)
@@ -155,23 +233,35 @@ let rec consume n folded =
 let rec fold_stream env folded stream : Ast.Text.instr list =
   match stream with
   | [] -> List.rev (List.map snd folded)
-  | (Block ({ block; _ } as b) as i) :: rem ->
-      let block = fold_stream env (*ZZZ*) [] block in
+  | (Block ({ label; typ; block; _ } as b) as i) :: rem ->
+      let block =
+        let _, i = blocktype_arity env typ in
+        let env = { env with labels = (label, i) :: env.labels } in
+        fold_stream env [] block
+      in
       let inputs, outputs = arity env i in
       let folded = consume inputs folded in
       fold_stream env
         ((outputs, Folded (Block { b with block }, [])) :: folded)
         rem
-  | (Loop ({ block; _ } as b) as i) :: rem ->
-      let block = fold_stream env [] block in
+  | (Loop ({ label; typ; block; _ } as b) as i) :: rem ->
+      let block =
+        let i, _ = blocktype_arity env typ in
+        let env = { env with labels = (label, i) :: env.labels } in
+        fold_stream env [] block
+      in
       let inputs, outputs = arity env i in
       let folded = consume inputs folded in
       fold_stream env
         ((outputs, Folded (Loop { b with block }, [])) :: folded)
         rem
-  | (If ({ if_block; else_block; _ } as b) as i) :: rem ->
-      let if_block = fold_stream env [] if_block in
-      let else_block = fold_stream env [] else_block in
+  | (If ({ label; typ; if_block; else_block; _ } as b) as i) :: rem ->
+      let env' =
+        let i, _ = blocktype_arity env typ in
+        { env with labels = (label, i) :: env.labels }
+      in
+      let if_block = fold_stream env' [] if_block in
+      let else_block = fold_stream env' [] else_block in
       let inputs, outputs = arity env i in
       fold_instr env folded [] [] rem
         (If { b with if_block; else_block })
@@ -207,8 +297,23 @@ and fold_instr env folded args tentative_args stream i inputs outputs =
             stream
 
 let fold m =
-  let module_env = { types = Tbl.empty; functions = Tbl.empty } in
-  map_instrs (fold_stream { module_env } []) m
+  let env = { module_env = module_env m; labels = []; return_arity = 0 } in
+  map_instrs
+    (fun typ str ->
+      let env =
+        match typ with
+        | None -> env
+        | Some (i, ty) ->
+            let i =
+              match (i, ty) with
+              | _, Some (_, t) -> List.length t
+              | Some i, None -> snd (type_arity env i)
+              | None, None -> assert false
+            in
+            { env with labels = [ (None, i) ]; return_arity = i }
+      in
+      fold_stream env [] str)
+    m
 
 (****)
 
@@ -238,4 +343,4 @@ let rec unfold_stream stream start =
 
 and unfold_instrs l = List.rev (unfold_stream l [])
 
-let unfold m = map_instrs unfold_instrs m
+let unfold m = map_instrs (fun _ str -> unfold_instrs str) m

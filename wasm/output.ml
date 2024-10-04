@@ -15,7 +15,7 @@ let rec format_sexp f s =
   | Atom s -> Format.pp_print_string f s
   | Atom' { len; s } -> Format.pp_print_as f len s
   | List l ->
-      Format.fprintf f "@[<2>(%a)@]"
+      Format.fprintf f "(@[<1>%a@])"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f "@ ")
            format_sexp)
@@ -494,4 +494,4 @@ let modulefield f =
 
 let module_ f (id, fields) =
   Format.fprintf f "%a@." format_sexp
-    (List (Atom "module" :: (opt_id id @ List.map modulefield fields)))
+    (List [ Atom "module"; Block (opt_id id @ List.map modulefield fields) ])
