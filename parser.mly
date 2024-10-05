@@ -149,7 +149,8 @@ resulttype:
 | "(" l = separated_nonempty_list(",", valtype) ")" { l }
 
 functype:
-| FN params = resulttype "->" result = resulttype
+| FN "(" params = separated_nonempty_list(",", valtype) ")" "->"
+  result = resulttype
   { {params = Array.of_list params; results = Array.of_list result} }
 
 storagetype:
@@ -200,10 +201,6 @@ fundecl:
   sign = option ("(" named_params = funcparams ")"
   "->" results = resulttype { {named_params; results} })
   { (name, t, sign) }
-| FN name = IDENT
-  ":" params = resulttype "->" results = resulttype
-  { (name, None,
-     Some {named_params = List.map (fun x -> (None, x)) params; results}) }
 
 func:
 | attributes = list(attribute) f = fundecl body = block

@@ -1,10 +1,10 @@
 
-fn foo : i32 -> i32
+fn foo(_: i32) -> i32
 fn bar : dup
 
-fn parse_int : (&eq, i32, &string) -> i32
+fn parse_int(_: &eq, _: i32, _: &string) -> i32
 
-fn format_int : (&eq, i32, i32) -> &eq
+fn format_int(_: &eq, _: i32, _: i32) -> &eq
 type string = [mut i8]
 
 type compare = fn(&eq, &eq, i32)->i32

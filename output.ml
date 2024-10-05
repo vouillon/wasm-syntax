@@ -26,11 +26,11 @@ let rec valtype f t =
   | F64 -> Format.pp_print_string f "f64"
   | V128 -> Format.pp_print_string f "v128"
   | Ref t -> reftype f t
-  | Tuple l -> tuple f l
+  | Tuple l -> tuple false f l
 
-and tuple f l =
+and tuple always_paren f l =
   match l with
-  | [ t ] -> valtype f t
+  | [ t ] when not always_paren -> valtype f t
   | _ ->
       Format.fprintf f "(@[%a@])"
         (Format.pp_print_list
@@ -40,10 +40,10 @@ and tuple f l =
 
 let functype f { params; results } =
   if results = [||] then
-    Format.fprintf f "@[<2>fn@ %a@]" tuple (Array.to_list params)
+    Format.fprintf f "@[<2>fn%a@]" (tuple true) (Array.to_list params)
   else
-    Format.fprintf f "@[<2>fn@ %a@ ->@ %a@]" tuple (Array.to_list params) tuple
-      (Array.to_list results)
+    Format.fprintf f "@[<2>fn%a@ ->@ %a@]" (tuple true) (Array.to_list params)
+      (tuple false) (Array.to_list results)
 
 let packedtype f t =
   match t with
@@ -375,30 +375,17 @@ and block_contents f l =
 
 let fundecl f (name, typ, sign) =
   Format.fprintf f "fn@ %s" name;
-  match (typ, sign) with
-  | None, Some { named_params; results }
-    when List.for_all (fun (nm, _) -> nm = None) named_params ->
-      (match named_params with
-      | [ (_, t) ] -> Format.fprintf f ":@ %a" valtype t
-      | _ ->
-          Format.fprintf f ":@ (@[%a@])"
-            (Format.pp_print_list
-               ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
-               (fun f (_, t) -> valtype f t))
-            named_params);
-      if results <> [] then Format.fprintf f "@ ->@ %a" tuple results
-  | _ ->
-      Option.iter (fun typ -> Format.fprintf f ": %s@ " typ) typ;
-      Option.iter
-        (fun { named_params; results } ->
-          Format.fprintf f "@,(@[%a@])"
-            (Format.pp_print_list
-               ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
-               (fun f (id, t) ->
-                 Format.fprintf f "@[<2>%a:@ %a@]" simple_pat id valtype t))
-            named_params;
-          if results <> [] then Format.fprintf f "@ ->@ %a" tuple results)
-        sign
+  Option.iter (fun typ -> Format.fprintf f ": %s@ " typ) typ;
+  Option.iter
+    (fun { named_params; results } ->
+      Format.fprintf f "@,(@[%a@])"
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+           (fun f (id, t) ->
+             Format.fprintf f "@[<2>%a:@ %a@]" simple_pat id valtype t))
+        named_params;
+      if results <> [] then Format.fprintf f "@ ->@ %a" (tuple false) results)
+    sign
 
 let attributes f attributes =
   List.iter
