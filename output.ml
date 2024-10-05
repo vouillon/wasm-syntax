@@ -72,7 +72,7 @@ let comptype f (t : comptype) =
 let subtype f (nm, { typ; supertype; final }) =
   Format.fprintf f "@[<hv>@[type@ %s%s" nm (if final then "" else " open");
   (match supertype with
-  | Some supertype -> Format.fprintf f "@ :@ %s" supertype
+  | Some supertype -> Format.fprintf f ":@ %s" supertype
   | None -> ());
   Format.fprintf f "@ =%a@]" comptype typ
 
@@ -142,7 +142,7 @@ type prec =
 
 let parentheses expected actual f g =
   if expected > actual then (
-    Format.fprintf f "(@[(";
+    Format.fprintf f "(@[";
     g ();
     Format.fprintf f "@])")
   else g ()
@@ -279,7 +279,7 @@ let rec instr prec f (i : instr) =
       parentheses prec Let f @@ fun () ->
       let single f (x, t) =
         Format.fprintf f "@[<2>%a" simple_pat x;
-        Option.iter (fun t -> Format.fprintf f "@ :@ %a" valtype t) t;
+        Option.iter (fun t -> Format.fprintf f ":@ %a" valtype t) t;
         Format.fprintf f "@]"
       in
       Format.fprintf f "@[<2>let@ %a"
@@ -329,6 +329,13 @@ let rec instr prec f (i : instr) =
       Format.fprintf f "@[<2>return";
       Option.iter (fun i -> Format.fprintf f "@ %a" (instr Branch) i) i;
       Format.fprintf f "@]"
+  | Throw (tag, l) ->
+      parentheses prec Branch f @@ fun () ->
+      Format.fprintf f "@[<2>throw@ %s@,(@[%a@])@]@]" tag
+        (Format.pp_print_list
+           ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+           (instr Instruction))
+        l
   | Sequence l ->
       Format.fprintf f "(@[%a@])"
         (Format.pp_print_list
@@ -353,7 +360,7 @@ and deliminated_instr f (i : instr) =
   | Float _ | Cast _ | Test _ | Struct _ | StructGet _ | StructSet _ | Array _
   | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _ | Let _ | Br _
   | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
-  | Br_on_cast_fail _ | Return _ | Sequence _ | Null | Select _ ->
+  | Br_on_cast_fail _ | Return _ | Throw _ | Sequence _ | Null | Select _ ->
       Format.fprintf f "@[%a;@]" (instr Instruction) i
 
 and block_instrs f l =
@@ -368,17 +375,30 @@ and block_contents f l =
 
 let fundecl f (name, typ, sign) =
   Format.fprintf f "fn@ %s" name;
-  Option.iter (fun typ -> Format.fprintf f "@ : %s@ " typ) typ;
-  Option.iter
-    (fun { named_params; results } ->
-      Format.fprintf f "@,(@[%a@])"
-        (Format.pp_print_list
-           ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
-           (fun f (id, t) ->
-             Format.fprintf f "@[<2>%a:@ %a@]" simple_pat id valtype t))
-        named_params;
-      if results <> [] then Format.fprintf f "@ ->@ %a" tuple results)
-    sign
+  match (typ, sign) with
+  | None, Some { named_params; results }
+    when List.for_all (fun (nm, _) -> nm = None) named_params ->
+      (match named_params with
+      | [ (_, t) ] -> Format.fprintf f ":@ %a" valtype t
+      | _ ->
+          Format.fprintf f ":@ (@[%a@])"
+            (Format.pp_print_list
+               ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+               (fun f (_, t) -> valtype f t))
+            named_params);
+      if results <> [] then Format.fprintf f "@ ->@ %a" tuple results
+  | _ ->
+      Option.iter (fun typ -> Format.fprintf f ": %s@ " typ) typ;
+      Option.iter
+        (fun { named_params; results } ->
+          Format.fprintf f "@,(@[%a@])"
+            (Format.pp_print_list
+               ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+               (fun f (id, t) ->
+                 Format.fprintf f "@[<2>%a:@ %a@]" simple_pat id valtype t))
+            named_params;
+          if results <> [] then Format.fprintf f "@ ->@ %a" tuple results)
+        sign
 
 let attributes f attributes =
   List.iter
@@ -394,7 +414,7 @@ let modulefield f field =
         (name, typ, sign) block_contents body
   | Global { name; typ; def; attributes = a } ->
       Format.fprintf f "@[<hv>%a@[<2>let@ %s" attributes a name;
-      Option.iter (fun t -> Format.fprintf f "@ :@ %a" globaltype t) typ;
+      Option.iter (fun t -> Format.fprintf f ":@ %a" globaltype t) typ;
       Format.fprintf f "@ =@ %a@]@]" (instr Instruction) def
   | Fundecl { name; typ; sign; attributes = a } ->
       Format.fprintf f "@[<hv>%a@[%a@]@]" attributes a fundecl (name, typ, sign)

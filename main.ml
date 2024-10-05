@@ -7,4 +7,4 @@ module P =
     (Fast_parser)
     (Lexer)
 
-let _ = P.parse ~filename:"test.txt"
+let () = Format.printf "%a" Output.module_ (P.parse ~filename:"test.txt")

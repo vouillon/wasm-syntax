@@ -27,6 +27,52 @@ let hexfloat =
 let float =
   [%sedlex.regexp? decfloat | hexfloat | "inf" | "nan" | "nan:", hexnum]
 
+let string_buffer = Buffer.create 256
+
+let rec string lexbuf =
+  match%sedlex lexbuf with
+  | '"' ->
+      let s = Buffer.contents string_buffer in
+      Buffer.clear string_buffer;
+      s
+  | Plus (Sub (any, (0 .. 31 | 0x7f | '"' | '\\'))) ->
+      Buffer.add_string string_buffer (Sedlexing.Utf8.lexeme lexbuf);
+      string lexbuf
+  | "\\t" ->
+      Buffer.add_char string_buffer '\t';
+      string lexbuf
+  | "\\n" ->
+      Buffer.add_char string_buffer '\n';
+      string lexbuf
+  | "\\r" ->
+      Buffer.add_char string_buffer '\r';
+      string lexbuf
+  | "\\'" ->
+      Buffer.add_char string_buffer '\'';
+      string lexbuf
+  | "\\\"" ->
+      Buffer.add_char string_buffer '"';
+      string lexbuf
+  | "\\\\" ->
+      Buffer.add_char string_buffer '\\';
+      string lexbuf
+  | '\\', hexdigit, hexdigit ->
+      let s = String.sub (Sedlexing.Utf8.lexeme lexbuf) 1 2 in
+      Buffer.add_char string_buffer (Char.chr (int_of_string ("0x" ^ s)));
+      string lexbuf
+  | "\\u{", hexnum, "}" ->
+      let n =
+        Sedlexing.Utf8.sub_lexeme lexbuf 3 (Sedlexing.lexeme_length lexbuf - 4)
+      in
+      Buffer.add_utf_8_uchar string_buffer
+        (Uchar.unsafe_of_int (int_of_string ("0x" ^ n)));
+      string lexbuf
+  | _ ->
+      raise
+        (Wasm.Parsing.Syntax_error
+           ( Sedlexing.lexing_positions lexbuf,
+             Printf.sprintf "Malformed string.\n" ))
+
 let rec token lexbuf =
   match%sedlex lexbuf with
   | white | newline -> token lexbuf
@@ -97,14 +143,15 @@ let rec token lexbuf =
   | "br_on_cast" -> BR_ON_CAST
   | "br_on_cast_fail" -> BR_ON_CAST_FAIL
   | "return" -> RETURN
+  | "throw" -> THROW
   | ident -> IDENT (Sedlexing.Utf8.lexeme lexbuf)
   | int -> INT (Sedlexing.Utf8.lexeme lexbuf)
   | float -> FLOAT (Sedlexing.Utf8.lexeme lexbuf)
-  | string -> STRING (Sedlexing.Utf8.lexeme lexbuf)
+  | '"' -> STRING (string lexbuf)
   | eof -> EOF
   | _ ->
       raise
-        (Misc.Syntax_error
+        (Wasm.Parsing.Syntax_error
            ( Sedlexing.lexing_positions lexbuf,
              Printf.sprintf "Unexpected character '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))

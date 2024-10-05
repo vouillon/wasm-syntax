@@ -60,7 +60,7 @@
 %token NOP UNREACHABLE NULL
 %token LOOP IF ELSE
 %token LET AS IS
-%token BR BR_IF BR_TABLE RETURN
+%token BR BR_IF BR_TABLE RETURN THROW
 %token BR_ON_CAST BR_ON_CAST_FAIL
 %token BR_ON_NULL BR_ON_NON_NULL
 
@@ -140,7 +140,7 @@ reftype:
 valtype:
 | t = IDENT
    { try Hashtbl.find valtype_tbl t with Not_found ->
-       raise (Misc.Syntax_error ($sloc, Printf.sprintf "Identifier '%s' is not a value type.\n" t )) }
+       raise (Wasm.Parsing.Syntax_error ($sloc, Printf.sprintf "Identifier '%s' is not a value type.\n" t )) }
 | t = reftype { Ref t }
 
 resulttype:
@@ -155,7 +155,7 @@ functype:
 storagetype:
 | t = IDENT
    { try Hashtbl.find storagetype_tbl t with Not_found ->
-       raise (Misc.Syntax_error ($sloc, Printf.sprintf "Identifier '%s' is not a storage type.\n" t )) }
+       raise (Wasm.Parsing.Syntax_error ($sloc, Printf.sprintf "Identifier '%s' is not a storage type.\n" t )) }
 | t = reftype { Value (Ref t) }
 
 fieldtype:
@@ -294,6 +294,8 @@ plaininstr:
 | BR_ON_CAST "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
 | BR_ON_CAST_FAIL "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec prec_branch
+| THROW t = IDENT  "(" l = separated_list(",", instr) ")"
+  { with_loc $sloc (Throw (t, l)) }
 | "[" l = separated_list(",", i = instr { i }) "]"
   { with_loc $sloc (ArrayFixed (None, l)) }
 | "[" i1 = instr ";" i2 = instr "]"

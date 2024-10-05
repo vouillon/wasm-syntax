@@ -67,6 +67,7 @@ type instr_descr =
   | Br_on_non_null of label * instr
   | Br_on_cast of label * reftype * instr
   | Br_on_cast_fail of label * reftype * instr
+  | Throw of idx * instr list
   | Return of instr option
   | Sequence of instr list
   | Select of instr * instr * instr

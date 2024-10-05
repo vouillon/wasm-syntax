@@ -394,8 +394,10 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | Select _ ->
       let e1, e2, e = three_args args in
       no_loc (Select (e, e1, e2))
-  (* To implement now *)
-  | Try _ | Throw _ | TupleExtract _ | ArrayFill _ | ArrayCopy _
+  (* ZZZZ To implement now *)
+  | Try _ | TupleExtract _ | ArrayFill _ | ArrayCopy _ ->
+      no_loc Unreachable (* ZZZ *)
+  | Throw t -> no_loc (Throw (idx st `Tag t, args))
   (* signed(x as i8) as i32 ? *)
   (* Later *)
   | ReturnCallIndirect _ | CallIndirect _ | RefAsNonNull | ArrayInitElem _
