@@ -120,7 +120,7 @@ let rec token lexbuf =
   | "f64" -> VALTYPE F64
   | "v128" -> VALTYPE V128
   | "i8" -> PACKEDTYPE I8
-  | "i6" -> PACKEDTYPE I16
+  | "i16" -> PACKEDTYPE I16
   | "any" -> ANY
   | "eq" -> EQ
   | "i31" -> I31
