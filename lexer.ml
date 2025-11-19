@@ -2,11 +2,7 @@ open Parser
 
 let white = [%sedlex.regexp? Plus (' ' | '\t')]
 let newline = [%sedlex.regexp? '\r' | '\n' | "\r\n"]
-
-let ident =
-  [%sedlex.regexp?
-    ('a' .. 'z' | 'A' .. 'Z'), Star ('a' .. 'z' | 'A' .. 'Z' | '_' | '0' .. '9')]
-
+let ident = [%sedlex.regexp? (xid_start | '_'), Star xid_continue]
 let string = [%sedlex.regexp? '"', Star (Sub (any, '"')), '"']
 let sign = [%sedlex.regexp? Opt ('+' | '-')]
 let digit = [%sedlex.regexp? '0' .. '9']
