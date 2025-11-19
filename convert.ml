@@ -9,6 +9,9 @@ module P =
 
 let convert ~filename =
   let ast = P.parse ~filename in
+  (*
+  Wasm.Validation.f ast;
+*)
   Format.printf "/////////// %s //////////@.@.%a" filename Output.module_
     (List.filter_map (fun x -> x) (From_wasm.module_ ast))
 

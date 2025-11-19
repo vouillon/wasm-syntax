@@ -192,10 +192,10 @@ let exports l =
 
 let type_prefix op nm =
   (match op with
-  | I32 _ -> "i32."
-  | I64 _ -> "i64."
-  | F32 _ -> "f32."
-  | F64 _ -> "f64.")
+    | I32 _ -> "i32."
+    | I64 _ -> "i64."
+    | F32 _ -> "f32."
+    | F64 _ -> "f64.")
   ^ nm
 
 let signage op (s : signage) =
@@ -548,3 +548,5 @@ let modulefield f =
 let module_ f (id, fields) =
   Format.fprintf f "%a@." (format_sexp false)
     (List [ Atom "module"; Block (opt_id id @ List.map modulefield fields) ])
+
+let instr f i = Format.fprintf f "%a@." (format_sexp false) (instr i)

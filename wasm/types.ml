@@ -48,9 +48,9 @@ module RecTypeTbl = Hashtbl.Make (struct
       { final = f2; supertype = s2; typ = t2; _ } =
     f1 = f2
     && (match (s1, s2) with
-       | Some _, None | None, Some _ -> false
-       | None, None -> true
-       | Some i1, Some i2 -> i1 = i2)
+      | Some _, None | None, Some _ -> false
+      | None, None -> true
+      | Some i1, Some i2 -> i1 = i2)
     && comptype_eq t1 t2
 
   let equal t1 t2 =
@@ -62,7 +62,7 @@ end)
 type t = {
   types : int RecTypeTbl.t;
   mutable last_index : int;
-  mutable rev_list : rectype list;
+  mutable rev_list : (int * rectype) list;
 }
 
 let create () =
@@ -74,8 +74,59 @@ let add_rectype types typ =
     let index = types.last_index in
     RecTypeTbl.add types.types typ index;
     types.last_index <- Array.length typ + index;
-    types.rev_list <- typ :: types.rev_list;
+    types.rev_list <- (index, typ) :: types.rev_list;
     index
+
+type subtyping_info = subtype array
+
+let subtyping_info t =
+  let update_index i i' = if i' >= 0 then i' else i + lnot i' in
+  let update_heaptype i (ty : heaptype) =
+    match ty with
+    | Func | NoFunc | Extern | NoExtern | Any | Eq | I31 | Struct | Array
+    | None_ ->
+        ty
+    | Type i' -> Type (update_index i i')
+  in
+  let update_valtype i (ty : valtype) =
+    match ty with
+    | I32 | I64 | F32 | F64 | V128 -> ty
+    | Ref { nullable; typ } -> Ref { nullable; typ = update_heaptype i typ }
+    | Tuple _ -> assert false
+  in
+  let update_functype i { params; results } =
+    {
+      params = Array.map (update_valtype i) params;
+      results = Array.map (update_valtype i) results;
+    }
+  in
+  let update_fieldtype i ({ mut; typ } as ty) =
+    match typ with
+    | Value v -> { mut; typ = Value (update_valtype i v) }
+    | Packed _ -> ty
+  in
+  let update_comptype i (ty : comptype) : comptype =
+    match ty with
+    | Func ty -> Func (update_functype i ty)
+    | Struct a -> Struct (Array.map (update_fieldtype i) a)
+    | Array ty -> Array (update_fieldtype i ty)
+  in
+  let l =
+    List.map
+      (fun (i, a) ->
+        Array.map
+          (fun { typ; supertype; final } ->
+            {
+              typ = update_comptype i typ;
+              supertype = Option.map (update_index i) supertype;
+              final;
+            })
+          a)
+      t.rev_list
+  in
+  Array.concat (List.rev l)
+
+let get_subtype a i = a.(i)
 
 let rec subtype subtyping_info (i : int) i' =
   i = i'
@@ -90,6 +141,7 @@ let heap_subtype (subtyping_info : subtype array) (ty : heaptype)
   | (Func | NoFunc), Func
   | NoFunc, NoFunc
   | (Extern | NoExtern), Extern
+  | NoExtern, NoExtern
   | (Any | Eq | I31 | Struct | Array | None_ | Type _), Any
   | (Eq | I31 | Struct | Array | None_ | Type _), Eq
   | (I31 | None_), I31

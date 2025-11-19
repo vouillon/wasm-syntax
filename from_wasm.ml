@@ -1,4 +1,115 @@
+(*
+Namespaces:
+- types
+- functions, globals, locals
+- tags
+- elem
+- data
+
+Set of already used names
+Multiple mapping: index -> name
+*)
+
 module Src = Wasm.Ast.Text
+module StringMap = Map.Make (String)
+
+module Namespace = struct
+  type t = { mutable existing_names : int StringMap.t }
+
+  let rec add_indexed ns x i =
+    let y = Printf.sprintf "%s_%d" x i in
+    if StringMap.mem y ns.existing_names then add_indexed ns x (i + 1)
+    else (
+      ns.existing_names <-
+        ns.existing_names |> StringMap.add y 0 |> StringMap.add x i;
+      y)
+
+  let add ns x =
+    match StringMap.find_opt x ns.existing_names with
+    | Some i -> add_indexed ns x (i + 1)
+    | None ->
+        ns.existing_names <- ns.existing_names |> StringMap.add x 0;
+        x
+
+  let dup { existing_names } = { existing_names }
+  let make () = { existing_names = StringMap.empty }
+end
+
+module Sequence = struct
+  type t = {
+    name : string;
+    index_mapping : (int, string) Hashtbl.t;
+    label_mapping : (string, string) Hashtbl.t;
+    mutable last_index : int;
+    namespace : Namespace.t;
+    default : string;
+  }
+
+  let make namespace name default =
+    {
+      name;
+      index_mapping = Hashtbl.create 16;
+      label_mapping = Hashtbl.create 16;
+      last_index = 0;
+      namespace;
+      default;
+    }
+
+  let register seq id exports =
+    let name =
+      let name =
+        match (id, exports) with
+        | Some nm, _ -> nm
+        | None, nm :: _ -> nm
+        | _ -> seq.default
+      in
+      Namespace.add seq.namespace name
+    in
+    let idx = seq.last_index in
+    seq.last_index <- seq.last_index + 1;
+    Hashtbl.add seq.index_mapping idx name;
+    Option.iter (fun id -> Hashtbl.add seq.label_mapping id name) id
+
+  let get seq (idx : Src.idx) =
+    match idx with
+    | Num n -> (
+        try Hashtbl.find seq.index_mapping (Int32.to_int n)
+        with Not_found ->
+          Format.eprintf "Unbound %s %ld@." seq.name n;
+          exit 1)
+    | Id id -> (
+        try Hashtbl.find seq.label_mapping id
+        with Not_found ->
+          Format.eprintf "Unbound %s $%s@." seq.name id;
+          exit 1)
+end
+
+module LabelStack = struct
+  type t = { ns : Namespace.t; stack : (string option * string) list }
+
+  let push st label =
+    let ns = Namespace.dup st.ns in
+    let name = Namespace.add ns (Option.value ~default:"l" label) in
+    (name, { ns; stack = (label, name) :: st.stack })
+
+  let get st (idx : Src.idx) =
+    match idx with
+    | Num n -> snd (List.nth st.stack (Int32.to_int n))
+    | Id id -> List.assoc (Some id) st.stack
+
+  let make () = { ns = Namespace.make (); stack = [] }
+end
+
+type ctx = {
+  common_namespace : Namespace.t;
+  types : Sequence.t;
+  globals : Sequence.t;
+  functions : Sequence.t;
+  memories : Sequence.t;
+  tags : Sequence.t;
+  locals : Sequence.t;
+  labels : LabelStack.t;
+}
 
 let get_annot (a, _) = a
 let get_type (_, t) = t
@@ -13,8 +124,14 @@ let name_global _st a = Option.value ~default:"x" a
 let annotated a t = (a, t)
 
 (*ZZZ Get name from table*)
-let idx _st _ i =
-  match i with Src.Num i -> Format.sprintf "t%ld" i | Id i -> i
+let idx ctx kind i =
+  match kind with
+  | `Type -> Sequence.get ctx.types i
+  | `Global -> Sequence.get ctx.globals i
+  | `Func -> Sequence.get ctx.functions i
+  | `Tag -> Sequence.get ctx.tags i
+  | `Local -> Sequence.get ctx.locals i
+  | `Label -> LabelStack.get ctx.labels i
 
 let heaptype st (t : Src.heaptype) : Ast.heaptype =
   match t with
@@ -266,14 +383,20 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   match i with
   | Block { label; typ = _; block } ->
       assert (args = []);
-      no_loc (Block (label, List.map (fun i -> instr st i []) block))
+      let label, labels = LabelStack.push st.labels label in
+      let st = { st with labels } in
+      no_loc (Block (Some label, List.map (fun i -> instr st i []) block))
   | Loop { label; typ = _; block } ->
       assert (args = []);
-      no_loc (Loop (label, List.map (fun i -> instr st i []) block))
+      let label, labels = LabelStack.push st.labels label in
+      let st = { st with labels } in
+      no_loc (Loop (Some label, List.map (fun i -> instr st i []) block))
   | If { label; typ = _; if_block; else_block } ->
+      let label, labels = LabelStack.push st.labels label in
+      let st = { st with labels } in
       no_loc
         (If
-           ( label,
+           ( Some label,
              sequence args,
              List.map (fun i -> instr st i []) if_block,
              if else_block = [] then None
@@ -412,12 +535,24 @@ let bind_locals st l =
         (Ast.Let ([ (Some (name_local st id), Some (valtype st t)) ], None)))
     l
 
-let typeuse st (typ, sign) =
+let typeuse kind st (typ, sign) =
   ( Option.map (fun i -> idx st `Type i) typ,
     Option.map
       (fun (p, r) ->
         {
-          Ast.named_params = List.map (fun (id, t) -> (id, valtype st t)) p;
+          Ast.named_params =
+            List.mapi
+              (fun n (id, t) ->
+                ( (match kind with
+                  | `Func ->
+                      Some
+                        (idx st `Local
+                           (match id with
+                           | Some id -> Id id
+                           | None -> Num (Int32.of_int n)))
+                  | `Sig -> id),
+                  valtype st t ))
+              p;
           results = List.map (fun t -> valtype st t) r;
         })
       sign )
@@ -438,8 +573,19 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
   match f with
   | Types t -> Some (Type (rectype st t))
   | Func { id; locals; instrs; typ; exports = e } ->
+      let st =
+        let seq =
+          Sequence.make (Namespace.dup st.common_namespace) "local" "x"
+        in
+        (match typ with
+        | _, Some (params, _) ->
+            List.iter (fun (id, _) -> Sequence.register seq id []) params
+        | _ -> ());
+        List.iter (fun (id, _) -> Sequence.register seq id []) locals;
+        { st with locals = seq }
+      in
       let locals = bind_locals st locals in
-      let typ, sign = typeuse st typ in
+      let typ, sign = typeuse `Func st typ in
       Some
         (Func
            {
@@ -450,7 +596,7 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
              attributes = exports e;
            })
   | Import { module_; name; id; desc = Func typ; exports = e } ->
-      let typ, sign = typeuse st typ in
+      let typ, sign = typeuse `Sig st typ in
       Some
         (Fundecl
            {
@@ -483,7 +629,55 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
     | Elem of { id : id option; typ : reftype; init : expr list }
     | Data of { id : id option; init : string; mode : datamode }
 *)
-let module_ (_, fields) = List.map (fun f -> modulefield () f) fields
+let register_names ctx fields =
+  List.iter
+    (fun (field : Src.modulefield) ->
+      match field with
+      | Import { id; desc; exports; _ } -> (
+          (* ZZZ Check for non-import fields *)
+          match desc with
+          | Func _ -> ()
+          | Memory _ -> Sequence.register ctx.memories id exports
+          | Global _ -> Sequence.register ctx.globals id exports
+          | Tag _ -> Sequence.register ctx.tags id exports)
+      | Types rectype ->
+          Array.iter (fun (id, _) -> Sequence.register ctx.types id []) rectype
+      | Global { id; exports; _ } -> Sequence.register ctx.globals id exports
+      | Func _ | Export _ | Start _ -> ()
+      | Elem _ | Data _ -> () (*ZZZ*)
+      | Memory { id; exports; _ } -> Sequence.register ctx.memories id exports
+      | Tag { id; exports; _ } -> Sequence.register ctx.tags id exports)
+    fields;
+  List.iter
+    (fun (field : Src.modulefield) ->
+      match field with
+      | Import { id; desc; exports; _ } -> (
+          (* ZZZ Check for non-import fields *)
+          match desc with
+          | Func _ -> Sequence.register ctx.functions id exports
+          | Memory _ | Global _ | Tag _ -> ())
+      | Func { id; exports; _ } -> Sequence.register ctx.functions id exports
+      | Types _ | Global _ | Export _ | Start _ | Elem _ | Data _ | Memory _
+      | Tag _ ->
+          ())
+    fields
+
+let module_ (_, fields) =
+  let ctx =
+    let common_namespace = Namespace.make () in
+    {
+      common_namespace;
+      types = Sequence.make (Namespace.make ()) "type" "t";
+      globals = Sequence.make common_namespace "global" "x";
+      functions = Sequence.make common_namespace "function" "f";
+      locals = Sequence.make common_namespace "local" "x";
+      memories = Sequence.make (Namespace.make ()) "memories" "m";
+      labels = LabelStack.make ();
+      tags = Sequence.make (Namespace.make ()) "tag" "t";
+    }
+  in
+  register_names ctx fields;
+  List.map (fun f -> modulefield ctx f) fields
 
 (*
 Use imports and exports as hints for naming functions
