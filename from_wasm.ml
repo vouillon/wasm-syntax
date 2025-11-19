@@ -1,13 +1,7 @@
 (*
-Namespaces:
-- types
-- functions, globals, locals
-- tags
-- elem
-- data
-
-Set of already used names
-Multiple mapping: index -> name
+- field names
+- type checker
+- proper folding
 *)
 
 module Src = Wasm.Ast.Text
@@ -41,6 +35,7 @@ module Sequence = struct
     index_mapping : (int, string) Hashtbl.t;
     label_mapping : (string, string) Hashtbl.t;
     mutable last_index : int;
+    mutable current_index : int;
     namespace : Namespace.t;
     default : string;
   }
@@ -51,11 +46,12 @@ module Sequence = struct
       index_mapping = Hashtbl.create 16;
       label_mapping = Hashtbl.create 16;
       last_index = 0;
+      current_index = 0;
       namespace;
       default;
     }
 
-  let register seq id exports =
+  let register' seq id exports =
     let name =
       let name =
         match (id, exports) with
@@ -68,7 +64,10 @@ module Sequence = struct
     let idx = seq.last_index in
     seq.last_index <- seq.last_index + 1;
     Hashtbl.add seq.index_mapping idx name;
-    Option.iter (fun id -> Hashtbl.add seq.label_mapping id name) id
+    Option.iter (fun id -> Hashtbl.add seq.label_mapping id name) id;
+    name
+
+  let register seq id exports = ignore (register' seq id exports)
 
   let get seq (idx : Src.idx) =
     match idx with
@@ -81,7 +80,14 @@ module Sequence = struct
         try Hashtbl.find seq.label_mapping id
         with Not_found ->
           Format.eprintf "Unbound %s $%s@." seq.name id;
-          exit 1)
+          if true then raise Not_found else exit 1)
+
+  let get_current seq =
+    let i = seq.current_index in
+    seq.current_index <- i + 1;
+    Hashtbl.find seq.index_mapping i
+
+  let consume_currents seq = seq.current_index <- seq.last_index
 end
 
 module LabelStack = struct
@@ -103,6 +109,7 @@ end
 type ctx = {
   common_namespace : Namespace.t;
   types : Sequence.t;
+  struct_fields : (string, Sequence.t * string list) Hashtbl.t;
   globals : Sequence.t;
   functions : Sequence.t;
   memories : Sequence.t;
@@ -113,14 +120,6 @@ type ctx = {
 
 let get_annot (a, _) = a
 let get_type (_, t) = t
-let name_field _st a = Option.value ~default:"foo" a
-let name_type _st a = Option.value ~default:"foo" a
-
-let name_func _st a exports =
-  Option.value ~default:(match exports with nm :: _ -> nm | [] -> "foo") a
-
-let name_local _st a = Option.value ~default:"x" a
-let name_global _st a = Option.value ~default:"x" a
 let annotated a t = (a, t)
 
 (*ZZZ Get name from table*)
@@ -178,27 +177,35 @@ let muttype typ st (t : _ Src.muttype) : _ Ast.muttype =
 
 let fieldtype st = muttype storagetype st
 
-let comptype st (t : Src.comptype) : Ast.comptype =
+let comptype st name (t : Src.comptype) : Ast.comptype =
   match t with
   | Func t -> Func (functype st t)
   | Struct l ->
+      let seq = fst (Hashtbl.find st.struct_fields name) in
       Struct
-        (Array.map
-           (fun t ->
-             annotated (name_field st (get_annot t)) (fieldtype st (get_type t)))
+        (Array.mapi
+           (fun i t ->
+             annotated
+               (Sequence.get seq
+                  (match get_annot t with
+                  | None -> Num (Int32.of_int i)
+                  | Some id -> Id id))
+               (fieldtype st (get_type t)))
            l)
   | Array t -> Array (fieldtype st t)
 
-let subtype st (t : Src.subtype) : Ast.subtype =
+let subtype st name (t : Src.subtype) : Ast.subtype =
   {
-    typ = comptype st t.typ;
+    typ = comptype st name t.typ;
     supertype = Option.map (fun i -> idx st `Type i) t.supertype;
     final = t.final;
   }
 
 let rectype st (t : Src.rectype) : Ast.rectype =
   Array.map
-    (fun t -> annotated (name_type st (get_annot t)) (subtype st (get_type t)))
+    (fun t ->
+      let name = Sequence.get_current st.types in
+      annotated name (subtype st name (get_type t)))
     t
 
 let globaltype st = muttype valtype st
@@ -435,13 +442,24 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | UnOp (F64 op) -> float_un_op F64 op args
   | UnOp (F32 op) -> float_un_op F32 op args
   | StructNew i ->
-      (*ZZZZ Use type *)
-      no_loc (Struct (Some (idx st `Type i), List.map (fun i -> ("f", i)) args))
-  | StructGet (s, _t, _f) ->
-      signage s [ no_loc (StructGet (sequence args, "f")) ]
-  | StructSet (_t, _f) ->
+      let type_name = idx st `Type i in
+      let fields = snd (Hashtbl.find st.struct_fields type_name) in
+      no_loc
+        (Struct
+           (Some (idx st `Type i), List.map2 (fun nm i -> (nm, i)) fields args))
+  | StructGet (s, t, f) ->
+      let type_name = idx st `Type t in
+      let name =
+        Sequence.get (fst (Hashtbl.find st.struct_fields type_name)) f
+      in
+      signage s [ no_loc (StructGet (sequence args, name)) ]
+  | StructSet (t, f) ->
+      let type_name = idx st `Type t in
+      let name =
+        Sequence.get (fst (Hashtbl.find st.struct_fields type_name)) f
+      in
       let e1, e2 = two_args args in
-      no_loc (StructSet (e1, "f", e2))
+      no_loc (StructSet (e1, name, e2))
   | ArrayNew t ->
       let e1, e2 = two_args args in
       no_loc (Array (Some (idx st `Type t), e1, e2))
@@ -530,9 +548,11 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
 
 let bind_locals st l =
   List.map
-    (fun (id, t) ->
+    (fun (_, t) ->
       Ast.no_loc
-        (Ast.Let ([ (Some (name_local st id), Some (valtype st t)) ], None)))
+        (Ast.Let
+           ( [ (Some (Sequence.get_current st.locals), Some (valtype st t)) ],
+             None )))
     l
 
 let typeuse kind st (typ, sign) =
@@ -572,14 +592,15 @@ let import (module_, name) =
 let modulefield st (f : Src.modulefield) : Ast.modulefield option =
   match f with
   | Types t -> Some (Type (rectype st t))
-  | Func { id; locals; instrs; typ; exports = e } ->
+  | Func { locals; instrs; typ; exports = e; _ } ->
       let st =
         let seq =
           Sequence.make (Namespace.dup st.common_namespace) "local" "x"
         in
         (match typ with
         | _, Some (params, _) ->
-            List.iter (fun (id, _) -> Sequence.register seq id []) params
+            List.iter (fun (id, _) -> Sequence.register seq id []) params;
+            Sequence.consume_currents seq
         | _ -> ());
         List.iter (fun (id, _) -> Sequence.register seq id []) locals;
         { st with locals = seq }
@@ -589,32 +610,63 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
       Some
         (Func
            {
-             name = name_func st id e;
+             name = Sequence.get_current st.functions;
              typ;
              sign;
              body = (None, locals @ List.map (fun i -> instr st i []) instrs);
              attributes = exports e;
            })
-  | Import { module_; name; id; desc = Func typ; exports = e } ->
-      let typ, sign = typeuse `Sig st typ in
-      Some
-        (Fundecl
-           {
-             name = name_func st id e;
-             typ;
-             sign;
-             attributes = import (module_, name) :: exports e;
-           })
-  | Global { id; typ; init; exports = e } ->
+  | Import { module_; name; desc; exports = e; _ } -> (
+      match desc with
+      | Func typ ->
+          let typ, sign = typeuse `Sig st typ in
+          Some
+            (Fundecl
+               {
+                 name = Sequence.get_current st.functions;
+                 typ;
+                 sign;
+                 attributes = import (module_, name) :: exports e;
+               })
+      | Tag typ ->
+          let typ, sign = typeuse `Sig st typ in
+          Some
+            (Tag
+               {
+                 name = Sequence.get_current st.tags;
+                 typ;
+                 sign;
+                 attributes = import (module_, name) :: exports e;
+               })
+      | Global typ ->
+          Some
+            (GlobalDecl
+               {
+                 name = Sequence.get_current st.globals;
+                 typ = Some (globaltype st typ);
+                 attributes = import (module_, name) :: exports e;
+               })
+      | Memory _ -> None)
+  | Global { typ; init; exports = e; _ } ->
       Some
         (Global
            {
-             name = name_global st id;
+             name = Sequence.get_current st.globals;
              typ = Some (globaltype st typ);
              def = sequence (List.map (fun i -> instr st i []) init);
              attributes = exports e;
            })
-  | _ -> None
+  | Tag { typ; exports = e; _ } ->
+      let typ, sign = typeuse `Sig st typ in
+      Some
+        (Tag
+           {
+             name = Sequence.get_current st.tags;
+             typ;
+             sign;
+             attributes = exports e;
+           })
+  | Memory _ | Start _ | Export _ | Elem _ | Data _ -> None
 
 (*
     | Memory of {
@@ -641,7 +693,21 @@ let register_names ctx fields =
           | Global _ -> Sequence.register ctx.globals id exports
           | Tag _ -> Sequence.register ctx.tags id exports)
       | Types rectype ->
-          Array.iter (fun (id, _) -> Sequence.register ctx.types id []) rectype
+          Array.iter
+            (fun (id, ty) ->
+              let name = Sequence.register' ctx.types id [] in
+              match (ty : Src.subtype).typ with
+              | Func _ | Array _ -> ()
+              | Struct l ->
+                  let seq = Sequence.make (Namespace.make ()) "field" "f" in
+                  let fields =
+                    Array.map
+                      (fun t -> Sequence.register' seq (get_annot t) [])
+                      l
+                  in
+                  Hashtbl.replace ctx.struct_fields name
+                    (seq, Array.to_list fields))
+            rectype
       | Global { id; exports; _ } -> Sequence.register ctx.globals id exports
       | Func _ | Export _ | Start _ -> ()
       | Elem _ | Data _ -> () (*ZZZ*)
@@ -668,6 +734,7 @@ let module_ (_, fields) =
     {
       common_namespace;
       types = Sequence.make (Namespace.make ()) "type" "t";
+      struct_fields = Hashtbl.create 16;
       globals = Sequence.make common_namespace "global" "x";
       functions = Sequence.make common_namespace "function" "f";
       locals = Sequence.make common_namespace "local" "x";

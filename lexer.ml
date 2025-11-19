@@ -118,6 +118,7 @@ let rec token lexbuf =
   | "<=s" -> LES
   | "<=u" -> LEU
   | "null" -> NULL
+  | "tag" -> TAG
   | "fn" -> FN
   | "mut" -> MUT
   | "type" -> TYPE

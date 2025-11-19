@@ -53,6 +53,7 @@
 %token UNDERSCORE "_"
 
 %token FN
+%token TAG
 %token MUT
 %token TYPE
 %token REC
@@ -207,6 +208,13 @@ func:
   { let (name, typ, sign) = f in
     Func {name; typ; sign; body; attributes} }
 
+tag:
+| TAG name = IDENT
+  t = ioption(":" t = IDENT { t } )
+  sign = option ("(" named_params = funcparams ")"
+  "->" results = resulttype { {named_params; results} })
+  { (name, t, sign) }
+
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
 %inline block:
@@ -326,11 +334,19 @@ global:
   "=" def = instr option(";")
   { Global {name; typ; def; attributes} }
 
+globaldecl:
+| attributes = list(attribute) LET name = IDENT
+  typ = option(":" mut = boption(MUT) typ = valtype { {mut; typ} })
+  { GlobalDecl {name; typ; attributes} }
+
 modulefield:
 | r = rectype { Type r }
 | attributes = list(attribute) f = fundecl option(";")
   { let (name, typ, sign) = f in Fundecl {name; typ; sign; attributes} }
 | f = func { f }
 | g = global { g }
+| g = globaldecl { g }
+| attributes = list(attribute) f = tag option(";")
+  { let (name, typ, sign) = f in Tag {name; typ; sign; attributes} }
 
 parse: l = list(modulefield) EOF { l }

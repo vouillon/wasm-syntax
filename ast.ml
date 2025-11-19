@@ -96,9 +96,20 @@ type modulefield =
       body : string option * instr list;
       attributes : attributes;
     }
+  | GlobalDecl of {
+      name : string;
+      typ : valtype muttype option;
+      attributes : attributes;
+    }
   | Global of {
       name : string;
       typ : valtype muttype option;
       def : instr;
+      attributes : attributes;
+    }
+  | Tag of {
+      name : string;
+      typ : string option;
+      sign : funsig option;
       attributes : attributes;
     }

@@ -373,8 +373,8 @@ and block_instrs f l =
 and block_contents f l =
   match l with [] -> () | _ -> Format.fprintf f "@;<1 2>%a@ " block_instrs l
 
-let fundecl f (name, typ, sign) =
-  Format.fprintf f "fn@ %s" name;
+let fundecl ~tag f (name, typ, sign) =
+  Format.fprintf f "%s@ %s" (if tag then "tag" else "fn") name;
   Option.iter (fun typ -> Format.fprintf f ": %s@ " typ) typ;
   Option.iter
     (fun { named_params; results } ->
@@ -397,14 +397,22 @@ let modulefield f field =
   match field with
   | Type t -> rectype f t
   | Func { name; typ; sign; body = _lab, body; attributes = a } ->
-      Format.fprintf f "@[<hv>%a@[<hv>@[%a@ {@]%a}@]@]" attributes a fundecl
-        (name, typ, sign) block_contents body
+      Format.fprintf f "@[<hv>%a@[<hv>@[%a@ {@]%a}@]@]" attributes a
+        (fundecl ~tag:false) (name, typ, sign) block_contents body
   | Global { name; typ; def; attributes = a } ->
       Format.fprintf f "@[<hv>%a@[<2>let@ %s" attributes a name;
       Option.iter (fun t -> Format.fprintf f ":@ %a" globaltype t) typ;
       Format.fprintf f "@ =@ %a@]@]" (instr Instruction) def
   | Fundecl { name; typ; sign; attributes = a } ->
-      Format.fprintf f "@[<hv>%a@[%a@]@]" attributes a fundecl (name, typ, sign)
+      Format.fprintf f "@[<hv>%a@[%a@]@]" attributes a (fundecl ~tag:false)
+        (name, typ, sign)
+  | Tag { name; typ; sign; attributes = a } ->
+      Format.fprintf f "@[<hv>%a@[%a@]@]" attributes a (fundecl ~tag:true)
+        (name, typ, sign)
+  | GlobalDecl { name; typ; attributes = a } ->
+      Format.fprintf f "@[<hv>%a@[<2>let@ %s" attributes a name;
+      Option.iter (fun t -> Format.fprintf f ":@ %a" globaltype t) typ;
+      Format.fprintf f "@]@]"
 
 let module_ f l =
   Format.fprintf f "@[<hv>%a@]@."
