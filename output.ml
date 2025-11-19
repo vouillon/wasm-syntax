@@ -207,10 +207,10 @@ let rec instr prec f (i : instr) =
   | Get x -> Format.pp_print_string f x
   | Set (x, i) ->
       parentheses prec Assignement f @@ fun () ->
-      Format.fprintf f "@[<2>%s@ :=@ %a@]" x (instr Assignement) i
+      Format.fprintf f "@[<2>%s@ =@ %a@]" x (instr Assignement) i
   | Tee (x, i) ->
       parentheses prec Assignement f @@ fun () ->
-      Format.fprintf f "@[<2>%s@ =@ %a@]" x (instr Assignement) i
+      Format.fprintf f "@[<2>%s@ :=@ %a@]" x (instr Assignement) i
   | Call (i, l) ->
       parentheses prec Call f @@ fun () ->
       Format.fprintf f "@[<2>%a@,(@[%a@])@]" (instr Call) i

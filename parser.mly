@@ -233,8 +233,8 @@ plaininstr:
 | UNREACHABLE { with_loc $sloc Unreachable }
 | NULL { with_loc $sloc Null }
 | x = IDENT { with_loc $sloc (Get x) }
-| x = IDENT ":=" i = instr { with_loc $sloc (Set (x, i)) }
-| x = IDENT "=" i = instr { with_loc $sloc (Tee (x, i)) }
+| x = IDENT "=" i = instr { with_loc $sloc (Set (x, i)) }
+| x = IDENT ":=" i = instr { with_loc $sloc (Tee (x, i)) }
 | "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
 | i = instr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (Call(i, l)) }
