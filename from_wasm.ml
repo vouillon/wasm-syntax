@@ -91,17 +91,26 @@ module Sequence = struct
 end
 
 module LabelStack = struct
-  type t = { ns : Namespace.t; stack : (string option * string) list }
+  type t = {
+    ns : Namespace.t;
+    stack : (string option * (string * bool ref)) list;
+  }
 
   let push st label =
     let ns = Namespace.dup st.ns in
+    let used = ref false in
     let name = Namespace.add ns (Option.value ~default:"l" label) in
-    (name, { ns; stack = (label, name) :: st.stack })
+    ( (fun () -> if !used then Some name else None),
+      { ns; stack = (label, (name, used)) :: st.stack } )
 
   let get st (idx : Src.idx) =
-    match idx with
-    | Num n -> snd (List.nth st.stack (Int32.to_int n))
-    | Id id -> List.assoc (Some id) st.stack
+    let name, used =
+      match idx with
+      | Num n -> snd (List.nth st.stack (Int32.to_int n))
+      | Id id -> List.assoc (Some id) st.stack
+    in
+    used := true;
+    name
 
   let make () = { ns = Namespace.make (); stack = [] }
 end
@@ -392,22 +401,23 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
       assert (args = []);
       let label, labels = LabelStack.push st.labels label in
       let st = { st with labels } in
-      no_loc (Block (Some label, List.map (fun i -> instr st i []) block))
+      let body = List.map (fun i -> instr st i []) block in
+      no_loc (Block (label (), body))
   | Loop { label; typ = _; block } ->
       assert (args = []);
       let label, labels = LabelStack.push st.labels label in
       let st = { st with labels } in
-      no_loc (Loop (Some label, List.map (fun i -> instr st i []) block))
+      let body = List.map (fun i -> instr st i []) block in
+      no_loc (Loop (label (), body))
   | If { label; typ = _; if_block; else_block } ->
       let label, labels = LabelStack.push st.labels label in
       let st = { st with labels } in
-      no_loc
-        (If
-           ( Some label,
-             sequence args,
-             List.map (fun i -> instr st i []) if_block,
-             if else_block = [] then None
-             else Some (List.map (fun i -> instr st i []) else_block) ))
+      let if_body = List.map (fun i -> instr st i []) if_block in
+      let else_body =
+        if else_block = [] then None
+        else Some (List.map (fun i -> instr st i []) else_block)
+      in
+      no_loc (If (label (), sequence args, if_body, else_body))
   | Unreachable -> sequence (args @ [ no_loc Unreachable ])
   | Nop -> sequence (args @ [ no_loc Nop ])
   | Pop _ -> sequence []
