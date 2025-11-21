@@ -31,7 +31,13 @@ module Tbl = struct
     Namespace.register env.namespace env.kind x;
     Hashtbl.replace env.tbl x.descr v
 
-  let find env x = Hashtbl.find env.tbl x
+  let override env x v = Hashtbl.replace env.tbl x.descr v
+
+  let find env x =
+    try Hashtbl.find env.tbl x.descr
+    with Not_found ->
+      Format.eprintf "Unbound %s %s@." env.kind x.descr;
+      raise Not_found
 end
 
 type type_context = {
@@ -40,7 +46,7 @@ type type_context = {
 }
 
 (*ZZZ unbound type*)
-let resolve_type_name ctx name = fst (Tbl.find ctx.types name.descr)
+let resolve_type_name ctx name = fst (Tbl.find ctx.types name)
 
 module Internal = Wasm.Ast.Binary.Types
 
@@ -100,9 +106,12 @@ let subtype ctx { typ; supertype; final } : Internal.subtype =
 let rectype ctx ty = Array.map (fun (_, ty) -> subtype ctx ty) ty
 
 let add_type ctx ty =
-  (*ZZZ Check unique names / field names*)
+  (*ZZZ Check unique field names*)
+  Array.iteri (fun i (name, typ) -> Tbl.add ctx.types name (lnot i, typ.typ)) ty;
   let i' = Wasm.Types.add_rectype ctx.internal_types (rectype ctx ty) in
-  Array.iteri (fun i (name, typ) -> Tbl.add ctx.types name (i' + i, typ.typ)) ty
+  Array.iteri
+    (fun i (name, typ) -> Tbl.override ctx.types name (i' + i, typ.typ))
+    ty
 
 type module_context = {
   subtyping_info : Wasm.Types.subtyping_info;
@@ -113,6 +122,7 @@ type module_context = {
   memories : limits Tbl.t;
 }
 
+(*ZZZ
 let typeuse ctx typ sign =
   match (typ, sign) with
   | Some idx, _ ->
@@ -125,6 +135,7 @@ let typeuse ctx typ sign =
           { typ = Func (signature ctx sign); supertype = None; final = true };
         |]
   | None, None -> assert false (*ZZZ*)
+*)
 
 let f (_, fields) =
   let type_context =
@@ -137,6 +148,7 @@ let f (_, fields) =
     (fun (field : modulefield) ->
       match field with Type rectype -> add_type type_context rectype | _ -> ())
     fields;
+  (*
   let ctx =
     let namespace = Namespace.make () in
     {
@@ -169,6 +181,8 @@ let f (_, fields) =
   in
   globals ctx fields;
   functions ctx fields
+*)
+  ()
 
 (*
 let rec infer env (stack : _ list) i : _ option =

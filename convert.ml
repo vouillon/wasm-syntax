@@ -12,8 +12,10 @@ let convert ~filename =
   (*
   Wasm.Validation.f ast;
 *)
+  let ast' = (None, List.filter_map (fun x -> x) (From_wasm.module_ ast)) in
+  Typing.f ast';
   Format.printf "/////////// %s //////////@.@.%a" filename Output.module_
-    (List.filter_map (fun x -> x) (From_wasm.module_ ast))
+    (snd ast')
 
 let _ =
   let p = "/home/jerome/wasm_of_ocaml/runtime/wasm" in
