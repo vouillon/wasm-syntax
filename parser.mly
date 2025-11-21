@@ -17,6 +17,7 @@
 %token COMMA ","
 %token COLON ":"
 %token ARROW "->"
+%token FATARROW "=>"
 %token EQUAL "="
 %token COLONEQUAL ":="
 %token QUOTE "'"
@@ -220,9 +221,8 @@ tag:
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
 blocktype:
-| "|" separated_list(",", valtype) "|"
-  option("->" resulttype {()} ) { () }
-| "->" resulttype { () }
+| "(" separated_list(",", valtype) ")" "->" resulttype { () }
+| valtype { () }
 
 %inline block:
 | label = label "{" l = delimited_instr_list "}" { (label, l) }
@@ -233,7 +233,8 @@ blocktype:
   { with_loc $sloc (Block(label, l)) }
 | label = label LOOP option(blocktype) "{" l = delimited_instr_list "}"
   { with_loc $sloc (Loop(label, l)) }
-| label = label IF e = instr (*option(blocktype)*) "{" l1 = delimited_instr_list "}"
+| label = label IF e = instr option(FATARROW blocktype {()})
+  "{" l1 = delimited_instr_list "}"
   l2 = option(ELSE  "{" l = delimited_instr_list "}" { l })
   { with_loc $sloc (If(label, e, l1, l2)) }
 

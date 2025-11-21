@@ -84,6 +84,7 @@ let rec token lexbuf =
   | ',' -> COMMA
   | ':' -> COLON
   | "->" -> ARROW
+  | "=>" -> FATARROW
   | '=' -> EQUAL
   | ":=" -> COLONEQUAL
   | "'" -> QUOTE

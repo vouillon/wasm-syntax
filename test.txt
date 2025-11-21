@@ -95,5 +95,5 @@ fn caml_int32_of_string(v: &eq) -> &eq {
 let foo = [block|1,2]
 
 fn test (b : i32) -> i32 {
-  if b { 1 } else { 2 }
+  if b => i32 { 1 } else { 2 }
 }
