@@ -131,8 +131,11 @@ let with_loc (loc_start, loc_end) descr = {descr; loc = { loc_start; loc_end }}
 
 %%
 
+%inline ident:
+| t = IDENT { with_loc $sloc t }
+
 heaptype:
-| t = IDENT { try Hashtbl.find absheaptype_tbl t with Not_found -> Type t }
+| t = ident { try Hashtbl.find absheaptype_tbl t.descr with Not_found -> Type t }
 
 reftype:
 | "&" nullable = boption("?") typ = heaptype
@@ -164,7 +167,7 @@ fieldtype:
 | mut = boption(MUT) typ = storagetype { {mut; typ } }
 
 structtype:
-| "{" l = separated_list(",", x = IDENT ":" t = fieldtype { (x, t) } ) "}"
+| "{" l = separated_list(",", x = ident ":" t = fieldtype { (x, t) } ) "}"
   { Array.of_list l }
 
 arraytype:
@@ -176,8 +179,8 @@ comptype:
 | t = arraytype { Array t }
 
 typedef:
-| TYPE name = IDENT op = boption(OPEN)
-  supertype = option(":" s = IDENT { s })
+| TYPE name = ident op = boption(OPEN)
+  supertype = option(":" s = ident { s })
   "=" typ = comptype option(";")
     { (name, {typ; supertype; final = not op}) }
 
@@ -189,7 +192,7 @@ attribute:
 | "#" "[" name = IDENT "=" i = instr "]" { (name, i) }
 
 simple_pat:
-| x = IDENT { Some x }
+| x = ident { Some x }
 | "_" { None }
 
 funcparams:
@@ -197,8 +200,8 @@ funcparams:
   { l }
 
 fundecl:
-| FN name = IDENT
-  t = ioption(":" t = IDENT { t } )
+| FN name = ident
+  t = ioption(":" t = ident { t } )
   sign = option ("(" named_params = funcparams ")"
   "->" results = resulttype { {named_params; results} })
   { (name, t, sign) }
@@ -209,8 +212,8 @@ func:
     Func {name; typ; sign; body; attributes} }
 
 tag:
-| TAG name = IDENT
-  t = ioption(":" t = IDENT { t } )
+| TAG name = ident
+  t = ioption(":" t = ident { t } )
   sign = option ("(" named_params = funcparams ")"
   "->" results = resulttype { {named_params; results} })
   { (name, t, sign) }
@@ -232,23 +235,23 @@ plaininstr:
 | NOP { with_loc $sloc Nop }
 | UNREACHABLE { with_loc $sloc Unreachable }
 | NULL { with_loc $sloc Null }
-| x = IDENT { with_loc $sloc (Get x) }
-| x = IDENT "=" i = instr { with_loc $sloc (Set (x, i)) }
-| x = IDENT ":=" i = instr { with_loc $sloc (Tee (x, i)) }
+| x = ident { with_loc $sloc (Get x) }
+| x = ident "=" i = instr { with_loc $sloc (Set (x, i)) }
+| x = ident ":=" i = instr { with_loc $sloc (Tee (x, i)) }
 | "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
 | i = instr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (Call(i, l)) }
-| t  = option(t = IDENT "#" { t }) s = STRING { with_loc $sloc (String (t, s)) }
+| t  = option(t = ident "#" { t }) s = STRING { with_loc $sloc (String (t, s)) }
 | i = INT { with_loc $sloc (Int i) }
 | f = FLOAT { with_loc $sloc (Float f) }
-| "{" x = IDENT "|" l = separated_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
+| "{" x = ident "|" l = separated_list(",", y = ident ":" i = instr { (y, i) }) "}"
   { with_loc $sloc (Struct (Some x, l)) }
-| "{" l = separated_nonempty_list(",", y = IDENT ":" i = instr { (y, i) }) "}"
+| "{" l = separated_nonempty_list(",", y = ident ":" i = instr { (y, i) }) "}"
   { with_loc $sloc (Struct (None, l)) }
 | i = instr AS t = valtype { with_loc $sloc (Cast(i, t)) }
 | i = instr IS t = reftype { with_loc $sloc (Test(i, t)) }
-| i = instr "." x = IDENT { with_loc $sloc (StructGet(i, x)) }
-| i = instr "." x = IDENT "=" j = instr { with_loc $sloc (StructSet(i, x, j)) }
+| i = instr "." x = ident { with_loc $sloc (StructGet(i, x)) }
+| i = instr "." x = ident "=" j = instr { with_loc $sloc (StructSet(i, x, j)) }
 | i = instr "+" j = instr { with_loc $sloc (BinOp(Add, i, j)) }
 | i = instr "-" j = instr { with_loc $sloc (BinOp(Sub, i, j)) }
 | i = instr "*" j = instr { with_loc $sloc (BinOp(Mul, i, j)) }
@@ -299,15 +302,15 @@ plaininstr:
 | BR_ON_CAST "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
 | BR_ON_CAST_FAIL "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec prec_branch
-| THROW t = IDENT  "(" l = separated_list(",", instr) ")"
+| THROW t = ident  "(" l = separated_list(",", instr) ")"
   { with_loc $sloc (Throw (t, l)) }
 | "[" l = separated_list(",", i = instr { i }) "]"
   { with_loc $sloc (ArrayFixed (None, l)) }
 | "[" i1 = instr ";" i2 = instr "]"
   { with_loc $sloc (Array (None, i1, i2)) }
-| "[" t = IDENT "|" l = separated_list(",", i = instr { i }) "]"
+| "[" t = ident "|" l = separated_list(",", i = instr { i }) "]"
   { with_loc $sloc (ArrayFixed (Some t, l)) }
-| "[" t = IDENT "|" i1 = instr ";" i2 = instr "]"
+| "[" t = ident "|" i1 = instr ";" i2 = instr "]"
   { with_loc $sloc (Array (Some t, i1, i2)) }
 | i1 = instr "[" i2 = instr "]" { with_loc $sloc (ArrayGet (i1, i2)) }
 | i1 = instr "[" i2 = instr "]" "=" i3 = instr
@@ -329,15 +332,15 @@ delimited_instr_list:
 | i = plaininstr ";" l = delimited_instr_list { i :: l }
 
 global:
-| attributes = list(attribute) LET name = IDENT
+| attributes = list(attribute) LET name = ident
   typ = option(":" mut = boption(MUT) typ = valtype { {mut; typ} })
   "=" def = instr option(";")
   { Global {name; typ; def; attributes} }
 
 globaldecl:
-| attributes = list(attribute) LET name = IDENT
-  typ = (":" mut = boption(MUT) typ = valtype { {mut; typ} })
-  { GlobalDecl {name; typ; attributes} }
+| attributes = list(attribute) LET name = ident
+  ":" mut = boption(MUT) typ = valtype
+  { GlobalDecl {name; typ = {mut; typ}; attributes} }
 
 modulefield:
 | r = rectype { Type r }

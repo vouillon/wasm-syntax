@@ -1,8 +1,14 @@
-type idx = string
+type location = { loc_start : Lexing.position; loc_end : Lexing.position }
+type 'a with_loc = { descr : 'a; loc : location }
+
+let no_loc descr =
+  { descr; loc = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos } }
+
+type idx = string with_loc
 
 include Wasm.Ast.Types (struct
   type nonrec idx = idx
-  type 'a annotated_array = (string * 'a) array
+  type 'a annotated_array = (idx * 'a) array
 end)
 
 type signage = Wasm.Ast.signage = Signed | Unsigned
@@ -26,12 +32,6 @@ type binop =
   | Le of signage option
   | Ge of signage option
 
-type location = { loc_start : Lexing.position; loc_end : Lexing.position }
-type 'a with_loc = { descr : 'a; loc : location }
-
-let no_loc descr =
-  { descr; loc = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos } }
-
 type label = string
 
 type instr_descr =
@@ -50,9 +50,9 @@ type instr_descr =
   | Float of string
   | Cast of instr * valtype
   | Test of instr * reftype
-  | Struct of idx option * (string * instr) list
-  | StructGet of instr * string
-  | StructSet of instr * string * instr
+  | Struct of idx option * (idx * instr) list
+  | StructGet of instr * idx
+  | StructSet of instr * idx * instr
   | Array of idx option * instr * instr
   | ArrayFixed of idx option * instr list
   | ArrayGet of instr * instr
@@ -75,7 +75,7 @@ type instr_descr =
 and instr = instr_descr with_loc
 
 type funsig = {
-  named_params : (string option * valtype) list;
+  named_params : (idx option * valtype) list;
   results : valtype list;
 }
 
@@ -84,32 +84,28 @@ type attributes = (string * instr) list
 type modulefield =
   | Type of rectype
   | Fundecl of {
-      name : string;
-      typ : string option;
+      name : idx;
+      typ : idx option;
       sign : funsig option;
       attributes : attributes;
     }
   | Func of {
-      name : string;
-      typ : string option;
+      name : idx;
+      typ : idx option;
       sign : funsig option;
       body : string option * instr list;
       attributes : attributes;
     }
-  | GlobalDecl of {
-      name : string;
-      typ : valtype muttype;
-      attributes : attributes;
-    }
+  | GlobalDecl of { name : idx; typ : valtype muttype; attributes : attributes }
   | Global of {
-      name : string;
+      name : idx;
       typ : valtype muttype option;
       def : instr;
       attributes : attributes;
     }
   | Tag of {
-      name : string;
-      typ : string option;
+      name : idx;
+      typ : idx option;
       sign : funsig option;
       attributes : attributes;
     }

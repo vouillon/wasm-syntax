@@ -8,7 +8,7 @@ type type_context = {
 }
 
 (*ZZZ unbound type*)
-let resolve_type_name ctx name = fst (Hashtbl.find ctx.types name)
+let resolve_type_name ctx name = fst (Hashtbl.find ctx.types name.descr)
 
 module Internal = Wasm.Ast.Binary.Types
 
@@ -71,7 +71,8 @@ let add_type ctx ty =
   (*ZZZ Check unique names / field names*)
   let i' = Wasm.Types.add_rectype ctx.internal_types (rectype ctx ty) in
   Array.iteri
-    (fun i (name, typ) -> Hashtbl.replace ctx.types name (i' + i, typ.typ))
+    (fun i (name, typ) ->
+      Hashtbl.replace ctx.types name.descr (i' + i, typ.typ))
     ty
 
 type module_context = {
@@ -119,13 +120,13 @@ let f (_, fields) =
       match field with
       | Fundecl { name; typ; sign; _ } ->
           (*ZZZ Check existing*)
-          Hashtbl.add ctx.functions name (typeuse ctx.types typ sign)
+          Hashtbl.add ctx.functions name.descr (typeuse ctx.types typ sign)
       | GlobalDecl { name; typ; _ } ->
-          Hashtbl.add ctx.globals name (globaltype type_context typ, typ)
+          Hashtbl.add ctx.globals name.descr (globaltype type_context typ, typ)
       | Func { name; typ; sign; _ } ->
-          Hashtbl.add ctx.functions name (typeuse ctx.types typ sign)
+          Hashtbl.add ctx.functions name.descr (typeuse ctx.types typ sign)
       | Tag { name; typ; _ } ->
-          Hashtbl.add ctx.tags name (typeuse ctx.types typ)
+          Hashtbl.add ctx.tags name.descr (typeuse ctx.types typ)
       | _ -> ())
     fields;
   let ctx =

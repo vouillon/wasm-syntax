@@ -70,6 +70,8 @@ module Sequence = struct
   let register seq id exports = ignore (register' seq id exports)
 
   let get seq (idx : Src.idx) =
+    Ast.no_loc
+    @@
     match idx with
     | Num n -> (
         try Hashtbl.find seq.index_mapping (Int32.to_int n)
@@ -85,7 +87,7 @@ module Sequence = struct
   let get_current seq =
     let i = seq.current_index in
     seq.current_index <- i + 1;
-    Hashtbl.find seq.index_mapping i
+    Ast.no_loc (Hashtbl.find seq.index_mapping i)
 
   let consume_currents seq = seq.current_index <- seq.last_index
 end
@@ -131,7 +133,6 @@ let get_annot (a, _) = a
 let get_type (_, t) = t
 let annotated a t = (a, t)
 
-(*ZZZ Get name from table*)
 let idx ctx kind i =
   match kind with
   | `Type -> Sequence.get ctx.types i
@@ -139,7 +140,8 @@ let idx ctx kind i =
   | `Func -> Sequence.get ctx.functions i
   | `Tag -> Sequence.get ctx.tags i
   | `Local -> Sequence.get ctx.locals i
-  | `Label -> LabelStack.get ctx.labels i
+
+let label ctx i = LabelStack.get ctx.labels i
 
 let heaptype st (t : Src.heaptype) : Ast.heaptype =
   match t with
@@ -214,7 +216,7 @@ let rectype st (t : Src.rectype) : Ast.rectype =
   Array.map
     (fun t ->
       let name = Sequence.get_current st.types in
-      annotated name (subtype st name (get_type t)))
+      annotated name (subtype st name.descr (get_type t)))
     t
 
 let globaltype st = muttype valtype st
@@ -317,21 +319,24 @@ let signage s args =
            ( Ast.no_loc
                (Ast.Get
                   (match s with
-                  | Ast.Signed -> "signed"
-                  | Unsigned -> "unsigned")),
+                  | Ast.Signed -> Ast.no_loc "signed"
+                  | Unsigned -> Ast.no_loc "unsigned")),
              [ sequence args ] ))
 
 let int_un_op sz (op : Src.int_un_op) args =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
   match op with
-  | Clz -> no_loc (Call (no_loc (Get "clz"), [ sequence args ]))
-  | Ctz -> no_loc (Call (no_loc (Get "ctz"), [ sequence args ]))
-  | Popcnt -> no_loc (Call (no_loc (Get "popcnt"), [ sequence args ]))
+  | Clz -> no_loc (Call (no_loc (Get (Ast.no_loc "clz")), [ sequence args ]))
+  | Ctz -> no_loc (Call (no_loc (Get (Ast.no_loc "ctz")), [ sequence args ]))
+  | Popcnt ->
+      no_loc (Call (no_loc (Get (Ast.no_loc "popcnt")), [ sequence args ]))
   | Eqz -> no_loc (UnOp (Not, sequence args))
   | Trunc (_, s) ->
-      no_loc (Call (no_loc (Get "truncate"), [ signage (Some s) args ]))
+      no_loc
+        (Call (no_loc (Get (Ast.no_loc "truncate")), [ signage (Some s) args ]))
   | TruncSat (_, s) -> no_loc (Cast (signage (Some s) args, sz))
-  | Reinterpret -> no_loc (Call (no_loc (Get "reinterpret"), [ sequence args ]))
+  | Reinterpret ->
+      no_loc (Call (no_loc (Get (Ast.no_loc "reinterpret")), [ sequence args ]))
   | ExtendS _ -> no_loc Unreachable (* ZZZ *)
 
 let int_bin_op (op : Src.int_bin_op) args =
@@ -351,8 +356,8 @@ let int_bin_op (op : Src.int_bin_op) args =
   | Xor -> symbol Xor
   | Shl -> symbol Shl
   | Shr s -> symbol (Shr s)
-  | Rotl -> no_loc (Call (no_loc (Get "rotl"), [ sequence args ]))
-  | Rotr -> no_loc (Call (no_loc (Get "rotr"), [ sequence args ]))
+  | Rotl -> no_loc (Call (no_loc (Get (Ast.no_loc "rotl")), [ sequence args ]))
+  | Rotr -> no_loc (Call (no_loc (Get (Ast.no_loc "rotr")), [ sequence args ]))
   | Eq -> symbol Eq
   | Ne -> symbol Ne
   | Lt s -> symbol (Lt (Some s))
@@ -364,14 +369,18 @@ let float_un_op sz (op : Src.float_un_op) args =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
   match op with
   | Neg -> no_loc (UnOp (Neg, sequence args))
-  | Abs -> no_loc (Call (no_loc (Get "abs"), [ sequence args ]))
-  | Ceil -> no_loc (Call (no_loc (Get "ceil"), [ sequence args ]))
-  | Floor -> no_loc (Call (no_loc (Get "floor"), [ sequence args ]))
-  | Trunc -> no_loc (Call (no_loc (Get "trunc"), [ sequence args ]))
-  | Nearest -> no_loc (Call (no_loc (Get "nearest"), [ sequence args ]))
-  | Sqrt -> no_loc (Call (no_loc (Get "sqrt"), [ sequence args ]))
+  | Abs -> no_loc (Call (no_loc (Get (Ast.no_loc "abs")), [ sequence args ]))
+  | Ceil -> no_loc (Call (no_loc (Get (Ast.no_loc "ceil")), [ sequence args ]))
+  | Floor ->
+      no_loc (Call (no_loc (Get (Ast.no_loc "floor")), [ sequence args ]))
+  | Trunc ->
+      no_loc (Call (no_loc (Get (Ast.no_loc "trunc")), [ sequence args ]))
+  | Nearest ->
+      no_loc (Call (no_loc (Get (Ast.no_loc "nearest")), [ sequence args ]))
+  | Sqrt -> no_loc (Call (no_loc (Get (Ast.no_loc "sqrt")), [ sequence args ]))
   | Convert (_, s) -> no_loc (Cast (signage (Some s) args, sz))
-  | Reinterpret -> no_loc (Call (no_loc (Get "reinterpret"), [ sequence args ]))
+  | Reinterpret ->
+      no_loc (Call (no_loc (Get (Ast.no_loc "reinterpret")), [ sequence args ]))
 
 let float_bin_op (op : Src.float_bin_op) args =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
@@ -384,9 +393,10 @@ let float_bin_op (op : Src.float_bin_op) args =
   | Sub -> symbol Sub
   | Mul -> symbol Mul
   | Div -> symbol (Div None)
-  | Min -> no_loc (Call (no_loc (Get "min"), [ sequence args ]))
-  | Max -> no_loc (Call (no_loc (Get "max"), [ sequence args ]))
-  | CopySign -> no_loc (Call (no_loc (Get "copysign"), [ sequence args ]))
+  | Min -> no_loc (Call (no_loc (Get (Ast.no_loc "min")), [ sequence args ]))
+  | Max -> no_loc (Call (no_loc (Get (Ast.no_loc "max")), [ sequence args ]))
+  | CopySign ->
+      no_loc (Call (no_loc (Get (Ast.no_loc "copysign")), [ sequence args ]))
   | Eq -> symbol Eq
   | Ne -> symbol Ne
   | Lt -> symbol (Lt None)
@@ -422,21 +432,20 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | Nop -> sequence (args @ [ no_loc Nop ])
   | Pop _ -> sequence []
   | Drop -> no_loc (Let ([ (None, None) ], Some (sequence args)))
-  | Br i -> no_loc (Br (idx st `Label i, sequence_opt args))
-  | Br_if i -> no_loc (Br_if (idx st `Label i, sequence args))
-  | Br_on_null i -> no_loc (Br_on_null (idx st `Label i, sequence args))
-  | Br_on_non_null i -> no_loc (Br_on_null (idx st `Label i, sequence args))
+  | Br i -> no_loc (Br (label st i, sequence_opt args))
+  | Br_if i -> no_loc (Br_if (label st i, sequence args))
+  | Br_on_null i -> no_loc (Br_on_null (label st i, sequence args))
+  | Br_on_non_null i -> no_loc (Br_on_null (label st i, sequence args))
   | Br_on_cast (i, _, t) ->
       (* ZZZ cast? *)
-      no_loc (Br_on_cast (idx st `Label i, reftype st t, sequence args))
+      no_loc (Br_on_cast (label st i, reftype st t, sequence args))
   | Br_on_cast_fail (i, _, t) ->
       (* ZZZ cast? *)
-      no_loc (Br_on_cast_fail (idx st `Label i, reftype st t, sequence args))
-  | Br_table (labels, label) ->
+      no_loc (Br_on_cast_fail (label st i, reftype st t, sequence args))
+  | Br_table (labels, lab) ->
       no_loc
         (Br_table
-           ( List.map (fun i -> idx st `Label i) (labels @ [ label ]),
-             sequence args ))
+           (List.map (fun i -> label st i) (labels @ [ lab ]), sequence args))
   | Folded (i, args') ->
       assert (args = []);
       instr st i (List.map (fun i -> instr st i []) args')
@@ -453,20 +462,21 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | UnOp (F32 op) -> float_un_op F32 op args
   | StructNew i ->
       let type_name = idx st `Type i in
-      let fields = snd (Hashtbl.find st.struct_fields type_name) in
+      let fields = snd (Hashtbl.find st.struct_fields type_name.descr) in
       no_loc
         (Struct
-           (Some (idx st `Type i), List.map2 (fun nm i -> (nm, i)) fields args))
+           ( Some (idx st `Type i),
+             List.map2 (fun nm i -> (Ast.no_loc nm, i)) fields args ))
   | StructGet (s, t, f) ->
       let type_name = idx st `Type t in
       let name =
-        Sequence.get (fst (Hashtbl.find st.struct_fields type_name)) f
+        Sequence.get (fst (Hashtbl.find st.struct_fields type_name.descr)) f
       in
       signage s [ no_loc (StructGet (sequence args, name)) ]
   | StructSet (t, f) ->
       let type_name = idx st `Type t in
       let name =
-        Sequence.get (fst (Hashtbl.find st.struct_fields type_name)) f
+        Sequence.get (fst (Hashtbl.find st.struct_fields type_name.descr)) f
       in
       let e1, e2 = two_args args in
       no_loc (StructSet (e1, name, e2))
@@ -520,7 +530,11 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
       no_loc
         (Call
            ( no_loc
-               (Get (match s with Signed -> "signed" | Unsigned -> "unsigned")),
+               (Get
+                  (Ast.no_loc
+                     (match s with
+                     | Signed -> "signed"
+                     | Unsigned -> "unsigned"))),
              args ))
   | I64ExtendI32 s -> no_loc (Cast (signage (Some s) args, I64))
   | I32WrapI64 -> no_loc (Cast (sequence args, I32))
@@ -532,7 +546,7 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
       no_loc (Cast (sequence args, Ref { nullable = true; typ = Any }))
   | ArrayNewData (t, _) ->
       no_loc (String (Some (idx st `Type t), "foo")) (*ZZZ*)
-  | ArrayLen -> no_loc (Call (no_loc (Get "array_len"), args))
+  | ArrayLen -> no_loc (Call (no_loc (Get (Ast.no_loc "array_len")), args))
   | RefCast t -> no_loc (Cast (sequence args, Ref (reftype st t)))
   | RefTest t -> no_loc (Test (sequence args, reftype st t))
   | RefEq ->
@@ -580,7 +594,7 @@ let typeuse kind st (typ, sign) =
                            (match id with
                            | Some id -> Id id
                            | None -> Num (Int32.of_int n)))
-                  | `Sig -> id),
+                  | `Sig -> Option.map Ast.no_loc id),
                   valtype st t ))
               p;
           results = List.map (fun t -> valtype st t) r;

@@ -12,7 +12,7 @@ let heaptype f (t : heaptype) =
   | Struct -> Format.pp_print_string f "struct"
   | Array -> Format.pp_print_string f "array"
   | None_ -> Format.pp_print_string f "none"
-  | Type s -> Format.pp_print_string f s
+  | Type s -> Format.pp_print_string f s.descr
 
 let reftype f { nullable; typ } =
   if nullable then Format.fprintf f "&?%a" heaptype typ
@@ -65,14 +65,15 @@ let comptype f (t : comptype) =
       Format.fprintf f "@ {@]@;<1 2>%a@ }"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@;<1 2>")
-           (fun f (nm, t) -> Format.fprintf f "@[<2>%s:@ %a@]" nm fieldtype t))
+           (fun f (nm, t) ->
+             Format.fprintf f "@[<2>%s:@ %a@]" nm.descr fieldtype t))
         (Array.to_list l)
   | Array t -> Format.fprintf f "@]@ [@[%a@]]" fieldtype t
 
 let subtype f (nm, { typ; supertype; final }) =
-  Format.fprintf f "@[<hv>@[type@ %s%s" nm (if final then "" else " open");
+  Format.fprintf f "@[<hv>@[type@ %s%s" nm.descr (if final then "" else " open");
   (match supertype with
-  | Some supertype -> Format.fprintf f ":@ %s" supertype
+  | Some supertype -> Format.fprintf f ":@ %s" supertype.descr
   | None -> ());
   Format.fprintf f "@ =%a@]" comptype typ
 
@@ -183,7 +184,7 @@ let label_comment f (l, label) =
 
 let simple_pat f p =
   match p with
-  | Some x -> Format.pp_print_string f x
+  | Some x -> Format.pp_print_string f x.descr
   | None -> Format.pp_print_string f "_"
 
 let rec instr prec f (i : instr) =
@@ -204,13 +205,13 @@ let rec instr prec f (i : instr) =
       | None -> Format.fprintf f "@[}%a@]@]@]" label_comment (l1, label))
   | Unreachable -> Format.pp_print_string f "unreachable"
   | Nop -> Format.pp_print_string f "nop"
-  | Get x -> Format.pp_print_string f x
+  | Get x -> Format.pp_print_string f x.descr
   | Set (x, i) ->
       parentheses prec Assignement f @@ fun () ->
-      Format.fprintf f "@[<2>%s@ =@ %a@]" x (instr Assignement) i
+      Format.fprintf f "@[<2>%s@ =@ %a@]" x.descr (instr Assignement) i
   | Tee (x, i) ->
       parentheses prec Assignement f @@ fun () ->
-      Format.fprintf f "@[<2>%s@ :=@ %a@]" x (instr Assignement) i
+      Format.fprintf f "@[<2>%s@ :=@ %a@]" x.descr (instr Assignement) i
   | Call (i, l) ->
       parentheses prec Call f @@ fun () ->
       Format.fprintf f "@[<2>%a@,(@[%a@])@]" (instr Call) i
@@ -220,7 +221,7 @@ let rec instr prec f (i : instr) =
         l
   | String (t, s) ->
       Format.fprintf f "@[";
-      Option.iter (fun t -> Format.fprintf f "%s#" t) t;
+      Option.iter (fun t -> Format.fprintf f "%s#" t.descr) t;
       Format.fprintf f "\"%a\"@]"
         (fun f s ->
           let len, s = Wasm.Output.escape_string s in
@@ -235,27 +236,27 @@ let rec instr prec f (i : instr) =
       Format.fprintf f "@[<2>%a@ @[is@ %a@]@]" (instr Cast) i reftype t
   | Struct (nm, l) ->
       Format.fprintf f "@[<hv>@[{";
-      Option.iter (fun nm -> Format.fprintf f "%s|" nm) nm;
+      Option.iter (fun nm -> Format.fprintf f "%s|" nm.descr) nm;
       Format.fprintf f "@]@;<1 2>%a@ }@]"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@;<1 2>")
            (fun f (nm, i) ->
-             Format.fprintf f "@[<2>%s:@ %a@]" nm (instr Instruction) i))
+             Format.fprintf f "@[<2>%s:@ %a@]" nm.descr (instr Instruction) i))
         l
   | StructGet (i, s) ->
       parentheses prec FieldAccess f @@ fun () ->
-      Format.fprintf f "%a.%s" (instr FieldAccess) i s
+      Format.fprintf f "%a.%s" (instr FieldAccess) i s.descr
   | StructSet (i, s, i') ->
       parentheses prec FieldAccess f @@ fun () ->
-      Format.fprintf f "@[<2>%a.%s@ =@ %a@]" (instr FieldAccess) i s
+      Format.fprintf f "@[<2>%a.%s@ =@ %a@]" (instr FieldAccess) i s.descr
         (instr Assignement) i'
   | Array (t, i, n) ->
       Format.fprintf f "[@[";
-      Option.iter (fun t -> Format.fprintf f "%s|@ " t) t;
+      Option.iter (fun t -> Format.fprintf f "%s|@ " t.descr) t;
       Format.fprintf f "%a;@ %a@]]" (instr Instruction) i (instr Instruction) n
   | ArrayFixed (t, l) ->
       Format.fprintf f "[@[";
-      Option.iter (fun t -> Format.fprintf f "%s|@ " t) t;
+      Option.iter (fun t -> Format.fprintf f "%s|@ " t.descr) t;
       Format.fprintf f "%a@]]"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
@@ -331,7 +332,7 @@ let rec instr prec f (i : instr) =
       Format.fprintf f "@]"
   | Throw (tag, l) ->
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[<2>throw@ %s@,(@[%a@])@]@]" tag
+      Format.fprintf f "@[<2>throw@ %s@,(@[%a@])@]@]" tag.descr
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))
@@ -374,8 +375,8 @@ and block_contents f l =
   match l with [] -> () | _ -> Format.fprintf f "@;<1 2>%a@ " block_instrs l
 
 let fundecl ~tag f (name, typ, sign) =
-  Format.fprintf f "%s@ %s" (if tag then "tag" else "fn") name;
-  Option.iter (fun typ -> Format.fprintf f ": %s@ " typ) typ;
+  Format.fprintf f "%s@ %s" (if tag then "tag" else "fn") name.descr;
+  Option.iter (fun typ -> Format.fprintf f ": %s@ " typ.descr) typ;
   Option.iter
     (fun { named_params; results } ->
       Format.fprintf f "@,(@[%a@])"
@@ -400,7 +401,7 @@ let modulefield f field =
       Format.fprintf f "@[<hv>%a@[<hv>@[%a@ {@]%a}@]@]" attributes a
         (fundecl ~tag:false) (name, typ, sign) block_contents body
   | Global { name; typ; def; attributes = a } ->
-      Format.fprintf f "@[<hv>%a@[<2>let@ %s" attributes a name;
+      Format.fprintf f "@[<hv>%a@[<2>let@ %s" attributes a name.descr;
       Option.iter (fun t -> Format.fprintf f ":@ %a" globaltype t) typ;
       Format.fprintf f "@ =@ %a@]@]" (instr Instruction) def
   | Fundecl { name; typ; sign; attributes = a } ->
@@ -410,7 +411,7 @@ let modulefield f field =
       Format.fprintf f "@[<hv>%a@[%a@]@]" attributes a (fundecl ~tag:true)
         (name, typ, sign)
   | GlobalDecl { name; typ; attributes = a } ->
-      Format.fprintf f "@[<hv>%a@[<2>let@ %s:@ %a@]@]" attributes a name
+      Format.fprintf f "@[<hv>%a@[<2>let@ %s:@ %a@]@]" attributes a name.descr
         globaltype typ
 
 let module_ f l =
