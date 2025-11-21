@@ -28,7 +28,7 @@ type custom_operations = {
   dup : &?dup
 }
 
-type custom open = { ops : &custom_operations }
+type custom = open { ops : &custom_operations }
 
 let int32_ops : &custom_operations =
   {custom_operations|
@@ -93,3 +93,7 @@ fn caml_int32_of_string(v: &eq) -> &eq {
 }
 
 let foo = [block|1,2]
+
+fn test (b : i32) -> i32 {
+  if b { 1 } else { 2 }
+}

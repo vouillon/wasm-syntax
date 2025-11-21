@@ -71,11 +71,11 @@ let comptype f (t : comptype) =
   | Array t -> Format.fprintf f "@]@ [@[%a@]]" fieldtype t
 
 let subtype f (nm, { typ; supertype; final }) =
-  Format.fprintf f "@[<hv>@[type@ %s%s" nm.descr (if final then "" else " open");
+  Format.fprintf f "@[<hv>@[type@ %s" nm.descr;
   (match supertype with
   | Some supertype -> Format.fprintf f ":@ %s" supertype.descr
   | None -> ());
-  Format.fprintf f "@ =%a@]" comptype typ
+  Format.fprintf f "@ =%s%a@]" (if final then "" else " open") comptype typ
 
 let rectype f t =
   match Array.to_list t with

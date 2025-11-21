@@ -5,8 +5,6 @@ A local let can override a previous let
 
 open Ast
 
-type stack = Unreachable | Empty | Cons of valtype * stack
-
 module Namespace = struct
   type t = (string, string * location) Hashtbl.t
 
@@ -37,6 +35,7 @@ module Tbl = struct
     try Hashtbl.find env.tbl x.descr
     with Not_found ->
       Format.eprintf "Unbound %s %s@." env.kind x.descr;
+      (*ZZZ*)
       raise Not_found
 end
 
@@ -45,7 +44,6 @@ type type_context = {
   types : (int * comptype) Tbl.t;
 }
 
-(*ZZZ unbound type*)
 let resolve_type_name ctx name = fst (Tbl.find ctx.types name)
 
 module Internal = Wasm.Ast.Binary.Types
@@ -113,6 +111,8 @@ let add_type ctx ty =
     (fun i (name, typ) -> Tbl.override ctx.types name (i' + i, typ.typ))
     ty
 
+type stack = Unreachable | Empty | Cons of valtype * Internal.valtype * stack
+
 type module_context = {
   subtyping_info : Wasm.Types.subtyping_info;
   types : (int * comptype) Tbl.t;
@@ -123,7 +123,7 @@ type module_context = {
 }
 
 (*ZZZ
-let typeuse ctx typ sign =
+let fundecl ctx typ sign =
   match (typ, sign) with
   | Some idx, _ ->
       (*ZZZ Validate signature *)
@@ -165,12 +165,12 @@ let f (_, fields) =
       match field with
       | Fundecl { name; typ; sign; _ } ->
           (*ZZZ Check existing*)
-          Tbl.add ctx.functions name (typeuse ctx.types typ sign)
+          Tbl.add ctx.functions name (fundecl ctx.types typ sign)
       | GlobalDecl { name; typ; _ } ->
           Tbl.add ctx.globals name (globaltype type_context typ, typ)
       | Func { name; typ; sign; _ } ->
-          Tbl.add ctx.functions name (typeuse ctx.types typ sign)
-      | Tag { name; typ; _ } -> Tbl.add ctx.tags name (typeuse ctx.types typ)
+          Tbl.add ctx.functions name (fundecl ctx.types typ sign)
+      | Tag { name; typ; _ } -> Tbl.add ctx.tags name (fundecl ctx.types typ)
       | _ -> ())
     fields;
   let ctx =

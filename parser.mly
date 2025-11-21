@@ -59,7 +59,7 @@
 %token REC
 %token OPEN
 %token NOP UNREACHABLE NULL
-%token LOOP IF ELSE
+%token DO LOOP IF ELSE
 %token LET AS IS
 %token BR BR_IF BR_TABLE RETURN THROW
 %token BR_ON_CAST BR_ON_CAST_FAIL
@@ -81,7 +81,6 @@
 %right prec_unary
 %left DOT LPAREN
 %left SHARP
-
 (* BR foo 1 + 2 understood as BR foo (1 + 2)
    BR_TABLE { ...} 1 + 2 understood as BR_TABLE { ...} (1 + 2)
    BR foo { ... } understood as a single instruction
@@ -179,9 +178,9 @@ comptype:
 | t = arraytype { Array t }
 
 typedef:
-| TYPE name = ident op = boption(OPEN)
+| TYPE name = ident
   supertype = option(":" s = ident { s })
-  "=" typ = comptype option(";")
+  "=" op = boption(OPEN) typ = comptype option(";")
     { (name, {typ; supertype; final = not op}) }
 
 rectype:
@@ -220,14 +219,21 @@ tag:
 
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
+blocktype:
+| "|" separated_list(",", valtype) "|"
+  option("->" resulttype {()} ) { () }
+| "->" resulttype { () }
+
 %inline block:
 | label = label "{" l = delimited_instr_list "}" { (label, l) }
 
 %inline blockinstr:
 | b = block { let (label, l) = b in with_loc $sloc (Block(label, l)) }
-| label = label LOOP "{" l = delimited_instr_list "}"
+| label = label DO option(blocktype) "{" l = delimited_instr_list "}"
+  { with_loc $sloc (Block(label, l)) }
+| label = label LOOP option(blocktype) "{" l = delimited_instr_list "}"
   { with_loc $sloc (Loop(label, l)) }
-| label = label IF e = instr "{" l1 = delimited_instr_list "}"
+| label = label IF e = instr (*option(blocktype)*) "{" l1 = delimited_instr_list "}"
   l2 = option(ELSE  "{" l = delimited_instr_list "}" { l })
   { with_loc $sloc (If(label, e, l1, l2)) }
 

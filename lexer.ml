@@ -126,6 +126,7 @@ let rec token lexbuf =
   | "open" -> OPEN
   | "nop" -> NOP
   | "unreachable" -> UNREACHABLE
+  | "do" -> DO
   | "loop" -> LOOP
   | "if" -> IF
   | "else" -> ELSE
