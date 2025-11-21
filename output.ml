@@ -410,9 +410,8 @@ let modulefield f field =
       Format.fprintf f "@[<hv>%a@[%a@]@]" attributes a (fundecl ~tag:true)
         (name, typ, sign)
   | GlobalDecl { name; typ; attributes = a } ->
-      Format.fprintf f "@[<hv>%a@[<2>let@ %s" attributes a name;
-      Option.iter (fun t -> Format.fprintf f ":@ %a" globaltype t) typ;
-      Format.fprintf f "@]@]"
+      Format.fprintf f "@[<hv>%a@[<2>let@ %s:@ %a@]@]" attributes a name
+        globaltype typ
 
 let module_ f l =
   Format.fprintf f "@[<hv>%a@]@."

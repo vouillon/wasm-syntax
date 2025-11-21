@@ -336,7 +336,7 @@ global:
 
 globaldecl:
 | attributes = list(attribute) LET name = IDENT
-  typ = option(":" mut = boption(MUT) typ = valtype { {mut; typ} })
+  typ = (":" mut = boption(MUT) typ = valtype { {mut; typ} })
   { GlobalDecl {name; typ; attributes} }
 
 modulefield:

@@ -98,7 +98,7 @@ type modulefield =
     }
   | GlobalDecl of {
       name : string;
-      typ : valtype muttype option;
+      typ : valtype muttype;
       attributes : attributes;
     }
   | Global of {

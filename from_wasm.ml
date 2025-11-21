@@ -653,7 +653,7 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
             (GlobalDecl
                {
                  name = Sequence.get_current st.globals;
-                 typ = Some (globaltype st typ);
+                 typ = globaltype st typ;
                  attributes = import (module_, name) :: exports e;
                })
       | Memory _ -> None)
