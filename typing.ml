@@ -1,14 +1,46 @@
+(*
+Type, function/global and tag names are unique
+A local let can override a previous let
+*)
+
 open Ast
 
 type stack = Unreachable | Empty | Cons of valtype * stack
 
+module Namespace = struct
+  type t = (string, string * location) Hashtbl.t
+
+  let make () = Hashtbl.create 16
+
+  let register ns kind x =
+    (*ZZZ Error message*)
+    assert (not (Hashtbl.mem ns x.descr));
+    Hashtbl.replace ns x.descr (kind, x.loc)
+end
+
+module Tbl = struct
+  type 'a t = {
+    kind : string;
+    namespace : Namespace.t;
+    tbl : (string, 'a) Hashtbl.t;
+  }
+
+  let make namespace kind = { kind; namespace; tbl = Hashtbl.create 16 }
+
+  let add env x v =
+    Namespace.register env.namespace env.kind x;
+    Hashtbl.replace env.tbl x.descr v
+
+  let find env x = Hashtbl.find env.tbl x
+end
+
 type type_context = {
   internal_types : Wasm.Types.t;
-  types : (string, int * comptype) Hashtbl.t;
+  types : (int * comptype) Tbl.t;
 }
 
 (*ZZZ unbound type*)
-let resolve_type_name ctx name = fst (Hashtbl.find ctx.types name.descr)
+let resolve_type_name ctx name = fst (Tbl.find ctx.types name.descr)
 
 module Internal = Wasm.Ast.Binary.Types
 
@@ -70,18 +102,15 @@ let rectype ctx ty = Array.map (fun (_, ty) -> subtype ctx ty) ty
 let add_type ctx ty =
   (*ZZZ Check unique names / field names*)
   let i' = Wasm.Types.add_rectype ctx.internal_types (rectype ctx ty) in
-  Array.iteri
-    (fun i (name, typ) ->
-      Hashtbl.replace ctx.types name.descr (i' + i, typ.typ))
-    ty
+  Array.iteri (fun i (name, typ) -> Tbl.add ctx.types name (i' + i, typ.typ)) ty
 
 type module_context = {
   subtyping_info : Wasm.Types.subtyping_info;
-  types : (string, int * comptype) Hashtbl.t;
-  functions : (string, int * string) Hashtbl.t;
-  globals : (string, Internal.globaltype * globaltype) Hashtbl.t;
-  tags : (string, funsig) Hashtbl.t;
-  memories : (string, limits) Hashtbl.t;
+  types : (int * comptype) Tbl.t;
+  functions : (int * string) Tbl.t;
+  globals : (Internal.globaltype * globaltype) Tbl.t;
+  tags : funsig Tbl.t;
+  memories : limits Tbl.t;
 }
 
 let typeuse ctx typ sign =
@@ -99,20 +128,24 @@ let typeuse ctx typ sign =
 
 let f (_, fields) =
   let type_context =
-    { internal_types = Wasm.Types.create (); types = Hashtbl.create 16 }
+    {
+      internal_types = Wasm.Types.create ();
+      types = Tbl.make (Namespace.make ()) "type";
+    }
   in
   List.iter
     (fun (field : modulefield) ->
       match field with Type rectype -> add_type type_context rectype | _ -> ())
     fields;
   let ctx =
+    let namespace = Namespace.make () in
     {
       subtyping_info = Wasm.Types.subtyping_info type_context.internal_types;
       types = type_context.types;
-      functions = Hashtbl.create 16;
-      globals = Hashtbl.create 16;
-      tags = Hashtbl.create 16;
-      memories = Hashtbl.create 16;
+      functions = Tbl.make namespace "function";
+      globals = Tbl.make namespace "global";
+      tags = Tbl.make (Namespace.make ()) "tag";
+      memories = Tbl.make (Namespace.make ()) "memories";
     }
   in
   List.iter
@@ -120,13 +153,12 @@ let f (_, fields) =
       match field with
       | Fundecl { name; typ; sign; _ } ->
           (*ZZZ Check existing*)
-          Hashtbl.add ctx.functions name.descr (typeuse ctx.types typ sign)
+          Tbl.add ctx.functions name (typeuse ctx.types typ sign)
       | GlobalDecl { name; typ; _ } ->
-          Hashtbl.add ctx.globals name.descr (globaltype type_context typ, typ)
+          Tbl.add ctx.globals name (globaltype type_context typ, typ)
       | Func { name; typ; sign; _ } ->
-          Hashtbl.add ctx.functions name.descr (typeuse ctx.types typ sign)
-      | Tag { name; typ; _ } ->
-          Hashtbl.add ctx.tags name.descr (typeuse ctx.types typ)
+          Tbl.add ctx.functions name (typeuse ctx.types typ sign)
+      | Tag { name; typ; _ } -> Tbl.add ctx.tags name (typeuse ctx.types typ)
       | _ -> ())
     fields;
   let ctx =
