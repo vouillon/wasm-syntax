@@ -338,6 +338,40 @@ let fundecl ctx typ sign =
   | None, None -> assert false (*ZZZ*)
 *)
 
+let with_empty_stack f =
+  let st, () = f Empty in
+  match st with
+  | Cons _ ->
+      (*ZZZ
+      prerr_endline "Stack:";
+      print_stack st;
+*)
+      assert false
+  | Empty | Unreachable -> ()
+
+let globals type_context ctx fields =
+  List.iter
+    (fun field ->
+      match field with
+      | Global { name; typ = Some typ; def; _ } ->
+          with_empty_stack
+            ((*let ctx =
+               {
+                 locals = Sequence.make "local";
+                 control_types = [];
+                 return_types = [];
+                 modul = ctx;
+               }
+             in
+*)
+             let* () = instruction ctx def in
+             let typ' = globaltype type_context typ in
+             Tbl.add ctx.globals name (typ', typ);
+             pop ctx
+               (UnionFind.make (Valtype { typ = typ.typ; internal = typ'.typ })))
+      | _ -> ())
+    fields
+
 let f (_, fields) =
   let type_context =
     {
@@ -349,7 +383,6 @@ let f (_, fields) =
     (fun (field : modulefield) ->
       match field with Type rectype -> add_type type_context rectype | _ -> ())
     fields;
-  (*
   let ctx =
     let namespace = Namespace.make () in
     {
@@ -361,6 +394,7 @@ let f (_, fields) =
       memories = Tbl.make (Namespace.make ()) "memories";
     }
   in
+  (*
   List.iter
     (fun field ->
       match field with
@@ -374,13 +408,15 @@ let f (_, fields) =
       | Tag { name; typ; _ } -> Tbl.add ctx.tags name (fundecl ctx.types typ)
       | _ -> ())
     fields;
+*)
   let ctx =
     {
       ctx with
       subtyping_info = Wasm.Types.subtyping_info type_context.internal_types;
     }
   in
-  globals ctx fields;
+  globals type_context ctx fields;
+  (*
   functions ctx fields
 *)
   ()
