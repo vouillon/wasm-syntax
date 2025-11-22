@@ -166,26 +166,39 @@ let subtype ctx ty ty' =
   let ity = UnionFind.find ty in
   let ity' = UnionFind.find ty' in
   match (ity, ity') with
+  | Valtype ty, Valtype ty' ->
+      Wasm.Types.val_subtype ctx.subtyping_info ty'.internal ty.internal
   | Null, Null
-  | ( (Number | Int | Float | Valtype { internal = I32 | I64 | F32 | F64; _ }),
-      Number )
-  | (Int | Valtype { internal = I32 | I64; _ }), Int
-  | (Float | Valtype { internal = F32 | F64; _ }), Float
-  | Number, Valtype { internal = I32 | I64 | F32 | F64; _ }
-  | Int, Valtype { internal = I32 | I64; _ }
-  | Float, Valtype { internal = F32 | F64; _ } ->
+  | Int, Int
+  | Float, Float
+  | Number, Number
+  | (Int | Float | Valtype { internal = I32 | I64 | F32 | F64; _ }), Number
+  | Valtype { internal = I32 | I64; _ }, Int
+  | Valtype { internal = F32 | F64; _ }, Float ->
       UnionFind.merge ty ty' ity;
       true
-  | Null, (Number | Int | Float)
+  | Number, Valtype { internal = I32 | I64 | F32 | F64; _ }
+  | Int, Valtype { internal = I32 | I64; _ }
+  | Float, Valtype { internal = F32 | F64; _ }
+  | Null, Valtype { internal = Ref { nullable = true; _ }; _ } ->
+      UnionFind.merge ty ty' ity';
+      true
+  | ( Null,
+      ( Number | Int | Float
+      | Valtype
+          {
+            internal =
+              ( I32 | I64 | F32 | F64 | V128
+              | Ref { nullable = false; _ }
+              | Tuple _ );
+            _;
+          } ) )
   | Valtype _, Null
   | Valtype { internal = V128 | Ref _ | Tuple _; _ }, Number
   | Valtype { internal = F32 | F64 | V128 | Ref _ | Tuple _; _ }, Int
-  | Valtype { internal = I32 | I64 | V128 | Ref _ | Tuple _; _ }, Float ->
-      false
+  | Valtype { internal = I32 | I64 | V128 | Ref _ | Tuple _; _ }, Float
   | ( Number,
       (Null | Int | Float | Valtype { internal = V128 | Ref _ | Tuple _; _ }) )
-    ->
-      false
   | ( Int,
       ( Null | Float
       | Valtype { internal = F32 | F64 | V128 | Ref _ | Tuple _; _ } ) )
@@ -193,15 +206,6 @@ let subtype ctx ty ty' =
       (Null | Int | Valtype { internal = I32 | I64 | V128 | Ref _ | Tuple _; _ })
     ) ->
       false
-  | Valtype ty, Valtype ty' ->
-      Wasm.Types.val_subtype ctx.subtyping_info ty'.internal ty.internal
-  | Null, Valtype vty -> (
-      match vty.internal with
-      | Ref { nullable = true; _ } ->
-          UnionFind.merge ty ty' ity';
-          true
-      | Ref { nullable = false; _ } | I32 | I64 | F32 | F64 | V128 -> false
-      | Tuple _ -> assert false (*ZZZ KILL*))
 
 type stack =
   | Unreachable
