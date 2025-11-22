@@ -314,7 +314,9 @@ let rec instruction ctx i =
   (*
   | Select of instr * instr * instr
 *)
-  | _ -> assert false
+  | _ ->
+      Format.eprintf "%a@." Output.instr i;
+      assert false
 
 and instructions ctx l =
   match l with

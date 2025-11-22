@@ -420,3 +420,5 @@ let module_ f l =
        ~pp_sep:(fun f () -> Format.fprintf f "@ ")
        modulefield)
     l
+
+let instr = instr Instruction

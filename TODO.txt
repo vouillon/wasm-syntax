@@ -1,3 +1,14 @@
+
+Globals
+  const x : foo = ...
+  let x = foo
+
+inferred types are only on the stack
+inferred types: keep track of one optional constraint
+   ==> mandatory constraint ==> no need to keep any other constraint
+
+====================
+
 - typing
 - output wasm code
 - validation of wasm code
