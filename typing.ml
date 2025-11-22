@@ -5,15 +5,21 @@ A local let can override a previous let
 
 open Ast
 
+exception Type_error of location * string
+
 module Namespace = struct
   type t = (string, string * location) Hashtbl.t
 
   let make () = Hashtbl.create 16
 
   let register ns kind x =
-    (*ZZZ Error message*)
-    assert (not (Hashtbl.mem ns x.descr));
-    Hashtbl.replace ns x.descr (kind, x.loc)
+    match Hashtbl.find_opt ns x.descr with
+    | None -> Hashtbl.replace ns x.descr (kind, x.loc)
+    | Some (kind', _loc') ->
+        raise
+          (Type_error
+             ( x.loc,
+               Printf.sprintf "A %s named %s is already bound" kind' x.descr ))
 end
 
 module Tbl = struct
@@ -34,9 +40,10 @@ module Tbl = struct
   let find env x =
     try Hashtbl.find env.tbl x.descr
     with Not_found ->
-      Format.eprintf "Unbound %s %s@." env.kind x.descr;
-      (*ZZZ*)
-      raise Not_found
+      raise
+        (Type_error (x.loc, Printf.sprintf "Unbound %s %s\n" env.kind x.descr))
+
+  let find_opt env x = Hashtbl.find_opt env.tbl x.descr
 end
 
 type type_context = {
@@ -111,8 +118,6 @@ let add_type ctx ty =
     (fun i (name, typ) -> Tbl.override ctx.types name (i' + i, typ.typ))
     ty
 
-type stack = Unreachable | Empty | Cons of valtype * Internal.valtype * stack
-
 type module_context = {
   subtyping_info : Wasm.Types.subtyping_info;
   types : (int * comptype) Tbl.t;
@@ -121,6 +126,187 @@ type module_context = {
   tags : funsig Tbl.t;
   memories : limits Tbl.t;
 }
+
+module UnionFind = struct
+  type 'a state = Link of 'a t | Root of 'a
+  and 'a t = { mutable state : 'a state }
+
+  let make v = { state = Root v }
+
+  let rec representative node =
+    match node.state with
+    | Root _ -> node
+    | Link next ->
+        let root = representative next in
+        if next != root then node.state <- Link root;
+        root
+
+  let find node =
+    let root = representative node in
+    match root.state with Root v -> v | Link _ -> assert false
+
+  let merge t1 t2 new_val =
+    let root1 = representative t1 in
+    let root2 = representative t2 in
+    if root1 == root2 then root1.state <- Root new_val
+    else begin
+      root1.state <- Link root2;
+      root2.state <- Root new_val
+    end
+end
+
+type inferred_type =
+  | Null
+  | Number
+  | Int
+  | Float
+  | Valtype of { typ : valtype; internal : Internal.valtype }
+
+let subtype ctx ty ty' =
+  let ity = UnionFind.find ty in
+  let ity' = UnionFind.find ty' in
+  match (ity, ity') with
+  | Null, Null
+  | ( (Number | Int | Float | Valtype { internal = I32 | I64 | F32 | F64; _ }),
+      Number )
+  | (Int | Valtype { internal = I32 | I64; _ }), Int
+  | (Float | Valtype { internal = F32 | F64; _ }), Float
+  | Number, Valtype { internal = I32 | I64 | F32 | F64; _ }
+  | Int, Valtype { internal = I32 | I64; _ }
+  | Float, Valtype { internal = F32 | F64; _ } ->
+      UnionFind.merge ty ty' ity;
+      true
+  | Null, (Number | Int | Float)
+  | Valtype _, Null
+  | Valtype { internal = V128 | Ref _ | Tuple _; _ }, Number
+  | Valtype { internal = F32 | F64 | V128 | Ref _ | Tuple _; _ }, Int
+  | Valtype { internal = I32 | I64 | V128 | Ref _ | Tuple _; _ }, Float ->
+      false
+  | ( Number,
+      (Null | Int | Float | Valtype { internal = V128 | Ref _ | Tuple _; _ }) )
+    ->
+      false
+  | ( Int,
+      ( Null | Float
+      | Valtype { internal = F32 | F64 | V128 | Ref _ | Tuple _; _ } ) )
+  | ( Float,
+      (Null | Int | Valtype { internal = I32 | I64 | V128 | Ref _ | Tuple _; _ })
+    ) ->
+      false
+  | Valtype ty, Valtype ty' ->
+      Wasm.Types.val_subtype ctx.subtyping_info ty'.internal ty.internal
+  | Null, Valtype vty -> (
+      match vty.internal with
+      | Ref { nullable = true; _ } ->
+          UnionFind.merge ty ty' ity';
+          true
+      | Ref { nullable = false; _ } | I32 | I64 | F32 | F64 | V128 -> false
+      | Tuple _ -> assert false (*ZZZ KILL*))
+
+type stack =
+  | Unreachable
+  | Empty
+  | Cons of location * inferred_type UnionFind.t * stack
+
+let pop_any st =
+  match st with
+  | Unreachable -> (Unreachable, None)
+  | Cons (_, ty, r) -> (r, Some ty)
+  | Empty -> assert false
+
+let pop ctx ty st =
+  match st with
+  | Unreachable -> (Unreachable, ())
+  | Cons (_, ty', r) ->
+      let ok = subtype ctx ty' ty in
+      (*ZZZ
+      if not ok then
+        Format.eprintf "%a <: %a@." print_valtype ty' print_valtype ty;
+*)
+      assert ok;
+      (r, ())
+  | Empty -> assert false
+
+let push loc ty st = (Cons (loc, ty, st), ())
+let unreachable _ = (Unreachable, ())
+let return v st = (st, v)
+
+let ( let* ) e f st =
+  let st, v = e st in
+  f v st
+
+let rec instruction ctx i =
+  match i.descr with
+  | Block _ -> assert false
+  (*
+  | Loop of label option * instr list
+  | If of label option * instr * instr list * instr list option
+*)
+  | Unreachable -> unreachable
+  | Nop -> return ()
+  | Null -> push i.loc (UnionFind.make Null)
+  | Get idx -> (
+      (*ZZZ local *)
+      match Tbl.find_opt ctx.globals idx with
+      | Some (ty, ty') ->
+          push i.loc
+            (UnionFind.make (Valtype { typ = ty'.typ; internal = ty.typ }))
+      | None -> (
+          match Tbl.find_opt ctx.functions idx with
+          | Some (ty, ty') ->
+              push i.loc
+                (UnionFind.make
+                   (Valtype
+                      {
+                        typ =
+                          Ref { nullable = false; typ = Type (Ast.no_loc ty') };
+                        internal = Ref { nullable = false; typ = Type ty };
+                      }))
+          | None -> assert false))
+  | Set (idx, i') -> (
+      let* () = instruction ctx i' in
+      (*ZZZ local *)
+      match Tbl.find_opt ctx.globals idx with
+      | Some (ty, ty') ->
+          assert ty.mut;
+          (*ZZZ*)
+          pop ctx
+            (UnionFind.make (Valtype { typ = ty'.typ; internal = ty.typ }))
+      | None -> (
+          match Tbl.find_opt ctx.functions idx with
+          | Some _ -> assert false (*ZZZ*)
+          | None -> assert false))
+  (*
+  | Tee of idx * instr
+  | Call of instr * instr list
+  | String of idx option * string
+  | Int of string
+  | Float of string
+  | Cast of instr * valtype
+  | Test of instr * reftype
+  | Struct of idx option * (idx * instr) list
+  | StructGet of instr * idx
+  | StructSet of instr * idx * instr
+  | Array of idx option * instr * instr
+  | ArrayFixed of idx option * instr list
+  | ArrayGet of instr * instr
+  | ArraySet of instr * instr * instr
+  | BinOp of binop * instr * instr
+  | UnOp of unop * instr
+  | Let of (idx option * valtype option) list * instr option
+  | Br of label * instr option
+  | Br_if of label * instr
+  | Br_table of label list * instr
+  | Br_on_null of label * instr
+  | Br_on_non_null of label * instr
+  | Br_on_cast of label * reftype * instr
+  | Br_on_cast_fail of label * reftype * instr
+  | Throw of idx * instr list
+  | Return of instr option
+  | Sequence of instr list
+  | Select of instr * instr * instr
+*)
+  | _ -> assert false
 
 (*ZZZ
 let fundecl ctx typ sign =

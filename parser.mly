@@ -233,7 +233,7 @@ blocktype:
   { with_loc $sloc (Block(label, l)) }
 | label = label LOOP option(blocktype) "{" l = delimited_instr_list "}"
   { with_loc $sloc (Loop(label, l)) }
-| label = label IF e = instr option(FATARROW blocktype {()})
+| label = label IF e = instr option("=>" blocktype {()})
   "{" l1 = delimited_instr_list "}"
   l2 = option(ELSE  "{" l = delimited_instr_list "}" { l })
   { with_loc $sloc (If(label, e, l1, l2)) }
