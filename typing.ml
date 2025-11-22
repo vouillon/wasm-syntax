@@ -284,8 +284,10 @@ let rec instruction ctx i =
   | Tee of idx * instr
   | Call of instr * instr list
   | String of idx option * string
-  | Int of string
-  | Float of string
+*)
+  | Int _ -> push i.loc (UnionFind.make Number)
+  | Float _ -> push i.loc (UnionFind.make Float)
+  (*
   | Cast of instr * valtype
   | Test of instr * reftype
   | Struct of idx option * (idx * instr) list
@@ -307,10 +309,19 @@ let rec instruction ctx i =
   | Br_on_cast_fail of label * reftype * instr
   | Throw of idx * instr list
   | Return of instr option
-  | Sequence of instr list
+*)
+  | Sequence l -> instructions ctx l
+  (*
   | Select of instr * instr * instr
 *)
   | _ -> assert false
+
+and instructions ctx l =
+  match l with
+  | [] -> return ()
+  | i :: r ->
+      let* () = instruction ctx i in
+      instructions ctx r
 
 (*ZZZ
 let fundecl ctx typ sign =
