@@ -224,6 +224,11 @@ let subtype ctx ty ty' =
 
 let cast ctx ty ty' =
   (* signage:
+as si32
+as ui32
+...
+(ref.i31 i) as si32
+
    I8/I16 ==> I32
    I31 ==> I32
    I32/I64/F32/F64 ==> signed variants
