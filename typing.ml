@@ -226,6 +226,7 @@ let cast ctx ty ty' =
   (* signage:
 as si32
 as ui32
+as si64
 ...
 (ref.i31 i) as si32
 

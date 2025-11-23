@@ -229,6 +229,9 @@ let rec instr prec f (i : instr) =
   | Cast (i, t) ->
       parentheses prec Cast f @@ fun () ->
       Format.fprintf f "@[<2>%a@ @[as@ %a@]@]" (instr Cast) i valtype t
+  | NonNull i ->
+      parentheses prec UnaryOp f @@ fun () ->
+      Format.fprintf f "@[%a!@]" (instr UnaryOp) i
   | Test (i, t) ->
       parentheses prec Cast f @@ fun () ->
       Format.fprintf f "@[<2>%a@ @[is@ %a@]@]" (instr Cast) i reftype t
@@ -356,9 +359,9 @@ and deliminated_instr f (i : instr) =
   match i.descr with
   | Block _ | Loop _ | If _ -> instr Instruction f i
   | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | String _ | Int _
-  | Float _ | Cast _ | Test _ | Struct _ | StructGet _ | StructSet _ | Array _
-  | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _ | Let _ | Br _
-  | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | Float _ | Cast _ | NonNull _ | Test _ | Struct _ | StructGet _ | StructSet _
+  | Array _ | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _ | Let _
+  | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
   | Br_on_cast_fail _ | Return _ | Throw _ | Sequence _ | Null | Select _ ->
       Format.fprintf f "@[%a;@]" (instr Instruction) i
 

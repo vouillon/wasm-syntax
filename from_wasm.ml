@@ -563,11 +563,12 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | Try _ | TupleExtract _ | ArrayFill _ | ArrayCopy _ ->
       no_loc Unreachable (* ZZZ *)
   | Throw t -> no_loc (Throw (idx st `Tag t, args))
+  | RefAsNonNull -> no_loc (NonNull (sequence args))
   (* signed(x as i8) as i32 ? *)
   (* Later *)
-  | ReturnCallIndirect _ | CallIndirect _ | RefAsNonNull | ArrayInitElem _
-  | ArrayInitData _ | ArrayNewElem _ | StructNewDefault _ | ArrayNewDefault _
-  | I32Load8 _ | I32Store8 _ ->
+  | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _ | ArrayInitData _
+  | ArrayNewElem _ | StructNewDefault _ | ArrayNewDefault _ | I32Load8 _
+  | I32Store8 _ ->
       no_loc Unreachable (* ZZZ *)
 
 let bind_locals st l =

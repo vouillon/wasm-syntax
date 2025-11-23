@@ -50,6 +50,7 @@ type instr_descr =
   | Float of string
   | Cast of instr * valtype
   | Test of instr * reftype
+  | NonNull of instr
   | Struct of idx option * (idx * instr) list
   | StructGet of instr * idx
   | StructSet of instr * idx * instr

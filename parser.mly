@@ -79,7 +79,7 @@
 %left MINUS PLUS
 %left STAR SLASH SLASHS SLASHU PERCENTS PERCENTU
 %left AS IS
-%right prec_unary
+%right prec_unary BANG
 %left DOT LPAREN
 %left SHARP
 (* BR foo 1 + 2 understood as BR foo (1 + 2)
@@ -327,6 +327,7 @@ plaininstr:
 | "!" i = instr { with_loc $sloc (UnOp (Not, i)) } %prec prec_unary
 | "+" i = instr { with_loc $sloc (UnOp (Pos, i)) } %prec prec_unary
 | "-" i = instr { with_loc $sloc (UnOp (Neg, i)) } %prec prec_unary
+| i = instr "!" { with_loc $sloc (NonNull i) }
 
 instr:
 | i = blockinstr { i }
