@@ -119,6 +119,7 @@ let add_type ctx ty =
     ty
 
 type module_context = {
+  type_context : type_context;
   subtyping_info : Wasm.Types.subtyping_info;
   types : (int * comptype) Tbl.t;
   functions : (int * string) Tbl.t;
@@ -153,7 +154,21 @@ module UnionFind = struct
       root1.state <- Link root2;
       root2.state <- Root new_val
     end
+
+  let set t new_val =
+    let root = representative t in
+    root.state <- Root new_val
 end
+
+let top_heap_type ctx (t : heaptype) : heaptype =
+  match t with
+  | Any | Eq | I31 | Struct | Array | None_ -> Any
+  | Func | NoFunc -> Func
+  | Extern | NoExtern -> Extern
+  | Type ty -> (
+      match snd (Tbl.find ctx.types ty) with
+      | Struct _ | Array _ -> Any
+      | Func _ -> Func)
 
 type inferred_type =
   | Null
@@ -207,10 +222,54 @@ let subtype ctx ty ty' =
     ) ->
       false
 
+let cast ctx ty ty' (ity' : Internal.valtype) =
+  let ity = UnionFind.find ty in
+  match (ity, ity') with
+  | (Number | Int), Ref { typ = I31; _ } ->
+      UnionFind.set ty (Valtype { typ = I32; internal = I32 });
+      true
+  | (Number | Int), I32 | Int, F32 ->
+      UnionFind.set ty (Valtype { typ = I32; internal = I32 });
+      true
+  | (Number | Int), I64 | Int, F64 ->
+      UnionFind.set ty (Valtype { typ = I64; internal = I64 });
+      true
+  | (Number | Float), F32 | Float, I32 ->
+      UnionFind.set ty (Valtype { typ = F32; internal = F32 });
+      true
+  | (Number | Float), F64 | Float, I64 ->
+      UnionFind.set ty (Valtype { typ = F64; internal = F64 });
+      true
+  | Null, Ref { nullable = true; _ } ->
+      UnionFind.set ty (Valtype { typ = ty'; internal = ity' });
+      true
+  | Valtype { internal = I32; _ }, Ref { typ = I31; _ } -> true
+  | Valtype ty, _ -> Wasm.Types.val_subtype ctx.subtyping_info ity' ty.internal
+  | ( (Number | Int | Float),
+      ( Ref
+          {
+            typ =
+              ( Func | NoFunc | Extern | NoExtern | Any | Eq | Array | Struct
+              | Type _ | None_ );
+            _;
+          }
+      | V128 | Tuple _ ) )
+  | Float, Ref { typ = I31; _ }
+  | Null, (I32 | I64 | F32 | F64 | V128 | Ref { nullable = false; _ } | Tuple _)
+    ->
+      false
+
 type stack =
   | Unreachable
   | Empty
   | Cons of location * inferred_type UnionFind.t * stack
+
+let unreachable _ = (Unreachable, ())
+let return v st = (st, v)
+
+let ( let* ) e f st =
+  let st, v = e st in
+  f v st
 
 let pop_any st =
   match st with
@@ -232,12 +291,20 @@ let pop ctx ty st =
   | Empty -> assert false
 
 let push loc ty st = (Cons (loc, ty, st), ())
-let unreachable _ = (Unreachable, ())
-let return v st = (st, v)
 
-let ( let* ) e f st =
-  let st, v = e st in
-  f v st
+let rec pop_args ctx args =
+  match args with
+  | [] -> return ()
+  | ty :: rem ->
+      let* () = pop_args ctx rem in
+      pop ctx ty
+
+let rec push_results results =
+  match results with
+  | [] -> return ()
+  | (loc, ty) :: rem ->
+      let* () = push loc ty in
+      push_results rem
 
 let rec instruction ctx i =
   match i.descr with
@@ -266,7 +333,9 @@ let rec instruction ctx i =
                           Ref { nullable = false; typ = Type (Ast.no_loc ty') };
                         internal = Ref { nullable = false; typ = Type ty };
                       }))
-          | None -> assert false))
+          | None ->
+              Format.eprintf "%a@." Output.instr i;
+              assert false))
   | Set (idx, i') -> (
       let* () = instruction ctx i' in
       (*ZZZ local *)
@@ -287,9 +356,62 @@ let rec instruction ctx i =
 *)
   | Int _ -> push i.loc (UnionFind.make Number)
   | Float _ -> push i.loc (UnionFind.make Float)
+  | Cast (i, typ) -> (
+      let* () = instruction ctx i in
+      let* ty' = pop_any in
+      match ty' with
+      | None -> assert false
+      | Some ty' ->
+          let ty = valtype ctx.type_context typ in
+          assert (cast ctx ty' typ ty);
+          push i.loc (UnionFind.make (Valtype { typ; internal = ty })))
+  | Test (i, ty) ->
+      let* () = instruction ctx i in
+      let typ = Ref { nullable = true; typ = top_heap_type ctx ty.typ } in
+      pop ctx
+        (UnionFind.make
+           (Valtype { typ; internal = valtype ctx.type_context typ }))
+  | Struct (ty, fields) -> (
+      match ty with
+      | None -> assert false (*ZZZ*)
+      | Some ty ->
+          let* () =
+            match snd (Tbl.find ctx.types ty) with
+            | Struct fields' ->
+                assert (List.length fields = Array.length fields');
+                (*ZZZ*)
+                let* () =
+                  Array.fold_left
+                    (fun cont (name, _) ->
+                      match
+                        List.find_opt
+                          (fun (idx, _) -> name.descr = idx.descr)
+                          fields
+                      with
+                      | None -> assert false (*ZZZ*)
+                      | Some (_, i') ->
+                          let* () = instruction ctx i' in
+                          cont)
+                    (return ()) fields'
+                in
+                pop_args ctx
+                  (Array.to_list
+                     (Array.map
+                        (fun (_, (f : fieldtype)) ->
+                          let typ =
+                            match f.typ with Value v -> v | Packed _ -> I32
+                          in
+                          UnionFind.make
+                            (Valtype
+                               { typ; internal = valtype ctx.type_context typ }))
+                        fields'))
+            | _ -> (*ZZZ *) assert false
+          in
+          let typ = Ref { nullable = false; typ = Type ty } in
+          push i.loc
+            (UnionFind.make
+               (Valtype { typ; internal = valtype ctx.type_context typ })))
   (*
-  | Cast of instr * valtype
-  | Test of instr * reftype
   | Struct of idx option * (idx * instr) list
   | StructGet of instr * idx
   | StructSet of instr * idx * instr
@@ -388,6 +510,7 @@ let f (_, fields) =
   let ctx =
     let namespace = Namespace.make () in
     {
+      type_context;
       subtyping_info = Wasm.Types.subtyping_info type_context.internal_types;
       types = type_context.types;
       functions = Tbl.make namespace "function";
