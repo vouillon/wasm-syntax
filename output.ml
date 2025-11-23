@@ -87,8 +87,6 @@ let rectype f t =
            subtype)
         l
 
-let globaltype = muttype valtype
-
 let binop op =
   match op with
   | Add -> "+"
@@ -400,9 +398,11 @@ let modulefield f field =
   | Func { name; typ; sign; body = _lab, body; attributes = a } ->
       Format.fprintf f "@[<hv>%a@[<hv>@[%a@ {@]%a}@]@]" attributes a
         (fundecl ~tag:false) (name, typ, sign) block_contents body
-  | Global { name; typ; def; attributes = a } ->
-      Format.fprintf f "@[<hv>%a@[<2>let@ %s" attributes a name.descr;
-      Option.iter (fun t -> Format.fprintf f ":@ %a" globaltype t) typ;
+  | Global { name; mut; typ; def; attributes = a } ->
+      Format.fprintf f "@[<hv>%a@[<2>%s@ %s" attributes a
+        (if mut then "let" else "const")
+        name.descr;
+      Option.iter (fun t -> Format.fprintf f ":@ %a" valtype t) typ;
       Format.fprintf f "@ =@ %a@]@]" (instr Instruction) def
   | Fundecl { name; typ; sign; attributes = a } ->
       Format.fprintf f "@[<hv>%a@[%a@]@]" attributes a (fundecl ~tag:false)
@@ -410,9 +410,10 @@ let modulefield f field =
   | Tag { name; typ; sign; attributes = a } ->
       Format.fprintf f "@[<hv>%a@[%a@]@]" attributes a (fundecl ~tag:true)
         (name, typ, sign)
-  | GlobalDecl { name; typ; attributes = a } ->
-      Format.fprintf f "@[<hv>%a@[<2>let@ %s:@ %a@]@]" attributes a name.descr
-        globaltype typ
+  | GlobalDecl { name; mut; typ; attributes = a } ->
+      Format.fprintf f "@[<hv>%a@[<2>%s@ %s:@ %a@]@]" attributes a
+        (if mut then "let" else "const")
+        name.descr valtype typ
 
 let module_ f l =
   Format.fprintf f "@[<hv>%a@]@."

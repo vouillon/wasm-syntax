@@ -663,20 +663,24 @@ let modulefield st (f : Src.modulefield) : Ast.modulefield option =
                  attributes = import (module_, name) :: exports e;
                })
       | Global typ ->
+          let typ' = globaltype st typ in
           Some
             (GlobalDecl
                {
                  name = Sequence.get_current st.globals;
-                 typ = globaltype st typ;
+                 mut = typ'.mut;
+                 typ = typ'.typ;
                  attributes = import (module_, name) :: exports e;
                })
       | Memory _ -> None)
   | Global { typ; init; exports = e; _ } ->
+      let typ' = globaltype st typ in
       Some
         (Global
            {
              name = Sequence.get_current st.globals;
-             typ = Some (globaltype st typ);
+             mut = typ'.mut;
+             typ = Some typ'.typ;
              def = sequence (List.map (fun i -> instr st i []) init);
              attributes = exports e;
            })

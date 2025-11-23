@@ -132,6 +132,7 @@ let rec token lexbuf =
   | "if" -> IF
   | "else" -> ELSE
   | "let" -> LET
+  | "const" -> CONST
   | "as" -> AS
   | "is" -> IS
   | "br" -> BR

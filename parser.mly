@@ -61,7 +61,7 @@
 %token OPEN
 %token NOP UNREACHABLE NULL
 %token DO LOOP IF ELSE
-%token LET AS IS
+%token CONST LET AS IS
 %token BR BR_IF BR_TABLE RETURN THROW
 %token BR_ON_CAST BR_ON_CAST_FAIL
 %token BR_ON_NULL BR_ON_NON_NULL
@@ -338,16 +338,20 @@ delimited_instr_list:
 | i = blockinstr l = delimited_instr_list { i :: l }
 | i = plaininstr ";" l = delimited_instr_list { i :: l }
 
+globalmut:
+| LET { true }
+| CONST { false }
+
 global:
-| attributes = list(attribute) LET name = ident
-  typ = option(":" mut = boption(MUT) typ = valtype { {mut; typ} })
+| attributes = list(attribute) mut = globalmut name = ident
+  typ = option(":" typ = valtype { typ })
   "=" def = instr option(";")
-  { Global {name; typ; def; attributes} }
+  { Global {name; mut; typ; def; attributes} }
 
 globaldecl:
-| attributes = list(attribute) LET name = ident
-  ":" mut = boption(MUT) typ = valtype
-  { GlobalDecl {name; typ = {mut; typ}; attributes} }
+| attributes = list(attribute) mut = globalmut name = ident
+  ":" typ = valtype
+  { GlobalDecl {name; mut; typ; attributes} }
 
 modulefield:
 | r = rectype { Type r }

@@ -123,7 +123,7 @@ type module_context = {
   subtyping_info : Wasm.Types.subtyping_info;
   types : (int * comptype) Tbl.t;
   functions : (int * string) Tbl.t;
-  globals : (Internal.globaltype * globaltype) Tbl.t;
+  globals : (*mutable:*) (bool * Internal.valtype * valtype) Tbl.t;
   tags : funsig Tbl.t;
   memories : limits Tbl.t;
 }
@@ -319,9 +319,8 @@ let rec instruction ctx i =
   | Get idx -> (
       (*ZZZ local *)
       match Tbl.find_opt ctx.globals idx with
-      | Some (ty, ty') ->
-          push i.loc
-            (UnionFind.make (Valtype { typ = ty'.typ; internal = ty.typ }))
+      | Some (_, ty, ty') ->
+          push i.loc (UnionFind.make (Valtype { typ = ty'; internal = ty }))
       | None -> (
           match Tbl.find_opt ctx.functions idx with
           | Some (ty, ty') ->
@@ -340,11 +339,10 @@ let rec instruction ctx i =
       let* () = instruction ctx i' in
       (*ZZZ local *)
       match Tbl.find_opt ctx.globals idx with
-      | Some (ty, ty') ->
-          assert ty.mut;
+      | Some (mut, ty, ty') ->
+          assert mut;
           (*ZZZ*)
-          pop ctx
-            (UnionFind.make (Valtype { typ = ty'.typ; internal = ty.typ }))
+          pop ctx (UnionFind.make (Valtype { typ = ty'; internal = ty }))
       | None -> (
           match Tbl.find_opt ctx.functions idx with
           | Some _ -> assert false (*ZZZ*)
@@ -477,7 +475,7 @@ let globals type_context ctx fields =
   List.iter
     (fun field ->
       match field with
-      | Global { name; typ = Some typ; def; _ } ->
+      | Global { name; mut; typ = Some typ; def; _ } ->
           with_empty_stack
             ((*let ctx =
                {
@@ -489,10 +487,9 @@ let globals type_context ctx fields =
              in
 *)
              let* () = instruction ctx def in
-             let typ' = globaltype type_context typ in
-             Tbl.add ctx.globals name (typ', typ);
-             pop ctx
-               (UnionFind.make (Valtype { typ = typ.typ; internal = typ'.typ })))
+             let typ' = valtype type_context typ in
+             Tbl.add ctx.globals name (mut, typ', typ);
+             pop ctx (UnionFind.make (Valtype { typ; internal = typ' })))
       | _ -> ())
     fields
 
