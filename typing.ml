@@ -222,9 +222,17 @@ let subtype ctx ty ty' =
     ) ->
       false
 
-let cast ctx ty ty' (ity' : Internal.valtype) =
+let cast ctx ty ty' =
+  (* signage:
+   I8/I16 ==> I32
+   I31 ==> I32
+   I32/I64/F32/F64 ==> signed variants
+   *)
+  (*ZZZ Conversion between integers and floats require signedness;
+    same for integer extension *)
+  (*ZZZ Cast between Any and Extern *)
   let ity = UnionFind.find ty in
-  match (ity, ity') with
+  match (ity, ty') with
   | (Number | Int), Ref { typ = I31; _ } ->
       UnionFind.set ty (Valtype { typ = I32; internal = I32 });
       true
@@ -240,12 +248,20 @@ let cast ctx ty ty' (ity' : Internal.valtype) =
   | (Number | Float), F64 | Float, I64 ->
       UnionFind.set ty (Valtype { typ = F64; internal = F64 });
       true
-  | Null, Ref { nullable = true; _ } ->
+  | Null, Ref { typ = ty'; _ } ->
+      let ty' = Ref { nullable = true; typ = top_heap_type ctx ty' } in
+      let ity' = valtype ctx.type_context ty' in
       UnionFind.set ty (Valtype { typ = ty'; internal = ity' });
       true
-  | Valtype { internal = I32; _ }, Ref { typ = I31; _ } -> true
-  | Valtype ty, _ -> Wasm.Types.val_subtype ctx.subtyping_info ity' ty.internal
-  | ( (Number | Int | Float),
+  | Valtype { internal = I32 | I64 | F32 | F64; _ }, (I32 | I64 | F32 | F64)
+  | Valtype { internal = V128; _ }, V128
+  | Valtype { internal = I32; _ }, Ref { typ = I31; _ } ->
+      true
+  | Valtype { internal = Ref _ as ity; _ }, Ref { typ = ty'; _ } ->
+      let ty' = Ref { nullable = true; typ = top_heap_type ctx ty' } in
+      let ity' = valtype ctx.type_context ty' in
+      Wasm.Types.val_subtype ctx.subtyping_info ity ity'
+  | ( (Number | Int | Float | Valtype { internal = I32 | F32 | I64 | F64; _ }),
       ( Ref
           {
             typ =
@@ -254,9 +270,12 @@ let cast ctx ty ty' (ity' : Internal.valtype) =
             _;
           }
       | V128 | Tuple _ ) )
-  | Float, Ref { typ = I31; _ }
-  | Null, (I32 | I64 | F32 | F64 | V128 | Ref { nullable = false; _ } | Tuple _)
-    ->
+  | ( (Float | Valtype { internal = I64 | F32 | F64 | V128; _ }),
+      Ref { typ = I31; _ } )
+  | ( (Null | Valtype { internal = Ref _; _ }),
+      (I32 | I64 | F32 | F64 | V128 | Tuple _) )
+  | Valtype { internal = V128; _ }, (I32 | I64 | F32 | F64 | Ref _ | Tuple _)
+  | Valtype { internal = Tuple _; _ }, _ ->
       false
 
 type stack =
@@ -361,7 +380,7 @@ let rec instruction ctx i =
       | None -> assert false
       | Some ty' ->
           let ty = valtype ctx.type_context typ in
-          assert (cast ctx ty' typ ty);
+          assert (cast ctx ty' typ);
           push i.loc (UnionFind.make (Valtype { typ; internal = ty })))
   | Test (i, ty) ->
       let* () = instruction ctx i in
@@ -537,7 +556,7 @@ let f (_, fields) =
       subtyping_info = Wasm.Types.subtyping_info type_context.internal_types;
     }
   in
-  globals type_context ctx fields;
+  if false then globals type_context ctx fields;
   (*
   functions ctx fields
 *)
