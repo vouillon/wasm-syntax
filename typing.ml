@@ -1,6 +1,10 @@
 (*
-Type, function/global and tag names are unique
-A local let can override a previous let
+TODO:
+- enforce expressions
+- return a typed tree
+- check that underscores are properly placed
+- check that all types are resolved
+- error messages
 *)
 
 open Ast
