@@ -35,9 +35,9 @@ type binop =
 type label = string
 
 type instr_descr =
-  | Block of label option * instr list
-  | Loop of label option * instr list
-  | If of label option * instr * instr list * instr list option
+  | Block of label option * functype * instr list
+  | Loop of label option * functype * instr list
+  | If of label option * functype * instr * instr list * instr list option
   | Unreachable
   | Nop
   | Null

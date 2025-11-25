@@ -404,22 +404,35 @@ let float_bin_op (op : Src.float_bin_op) args =
   | Le -> symbol (Le None)
   | Ge -> symbol (Ge None)
 
+let blocktype ctx (typ : Src.blocktype option) =
+  match typ with
+  | None -> { Ast.params = [||]; results = [||] }
+  | Some (Valtype ty) -> { Ast.params = [||]; results = [| valtype ctx ty |] }
+  | Some (Typeuse (ty, sign)) -> (
+      match (ty, sign) with
+      | _, Some { Src.params; results } ->
+          {
+            Ast.params = Array.map (fun t -> valtype ctx t) params;
+            results = Array.map (fun t -> valtype ctx t) results;
+          }
+      | _, None -> assert false (*ZZZ*))
+
 let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
   match i with
-  | Block { label; typ = _; block } ->
+  | Block { label; typ; block } ->
       assert (args = []);
       let label, labels = LabelStack.push st.labels label in
       let st = { st with labels } in
       let body = List.map (fun i -> instr st i []) block in
-      no_loc (Block (label (), body))
-  | Loop { label; typ = _; block } ->
+      no_loc (Block (label (), blocktype st typ, body))
+  | Loop { label; typ; block } ->
       assert (args = []);
       let label, labels = LabelStack.push st.labels label in
       let st = { st with labels } in
       let body = List.map (fun i -> instr st i []) block in
-      no_loc (Loop (label (), body))
-  | If { label; typ = _; if_block; else_block } ->
+      no_loc (Loop (label (), blocktype st typ, body))
+  | If { label; typ; if_block; else_block } ->
       let label, labels = LabelStack.push st.labels label in
       let st = { st with labels } in
       let if_body = List.map (fun i -> instr st i []) if_block in
@@ -427,7 +440,8 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
         if else_block = [] then None
         else Some (List.map (fun i -> instr st i []) else_block)
       in
-      no_loc (If (label (), sequence args, if_body, else_body))
+      no_loc
+        (If (label (), blocktype st typ, sequence args, if_body, else_body))
   | Unreachable -> sequence (args @ [ no_loc Unreachable ])
   | Nop -> sequence (args @ [ no_loc Nop ])
   | Pop _ -> sequence []

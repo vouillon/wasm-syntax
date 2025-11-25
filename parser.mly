@@ -127,6 +127,7 @@ let storagetype_tbl =
 
 let with_loc (loc_start, loc_end) descr = {descr; loc = { loc_start; loc_end }}
 
+let blocktype bt = Option.value ~default:{params = [||]; results = [||]} bt
 %}
 
 %start <modulefield list> parse
@@ -223,22 +224,23 @@ tag:
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
 blocktype:
-| "(" separated_list(",", valtype) ")" "->" resulttype { () }
-| valtype { () }
+| "(" params = separated_list(",", valtype) ")" "->" result = resulttype
+  { {params = Array.of_list params; results = Array.of_list result} }
+| t = valtype { {params = [||]; results = [|t|] } }
 
 %inline block:
 | label = label "{" l = delimited_instr_list "}" { (label, l) }
 
 %inline blockinstr:
-| b = block { let (label, l) = b in with_loc $sloc (Block(label, l)) }
-| label = label DO option(blocktype) "{" l = delimited_instr_list "}"
-  { with_loc $sloc (Block(label, l)) }
-| label = label LOOP option(blocktype) "{" l = delimited_instr_list "}"
-  { with_loc $sloc (Loop(label, l)) }
-| label = label IF e = instr option("=>" blocktype {()})
+| b = block { let (label, l) = b in with_loc $sloc (Block(label, blocktype None, l)) }
+| label = label DO bt = option(blocktype) "{" l = delimited_instr_list "}"
+  { with_loc $sloc (Block(label, blocktype bt, l)) }
+| label = label LOOP bt = option(blocktype) "{" l = delimited_instr_list "}"
+  { with_loc $sloc (Loop(label, blocktype bt, l)) }
+| label = label IF e = instr bt = option("=>" bt = blocktype { bt })
   "{" l1 = delimited_instr_list "}"
   l2 = option(ELSE  "{" l = delimited_instr_list "}" { l })
-  { with_loc $sloc (If(label, e, l1, l2)) }
+  { with_loc $sloc (If(label, blocktype bt, e, l1, l2)) }
 
 simpleinstr:
 | NOP { with_loc $sloc Nop }

@@ -45,6 +45,14 @@ let functype f { params; results } =
     Format.fprintf f "@[<2>fn%a@ ->@ %a@]" (tuple true) (Array.to_list params)
       (tuple false) (Array.to_list results)
 
+let blocktype f { params; results } =
+  match (params, results) with
+  | [||], [| ty |] -> valtype f ty
+  | _, [||] -> Format.fprintf f "@[<2>%a@]" (tuple true) (Array.to_list params)
+  | _ ->
+      Format.fprintf f "@[<2>%a@ ->@ %a@]" (tuple true) (Array.to_list params)
+        (tuple false) (Array.to_list results)
+
 let packedtype f t =
   match t with
   | I8 -> Format.pp_print_string f "i8"
@@ -163,9 +171,9 @@ let long_block l =
     else
       match l with
       | [] -> n
-      | { descr = Ast.Block (_, l); _ } :: rem -> loop rem (loop l (n - 2))
-      | { descr = Ast.Loop (_, l); _ } :: rem -> loop rem (loop l (n - 2))
-      | { descr = Ast.If (_, _, l1, l2); _ } :: rem ->
+      | { descr = Ast.Block (_, _, l); _ } :: rem -> loop rem (loop l (n - 2))
+      | { descr = Ast.Loop (_, _, l); _ } :: rem -> loop rem (loop l (n - 2))
+      | { descr = Ast.If (_, _, _, l1, l2); _ } :: rem ->
           let n = loop l1 (n - 2) in
           let n = match l2 with None -> n | Some l2 -> loop l2 (n - 1) in
           loop rem n
@@ -185,16 +193,21 @@ let simple_pat f p =
   | Some x -> Format.pp_print_string f x.descr
   | None -> Format.pp_print_string f "_"
 
+let need_blocktype bt = bt.params <> [||] || bt.results <> [||]
+
 let rec instr prec f (i : instr) =
   match i.descr with
-  | Block (label, l) ->
-      parentheses prec Block f @@ fun () -> block f label None l
-  | Loop (label, l) ->
-      parentheses prec Block f @@ fun () -> block f label (Some "loop") l
-  | If (label, i, l1, l2) -> (
+  | Block (label, bt, l) ->
       parentheses prec Block f @@ fun () ->
-      Format.fprintf f "@[@[<hv>@[%aif@ %a@ {@]%a" block_label label
-        (instr Instruction) i block_contents l1;
+      block f label (if need_blocktype bt then Some "do" else None) bt l
+  | Loop (label, bt, l) ->
+      parentheses prec Block f @@ fun () -> block f label (Some "loop") bt l
+  | If (label, bt, i, l1, l2) -> (
+      parentheses prec Block f @@ fun () ->
+      Format.fprintf f "@[@[<hv>@[%aif@ %a" block_label label
+        (instr Instruction) i;
+      if need_blocktype bt then Format.fprintf f "@ @[<2>=> %a@]" blocktype bt;
+      Format.fprintf f "@ {@]%a" block_contents l1;
       match l2 with
       | Some l2 ->
           Format.fprintf f "@[<hv>@[}@ else@ {@]%a@[}%a@]@]@]@]" block_contents
@@ -365,10 +378,12 @@ let rec instr prec f (i : instr) =
         i2 (instr Select) i3
   | Null -> Format.pp_print_string f "null"
 
-and block f label kind l =
-  Format.fprintf f "@[<hv>@[%a%a{@]%a@[}%a@]@]" block_label label
+and block f label kind bt l =
+  Format.fprintf f "@[<hv>@[%a%a%a{@]%a@[}%a@]@]" block_label label
     (fun f kind -> Option.iter (fun kind -> Format.fprintf f "%s@ " kind) kind)
-    kind block_contents l label_comment (l, label)
+    kind
+    (fun f bt -> if need_blocktype bt then Format.fprintf f "%a@ " blocktype bt)
+    bt block_contents l label_comment (l, label)
 
 and deliminated_instr f (i : instr) =
   match i.descr with
