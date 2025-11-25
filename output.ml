@@ -195,6 +195,19 @@ let simple_pat f p =
 
 let need_blocktype bt = bt.params <> [||] || bt.results <> [||]
 
+let casttype f ty =
+  match ty with
+  | Valtype ty -> valtype f ty
+  | Signedtype { typ; signage; strict } ->
+      Format.fprintf f "%s%s%s"
+        (match typ with
+        | `I32 -> "i32"
+        | `I64 -> "i64"
+        | `F32 -> "f32"
+        | `F64 -> "f64")
+        (match signage with Signed -> "_s" | Unsigned -> "_")
+        (if strict then "_strict" else "")
+
 let rec instr prec f (i : instr) =
   match i.descr with
   | Block (label, bt, l) ->
@@ -248,7 +261,7 @@ let rec instr prec f (i : instr) =
   | Int s | Float s -> Format.pp_print_string f s
   | Cast (i, t) ->
       parentheses prec Cast f @@ fun () ->
-      Format.fprintf f "@[<2>%a@ @[as@ %a@]@]" (instr Cast) i valtype t
+      Format.fprintf f "@[<2>%a@ @[as@ %a@]@]" (instr Cast) i casttype t
   | NonNull i ->
       parentheses prec UnaryOp f @@ fun () ->
       Format.fprintf f "@[%a!@]" (instr UnaryOp) i

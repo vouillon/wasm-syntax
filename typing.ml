@@ -1,12 +1,11 @@
 (*
 TODO:
-- don't use unsigned/signed
 - enforce expressions
 - return a typed tree
 - check that underscores are properly placed
-- check that all types are resolved
 - error messages
 - locations on the heap when push several values?
+- array.len(a) => a.length
 
 Syntax changes:
 - names in result type (symmetry with params)
@@ -133,7 +132,15 @@ let add_type ctx ty =
   i'
 
 type inferred_valtype = { typ : valtype; internal : Internal.valtype }
-type inferred_type = Null | Number | Int | Float | Valtype of inferred_valtype
+
+type inferred_type =
+  | Null
+  | Number
+  | Int8
+  | Int16
+  | Int
+  | Float
+  | Valtype of inferred_valtype
 
 module StringMap = Map.Make (String)
 
@@ -240,23 +247,12 @@ let subtype ctx ty ty' =
       | Valtype { internal = F32 | F64 | V128 | Ref _ | Tuple _; _ } ) )
   | ( Float,
       (Null | Int | Valtype { internal = I32 | I64 | V128 | Ref _ | Tuple _; _ })
-    ) ->
+    )
+  | (Int8 | Int16), _
+  | _, (Int8 | Int16) ->
       false
 
 let cast ctx ty ty' =
-  (* signage:
-as si32
-as ui32
-as si64
-...
-(ref.i31 i) as si32
-
-   I8/I16 ==> I32
-   I31 ==> I32
-   I32/I64/F32/F64 ==> signed variants
-   *)
-  (*ZZZ Conversion between integers and floats require signedness;
-    same for integer extension *)
   (*ZZZ Cast between Any and Extern *)
   let ity = UnionFind.find ty in
   match (ity, ty') with
@@ -280,7 +276,9 @@ as si64
       let ity' = valtype ctx.type_context ty' in
       UnionFind.set ty (Valtype { typ = ty'; internal = ity' });
       true
-  | Valtype { internal = I32 | I64 | F32 | F64; _ }, (I32 | I64 | F32 | F64)
+  | Valtype { internal = F32 | F64; _ }, (F32 | F64)
+  | Valtype { internal = I32 | I64; _ }, I32
+  | Valtype { internal = I64; _ }, I64
   | Valtype { internal = V128; _ }, V128
   | Valtype { internal = I32; _ }, Ref { typ = I31; _ } ->
       true
@@ -297,12 +295,63 @@ as si64
             _;
           }
       | V128 | Tuple _ ) )
+  | Valtype { internal = F32 | F64; _ }, (I32 | I64)
+  | Valtype { internal = I32 | I64; _ }, (F32 | F64)
+  | Valtype { internal = I32; _ }, I64
   | ( (Float | Valtype { internal = I64 | F32 | F64 | V128; _ }),
-      Ref { typ = I31; _ } )
+      (I32 | Ref { typ = I31; _ }) )
   | ( (Null | Valtype { internal = Ref _; _ }),
       (I32 | I64 | F32 | F64 | V128 | Tuple _) )
-  | Valtype { internal = V128; _ }, (I32 | I64 | F32 | F64 | Ref _ | Tuple _)
-  | Valtype { internal = Tuple _; _ }, _ ->
+  | Valtype { internal = V128; _ }, (I64 | F32 | F64 | Ref _ | Tuple _)
+  | Valtype { internal = Tuple _; _ }, _
+  | (Int8 | Int16), _ ->
+      false
+
+let signed_cast ctx ty ty' =
+  let ity = UnionFind.find ty in
+  match (ity, ty') with
+  | (Int8 | Int16), `I32 -> true
+  | Valtype { internal = Ref _ as ity; _ }, `I32 ->
+      let ty' = Ref { nullable = true; typ = Any } in
+      let ity' = valtype ctx.type_context ty' in
+      Wasm.Types.val_subtype ctx.subtyping_info ity ity'
+  | Null, `I32 ->
+      UnionFind.set ty
+        (Valtype
+           {
+             typ = Ref { typ = Any; nullable = true };
+             internal = Ref { typ = Any; nullable = true };
+           });
+      true
+  | (Number | Int), `I64 ->
+      UnionFind.set ty (Valtype { typ = I32; internal = I32 });
+      true
+  | Valtype { internal = I32; _ }, `I64
+  | Valtype { internal = I32 | I64; _ }, (`F32 | `F64)
+  | Valtype { internal = F32 | F64; _ }, (`I32 | `I64) ->
+      true
+  | (Number | Int), (`I32 | `F32 | `F64)
+  | Valtype { internal = I32; _ }, `I32
+  | Valtype { internal = I64; _ }, (`I32 | `I64)
+  | Valtype { internal = F32 | F64; _ }, (`F32 | `F64)
+  | ( ( Int8 | Int16 | Null
+      | Valtype
+          {
+            internal =
+              Ref { typ = Type _ | None_ | Struct | Array | I31 | Eq | Any; _ };
+            _;
+          } ),
+      (`I64 | `F32 | `F64) )
+  | ( ( Float
+      | Valtype
+          {
+            internal =
+              ( V128
+              | Ref { typ = Func | NoFunc | Extern | NoExtern; _ }
+              | Tuple _ );
+            _;
+          } ),
+      _ ) ->
       false
 
 type stack =
@@ -315,12 +364,15 @@ let output_inferred_type f ty =
   | Null -> Format.fprintf f "null"
   | Number -> Format.fprintf f "number"
   | Int -> Format.fprintf f "int"
+  | Int16 -> Format.fprintf f "int16"
+  | Int8 -> Format.fprintf f "int8"
   | Float -> Format.fprintf f "float"
   | Valtype ty -> Output.valtype f ty.typ
 
 let rec output_stack f st =
   match st with
-  | Empty | Unreachable -> ()
+  | Empty -> ()
+  | Unreachable -> Format.fprintf f "unreachable"
   | Cons (_, ty, st) ->
       Format.fprintf f "%a;%a" output_inferred_type ty output_stack st
 
@@ -386,6 +438,12 @@ let with_empty_stack f =
       assert false
   | Empty | Unreachable -> ()
 
+let fieldtype ctx (f : fieldtype) =
+  match f.typ with
+  | Value typ -> Valtype { typ; internal = valtype ctx.type_context typ }
+  | Packed I8 -> Int8
+  | Packed I16 -> Int16
+
 let unpack_type (f : fieldtype) =
   match f.typ with Value v -> v | Packed _ -> I32
 
@@ -399,6 +457,8 @@ let branch_target ctx label =
   find ctx.control_types label
 
 let rec instruction ctx i =
+  Format.eprintf "%a@." Output.instr i;
+  let* () = print_stack in
   match i.descr with
   | Block (label, bt, instrs) | Loop (label, bt, instrs) ->
       let { params; results } = bt in
@@ -526,6 +586,13 @@ let rec instruction ctx i =
                 }))
       in
       push i.loc (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+  | Call ({ descr = Get { descr = "copysign"; _ }; _ }, [ i1; i2 ]) ->
+      let* () = instruction ctx i1 in
+      let* () = instruction ctx i2 in
+      let f64 = UnionFind.make (Valtype { typ = F64; internal = F64 }) in
+      let* () = pop ctx f64 in
+      let* () = pop ctx f64 in
+      push i.loc f64
   | Call (i', l) -> (
       let* () = instructions ctx l in
       let* () = instruction ctx i' in
@@ -631,10 +698,22 @@ let rec instruction ctx i =
       let* ty' = pop_any in
       match ty' with
       | None -> assert false
-      | Some ty' ->
-          let ty = valtype ctx.type_context typ in
-          assert (cast ctx ty' typ);
-          push i.loc (UnionFind.make (Valtype { typ; internal = ty })))
+      | Some ty' -> (
+          match typ with
+          | Valtype typ ->
+              let ty = valtype ctx.type_context typ in
+              assert (cast ctx ty' typ);
+              push i.loc (UnionFind.make (Valtype { typ; internal = ty }))
+          | Signedtype { typ; _ } ->
+              assert (signed_cast ctx ty' typ);
+              let typ, (ty : Internal.valtype) =
+                match typ with
+                | `I32 -> (I32, I32)
+                | `I64 -> (I64, I64)
+                | `F32 -> (F32, F32)
+                | `F64 -> (F64, F64)
+              in
+              push i.loc (UnionFind.make (Valtype { typ; internal = ty }))))
   | Test (i, ty) ->
       let* () = instruction ctx i in
       let typ = Ref { nullable = true; typ = top_heap_type ctx ty.typ } in
@@ -690,8 +769,8 @@ let rec instruction ctx i =
       match ty with
       | None -> assert false (*ZZZ*)
       | Some ty -> (
-          match UnionFind.find ty with
-          | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
+          match (UnionFind.find ty, field.descr) with
+          | Valtype { typ = Ref { typ = Type ty; _ }; _ }, _ -> (
               match Tbl.find ctx.types ty with
               | _, Struct typ -> (
                   match
@@ -701,15 +780,26 @@ let rec instruction ctx i =
                       typ
                   with
                   | None -> assert false
-                  | Some typ ->
-                      let typ = unpack_type typ in
-                      push i.loc
-                        (UnionFind.make
-                           (Valtype
-                              { typ; internal = valtype ctx.type_context typ }))
-                  )
+                  | Some typ -> push i.loc (UnionFind.make (fieldtype ctx typ)))
               | _ -> assert false)
-          | _ -> assert false (*ZZZ*)))
+          | Valtype { typ = I32; _ }, "from_bits" ->
+              push i.loc
+                (UnionFind.make (Valtype { typ = F32; internal = F32 }))
+          | Valtype { typ = I64; _ }, "from_bits" ->
+              push i.loc
+                (UnionFind.make (Valtype { typ = F64; internal = F64 }))
+          | Valtype { typ = F32; _ }, "to_bits" ->
+              push i.loc
+                (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+          | Valtype { typ = F64; _ }, "to_bits" ->
+              push i.loc
+                (UnionFind.make (Valtype { typ = I64; internal = I64 }))
+          | ( Valtype { typ = F32 | F64; _ },
+              ("abs" | "ceil" | "floor" | "trunc" | "nearest" | "sqrt") ) ->
+              push i.loc ty
+          | _ ->
+              Format.eprintf "??? %a %s@." output_inferred_type ty field.descr;
+              assert false (*ZZZ*)))
   | StructSet (i, field, i') -> (
       let* () = instruction ctx i in
       let* () = instruction ctx i' in
@@ -749,10 +839,6 @@ let rec instruction ctx i =
                           return ()))
               | _ -> assert false (*ZZZ*))
           | _ -> assert false (*ZZZ*)))
-  (*
-  | StructSet of instr * idx * instr
-  | Array of idx option * instr * instr
-*)
   | Array (ty, i1, i2) -> (
       match ty with
       | None -> assert false (*ZZZ*)
@@ -762,13 +848,14 @@ let rec instruction ctx i =
             | Array field' ->
                 let* () = instruction ctx i1 in
                 let* () = instruction ctx i2 in
-                let typ = unpack_type field' in
-                let typ = { typ; internal = valtype ctx.type_context typ } in
                 let* () =
                   pop ctx
                     (UnionFind.make (Valtype { typ = I32; internal = I32 }))
                 in
-                pop ctx (UnionFind.make (Valtype typ))
+                let typ = unpack_type field' in
+                pop ctx
+                  (UnionFind.make
+                     (Valtype { typ; internal = valtype ctx.type_context typ }))
             | _ -> (*ZZZ *) assert false
           in
           let typ = Ref { nullable = false; typ = Type ty } in
@@ -789,12 +876,16 @@ let rec instruction ctx i =
                       instruction ctx i')
                     (return ()) instrs
                 in
+                prerr_endline "array.new_fixed";
+                let* () = print_stack in
                 let typ = unpack_type field' in
                 let typ = { typ; internal = valtype ctx.type_context typ } in
+                Format.eprintf "ZZZZ %d@." (List.length instrs);
                 repeat (List.length instrs)
                   (pop ctx (UnionFind.make (Valtype typ)))
             | _ -> (*ZZZ *) assert false
           in
+          let* () = print_stack in
           let typ = Ref { nullable = false; typ = Type ty } in
           push i.loc
             (UnionFind.make
@@ -812,11 +903,7 @@ let rec instruction ctx i =
           match UnionFind.find ty with
           | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
               match Tbl.find ctx.types ty with
-              | _, Array typ ->
-                  let typ = unpack_type typ in
-                  push i.loc
-                    (UnionFind.make
-                       (Valtype { typ; internal = valtype ctx.type_context typ }))
+              | _, Array typ -> push i.loc (UnionFind.make (fieldtype ctx typ))
               | _ -> assert false)
           | _ -> assert false (*ZZZ*)))
   | ArraySet (i1, i2, i3) -> (
@@ -912,9 +999,71 @@ let rec instruction ctx i =
                   UnionFind.merge typ1 typ2 (UnionFind.find typ2)
               | _ -> assert false (*ZZZ*));
               push i.loc typ1
-          | _ ->
-              Format.eprintf "%a@." Output.instr i;
-              assert false)
+          | Div (Some _) | Rem _ | And | Or | Xor | Shl | Shr _ ->
+              (match (UnionFind.find typ1, UnionFind.find typ2) with
+              | Valtype { internal = I32; _ }, Valtype { internal = I32; _ }
+              | Valtype { internal = I64; _ }, Valtype { internal = I64; _ }
+              | (Valtype { internal = I32 | I64; _ } | Int), (Number | Int) ->
+                  UnionFind.merge typ1 typ2 (UnionFind.find typ1)
+              | (Number | Int), Valtype { internal = I32 | I64; _ } ->
+                  UnionFind.merge typ1 typ2 (UnionFind.find typ2)
+              | Number, Number -> UnionFind.merge typ1 typ2 Int
+              | _ -> assert false (*ZZZ*));
+              push i.loc typ1
+          | Div None ->
+              (match (UnionFind.find typ1, UnionFind.find typ2) with
+              | Valtype { internal = F32; _ }, Valtype { internal = F32; _ }
+              | Valtype { internal = F64; _ }, Valtype { internal = F64; _ }
+              | (Valtype { internal = F32 | F64; _ } | Float), (Number | Float)
+                ->
+                  UnionFind.merge typ1 typ2 (UnionFind.find typ1)
+              | (Number | Float), Valtype { internal = F32 | F64; _ } ->
+                  UnionFind.merge typ1 typ2 (UnionFind.find typ2)
+              | Number, Number -> UnionFind.merge typ1 typ2 Float
+              | _ -> assert false (*ZZZ*));
+              push i.loc typ1
+          | Lt (Some _) | Gt (Some _) | Le (Some _) | Ge (Some _) ->
+              (match (UnionFind.find typ1, UnionFind.find typ2) with
+              | Valtype { internal = I32; _ }, Valtype { internal = I32; _ }
+              | Valtype { internal = I64; _ }, Valtype { internal = I64; _ }
+              | (Valtype { internal = I32 | I64; _ } | Int), (Number | Int) ->
+                  UnionFind.merge typ1 typ2 (UnionFind.find typ1)
+              | (Number | Int), Valtype { internal = I32 | I64; _ } ->
+                  UnionFind.merge typ1 typ2 (UnionFind.find typ2)
+              | Number, Number -> UnionFind.merge typ1 typ2 Int
+              | _ -> assert false (*ZZZ*));
+              push i.loc
+                (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+          | Lt None | Gt None | Le None | Ge None ->
+              (match (UnionFind.find typ1, UnionFind.find typ2) with
+              | Valtype { internal = F32; _ }, Valtype { internal = F32; _ }
+              | Valtype { internal = F64; _ }, Valtype { internal = F64; _ }
+              | (Valtype { internal = F32 | F64; _ } | Float), (Number | Float)
+                ->
+                  UnionFind.merge typ1 typ2 (UnionFind.find typ1)
+              | (Number | Float), Valtype { internal = F32 | F64; _ } ->
+                  UnionFind.merge typ1 typ2 (UnionFind.find typ2)
+              | Number, Number -> UnionFind.merge typ1 typ2 Float
+              | _ -> assert false (*ZZZ*));
+              push i.loc
+                (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+          | Ne ->
+              (match (UnionFind.find typ1, UnionFind.find typ2) with
+              | Valtype { internal = I32; _ }, Valtype { internal = I32; _ }
+              | Valtype { internal = I64; _ }, Valtype { internal = I64; _ }
+              | Valtype { internal = F32; _ }, Valtype { internal = F32; _ }
+              | Valtype { internal = F64; _ }, Valtype { internal = F64; _ } ->
+                  ()
+              | (Valtype { internal = I32 | I64; _ } | Int), (Number | Int)
+              | (Valtype { internal = F32 | F64; _ } | Float), (Number | Float)
+              | Number, Number ->
+                  UnionFind.merge typ1 typ2 (UnionFind.find typ1)
+              | (Number | Int), Valtype { internal = I32 | I64; _ }
+              | (Number | Float), Valtype { internal = F32 | F64; _ } ->
+                  UnionFind.merge typ1 typ2 (UnionFind.find typ2)
+              | _ -> assert false (*ZZZ*));
+              push i.loc
+                (UnionFind.make (Valtype { typ = I32; internal = I32 })))
       | _ ->
           Format.eprintf "%a@." Output.instr i;
           assert false)
@@ -926,13 +1075,18 @@ let rec instruction ctx i =
           match op with
           | Not ->
               (match UnionFind.find typ with
-              | Valtype { internal = Ref _; _ } | Null -> ()
+              | Valtype { internal = I32 | I64 | Ref _; _ } | Null | Int -> ()
+              | Number -> UnionFind.set typ Int
               | _ -> assert false);
               push i.loc
                 (UnionFind.make (Valtype { typ = I32; internal = I32 }))
-          | _ ->
-              Format.eprintf "%a@." Output.instr i;
-              assert false)
+          | Neg | Pos ->
+              (match UnionFind.find typ with
+              | Valtype { internal = I32 | I64 | F32 | F64; _ }
+              | Int | Float | Number ->
+                  ()
+              | _ -> assert false);
+              push i.loc typ)
       | _ ->
           Format.eprintf "%a@." Output.instr i;
           assert false)
@@ -951,17 +1105,25 @@ let rec instruction ctx i =
   (*
   | Let of (idx option * valtype option) list * instr option
 *)
-  | Br (idx, i') ->
+  | Br (label, i') ->
       (* Sequence of instructions *)
       let* () =
         match i' with Some i' -> instruction ctx i' | None -> return ()
       in
-      let params = branch_target ctx idx in
+      let params = branch_target ctx label in
       let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
       let* () = pop_args ctx params in
       unreachable
+  | Br_if (label, i') ->
+      let* () = instruction ctx i' in
+      let* () =
+        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+      in
+      let params = branch_target ctx label in
+      let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
+      let* () = pop_args ctx params in
+      push_results (List.map (fun p -> (i.loc, p) (*ZZZ*)) params)
   (*
-  | Br_if of label * instr
   | Br_table of label list * instr
 *)
   | Br_on_null (idx, i') -> (
@@ -995,7 +1157,6 @@ let rec instruction ctx i =
           | _ -> assert false (*ZZZ*)))
   (*
   | Br_on_non_null of label * instr
-  | Br_on_cast of label * reftype * instr
 *)
   | Br_on_cast (label, ty, i') -> (
       let* () = instruction ctx i' in
@@ -1119,15 +1280,50 @@ let rec instruction ctx i =
       let* () =
         match i' with Some i' -> instruction ctx i' | None -> return ()
       in
+      prerr_endline "return";
+      let* () = print_stack in
       let* () =
         pop_args ctx
           (List.map (fun typ -> UnionFind.make (Valtype typ)) ctx.return_types)
       in
+      prerr_endline "ret done";
       unreachable
   | Sequence l -> instructions ctx l
-  (*
-  | Select of instr * instr * instr
-*)
+  | Select (i1, i2, i3) -> (
+      let* () = instruction ctx i2 in
+      let* () = instruction ctx i3 in
+      let* () = instruction ctx i1 in
+      prerr_endline "select";
+      let* () = print_stack in
+      let* () =
+        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+      in
+      let* ty1 = pop_any in
+      let* ty2 = pop_any in
+      match (ty1, ty2) with
+      | None, None -> return ()
+      | Some ty1, None -> push i.loc ty1
+      | None, Some ty2 -> push i.loc ty2
+      | Some ty1, Some ty2 -> (
+          match (UnionFind.find ty1, UnionFind.find ty2) with
+          | Valtype { internal = I32; _ }, Valtype { internal = I32; _ }
+          | Valtype { internal = I64; _ }, Valtype { internal = I64; _ }
+          | Valtype { internal = F32; _ }, Valtype { internal = F32; _ }
+          | Valtype { internal = F64; _ }, Valtype { internal = F64; _ } ->
+              push i.loc ty2
+          | (Int | Number), (Int | Valtype { internal = I32 | I64; _ })
+          | (Float | Number), (Float | Valtype { internal = F32 | F64; _ })
+          | Number, Number ->
+              UnionFind.merge ty1 ty2 (UnionFind.find ty2);
+              push i.loc ty2
+          | ( (Valtype { internal = I32; _ } | Valtype { internal = I64; _ }),
+              (Int | Number) )
+          | ( (Valtype { internal = F32; _ } | Valtype { internal = F64; _ }),
+              (Float | Number) )
+          | (Int | Float), Number ->
+              UnionFind.merge ty1 ty2 (UnionFind.find ty1);
+              push i.loc ty1
+          | _ -> assert false))
   | _ ->
       Format.eprintf "%a@." Output.instr i;
       assert false

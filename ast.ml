@@ -34,6 +34,14 @@ type binop =
 
 type label = string
 
+type casttype =
+  | Valtype of valtype
+  | Signedtype of {
+      typ : [ `I32 | `I64 | `F32 | `F64 ];
+      signage : signage;
+      strict : bool;
+    }
+
 type instr_descr =
   | Block of label option * functype * instr list
   | Loop of label option * functype * instr list
@@ -49,7 +57,7 @@ type instr_descr =
   | String of idx option * string
   | Int of string
   | Float of string
-  | Cast of instr * valtype
+  | Cast of instr * casttype
   | Test of instr * reftype
   | NonNull of instr
   | Struct of idx option * (idx * instr) list

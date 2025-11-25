@@ -310,18 +310,13 @@ let rec split_last l =
       let x, l = split_last r in
       (x, y :: l)
 
-let signage s args =
-  match s with
-  | None -> sequence args
-  | Some s ->
-      Ast.no_loc
-        (Ast.Call
-           ( Ast.no_loc
-               (Ast.Get
-                  (match s with
-                  | Ast.Signed -> Ast.no_loc "signed"
-                  | Unsigned -> Ast.no_loc "unsigned")),
-             [ sequence args ] ))
+let numtype (ty : Src.valtype) =
+  match ty with
+  | I32 -> `I32
+  | I64 -> `I64
+  | F32 -> `F32
+  | F64 -> `F64
+  | _ -> assert false
 
 let int_un_op sz (op : Src.int_un_op) args =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
@@ -331,12 +326,17 @@ let int_un_op sz (op : Src.int_un_op) args =
   | Popcnt ->
       no_loc (Call (no_loc (Get (Ast.no_loc "popcnt")), [ sequence args ]))
   | Eqz -> no_loc (UnOp (Not, sequence args))
-  | Trunc (_, s) ->
+  | Trunc (_, signage) ->
       no_loc
-        (Call (no_loc (Get (Ast.no_loc "truncate")), [ signage (Some s) args ]))
-  | TruncSat (_, s) -> no_loc (Cast (signage (Some s) args, sz))
-  | Reinterpret ->
-      no_loc (Call (no_loc (Get (Ast.no_loc "reinterpret")), [ sequence args ]))
+        (Cast
+           ( sequence args,
+             Signedtype { typ = numtype sz; signage; strict = true } ))
+  | TruncSat (_, signage) ->
+      no_loc
+        (Cast
+           ( sequence args,
+             Signedtype { typ = numtype sz; signage; strict = false } ))
+  | Reinterpret -> no_loc (StructGet (sequence args, Ast.no_loc "to_bits"))
   | ExtendS _ -> no_loc Unreachable (* ZZZ *)
 
 let int_bin_op (op : Src.int_bin_op) args =
@@ -369,18 +369,18 @@ let float_un_op sz (op : Src.float_un_op) args =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
   match op with
   | Neg -> no_loc (UnOp (Neg, sequence args))
-  | Abs -> no_loc (Call (no_loc (Get (Ast.no_loc "abs")), [ sequence args ]))
-  | Ceil -> no_loc (Call (no_loc (Get (Ast.no_loc "ceil")), [ sequence args ]))
-  | Floor ->
-      no_loc (Call (no_loc (Get (Ast.no_loc "floor")), [ sequence args ]))
-  | Trunc ->
-      no_loc (Call (no_loc (Get (Ast.no_loc "trunc")), [ sequence args ]))
-  | Nearest ->
-      no_loc (Call (no_loc (Get (Ast.no_loc "nearest")), [ sequence args ]))
-  | Sqrt -> no_loc (Call (no_loc (Get (Ast.no_loc "sqrt")), [ sequence args ]))
-  | Convert (_, s) -> no_loc (Cast (signage (Some s) args, sz))
-  | Reinterpret ->
-      no_loc (Call (no_loc (Get (Ast.no_loc "reinterpret")), [ sequence args ]))
+  | Abs -> no_loc (StructGet (sequence args, Ast.no_loc "abs"))
+  | Ceil -> no_loc (StructGet (sequence args, Ast.no_loc "ceil"))
+  | Floor -> no_loc (StructGet (sequence args, Ast.no_loc "floor"))
+  | Trunc -> no_loc (StructGet (sequence args, Ast.no_loc "trunc"))
+  | Nearest -> no_loc (StructGet (sequence args, Ast.no_loc "nearest"))
+  | Sqrt -> no_loc (StructGet (sequence args, Ast.no_loc "sqrt"))
+  | Convert (_, signage) ->
+      no_loc
+        (Cast
+           ( sequence args,
+             Signedtype { typ = numtype sz; signage; strict = false } ))
+  | Reinterpret -> no_loc (StructGet (sequence args, Ast.no_loc "from_bits"))
 
 let float_bin_op (op : Src.float_bin_op) args =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
@@ -396,7 +396,8 @@ let float_bin_op (op : Src.float_bin_op) args =
   | Min -> no_loc (Call (no_loc (Get (Ast.no_loc "min")), [ sequence args ]))
   | Max -> no_loc (Call (no_loc (Get (Ast.no_loc "max")), [ sequence args ]))
   | CopySign ->
-      no_loc (Call (no_loc (Get (Ast.no_loc "copysign")), [ sequence args ]))
+      let e1, e2 = two_args args in
+      no_loc (Call (no_loc (Get (Ast.no_loc "copysign")), [ e1; e2 ]))
   | Eq -> symbol Eq
   | Ne -> symbol Ne
   | Lt -> symbol (Lt None)
@@ -482,12 +483,16 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
            ( Some (idx st `Type i),
              List.map2 (fun nm i -> (Ast.no_loc nm, i)) fields args ))
   | StructNewDefault i -> no_loc (StructDefault (Some (idx st `Type i)))
-  | StructGet (s, t, f) ->
+  | StructGet (s, t, f) -> (
       let type_name = idx st `Type t in
       let name =
         Sequence.get (fst (Hashtbl.find st.struct_fields type_name.descr)) f
       in
-      signage s [ no_loc (StructGet (sequence args, name)) ]
+      let e = no_loc (StructGet (sequence args, name)) in
+      match s with
+      | None -> e
+      | Some signage ->
+          no_loc (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
   | StructSet (t, f) ->
       let type_name = idx st `Type t in
       let name =
@@ -506,13 +511,18 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
           no_loc
             (Cast
                ( no_loc (String (Some (idx st `Type t), s)),
-                 Ref { nullable = false; typ = Type (idx st `Type t) } ))
+                 Valtype (Ref { nullable = false; typ = Type (idx st `Type t) })
+               ))
       | None ->
           (*ZZZ take n into account *)
           no_loc (ArrayFixed (Some (idx st `Type t), args)))
-  | ArrayGet (s, _t) ->
+  | ArrayGet (s, _t) -> (
       let e1, e2 = two_args args in
-      signage s [ no_loc (ArrayGet (e1, e2)) ]
+      let e = no_loc (ArrayGet (e1, e2)) in
+      match s with
+      | None -> e
+      | Some signage ->
+          no_loc (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
   | ArraySet _t ->
       let e1, e2, e3 = three_args args in
       no_loc (ArraySet (e1, e2, e3))
@@ -531,42 +541,43 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
         let f, l = split_last args in
         no_loc (TailCall (f, l))
   | Return -> no_loc (Return (sequence_opt args))
-  | TupleMake _ -> no_loc (Sequence args)
+  | TupleMake _ -> no_loc Unreachable (*ZZZ*)
   | Const (I32 n) | Const (I64 n) ->
       no_loc (Int n) (*ZZZ Negative ints / floats *)
   | Const (F32 f) | Const (F64 f) ->
       let f = if is_integer f then f ^ "." else f in
       no_loc (Float f)
-  | RefI31 -> no_loc (Cast (sequence args, Ref { nullable = false; typ = I31 }))
-  | I31Get s ->
+  | RefI31 ->
       no_loc
-        (Call
-           ( no_loc
-               (Get
-                  (Ast.no_loc
-                     (match s with
-                     | Signed -> "signed"
-                     | Unsigned -> "unsigned"))),
-             args ))
-  | I64ExtendI32 s -> no_loc (Cast (signage (Some s) args, I64))
-  | I32WrapI64 -> no_loc (Cast (sequence args, I32))
-  | F64PromoteF32 -> no_loc (Cast (sequence args, F64))
-  | F32DemoteF64 -> no_loc (Cast (sequence args, F32))
+        (Cast (sequence args, Valtype (Ref { nullable = false; typ = I31 })))
+  | I31Get signage ->
+      no_loc
+        (Cast (sequence args, Signedtype { typ = `I32; signage; strict = false }))
+  | I64ExtendI32 signage ->
+      no_loc
+        (Cast (sequence args, Signedtype { typ = `I64; signage; strict = false }))
+  | I32WrapI64 -> no_loc (Cast (sequence args, Valtype I32))
+  | F64PromoteF32 -> no_loc (Cast (sequence args, Valtype F64))
+  | F32DemoteF64 -> no_loc (Cast (sequence args, Valtype F32))
   | ExternConvertAny ->
-      no_loc (Cast (sequence args, Ref { nullable = true; typ = Extern }))
+      no_loc
+        (Cast (sequence args, Valtype (Ref { nullable = true; typ = Extern })))
   | AnyConvertExtern ->
-      no_loc (Cast (sequence args, Ref { nullable = true; typ = Any }))
+      no_loc
+        (Cast (sequence args, Valtype (Ref { nullable = true; typ = Any })))
   | ArrayNewData (t, _) ->
       no_loc (String (Some (idx st `Type t), "foo")) (*ZZZ*)
   | ArrayLen -> no_loc (Call (no_loc (Get (Ast.no_loc "array_len")), args))
-  | RefCast t -> no_loc (Cast (sequence args, Ref (reftype st t)))
+  | RefCast t -> no_loc (Cast (sequence args, Valtype (Ref (reftype st t))))
   | RefTest t -> no_loc (Test (sequence args, reftype st t))
   | RefEq ->
       let e1, e2 = two_args args in
       no_loc (BinOp (Eq, e1, e2))
   | RefFunc f -> no_loc (Get (idx st `Func f))
   | RefNull t ->
-      no_loc (Cast (no_loc Null, Ref { nullable = true; typ = heaptype st t }))
+      no_loc
+        (Cast
+           (no_loc Null, Valtype (Ref { nullable = true; typ = heaptype st t })))
   | RefIsNull -> no_loc (UnOp (Not, sequence args))
   | Select _ ->
       let e1, e2, e = three_args args in
