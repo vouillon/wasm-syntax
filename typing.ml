@@ -1,5 +1,6 @@
 (*
 TODO:
+- br_table
 - enforce expressions
 - return a typed tree
 - check that underscores are properly placed
@@ -282,10 +283,21 @@ let cast ctx ty ty' =
   | Valtype { internal = V128; _ }, V128
   | Valtype { internal = I32; _ }, Ref { typ = I31; _ } ->
       true
-  | Valtype { internal = Ref _ as ity; _ }, Ref { typ = ty'; _ } ->
-      let ty' = Ref { nullable = true; typ = top_heap_type ctx ty' } in
-      let ity' = valtype ctx.type_context ty' in
-      Wasm.Types.val_subtype ctx.subtyping_info ity ity'
+  | Valtype { internal = Ref _ as ity; _ }, Ref { typ = ty'; nullable } -> (
+      (let ty' = Ref { nullable = true; typ = top_heap_type ctx ty' } in
+       let ity' = valtype ctx.type_context ty' in
+       Wasm.Types.val_subtype ctx.subtyping_info ity ity')
+      ||
+      match ty' with
+      | Extern ->
+          let ty' = Ref { nullable; typ = Any } in
+          let ity' = valtype ctx.type_context ty' in
+          Wasm.Types.val_subtype ctx.subtyping_info ity ity'
+      | Any ->
+          let ty' = Ref { nullable; typ = Extern } in
+          let ity' = valtype ctx.type_context ty' in
+          Wasm.Types.val_subtype ctx.subtyping_info ity ity'
+      | _ -> false)
   | ( (Number | Int | Float | Valtype { internal = I32 | F32 | I64 | F64; _ }),
       ( Ref
           {
@@ -456,11 +468,35 @@ let branch_target ctx label =
   in
   find ctx.control_types label
 
+let check_int_bin_op i typ1 typ2 =
+  (match (UnionFind.find typ1, UnionFind.find typ2) with
+  | Valtype { internal = I32; _ }, Valtype { internal = I32; _ }
+  | Valtype { internal = I64; _ }, Valtype { internal = I64; _ }
+  | (Valtype { internal = I32 | I64; _ } | Int), (Number | Int) ->
+      UnionFind.merge typ1 typ2 (UnionFind.find typ1)
+  | (Number | Int), Valtype { internal = I32 | I64; _ } ->
+      UnionFind.merge typ1 typ2 (UnionFind.find typ2)
+  | Number, Number -> UnionFind.merge typ1 typ2 Int
+  | _ -> assert false (*ZZZ*));
+  push i.loc typ1
+
+let check_float_bin_op i typ1 typ2 =
+  (match (UnionFind.find typ1, UnionFind.find typ2) with
+  | Valtype { internal = F32; _ }, Valtype { internal = F32; _ }
+  | Valtype { internal = F64; _ }, Valtype { internal = F64; _ }
+  | (Valtype { internal = F32 | F64; _ } | Float), (Number | Float) ->
+      UnionFind.merge typ1 typ2 (UnionFind.find typ1)
+  | (Number | Float), Valtype { internal = F32 | F64; _ } ->
+      UnionFind.merge typ1 typ2 (UnionFind.find typ2)
+  | Number, Number -> UnionFind.merge typ1 typ2 Float
+  | _ -> assert false (*ZZZ*));
+  push i.loc typ1
+
 let rec instruction ctx i =
   Format.eprintf "%a@." Output.instr i;
   let* () = print_stack in
   match i.descr with
-  | Block (label, bt, instrs) | Loop (label, bt, instrs) ->
+  | Block (label, bt, instrs) ->
       let { params; results } = bt in
       let params =
         Array.to_list
@@ -477,7 +513,8 @@ let rec instruction ctx i =
              results)
       in
       let* () = pop_args ctx params in
-      block ctx i.loc label params results instrs;
+      block ctx i.loc label params results results instrs;
+      prerr_endline "block ok";
       push_results
         (List.map
            (fun typ ->
@@ -485,6 +522,34 @@ let rec instruction ctx i =
                (*ZZZ*)
                UnionFind.make (Valtype typ) ))
            results)
+  | Loop (label, bt, instrs) ->
+      let { params; results } = bt in
+      let params0 =
+        Array.to_list
+          (Array.map
+             (fun typ -> { typ; internal = valtype ctx.type_context typ })
+             params)
+      in
+      let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params0 in
+      let results =
+        Array.to_list
+          (Array.map
+             (fun typ -> { typ; internal = valtype ctx.type_context typ })
+             results)
+      in
+      let* () = pop_args ctx params in
+      block ctx i.loc label params results params0 instrs;
+      Format.eprintf "loop ok %d@." (List.length results);
+      let* () =
+        push_results
+          (List.map
+             (fun typ ->
+               ( i.loc,
+                 (*ZZZ*)
+                 UnionFind.make (Valtype typ) ))
+             results)
+      in
+      print_stack
   | If (label, bt, i', if_block, else_block) ->
       let* () = instruction ctx i' in
       let { params; results } = bt in
@@ -506,10 +571,11 @@ let rec instruction ctx i =
         pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
       in
       let* () = pop_args ctx params in
-      block ctx i.loc label params results if_block;
+      block ctx i.loc label params results results if_block;
       (match else_block with
       | None -> ()
-      | Some else_block -> block ctx i.loc label params results else_block);
+      | Some else_block ->
+          block ctx i.loc label params results results else_block);
       push_results
         (List.map
            (fun typ ->
@@ -586,13 +652,22 @@ let rec instruction ctx i =
                 }))
       in
       push i.loc (UnionFind.make (Valtype { typ = I32; internal = I32 }))
-  | Call ({ descr = Get { descr = "copysign"; _ }; _ }, [ i1; i2 ]) ->
+  | Call ({ descr = Get { descr = "rotl" | "rotr"; _ }; _ }, [ i1; i2 ]) -> (
       let* () = instruction ctx i1 in
       let* () = instruction ctx i2 in
-      let f64 = UnionFind.make (Valtype { typ = F64; internal = F64 }) in
-      let* () = pop ctx f64 in
-      let* () = pop ctx f64 in
-      push i.loc f64
+      let* typ2 = pop_any in
+      let* typ1 = pop_any in
+      match (typ1, typ2) with
+      | Some typ1, Some typ2 -> check_int_bin_op i typ1 typ2
+      | _ -> assert false (*ZZZ*))
+  | Call ({ descr = Get { descr = "copysign"; _ }; _ }, [ i1; i2 ]) -> (
+      let* () = instruction ctx i1 in
+      let* () = instruction ctx i2 in
+      let* typ2 = pop_any in
+      let* typ1 = pop_any in
+      match (typ1, typ2) with
+      | Some typ1, Some typ2 -> check_float_bin_op i typ1 typ2
+      | _ -> assert false (*ZZZ*))
   | Call (i', l) -> (
       let* () = instructions ctx l in
       let* () = instruction ctx i' in
@@ -635,6 +710,7 @@ let rec instruction ctx i =
   | TailCall (i', l) -> (
       let* () = instructions ctx l in
       let* () = instruction ctx i' in
+      let* () = print_stack in
       let* ty = pop_any in
       match ty with
       | None -> assert false (*ZZZ*)
@@ -677,6 +753,7 @@ let rec instruction ctx i =
                          (fun typ -> UnionFind.make (Valtype typ))
                          ctx.return_types)
                   in
+                  prerr_endline "ok";
                   unreachable
               | _ -> assert false)
           | _ -> assert false (*ZZZ*)))
@@ -702,7 +779,11 @@ let rec instruction ctx i =
           match typ with
           | Valtype typ ->
               let ty = valtype ctx.type_context typ in
-              assert (cast ctx ty' typ);
+              let ok = cast ctx ty' typ in
+              if not ok then
+                Format.eprintf "cast %a => %a@." output_inferred_type ty'
+                  Output.valtype typ;
+              assert ok;
               push i.loc (UnionFind.make (Valtype { typ; internal = ty }))
           | Signedtype { typ; _ } ->
               assert (signed_cast ctx ty' typ);
@@ -916,7 +997,7 @@ let rec instruction ctx i =
       in
       let* ty = pop_any in
       match ty with
-      | None -> assert false (*ZZZ*)
+      | None -> return ()
       | Some ty -> (
           match UnionFind.find ty with
           | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
@@ -1000,28 +1081,8 @@ let rec instruction ctx i =
               | _ -> assert false (*ZZZ*));
               push i.loc typ1
           | Div (Some _) | Rem _ | And | Or | Xor | Shl | Shr _ ->
-              (match (UnionFind.find typ1, UnionFind.find typ2) with
-              | Valtype { internal = I32; _ }, Valtype { internal = I32; _ }
-              | Valtype { internal = I64; _ }, Valtype { internal = I64; _ }
-              | (Valtype { internal = I32 | I64; _ } | Int), (Number | Int) ->
-                  UnionFind.merge typ1 typ2 (UnionFind.find typ1)
-              | (Number | Int), Valtype { internal = I32 | I64; _ } ->
-                  UnionFind.merge typ1 typ2 (UnionFind.find typ2)
-              | Number, Number -> UnionFind.merge typ1 typ2 Int
-              | _ -> assert false (*ZZZ*));
-              push i.loc typ1
-          | Div None ->
-              (match (UnionFind.find typ1, UnionFind.find typ2) with
-              | Valtype { internal = F32; _ }, Valtype { internal = F32; _ }
-              | Valtype { internal = F64; _ }, Valtype { internal = F64; _ }
-              | (Valtype { internal = F32 | F64; _ } | Float), (Number | Float)
-                ->
-                  UnionFind.merge typ1 typ2 (UnionFind.find typ1)
-              | (Number | Float), Valtype { internal = F32 | F64; _ } ->
-                  UnionFind.merge typ1 typ2 (UnionFind.find typ2)
-              | Number, Number -> UnionFind.merge typ1 typ2 Float
-              | _ -> assert false (*ZZZ*));
-              push i.loc typ1
+              check_int_bin_op i typ1 typ2
+          | Div None -> check_float_bin_op i typ1 typ2
           | Lt (Some _) | Gt (Some _) | Le (Some _) | Ge (Some _) ->
               (match (UnionFind.find typ1, UnionFind.find typ2) with
               | Valtype { internal = I32; _ }, Valtype { internal = I32; _ }
@@ -1110,9 +1171,11 @@ let rec instruction ctx i =
       let* () =
         match i' with Some i' -> instruction ctx i' | None -> return ()
       in
+      prerr_endline "br(2)";
       let params = branch_target ctx label in
       let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
       let* () = pop_args ctx params in
+      prerr_endline "br ok";
       unreachable
   | Br_if (label, i') ->
       let* () = instruction ctx i' in
@@ -1123,9 +1186,9 @@ let rec instruction ctx i =
       let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
       let* () = pop_args ctx params in
       push_results (List.map (fun p -> (i.loc, p) (*ZZZ*)) params)
-  (*
-  | Br_table of label list * instr
-*)
+  | Br_table (_labels, _i') ->
+      (*ZZZZZZZZZZZZZZ*)
+      unreachable
   | Br_on_null (idx, i') -> (
       let* () = instruction ctx i' in
       let* ty = pop_any in
@@ -1323,7 +1386,11 @@ let rec instruction ctx i =
           | (Int | Float), Number ->
               UnionFind.merge ty1 ty2 (UnionFind.find ty1);
               push i.loc ty1
-          | _ -> assert false))
+          | Valtype { internal = typ1; _ }, Valtype { internal = typ2; _ }
+            when typ1 = typ2 ->
+              (*ZZZ fragile *)
+              push i.loc ty1
+          | _ -> (*ZZZ*) assert false))
   | _ ->
       Format.eprintf "%a@." Output.instr i;
       assert false
@@ -1335,14 +1402,16 @@ and instructions ctx l =
       let* () = instruction ctx i in
       instructions ctx r
 
-and block ctx loc label params results block =
+and block ctx loc label params results br_params block =
   with_empty_stack
     (let* () = push_results (List.map (fun ty -> (loc, ty)) params) in
      let* () =
        instructions
-         { ctx with control_types = (label, results) :: ctx.control_types }
+         { ctx with control_types = (label, br_params) :: ctx.control_types }
          block
      in
+     prerr_endline "block red";
+     let* () = print_stack in
      pop_args ctx (List.map (fun typ -> UnionFind.make (Valtype typ)) results))
 
 (*ZZZ

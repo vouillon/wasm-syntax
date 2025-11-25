@@ -356,8 +356,12 @@ let int_bin_op (op : Src.int_bin_op) args =
   | Xor -> symbol Xor
   | Shl -> symbol Shl
   | Shr s -> symbol (Shr s)
-  | Rotl -> no_loc (Call (no_loc (Get (Ast.no_loc "rotl")), [ sequence args ]))
-  | Rotr -> no_loc (Call (no_loc (Get (Ast.no_loc "rotr")), [ sequence args ]))
+  | Rotl ->
+      let e1, e2 = two_args args in
+      no_loc (Call (no_loc (Get (Ast.no_loc "rotl")), [ e1; e2 ]))
+  | Rotr ->
+      let e1, e2 = two_args args in
+      no_loc (Call (no_loc (Get (Ast.no_loc "rotr")), [ e1; e2 ]))
   | Eq -> symbol Eq
   | Ne -> symbol Ne
   | Lt s -> symbol (Lt (Some s))
