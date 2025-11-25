@@ -135,6 +135,7 @@ let rec token lexbuf =
   | "const" -> CONST
   | "as" -> AS
   | "is" -> IS
+  | "become" -> BECOME
   | "br" -> BR
   | "br_if" -> BR_IF
   | "br_table" -> BR_TABLE

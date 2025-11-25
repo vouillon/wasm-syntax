@@ -865,7 +865,12 @@ let functions ctx fields =
           Format.eprintf "=== %s@." (Option.value ~default:"" id);
           with_empty_stack
             (let ctx =
-               { locals; control_types = []; return_types; modul = ctx }
+               {
+                 locals;
+                 control_types = [ (None, return_types) ];
+                 return_types;
+                 modul = ctx;
+               }
              in
              let* () = instructions ctx instrs in
              pop_args ctx return_types)

@@ -45,6 +45,7 @@ type instr_descr =
   | Set of idx * instr
   | Tee of idx * instr
   | Call of instr * instr list
+  | TailCall of instr * instr list
   | String of idx option * string
   | Int of string
   | Float of string
@@ -52,9 +53,11 @@ type instr_descr =
   | Test of instr * reftype
   | NonNull of instr
   | Struct of idx option * (idx * instr) list
+  | StructDefault of idx option
   | StructGet of instr * idx
   | StructSet of instr * idx * instr
   | Array of idx option * instr * instr
+  | ArrayDefault of idx option * instr
   | ArrayFixed of idx option * instr list
   | ArrayGet of instr * instr
   | ArraySet of instr * instr * instr

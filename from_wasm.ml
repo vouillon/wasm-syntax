@@ -467,6 +467,7 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
         (Struct
            ( Some (idx st `Type i),
              List.map2 (fun nm i -> (Ast.no_loc nm, i)) fields args ))
+  | StructNewDefault i -> no_loc (StructDefault (Some (idx st `Type i)))
   | StructGet (s, t, f) ->
       let type_name = idx st `Type t in
       let name =
@@ -483,6 +484,8 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | ArrayNew t ->
       let e1, e2 = two_args args in
       no_loc (Array (Some (idx st `Type t), e1, e2))
+  | ArrayNewDefault t ->
+      no_loc (ArrayDefault (Some (idx st `Type t), sequence args))
   | ArrayNewFixed (t, n) -> (
       match string_args n args with
       | Some s ->
@@ -506,18 +509,13 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
       else
         let f, l = split_last args in
         no_loc (Call (f, l))
-  | ReturnCall x ->
-      no_loc
-        (Return (Some (no_loc (Call (no_loc (Get (idx st `Func x)), args)))))
+  | ReturnCall x -> no_loc (TailCall (no_loc (Get (idx st `Func x)), args))
   | ReturnCallRef _ ->
       (* ZZZ cast? *)
-      no_loc
-        (Return
-           (Some
-              (if args = [] then no_loc (Call (unit, []))
-               else
-                 let f, l = split_last args in
-                 no_loc (Call (f, l)))))
+      if args = [] then no_loc (TailCall (unit, []))
+      else
+        let f, l = split_last args in
+        no_loc (TailCall (f, l))
   | Return -> no_loc (Return (sequence_opt args))
   | TupleMake _ -> no_loc (Sequence args)
   | Const (I32 n) | Const (I64 n) ->
@@ -567,8 +565,7 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   (* signed(x as i8) as i32 ? *)
   (* Later *)
   | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _ | ArrayInitData _
-  | ArrayNewElem _ | StructNewDefault _ | ArrayNewDefault _ | I32Load8 _
-  | I32Store8 _ ->
+  | ArrayNewElem _ | I32Load8 _ | I32Store8 _ ->
       no_loc Unreachable (* ZZZ *)
 
 let bind_locals st l =

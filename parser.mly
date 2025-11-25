@@ -22,6 +22,7 @@
 %token COLONEQUAL ":="
 %token QUOTE "'"
 %token DOT "."
+%token DOTDOT ".."
 %token BANG "!"
 %token PLUS "+"
 %token MINUS "-"
@@ -62,6 +63,7 @@
 %token NOP UNREACHABLE NULL
 %token DO LOOP IF ELSE
 %token CONST LET AS IS
+%token BECOME
 %token BR BR_IF BR_TABLE RETURN THROW
 %token BR_ON_CAST BR_ON_CAST_FAIL
 %token BR_ON_NULL BR_ON_NON_NULL
@@ -238,15 +240,13 @@ blocktype:
   l2 = option(ELSE  "{" l = delimited_instr_list "}" { l })
   { with_loc $sloc (If(label, e, l1, l2)) }
 
-plaininstr:
+simpleinstr:
 | NOP { with_loc $sloc Nop }
 | UNREACHABLE { with_loc $sloc Unreachable }
 | NULL { with_loc $sloc Null }
 | x = ident { with_loc $sloc (Get x) }
-| x = ident "=" i = instr { with_loc $sloc (Set (x, i)) }
-| x = ident ":=" i = instr { with_loc $sloc (Tee (x, i)) }
 | "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
-| i = instr "(" l = separated_list(",", instr) ")"
+| i = simpleinstr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (Call(i, l)) }
 | t  = option(t = ident "#" { t }) s = STRING { with_loc $sloc (String (t, s)) }
 | i = INT { with_loc $sloc (Int i) }
@@ -255,6 +255,29 @@ plaininstr:
   { with_loc $sloc (Struct (Some x, l)) }
 | "{" l = separated_nonempty_list(",", y = ident ":" i = instr { (y, i) }) "}"
   { with_loc $sloc (Struct (None, l)) }
+| "{" x = ident "|" ".." "}"
+  { with_loc $sloc (StructDefault (Some x)) }
+| "{" ".." "}"
+  { with_loc $sloc (StructDefault (None)) }
+| "[" l = separated_list(",", i = instr { i }) "]"
+  { with_loc $sloc (ArrayFixed (None, l)) }
+| "[" i1 = instr ";" i2 = instr "]"
+  { with_loc $sloc (Array (None, i1, i2)) }
+| "[" ".." ";" i = instr "]"
+  { with_loc $sloc (ArrayDefault (None, i)) }
+| "[" t = ident "|" l = separated_list(",", i = instr { i }) "]"
+  { with_loc $sloc (ArrayFixed (Some t, l)) }
+| "[" t = ident "|" i1 = instr ";" i2 = instr "]"
+  { with_loc $sloc (Array (Some t, i1, i2)) }
+| "[" t = ident "|" ".." ";" i = instr "]"
+  { with_loc $sloc (ArrayDefault (Some t, i)) }
+
+plaininstr:
+| i = simpleinstr { i }
+| BECOME i = instr "(" l = separated_list(",", instr) ")"
+   { with_loc $sloc (TailCall(i, l)) }
+| x = ident "=" i = instr { with_loc $sloc (Set (x, i)) }
+| x = ident ":=" i = instr { with_loc $sloc (Tee (x, i)) }
 | i = instr AS t = valtype { with_loc $sloc (Cast(i, t)) }
 | i = instr IS t = reftype { with_loc $sloc (Test(i, t)) }
 | i = instr "." x = ident { with_loc $sloc (StructGet(i, x)) }
@@ -311,14 +334,6 @@ plaininstr:
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec prec_branch
 | THROW t = ident  "(" l = separated_list(",", instr) ")"
   { with_loc $sloc (Throw (t, l)) }
-| "[" l = separated_list(",", i = instr { i }) "]"
-  { with_loc $sloc (ArrayFixed (None, l)) }
-| "[" i1 = instr ";" i2 = instr "]"
-  { with_loc $sloc (Array (None, i1, i2)) }
-| "[" t = ident "|" l = separated_list(",", i = instr { i }) "]"
-  { with_loc $sloc (ArrayFixed (Some t, l)) }
-| "[" t = ident "|" i1 = instr ";" i2 = instr "]"
-  { with_loc $sloc (Array (Some t, i1, i2)) }
 | i1 = instr "[" i2 = instr "]" { with_loc $sloc (ArrayGet (i1, i2)) }
 | i1 = instr "[" i2 = instr "]" "=" i3 = instr
   { with_loc $sloc (ArraySet (i1, i2, i3)) }

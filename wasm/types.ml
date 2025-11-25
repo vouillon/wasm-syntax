@@ -142,13 +142,17 @@ let heap_subtype (subtyping_info : subtype array) (ty : heaptype)
   | NoFunc, NoFunc
   | (Extern | NoExtern), Extern
   | NoExtern, NoExtern
-  | (Any | Eq | I31 | Struct | Array | None_ | Type _), Any
-  | (Eq | I31 | Struct | Array | None_ | Type _), Eq
+  | (Any | Eq | I31 | Struct | Array | None_), Any
+  | (Eq | I31 | Struct | Array | None_), Eq
   | (I31 | None_), I31
   | (Struct | None_), Struct
   | (Array | None_), Array
   | None_, None_ ->
       true
+  | Type i, (Any | Eq) -> (
+      match subtyping_info.(i).typ with
+      | Struct _ | Array _ -> true
+      | Func _ -> false)
   | Type i, Struct -> (
       match subtyping_info.(i).typ with
       | Struct _ -> true
