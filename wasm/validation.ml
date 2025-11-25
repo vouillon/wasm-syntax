@@ -311,17 +311,22 @@ let rec repeat n f =
 
 let rec instruction ctx (i : Ast.Text.instr) =
   match i with
-  | Block { label; typ; block = b } | Loop { label; typ; block = b } ->
+  | Block { label; typ; block = b } ->
       let params, results = blocktype ctx.modul.types typ in
       let* () = pop_args ctx params in
-      block ctx label params results b;
+      block ctx label params results results b;
+      push_results results
+  | Loop { label; typ; block = b } ->
+      let params, results = blocktype ctx.modul.types typ in
+      let* () = pop_args ctx params in
+      block ctx label params results params b;
       push_results results
   | If { label; typ; if_block; else_block } ->
       let params, results = blocktype ctx.modul.types typ in
       let* () = pop ctx I32 in
       let* () = pop_args ctx params in
-      block ctx label params results if_block;
-      block ctx label params results else_block;
+      block ctx label params results results if_block;
+      block ctx label params results results else_block;
       push_results results
   (*
     | Try of {
@@ -336,7 +341,7 @@ let rec instruction ctx (i : Ast.Text.instr) =
       (*ZZZ handlers*)
       let params, results = blocktype ctx.modul.types typ in
       let* () = pop_args ctx params in
-      block ctx label params results b;
+      block ctx label params results results b;
       push_results results
   | Unreachable -> unreachable
   | Nop -> return ()
@@ -734,12 +739,12 @@ and instructions ctx l =
       let* () = instruction ctx i in
       instructions ctx r
 
-and block ctx label params results block =
+and block ctx label params results br_params block =
   with_empty_stack
     (let* () = push_results params in
      let* () =
        instructions
-         { ctx with control_types = (label, results) :: ctx.control_types }
+         { ctx with control_types = (label, br_params) :: ctx.control_types }
          block
      in
      pop_args ctx results)

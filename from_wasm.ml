@@ -15,14 +15,14 @@ module Namespace = struct
     if StringMap.mem y ns.existing_names then add_indexed ns x (i + 1)
     else (
       ns.existing_names <-
-        ns.existing_names |> StringMap.add y 0 |> StringMap.add x i;
+        ns.existing_names |> StringMap.add y 1 |> StringMap.add x i;
       y)
 
   let add ns x =
     match StringMap.find_opt x ns.existing_names with
     | Some i -> add_indexed ns x (i + 1)
     | None ->
-        ns.existing_names <- ns.existing_names |> StringMap.add x 0;
+        ns.existing_names <- ns.existing_names |> StringMap.add x 1;
         x
 
   let dup { existing_names } = { existing_names }

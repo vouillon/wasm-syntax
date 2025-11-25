@@ -493,8 +493,6 @@ let check_float_bin_op i typ1 typ2 =
   push i.loc typ1
 
 let rec instruction ctx i =
-  Format.eprintf "%a@." Output.instr i;
-  let* () = print_stack in
   match i.descr with
   | Block (label, bt, instrs) ->
       let { params; results } = bt in
@@ -514,7 +512,6 @@ let rec instruction ctx i =
       in
       let* () = pop_args ctx params in
       block ctx i.loc label params results results instrs;
-      prerr_endline "block ok";
       push_results
         (List.map
            (fun typ ->
@@ -539,17 +536,13 @@ let rec instruction ctx i =
       in
       let* () = pop_args ctx params in
       block ctx i.loc label params results params0 instrs;
-      Format.eprintf "loop ok %d@." (List.length results);
-      let* () =
-        push_results
-          (List.map
-             (fun typ ->
-               ( i.loc,
-                 (*ZZZ*)
-                 UnionFind.make (Valtype typ) ))
-             results)
-      in
-      print_stack
+      push_results
+        (List.map
+           (fun typ ->
+             ( i.loc,
+               (*ZZZ*)
+               UnionFind.make (Valtype typ) ))
+           results)
   | If (label, bt, i', if_block, else_block) ->
       let* () = instruction ctx i' in
       let { params; results } = bt in
@@ -710,7 +703,6 @@ let rec instruction ctx i =
   | TailCall (i', l) -> (
       let* () = instructions ctx l in
       let* () = instruction ctx i' in
-      let* () = print_stack in
       let* ty = pop_any in
       match ty with
       | None -> assert false (*ZZZ*)
@@ -753,7 +745,6 @@ let rec instruction ctx i =
                          (fun typ -> UnionFind.make (Valtype typ))
                          ctx.return_types)
                   in
-                  prerr_endline "ok";
                   unreachable
               | _ -> assert false)
           | _ -> assert false (*ZZZ*)))
@@ -957,16 +948,12 @@ let rec instruction ctx i =
                       instruction ctx i')
                     (return ()) instrs
                 in
-                prerr_endline "array.new_fixed";
-                let* () = print_stack in
                 let typ = unpack_type field' in
                 let typ = { typ; internal = valtype ctx.type_context typ } in
-                Format.eprintf "ZZZZ %d@." (List.length instrs);
                 repeat (List.length instrs)
                   (pop ctx (UnionFind.make (Valtype typ)))
             | _ -> (*ZZZ *) assert false
           in
-          let* () = print_stack in
           let typ = Ref { nullable = false; typ = Type ty } in
           push i.loc
             (UnionFind.make
@@ -1171,11 +1158,9 @@ let rec instruction ctx i =
       let* () =
         match i' with Some i' -> instruction ctx i' | None -> return ()
       in
-      prerr_endline "br(2)";
       let params = branch_target ctx label in
       let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
       let* () = pop_args ctx params in
-      prerr_endline "br ok";
       unreachable
   | Br_if (label, i') ->
       let* () = instruction ctx i' in
@@ -1343,21 +1328,16 @@ let rec instruction ctx i =
       let* () =
         match i' with Some i' -> instruction ctx i' | None -> return ()
       in
-      prerr_endline "return";
-      let* () = print_stack in
       let* () =
         pop_args ctx
           (List.map (fun typ -> UnionFind.make (Valtype typ)) ctx.return_types)
       in
-      prerr_endline "ret done";
       unreachable
   | Sequence l -> instructions ctx l
   | Select (i1, i2, i3) -> (
       let* () = instruction ctx i2 in
       let* () = instruction ctx i3 in
       let* () = instruction ctx i1 in
-      prerr_endline "select";
-      let* () = print_stack in
       let* () =
         pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
       in
@@ -1410,8 +1390,6 @@ and block ctx loc label params results br_params block =
          { ctx with control_types = (label, br_params) :: ctx.control_types }
          block
      in
-     prerr_endline "block red";
-     let* () = print_stack in
      pop_args ctx (List.map (fun typ -> UnionFind.make (Valtype typ)) results))
 
 (*ZZZ
