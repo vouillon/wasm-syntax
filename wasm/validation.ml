@@ -56,6 +56,8 @@ let heaptype ctx (h : Ast.Text.heaptype) : heaptype =
   match h with
   | Func -> Func
   | NoFunc -> NoFunc
+  | Exn -> Exn
+  | NoExn -> NoExn
   | Extern -> Extern
   | NoExtern -> NoExtern
   | Any -> Any
@@ -136,6 +138,8 @@ let print_heaptype f (ty : heaptype) =
   match ty with
   | Func -> Format.fprintf f "func"
   | NoFunc -> Format.fprintf f "nofunc"
+  | Exn -> Format.fprintf f "exn"
+  | NoExn -> Format.fprintf f "noexn"
   | Extern -> Format.fprintf f "extern"
   | NoExtern -> Format.fprintf f "noextern"
   | Any -> Format.fprintf f "any"
@@ -294,6 +298,7 @@ let top_heap_type ctx (t : heaptype) : heaptype =
   match t with
   | Any | Eq | I31 | Struct | Array | None_ -> Any
   | Func | NoFunc -> Func
+  | Exn | NoExn -> Exn
   | Extern | NoExtern -> Extern
   | Type ty -> (
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with

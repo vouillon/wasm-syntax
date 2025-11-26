@@ -15,7 +15,7 @@ let hexfloat =
     "0x", hexnum, Opt ('.', Opt hexnum), Opt (('p' | 'P'), sign, num)]
 
 let fN =
-  [%sedlex.regexp? sign, (float | hexfloat | "inf" | "nan" | "nan:", hexnum)]
+  [%sedlex.regexp? sign, (float | hexfloat | "inf" | "nan" | "nan:0x", hexnum)]
 
 let idchar =
   [%sedlex.regexp?
@@ -129,6 +129,8 @@ let rec token lexbuf =
   | "none" -> NONE
   | "func" -> FUNC
   | "nofunc" -> NOFUNC
+  | "exn" -> EXN
+  | "noexn" -> NOEXN
   | "extern" -> EXTERN
   | "noextern" -> NOEXTERN
   | "anyref" -> ANYREF
@@ -139,6 +141,8 @@ let rec token lexbuf =
   | "nullref" -> NULLREF
   | "funcref" -> FUNCREF
   | "nullfuncref" -> NULLFUNCREF
+  | "exnref" -> EXNREF
+  | "nullexnref" -> NULLEXNREF
   | "externref" -> EXTERNREF
   | "nullexternref" -> NULLEXTERNREF
   | "ref" -> REF
@@ -169,6 +173,7 @@ let rec token lexbuf =
   | "if" -> IF
   | "then" -> THEN
   | "else" -> ELSE
+  | "end" -> END
   | "unreachable" -> INSTR Unreachable
   | "nop" -> INSTR Nop
   | "br" -> BR
@@ -193,8 +198,43 @@ let rec token lexbuf =
   | "local.tee" -> LOCAL_TEE
   | "global.get" -> GLOBAL_GET
   | "global.set" -> GLOBAL_SET
-  | "i32.load8_u" -> I32LOAD8 Unsigned
-  | "i32.store8" -> I32STORE8
+  | "i32.load" -> LOAD (I32 ())
+  | "i64.load" -> LOAD (I64 ())
+  | "f32.load" -> LOAD (F32 ())
+  | "f64.load" -> LOAD (F64 ())
+  | "i32.load8_u" -> LOADS (`I32, `I8, Unsigned)
+  | "i32.load8_s" -> LOADS (`I32, `I8, Signed)
+  | "i64.load8_u" -> LOADS (`I64, `I8, Unsigned)
+  | "i64.load8_s" -> LOADS (`I64, `I8, Signed)
+  | "i32.load16_u" -> LOADS (`I32, `I16, Unsigned)
+  | "i32.load16_s" -> LOADS (`I32, `I16, Signed)
+  | "i64.load16_u" -> LOADS (`I64, `I16, Unsigned)
+  | "i64.load16_s" -> LOADS (`I64, `I16, Signed)
+  | "i64.load32_u" -> LOADS (`I64, `I32, Unsigned)
+  | "i64.load32_s" -> LOADS (`I64, `I32, Signed)
+  | "i32.store" -> STORE (I32 ())
+  | "i64.store" -> STORE (I64 ())
+  | "f32.store" -> STORE (F32 ())
+  | "f64.store" -> STORE (F64 ())
+  | "i32.store8" -> STORES (`I32, `I8)
+  | "i64.store8" -> STORES (`I64, `I8)
+  | "i32.store16" -> STORES (`I32, `I16)
+  | "i64.store16" -> STORES (`I64, `I16)
+  | "i64.store32" -> STORES (`I64, `I32)
+  | "memory.size" -> MEMORY_SIZE
+  | "memory.grow" -> MEMORY_GROW
+  | "memory.fill" -> MEMORY_FILL
+  | "memory.copy" -> MEMORY_COPY
+  | "memory.init" -> MEMORY_INIT
+  | "data.drop" -> DATA_DROP
+  | "table.get" -> TABLE_GET
+  | "table.set" -> TABLE_SET
+  | "table.size" -> TABLE_SIZE
+  | "table.grow" -> TABLE_GROW
+  | "table.fill" -> TABLE_FILL
+  | "table.copy" -> TABLE_COPY
+  | "table.init" -> TABLE_INIT
+  | "elem.drop" -> ELEM_DROP
   | "ref.null" -> REF_NULL
   | "ref.func" -> REF_FUNC
   | "ref.is_null" -> INSTR RefIsNull
@@ -372,6 +412,7 @@ let rec token lexbuf =
   | "tuple.extract" -> TUPLE_EXTRACT
   | "tag" -> TAG
   | "try" -> TRY
+  | "try_table" -> TRY_TABLE
   | "do" -> DO
   | "catch" -> CATCH
   | "catch_all" -> CATCH_ALL
@@ -384,6 +425,39 @@ let rec token lexbuf =
       MEM_OFFSET
         (Sedlexing.Utf8.sub_lexeme lexbuf 7
            (Sedlexing.lexeme_length lexbuf - 7))
+  | "definition" -> DEFINITION
+  | "binary" -> BINARY
+  | "quote" -> QUOTE
+  | "instance" -> INSTANCE
+  | "register" -> REGISTER
+  | "invoke" -> INVOKE
+  | "get" -> GET
+  | "v128" -> V128
+  | "ref.host" -> REF_HOST
+  | "i8x16" -> I8X16
+  | "i16x8" -> I16X8
+  | "i32x4" -> I32X4
+  | "i64x2" -> I64X2
+  | "f32x4" -> F32X4
+  | "f64x2" -> F64X2
+  | "assert_return" -> ASSERT_RETURN
+  | "assert_exception" -> ASSERT_EXCEPTION
+  | "assert_trap" -> ASSERT_TRAP
+  | "assert_exhaustion" -> ASSERT_EXHAUSTION
+  | "assert_malformed" -> ASSERT_MALFORMED
+  | "assert_invalid" -> ASSERT_INVALID
+  | "assert_unlinkable" -> ASSERT_UNLINKABLE
+  | "assert_return_arithmetic_nan" | "assert_return_canonical_nan" ->
+      ASSERT_RETURN_NAN
+  | "nan:canonical" | "nan:arithmetic" -> NAN
+  | "v128.const" -> V128_CONST
+  | "ref.extern" -> REF_EXTERN
+  | "ref.struct" -> REF_STRUCT
+  | "ref.array" -> REF_ARRAY
+  | "either" -> EITHER
+  | "script" -> SCRIPT
+  | "input" -> INPUT
+  | "output" -> OUTPUT
   | keyword ->
       raise
         (Parsing.Syntax_error

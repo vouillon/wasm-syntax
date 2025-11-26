@@ -148,6 +148,8 @@ let heaptype st (t : Src.heaptype) : Ast.heaptype =
   match t with
   | Src.Func -> Ast.Func
   | NoFunc -> NoFunc
+  | Exn -> Exn
+  | NoExn -> NoExn
   | Extern -> Extern
   | NoExtern -> NoExtern
   | Any -> Any
@@ -597,7 +599,10 @@ let rec instr st (i : _ Src.instr) (args : _ Ast.instr list) : _ Ast.instr =
   (* signed(x as i8) as i32 ? *)
   (* Later *)
   | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _ | ArrayInitData _
-  | ArrayNewElem _ | I32Load8 _ | I32Store8 _ ->
+  | ArrayNewElem _ | Load _ | LoadS _ | Store _ | StoreS _ | MemorySize _
+  | MemoryGrow _ | MemoryFill _ | MemoryCopy _ | MemoryInit _ | DataDrop _
+  | TableGet _ | TableSet _ | TableSize _ | TableGrow _ | TableFill _
+  | TableCopy _ | TableInit _ | ElemDrop _ ->
       with_loc Unreachable (* ZZZ *)
 
 let bind_locals st l =

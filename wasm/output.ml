@@ -68,6 +68,8 @@ let heaptype (ty : heaptype) =
   match ty with
   | Func -> Atom "func"
   | NoFunc -> Atom "nofunc"
+  | Exn -> Atom "exn"
+  | NoExn -> Atom "noexn"
   | Extern -> Atom "extern"
   | NoExtern -> Atom "noextern"
   | Any -> Atom "any"
@@ -276,6 +278,8 @@ let select i32 i64 f32 f64 op =
   | F32 x -> f32 "32" x
   | F64 x -> f64 "64" x
 
+let memidx i = if i.Ast.desc = Num 0l then [] else [ index i ]
+
 let memarg align' { offset; align } =
   (if offset = 0l then [] else [ Atom (Printf.sprintf "offset=%ld" offset) ])
   @ if align = align' then [] else [ Atom (Printf.sprintf "align=%ld" align) ]
@@ -309,7 +313,56 @@ let rec instr i =
   | I64ExtendI32 s -> Atom (signage "i64.extend_i32" s)
   | F32DemoteF64 -> Atom "f32.demote_f64"
   | F64PromoteF32 -> Atom "f64.promote_f32"
-  | I32Load8 (s, m) -> Block (Atom (signage "i32load8" s) :: memarg 1l m)
+  | Load (i, m, sz) ->
+      let f s _ = s in
+      Block
+        (Atom (Printf.sprintf "%s.load" (select f f f f sz))
+        :: (memidx i @ memarg 1l m))
+  | LoadS (i, m, sz, sz', s) ->
+      Block
+        (Atom
+           (signage
+              (Printf.sprintf "%s.load%s"
+                 (match sz with `I32 -> "i32" | `I64 -> "i64")
+                 (match sz' with `I8 -> "8" | `I16 -> "i16" | `I32 -> "i32"))
+              s)
+        :: (memidx i @ memarg 1l m))
+  | Store (i, m, sz) ->
+      let f s _ = s in
+      Block
+        (Atom (Printf.sprintf "%s.store" (select f f f f sz))
+        :: (memidx i @ memarg 1l m))
+  | StoreS (i, m, sz, sz') ->
+      Block
+        (Atom
+           (Printf.sprintf "%s.store%s"
+              (match sz with `I32 -> "i32" | `I64 -> "i64")
+              (match sz' with `I8 -> "8" | `I16 -> "i16" | `I32 -> "i32"))
+        :: (memidx i @ memarg 1l m))
+  | MemorySize m -> Block (Atom "memory.size" :: memidx m)
+  | MemoryGrow m -> Block (Atom "memory.grow" :: memidx m)
+  | MemoryFill m -> Block (Atom "memory.fill" :: memidx m)
+  | MemoryCopy (m, m') ->
+      Block
+        (Atom "memory.copy"
+        ::
+        (if m.desc = Num 0l && m'.desc = Num 0l then []
+         else [ index m; index m' ]))
+  | MemoryInit (m, d) -> Block (Atom "memory.init" :: (memidx m @ [ index d ]))
+  | DataDrop d -> Block [ Atom "data.drop"; index d ]
+  | TableGet m -> Block (Atom "table.get" :: memidx m)
+  | TableSet m -> Block (Atom "table.set" :: memidx m)
+  | TableSize m -> Block (Atom "table.size" :: memidx m)
+  | TableGrow m -> Block (Atom "table.grow" :: memidx m)
+  | TableFill m -> Block (Atom "table.fill" :: memidx m)
+  | TableCopy (m, m') ->
+      Block
+        (Atom "table.copy"
+        ::
+        (if m.desc = Num 0l && m'.desc = Num 0l then []
+         else [ index m; index m' ]))
+  | TableInit (m, d) -> Block (Atom "table.init" :: (memidx m @ [ index d ]))
+  | ElemDrop d -> Block [ Atom "elem.drop"; index d ]
   | LocalGet i -> Block [ Atom "local.get"; index i ]
   | LocalTee i -> Block [ Atom "local.tee"; index i ]
   | GlobalGet i -> Block [ Atom "global.get"; index i ]
@@ -365,7 +418,6 @@ let rec instr i =
              Delimiter (Atom "end");
            ]))
   | Drop -> Atom "drop"
-  | I32Store8 m -> Block (Atom "i32store8" :: memarg 1l m)
   | LocalSet i -> Block [ Atom "local.set"; index i ]
   | GlobalSet i -> Block [ Atom "global.set"; index i ]
   | Block { label; typ; block } ->

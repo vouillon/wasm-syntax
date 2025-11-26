@@ -18,6 +18,8 @@ struct
   type heaptype =
     | Func
     | NoFunc
+    | Exn
+    | NoExn
     | Extern
     | NoExtern
     | Any
@@ -188,8 +190,25 @@ struct
     | LocalTee of X.idx
     | GlobalGet of X.idx
     | GlobalSet of X.idx
-    | I32Load8 of signage * memarg
-    | I32Store8 of memarg
+    | Load of X.idx * memarg * (unit, unit, unit, unit) op
+    | LoadS of
+        X.idx * memarg * [ `I32 | `I64 ] * [ `I8 | `I16 | `I32 ] * signage
+    | Store of X.idx * memarg * (unit, unit, unit, unit) op
+    | StoreS of X.idx * memarg * [ `I32 | `I64 ] * [ `I8 | `I16 | `I32 ]
+    | MemorySize of X.idx
+    | MemoryGrow of X.idx
+    | MemoryFill of X.idx
+    | MemoryCopy of X.idx * X.idx
+    | MemoryInit of X.idx * X.idx
+    | DataDrop of X.idx
+    | TableGet of X.idx
+    | TableSet of X.idx
+    | TableSize of X.idx
+    | TableGrow of X.idx
+    | TableFill of X.idx
+    | TableCopy of X.idx * X.idx
+    | TableInit of X.idx * X.idx
+    | ElemDrop of X.idx
     | RefNull of X.heaptype
     | RefFunc of X.idx
     | RefIsNull
@@ -300,7 +319,7 @@ module Text = struct
         id : id option;
         typ : tabletype;
         init : 'info expr option;
-        elem : (reftype * 'info expr list) option;
+        elem : 'info expr list option;
         exports : string list;
       }
     | Tag of { id : id option; typ : typeuse; exports : string list }

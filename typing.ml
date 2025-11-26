@@ -85,6 +85,8 @@ let heaptype ctx (h : heaptype) : Internal.heaptype =
   match h with
   | Func -> Func
   | NoFunc -> NoFunc
+  | Exn -> Exn
+  | NoExn -> NoExn
   | Extern -> Extern
   | NoExtern -> NoExtern
   | Any -> Any
@@ -207,6 +209,7 @@ let top_heap_type ctx (t : heaptype) : heaptype =
   match t with
   | Any | Eq | I31 | Struct | Array | None_ -> Any
   | Func | NoFunc -> Func
+  | Exn | NoExn -> Exn
   | Extern | NoExtern -> Extern
   | Type ty -> (
       match snd (Tbl.find ctx.types ty) with
@@ -315,8 +318,8 @@ let cast ctx ty ty' =
       ( Ref
           {
             typ =
-              ( Func | NoFunc | Extern | NoExtern | Any | Eq | Array | Struct
-              | Type _ | None_ );
+              ( Func | NoFunc | Exn | NoExn | Extern | NoExtern | Any | Eq
+              | Array | Struct | Type _ | None_ );
             _;
           }
       | V128 | Tuple _ ) )
@@ -372,7 +375,7 @@ let signed_cast ctx ty ty' =
           {
             internal =
               ( V128
-              | Ref { typ = Func | NoFunc | Extern | NoExtern; _ }
+              | Ref { typ = Func | NoFunc | Exn | NoExn | Extern | NoExtern; _ }
               | Tuple _ );
             _;
           } ),

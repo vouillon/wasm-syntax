@@ -4,6 +4,8 @@ let heaptype f (t : heaptype) =
   match t with
   | Func -> Format.pp_print_string f "func"
   | NoFunc -> Format.pp_print_string f "nofunc"
+  | Exn -> Format.pp_print_string f "exn"
+  | NoExn -> Format.pp_print_string f "noexn"
   | Extern -> Format.pp_print_string f "extern"
   | NoExtern -> Format.pp_print_string f "noextern"
   | Any -> Format.pp_print_string f "any"

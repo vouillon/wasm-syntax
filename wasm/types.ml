@@ -83,8 +83,8 @@ let subtyping_info t =
   let update_index i i' = if i' >= 0 then i' else i + lnot i' in
   let update_heaptype i (ty : heaptype) =
     match ty with
-    | Func | NoFunc | Extern | NoExtern | Any | Eq | I31 | Struct | Array
-    | None_ ->
+    | Func | NoFunc | Exn | NoExn | Extern | NoExtern | Any | Eq | I31 | Struct
+    | Array | None_ ->
         ty
     | Type i' -> Type (update_index i i')
   in
@@ -140,6 +140,8 @@ let heap_subtype (subtyping_info : subtype array) (ty : heaptype)
   match (ty, ty') with
   | (Func | NoFunc), Func
   | NoFunc, NoFunc
+  | (Exn | NoExn), Exn
+  | NoExn, NoExn
   | (Extern | NoExtern), Extern
   | NoExtern, NoExtern
   | (Any | Eq | I31 | Struct | Array | None_), Any

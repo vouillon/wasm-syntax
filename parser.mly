@@ -107,6 +107,8 @@ let absheaptype_tbl =
   tbl_from_list
     ["func", (Func : heaptype);
      "nofunc", NoFunc;
+     "exn", Exn;
+     "noexn", NoExn;
      "extern", Extern;
      "noextern", NoExtern;
      "any", Any;

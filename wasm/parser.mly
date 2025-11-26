@@ -23,6 +23,8 @@ ZZZ
 %token NONE
 %token FUNC
 %token NOFUNC
+%token EXN
+%token NOEXN
 %token EXTERN
 %token NOEXTERN
 %token ANYREF
@@ -33,6 +35,8 @@ ZZZ
 %token NULLREF
 %token FUNCREF
 %token NULLFUNCREF
+%token EXNREF
+%token NULLEXNREF
 %token EXTERNREF
 %token NULLEXTERNREF
 %token REF
@@ -83,8 +87,24 @@ ZZZ
 %token LOCAL_TEE
 %token GLOBAL_GET
 %token GLOBAL_SET
-%token I32STORE8
-%token <Ast.Text.signage> I32LOAD8
+%token <(unit, unit, unit, unit) Ast.Text.op> STORE
+%token <[`I32|`I64] * [`I8 | `I16 | `I32]> STORES
+%token <(unit, unit, unit, unit) Ast.Text.op> LOAD
+%token <[`I32|`I64] * [`I8 | `I16 | `I32] * Ast.Text.signage> LOADS
+%token MEMORY_SIZE
+%token MEMORY_GROW
+%token MEMORY_FILL
+%token MEMORY_COPY
+%token MEMORY_INIT
+%token DATA_DROP
+%token TABLE_GET
+%token TABLE_SET
+%token TABLE_SIZE
+%token TABLE_GROW
+%token TABLE_FILL
+%token TABLE_COPY
+%token TABLE_INIT
+%token ELEM_DROP
 %token REF_NULL
 %token REF_FUNC
 %token REF_TEST
@@ -111,6 +131,7 @@ ZZZ
 %token <Ast.location Ast.Text.instr_desc> INSTR
 %token TAG
 %token TRY
+%token TRY_TABLE
 %token DO
 %token CATCH
 %token CATCH_ALL
@@ -122,6 +143,39 @@ ZZZ
 %token TUPLE
 %token TUPLE_MAKE
 %token TUPLE_EXTRACT
+
+%token DEFINITION
+%token BINARY
+%token QUOTE
+%token INSTANCE
+%token REGISTER
+%token INVOKE
+%token GET
+%token NAN
+%token V128
+%token REF_HOST
+%token I8X16
+%token I16X8
+%token I32X4
+%token I64X2
+%token F32X4
+%token F64X2
+%token ASSERT_RETURN
+%token ASSERT_RETURN_NAN
+%token ASSERT_EXCEPTION
+%token ASSERT_TRAP
+%token ASSERT_EXHAUSTION
+%token ASSERT_MALFORMED
+%token ASSERT_INVALID
+%token ASSERT_UNLINKABLE
+%token V128_CONST
+%token REF_EXTERN
+%token REF_STRUCT
+%token REF_ARRAY
+%token EITHER
+%token SCRIPT
+%token INPUT
+%token OUTPUT
 
 %{
  (* To avoid references to module Wasm in the generated mli file *)
@@ -136,6 +190,7 @@ let map_fst f (x, y) = (f x, y)
 %}
 
 %start <string option * Ast.location Ast.Text.modulefield list> parse
+%start <unit list> parse_script
 
 %%
 
@@ -182,6 +237,8 @@ heaptype:
 | NONE { None_ }
 | FUNC { Func }
 | NOFUNC { NoFunc }
+| EXN { Exn }
+| NOEXN { NoExn }
 | EXTERN { Extern }
 | NOEXTERN { NoExtern }
 | i = idx { Type i }
@@ -197,6 +254,8 @@ reftype:
 | NULLREF { {nullable = true; typ = None_} }
 | FUNCREF { {nullable = true; typ = Func} }
 | NULLFUNCREF { {nullable = true; typ = NoFunc} }
+| EXNREF { {nullable = true; typ = Exn} }
+| NULLEXNREF { {nullable = true; typ = NoExn} }
 | EXTERNREF { {nullable = true; typ = Extern} }
 | NULLEXTERNREF { {nullable = true; typ = NoExtern} }
 
@@ -281,9 +340,9 @@ tabletype(cont):
 (* Instructions *)
 
 blockinstr:
-| BLOCK label = label bti = blocktype(instrs(END))
+| BLOCK label = label bti = blocktype(instrs(END)) label
   { let (typ, block) = bti in with_loc $sloc (Block {label; typ; block}) }
-| LOOP label = label bti = blocktype(instrs(END))
+| LOOP label = label bti = blocktype(instrs(END)) label
   { let (typ, block) = bti in with_loc $sloc (Loop {label; typ; block}) }
 | IF label = label bti = blocktype(instrs(ELSE))
   label else_block = instrs(END)
@@ -294,7 +353,7 @@ blockinstr:
   label (*ZZZ labels must match *)
   { let (typ, if_block) = bti in
     with_loc $sloc (If {label; typ; if_block; else_block = [] }) }
-| TRY label = label bti = blocktype(instrs({})) c = catches END
+| TRY label = label bti = blocktype(instrs({})) c = catches END label
   { let (typ, block) = bti in
     let (catches, catch_all) = c in
     with_loc $sloc (Try {label; typ; block; catches; catch_all}) }
@@ -315,6 +374,12 @@ blocktype(cont):
      | None, None -> None
      | _ -> Some (Typeuse (fst r))),
     snd r }
+
+%inline memidx:
+| i = ioption(idx) { Option.value ~default:(with_loc $sloc (Num 0l)) i}
+
+%inline tableidx:
+| i = ioption(idx) { Option.value ~default:(with_loc $sloc (Num 0l)) i}
 
 plaininstr:
 | THROW i = idx { with_loc $sloc (Throw i) }
@@ -339,8 +404,32 @@ plaininstr:
 | LOCAL_TEE i = idx { with_loc $sloc (LocalTee i) }
 | GLOBAL_GET i = idx { with_loc $sloc (GlobalGet i) }
 | GLOBAL_SET i = idx { with_loc $sloc (GlobalSet i) }
-| s = I32LOAD8 m = memarg { with_loc $sloc (I32Load8 (s, m 1l)) }
-| I32STORE8 m = memarg { with_loc $sloc (I32Store8 (m 1l)) }
+| sz = LOAD i = memidx m = memarg { with_loc $sloc (Load (i, m 1l, sz)) }
+| k = LOADS i = memidx m = memarg
+  { let (sz, sz', s) = k in with_loc $sloc (LoadS (i, m 1l, sz, sz', s)) }
+| sz = STORE i = memidx m = memarg { with_loc $sloc (Store (i, m 1l, sz)) }
+| sz = STORES i = memidx m = memarg
+  { with_loc $sloc (StoreS (i, m 1l, fst sz, snd sz)) }
+| MEMORY_SIZE i = memidx { with_loc $sloc (MemorySize i) }
+| MEMORY_GROW i = memidx { with_loc $sloc (MemoryGrow i) }
+| MEMORY_FILL i = memidx { with_loc $sloc (MemoryFill i) }
+| MEMORY_COPY p = option(i1 = idx i2 = idx { (i1, i2) })
+  { let zero = with_loc $loc(p) (Num 0l) in
+    let (i, i') = Option.value ~default:(zero, zero) p in
+    with_loc $sloc (MemoryCopy (i, i')) }
+| MEMORY_INIT i = memidx d = idx { with_loc $sloc (MemoryInit (i, d)) }
+| DATA_DROP d = idx { with_loc $sloc (DataDrop d) }
+| TABLE_GET i = tableidx { with_loc $sloc (TableGet i) }
+| TABLE_SET i = tableidx { with_loc $sloc (TableSet i) }
+| TABLE_SIZE i = tableidx { with_loc $sloc (TableSize i) }
+| TABLE_GROW i = tableidx { with_loc $sloc (TableGrow i) }
+| TABLE_FILL i = tableidx { with_loc $sloc (TableFill i) }
+| TABLE_COPY p = option(i1 = idx i2 = idx { (i1, i2) })
+  { let zero = with_loc $loc(p) (Num 0l) in
+    let (i, i') = Option.value ~default:(zero, zero) p in
+    with_loc $sloc (TableCopy (i, i')) }
+| TABLE_INIT i = tableidx d = idx { with_loc $sloc (TableInit (i, d)) }
+| ELEM_DROP e = idx { with_loc $sloc (ElemDrop e) }
 | REF_NULL t = heaptype { with_loc $sloc (RefNull t) }
 | REF_FUNC i = idx { with_loc $sloc (RefFunc i) }
 | REF_TEST t = reftype { with_loc $sloc (RefTest t) }
@@ -537,9 +626,16 @@ table:
    { let (exports, (typ, e)) = r in
      Table {id; typ; init = Some e; elem = None; exports} }
 | "(" TABLE id = ID?
-  r = exports(t = reftype "(" ELEM e = elemlist ")" {t, e}) ")"
+  r = exports(t = reftype "(" ELEM e = list(elemexpr) ")" {t, e}) ")"
    { let (exports, (reftype, elem)) = r in
-     let len = Int32.of_int (List.length (snd elem)) in
+     let len = Int32.of_int (List.length elem) in
+     Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
+            init = None; elem = Some elem; exports} }
+| "(" TABLE id = ID?
+  r = exports(t = reftype "(" ELEM
+  e = nonempty_list(i = idx { [with_loc $loc(i) (RefFunc i)] }) ")" {t, e}) ")"
+   { let (exports, (reftype, elem)) = r in
+     let len = Int32.of_int (List.length elem) in
      Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
             init = None; elem = Some elem; exports} }
 | "(" TABLE id = ID ?
@@ -591,7 +687,7 @@ elem:
 
 elemlist:
 | t = reftype l = elemexpr * { (t, l) }
-| FUNC l = list(i = idx { [with_loc $sloc (RefFunc i)] })
+| FUNC l = list(i = idx { [with_loc $loc(i) (RefFunc i)] })
   { ({nullable = false; typ = Func}, l) }
 
 elemexpr:
@@ -631,3 +727,102 @@ parse:
   { (name, l) }
 | l = modulefield * EOF
   { (None, l) }
+
+parse_script:
+| s = script EOF { s }
+| inline_module EOF { [] }
+
+script:
+| c = cmd* { c }
+
+inline_module:
+| modulefield + { }
+
+cmd:
+| c = module_
+| c = instance
+| c = register
+| c = action
+| c = assertion
+| c = meta
+  { c }
+
+module_:
+| "(" MODULE DEFINITION ? name = ID ? l = modulefield * ")" { ignore (name, l) }
+| "(" MODULE DEFINITION ? ID ? BINARY STRING *  ")" {}
+| "(" MODULE DEFINITION ? ID ? QUOTE STRING *  ")" {}
+
+script_instance:
+| instance { }
+| module_ { }
+
+instance:
+| "(" MODULE INSTANCE option(ID ID ? {}) ")" {}
+
+register:
+| "(" REGISTER STRING ID ? ")" {}
+
+action:
+| "(" INVOKE ID ? STRING const * ")"
+| "(" GET ID? STRING ")"
+{}
+
+const:
+| "(" I32_CONST i32 ")"
+| "(" I64_CONST i64 ")"
+| "(" F32_CONST f32 ")"
+| "(" F64_CONST f64 ")"
+| "(" V128 vec_shape NAT+ ")"
+| "(" REF_NULL heaptype ")"
+| "(" REF_HOST NAT ")"
+| "(" REF_EXTERN NAT ")"
+{}
+
+vec_shape:
+| I8X16
+| I16X8
+| I32X4
+| I64X2
+| F32X4
+| F64X2
+| V128
+{}
+
+assertion:
+| "(" ASSERT_RETURN action result_pat* ")"
+| "(" ASSERT_RETURN_NAN action ")"
+| "(" ASSERT_EXCEPTION action ")"
+| "(" ASSERT_TRAP action STRING ")"
+| "(" ASSERT_EXHAUSTION action STRING ")"
+| "(" ASSERT_MALFORMED module_ STRING ")"
+| "(" ASSERT_INVALID module_ STRING ")"
+| "(" ASSERT_UNLINKABLE script_instance STRING ")"
+| "(" ASSERT_TRAP script_instance STRING ")"
+{}
+
+result_pat:
+| "(" I32_CONST i32 ")"
+| "(" I64_CONST i64 ")"
+| "(" F32_CONST f32 ")"
+| "(" F32_CONST NAN ")"
+| "(" F64_CONST f64 ")"
+| "(" F64_CONST NAN ")"
+| "(" V128_CONST vec_shape NAT+ ")"
+| "(" REF ")"
+| "(" REF_NULL ")"
+| "(" REF_FUNC ")"
+| "(" REF_EXTERN ")"
+| "(" REF_STRUCT ")"
+| "(" REF_ARRAY ")"
+| "(" REF_NULL heaptype ")"
+| "(" REF_HOST NAT ")"
+| "(" REF_EXTERN NAT ")"
+| "(" INSTR (*RefI31*) ")"
+| "(" EITHER result_pat+ ")"
+{}
+
+meta:
+| "(" SCRIPT ID? script ")"
+| "(" INPUT ID? STRING ")"
+| "(" OUTPUT ID? STRING? ")"
+{}
