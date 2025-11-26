@@ -1,19 +1,21 @@
 (*
 TODO:
-- br_table
 - enforce expressions
 - return a typed tree
 - check that underscores are properly placed
+- check for floating types? when an instruction may trap (Div)?
 - error messages
 - locations on the heap when push several values?
-- more methods rather than global functions?
-  clz, ctz, popcnt, rotl(..), rotr(..), min(..), max(..), copysign(..)
+- more methods rather than global functions (no ambiguity)?
+  rotl(..), rotr(..), min(..), max(..), copysign(..)
 - tests:
   - short pieces of syntaxe, read / write / error
   - write the translated files, parse/validate them, translate/validate them back
   - webassembly testsuite => parse everything we can / reproduce errors
 - move lets at more appriate places
-- cast to number might need to be duplicated (initial type then final type)
+- remove redundant type annotations/casts
+- cast to number might need to be duplicated (initial type then final type);
+  need cast before to_bits/from_bits also
 
 Syntax changes:
 - names in result type (symmetry with params)
@@ -499,6 +501,8 @@ let check_float_bin_op i typ1 typ2 =
   | _ -> assert false (*ZZZ*));
   push i.loc typ1
 
+let with_current_stack f st = (st, f st)
+
 let rec instruction ctx i =
   match i.descr with
   | Block (label, bt, instrs) ->
@@ -852,7 +856,7 @@ let rec instruction ctx i =
                   push i.loc
                     (UnionFind.make (Valtype { typ = I32; internal = I32 }))
               | _ -> assert false)
-          | Valtype { typ = Ref { typ = Array; _ }; _ }, "length" ->
+          | (Null | Valtype { typ = Ref { typ = Array; _ }; _ }), "length" ->
               push i.loc
                 (UnionFind.make (Valtype { typ = I32; internal = I32 }))
           | Valtype { typ = I32; _ }, "from_bits" ->
@@ -867,8 +871,13 @@ let rec instruction ctx i =
           | Valtype { typ = F64; _ }, "to_bits" ->
               push i.loc
                 (UnionFind.make (Valtype { typ = I64; internal = I64 }))
-          | ( Valtype { typ = F32 | F64; _ },
+          | ( ((Number | Int | Valtype { typ = I32 | I64; _ }) as ty'),
+              ("clz" | "ctz" | "popcnt") ) ->
+              if ty' = Number then UnionFind.set ty Int;
+              push i.loc ty
+          | ( ((Number | Float | Valtype { typ = F32 | F64; _ }) as ty'),
               ("abs" | "ceil" | "floor" | "trunc" | "nearest" | "sqrt") ) ->
+              if ty' = Number then UnionFind.set ty Float;
               push i.loc ty
           | _ ->
               Format.eprintf "??? %a %s@." output_inferred_type ty field.descr;
@@ -1172,8 +1181,22 @@ let rec instruction ctx i =
       let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
       let* () = pop_args ctx params in
       push_results (List.map (fun p -> (i.loc, p) (*ZZZ*)) params)
-  | Br_table (_labels, _i') ->
-      (*ZZZZZZZZZZZZZZ*)
+  | Br_table (labels, i') ->
+      let* () = instruction ctx i' in
+      let* () =
+        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+      in
+      let* () =
+        with_current_stack (fun st ->
+            List.iter
+              (fun label ->
+                let params = branch_target ctx label in
+                ignore
+                  (pop_args ctx
+                     (List.map (fun typ -> UnionFind.make (Valtype typ)) params)
+                     st))
+              labels)
+      in
       unreachable
   | Br_on_null (idx, i') -> (
       let* () = instruction ctx i' in
