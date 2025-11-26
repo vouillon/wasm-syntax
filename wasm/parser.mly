@@ -468,13 +468,14 @@ memarg:
 
 callindirect(cont):
 | CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
-  { with_loc $sloc (CallIndirect (i, fst t)) :: snd t }
+  { with_loc ($symbolstartpos, $endpos(i)) (CallIndirect (i, fst t)) :: snd t }
 | CALL_INDIRECT t = typeuse_no_bindings(cont)
-  { with_loc $sloc (CallIndirect (Ast.no_loc (Num 0l), fst t)) :: snd t }
+  { with_loc $loc($1) (CallIndirect (Ast.no_loc (Num 0l), fst t)) :: snd t }
 | RETURN_CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
-  { with_loc $sloc (ReturnCallIndirect (i, fst t)) :: snd t }
+  { with_loc ($symbolstartpos, $endpos(i))
+      (ReturnCallIndirect (i, fst t)) :: snd t }
 | RETURN_CALL_INDIRECT t = typeuse_no_bindings(cont)
-  { with_loc $sloc
+  { with_loc $loc($1)
       (ReturnCallIndirect (Ast.no_loc (Num 0l), fst t)) :: snd t }
 
 select_results(cont):
@@ -495,12 +496,6 @@ ambiguous_instr(cont):
 | l = callindirect(cont)
 | l = select(cont)
 { l }
-
-instr:
-| i = plaininstr { i }
-| l = ambiguous_instr({[]}) { List.hd l }
-| i = blockinstr { i }
-| i = foldedinstr { i }
 
 instrs (cont):
 | cont { [] }
@@ -686,8 +681,16 @@ start:
 | "(" START i = idx ")" { Start i }
 
 elem:
+| "(" ELEM id = ID ? l = elemlist ")"
+  { let (typ, init) = l in Elem {id; mode = Passive; typ; init} }
+| "(" ELEM id = ID ? t = tableuse o = offset l = elemlist ")"
+  { let (typ, init) = l in Elem {id; mode = Active (t, o); typ; init} }
 | "(" ELEM id = ID ? DECLARE l = elemlist ")"
-  { let (typ, init) = l in Elem {id; typ; init} }
+  { let (typ, init) = l in Elem {id; mode = Declare; typ; init} }
+| "(" ELEM id = ID ? o = offset
+  init = list(i = idx { [with_loc $loc(i) (RefFunc i)] }) ")"
+  { Elem {id; mode = Active (Ast.no_loc (Num 0l), o);
+          typ = { nullable =true ; typ = Func }; init} }
 
 elemlist:
 | t = reftype l = elemexpr * { (t, l) }
@@ -695,15 +698,22 @@ elemlist:
   { ({nullable = false; typ = Func}, l) }
 
 elemexpr:
-| "(" ITEM  e = expr ")" {e}
+| "(" ITEM  e = expr ")" { e }
+| instr = foldedinstr { [instr] }
+
+%inline tableuse:
+| "(" TABLE i = idx ")" { i }
+| { with_loc $sloc (Num 0l) }
 
 data:
 | "(" DATA id = ID ? init = datastring ")"
   { Data { id; init; mode = Passive } }
-| "(" DATA id = ID ? m = memuse "(" OFFSET e = expr ")" init = datastring ")"
+| "(" DATA id = ID ? m = memuse e = offset init = datastring ")"
   { Data { id; init; mode = Active (m, e) } }
-| "(" DATA id = ID ? m = memuse "(" instr = instr ")" init = datastring ")"
-  { Data { id; init; mode = Active (m, [instr]) } }
+
+offset:
+| "(" OFFSET e = expr ")" { e }
+| instr = foldedinstr { [instr] }
 
 datastring:
 | l = STRING * { String.concat "" l }

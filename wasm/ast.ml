@@ -292,6 +292,7 @@ module Text = struct
 
   type exportable = Func | Memory | Table | Tag | Global
   type 'info datamode = Passive | Active of idx * 'info expr
+  type 'info elemmode = Passive | Active of idx * 'info expr | Declare
 
   type 'info modulefield =
     | Types of rectype
@@ -331,7 +332,12 @@ module Text = struct
       }
     | Export of { name : string; kind : exportable; index : idx }
     | Start of idx
-    | Elem of { id : id option; typ : reftype; init : 'info expr list }
+    | Elem of {
+        id : id option;
+        typ : reftype;
+        init : 'info expr list;
+        mode : 'info elemmode;
+      }
     | Data of { id : id option; init : string; mode : 'info datamode }
 
   type 'info module_ = string option * 'info modulefield list
@@ -370,6 +376,7 @@ module Binary = struct
 
   type exportable = Func | Memory | Tag | Global
   type 'info datamode = Passive | Active of idx * 'info expr
+  type 'info elemmode = Passive | Active of idx * 'info expr | Declare
 
   type 'info modulefield =
     | Types of rectype
@@ -402,6 +409,11 @@ module Binary = struct
       }
     | Export of { name : string; kind : exportable; index : idx }
     | Start of idx
-    | Elem of { id : id option; typ : reftype; init : 'info expr list }
+    | Elem of {
+        id : id option;
+        typ : reftype;
+        init : 'info expr list;
+        mode : 'info elemmode;
+      }
     | Data of { id : id option; init : string; mode : 'info datamode }
 end
