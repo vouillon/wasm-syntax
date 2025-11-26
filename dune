@@ -1,6 +1,6 @@
 (executables
- (names main test_wasm convert pretty_print)
- (libraries wasm menhirLib re)
+ (names main test_wasm convert pretty_print run_wasm_testsuite)
+ (libraries wasm menhirLib re unix)
  (preprocess
   (pps sedlex.ppx)))
 

@@ -160,6 +160,7 @@ let rec token lexbuf =
   | "declare" -> DECLARE
   | "item" -> ITEM
   | "memory" -> MEMORY
+  | "table" -> TABLE
   | "data" -> DATA
   | "offset" -> OFFSET
   | "module" -> MODULE
@@ -286,6 +287,26 @@ let rec token lexbuf =
   | "i64.le_u" -> INSTR (BinOp (I64 (Le Unsigned)))
   | "i64.ge_s" -> INSTR (BinOp (I64 (Ge Signed)))
   | "i64.ge_u" -> INSTR (BinOp (I64 (Ge Unsigned)))
+  | "f32.abs" -> INSTR (UnOp (F32 Abs))
+  | "f32.neg" -> INSTR (UnOp (F32 Neg))
+  | "f32.ceil" -> INSTR (UnOp (F32 Ceil))
+  | "f32.floor" -> INSTR (UnOp (F32 Floor))
+  | "f32.trunc" -> INSTR (UnOp (F32 Trunc))
+  | "f32.nearest" -> INSTR (UnOp (F32 Nearest))
+  | "f32.sqrt" -> INSTR (UnOp (F32 Sqrt))
+  | "f32.add" -> INSTR (BinOp (F32 Add))
+  | "f32.sub" -> INSTR (BinOp (F32 Sub))
+  | "f32.mul" -> INSTR (BinOp (F32 Mul))
+  | "f32.div" -> INSTR (BinOp (F32 Div))
+  | "f32.min" -> INSTR (BinOp (F32 Min))
+  | "f32.max" -> INSTR (BinOp (F32 Max))
+  | "f32.copysign" -> INSTR (BinOp (F32 CopySign))
+  | "f32.eq" -> INSTR (BinOp (F32 Eq))
+  | "f32.ne" -> INSTR (BinOp (F32 Ne))
+  | "f32.lt" -> INSTR (BinOp (F32 Lt))
+  | "f32.gt" -> INSTR (BinOp (F32 Gt))
+  | "f32.le" -> INSTR (BinOp (F32 Le))
+  | "f32.ge" -> INSTR (BinOp (F32 Ge))
   | "f64.abs" -> INSTR (UnOp (F64 Abs))
   | "f64.neg" -> INSTR (UnOp (F64 Neg))
   | "f64.ceil" -> INSTR (UnOp (F64 Ceil))

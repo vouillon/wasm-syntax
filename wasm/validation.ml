@@ -90,6 +90,10 @@ let storagetype ctx (ty : Ast.Text.storagetype) =
 
 let muttype f ctx { mut; typ } = { mut; typ = f ctx typ }
 let fieldtype ctx ty = muttype storagetype ctx ty
+
+let tabletype ctx ({ limits; reftype = typ } : Ast.Text.tabletype) =
+  { limits; reftype = reftype ctx typ }
+
 let globaltype ctx ty = muttype valtype ctx ty
 
 let comptype ctx (ty : Ast.Text.comptype) =
@@ -114,6 +118,7 @@ type module_context = {
   subtyping_info : Types.subtyping_info;
   functions : int Sequence.t;
   memories : limits Sequence.t;
+  tables : tabletype Sequence.t;
   globals : globaltype Sequence.t;
   tags : int Sequence.t;
 }
@@ -808,6 +813,8 @@ let build_initial_env ctx fields =
           match desc with
           | Func tu -> Sequence.register ctx.functions id (typeuse ctx.types tu)
           | Memory limits -> Sequence.register ctx.memories id limits
+          | Table typ ->
+              Sequence.register ctx.tables id (tabletype ctx.types typ)
           | Global ty ->
               Sequence.register ctx.globals id (globaltype ctx.types ty)
           | Tag tu -> Sequence.register ctx.tags id (typeuse ctx.types tu))
@@ -903,6 +910,7 @@ let f (_, fields) =
       subtyping_info = Types.subtyping_info type_context.types;
       functions = Sequence.make "function";
       memories = Sequence.make "memory";
+      tables = Sequence.make "tables";
       globals = Sequence.make "global";
       tags = Sequence.make "tag";
     }

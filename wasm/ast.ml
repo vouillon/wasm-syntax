@@ -54,6 +54,7 @@ struct
   type rectype = subtype X.annotated_array
   type nonrec limits = limits = { mi : Int32.t; ma : Int32.t option }
   type globaltype = valtype muttype
+  type tabletype = { limits : limits; reftype : reftype }
 end
 
 (* Instructions *)
@@ -266,10 +267,11 @@ module Text = struct
   type importdesc =
     | Func of typeuse
     | Memory of limits
+    | Table of tabletype
     | Global of globaltype
     | Tag of typeuse
 
-  type exportable = Func | Memory | Tag | Global
+  type exportable = Func | Memory | Table | Tag | Global
   type 'info datamode = Passive | Active of idx * 'info expr
 
   type 'info modulefield =
@@ -292,6 +294,13 @@ module Text = struct
         id : id option;
         limits : limits;
         init : string option;
+        exports : string list;
+      }
+    | Table of {
+        id : id option;
+        typ : tabletype;
+        init : 'info expr option;
+        elem : (reftype * 'info expr list) option;
         exports : string list;
       }
     | Tag of { id : id option; typ : typeuse; exports : string list }

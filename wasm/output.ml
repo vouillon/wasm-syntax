@@ -517,7 +517,8 @@ let modulefield f =
                 | Func typ -> Atom "func" :: (opt_id id @ fundecl typ)
                 | Global ty -> Atom "global" :: (opt_id id @ [ globaltype ty ])
                 | Tag typ -> Atom "tag" :: (opt_id id @ fundecl typ)
-                | Memory _ -> [ Atom "memory" ] (*ZZZ*));
+                | Memory _ -> [ Atom "memory" ] (*ZZZ*)
+                | Table _ -> [ Atom "table" ] (*ZZZ*));
             ];
         ]
   | Global { id; typ; init; exports = e } ->

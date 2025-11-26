@@ -124,6 +124,7 @@ type ctx = {
   globals : Sequence.t;
   functions : Sequence.t;
   memories : Sequence.t;
+  tables : Sequence.t;
   tags : Sequence.t;
   locals : Sequence.t;
   labels : LabelStack.t;
@@ -703,7 +704,7 @@ let modulefield st (f : _ Src.modulefield) : _ Ast.modulefield option =
                  typ = typ'.typ;
                  attributes = import (module_, name) :: exports e;
                })
-      | Memory _ -> None)
+      | Memory _ | Table _ -> None (*ZZZ*))
   | Global { typ; init; exports = e; _ } ->
       let typ' = globaltype st typ in
       Some
@@ -725,7 +726,7 @@ let modulefield st (f : _ Src.modulefield) : _ Ast.modulefield option =
              sign;
              attributes = exports e;
            })
-  | Memory _ | Start _ | Export _ | Elem _ | Data _ -> None
+  | Memory _ | Table _ | Start _ | Export _ | Elem _ | Data _ -> None
 
 (*
     | Memory of {
@@ -749,6 +750,7 @@ let register_names ctx fields =
           match desc with
           | Func _ -> ()
           | Memory _ -> Sequence.register ctx.memories id exports
+          | Table _ -> Sequence.register ctx.tables id exports
           | Global _ -> Sequence.register ctx.globals id exports
           | Tag _ -> Sequence.register ctx.tags id exports)
       | Types rectype ->
@@ -771,6 +773,7 @@ let register_names ctx fields =
       | Func _ | Export _ | Start _ -> ()
       | Elem _ | Data _ -> () (*ZZZ*)
       | Memory { id; exports; _ } -> Sequence.register ctx.memories id exports
+      | Table { id; exports; _ } -> Sequence.register ctx.tables id exports
       | Tag { id; exports; _ } -> Sequence.register ctx.tags id exports)
     fields;
   List.iter
@@ -780,10 +783,10 @@ let register_names ctx fields =
           (* ZZZ Check for non-import fields *)
           match desc with
           | Func _ -> Sequence.register ctx.functions id exports
-          | Memory _ | Global _ | Tag _ -> ())
+          | Memory _ | Table _ | Global _ | Tag _ -> ())
       | Func { id; exports; _ } -> Sequence.register ctx.functions id exports
       | Types _ | Global _ | Export _ | Start _ | Elem _ | Data _ | Memory _
-      | Tag _ ->
+      | Table _ | Tag _ ->
           ())
     fields
 
@@ -797,7 +800,8 @@ let module_ (_, fields) =
       globals = Sequence.make common_namespace "global" "x";
       functions = Sequence.make common_namespace "function" "f";
       locals = Sequence.make common_namespace "local" "x";
-      memories = Sequence.make (Namespace.make ()) "memories" "m";
+      memories = Sequence.make (Namespace.make ()) "memory" "m";
+      tables = Sequence.make (Namespace.make ()) "table" "m";
       labels = LabelStack.make ();
       tags = Sequence.make (Namespace.make ()) "tag" "t";
     }

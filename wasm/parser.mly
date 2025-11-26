@@ -54,6 +54,7 @@ ZZZ
 %token DECLARE
 %token ITEM
 %token MEMORY
+%token TABLE
 %token DATA
 %token OFFSET
 %token MODULE
@@ -274,6 +275,9 @@ limits:
 memtype:
 | l = limits { l }
 
+tabletype(cont):
+| l = limits t = reftype c = cont { ({limits = l; reftype = t}, c) }
+
 (* Instructions *)
 
 blockinstr:
@@ -486,6 +490,8 @@ importdesc:
     { (i, Func (fst t)) }
 | "(" MEMORY i = ID ? l = limits ")"
     { (i, (Memory l)) }
+| "(" TABLE i = ID ? t = tabletype({}) ")"
+    { (i, (Table (fst t))) }
 | "(" GLOBAL i = ID ? t = globaltype ")"
     { (i, (Global t)) }
 | "(" TAG i = ID ? t = typeuse(")")
@@ -526,6 +532,22 @@ memory:
   { let (exports, (module_, name)) = r in
     Import {module_; name; id; desc = Memory t; exports } }
 
+table:
+| "(" TABLE id = ID? r = exports(tabletype(expr)) ")"
+   { let (exports, (typ, e)) = r in
+     Table {id; typ; init = Some e; elem = None; exports} }
+| "(" TABLE id = ID?
+  r = exports(t = reftype "(" ELEM e = elemlist ")" {t, e}) ")"
+   { let (exports, (reftype, elem)) = r in
+     let len = Int32.of_int (List.length (snd elem)) in
+     Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
+            init = None; elem = Some elem; exports} }
+| "(" TABLE id = ID ?
+  r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
+  t = tabletype({}) ")"
+  { let (exports, (module_, name)) = r in
+    Import {module_; name; id; desc = Table (fst t); exports } }
+
 tag:
 | "(" TAG id = ID ? r = exports(typeuse (")"))
     { let (exports, (typ, _)) = r in
@@ -557,6 +579,7 @@ exportdesc:
 | "(" FUNC i = idx ")" { (i, Func) }
 | "(" GLOBAL i = idx ")" { (i, Global) }
 | "(" MEMORY i = idx ")" { (i, Memory) }
+| "(" TABLE i = idx ")" { (i, Table) }
 | "(" TAG i = idx ")" { (i, (Tag : exportable)) }
 
 start:
@@ -595,6 +618,7 @@ modulefield:
 | f = func
 | f = tag
 | f = memory
+| f = table
 | f = global
 | f = export
 | f = start

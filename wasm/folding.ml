@@ -8,6 +8,8 @@ let map_instrs func (name, fields) =
         | Func ({ typ; locals; instrs; _ } as f) ->
             Func { f with instrs = func (Some (typ, locals)) instrs }
         | Global ({ init; _ } as g) -> Global { g with init = func None init }
+        | Table ({ init; _ } as t) ->
+            Table { t with init = Option.map (fun e -> func None e) init }
         | Elem ({ init; _ } as e) ->
             Elem { e with init = List.map (fun l -> func None l) init }
         | Types _ | Import _ | Memory _ | Tag _ | Export _ | Start _ | Data _ ->
@@ -55,8 +57,8 @@ let types m =
       match f with
       | Types l ->
           Array.fold_left (fun tbl (id, typ) -> Tbl.add id typ tbl) tbl l
-      | Import _ | Func _ | Memory _ | Tag _ | Global _ | Export _ | Start _
-      | Elem _ | Data _ ->
+      | Import _ | Func _ | Memory _ | Table _ | Tag _ | Global _ | Export _
+      | Start _ | Elem _ | Data _ ->
           tbl)
     Tbl.empty m
 
@@ -66,9 +68,9 @@ let functions f =
       match f with
       | Func { id; typ; _ } | Import { id; desc = Func typ; _ } ->
           Tbl.add id typ tbl
-      | Import { desc = Memory _ | Global _ | Tag _; _ }
-      | Types _ | Memory _ | Tag _ | Global _ | Export _ | Start _ | Elem _
-      | Data _ ->
+      | Import { desc = Memory _ | Table _ | Global _ | Tag _; _ }
+      | Types _ | Memory _ | Table _ | Tag _ | Global _ | Export _ | Start _
+      | Elem _ | Data _ ->
           tbl)
     Tbl.empty f
 
@@ -78,9 +80,9 @@ let globals f =
       match f with
       | Global { id; typ; _ } | Import { id; desc = Global typ; _ } ->
           Tbl.add id typ tbl
-      | Import { desc = Func _ | Memory _ | Tag _; _ }
-      | Types _ | Func _ | Memory _ | Tag _ | Export _ | Start _ | Elem _
-      | Data _ ->
+      | Import { desc = Func _ | Memory _ | Table _ | Tag _; _ }
+      | Types _ | Func _ | Memory _ | Table _ | Tag _ | Export _ | Start _
+      | Elem _ | Data _ ->
           tbl)
     Tbl.empty f
 
