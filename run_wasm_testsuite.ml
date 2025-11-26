@@ -1,3 +1,9 @@
+(*
+- perform parsing and validation tests
+- output the tests and read them back to test the text output
+- conversion to rust-like format and typing
+*)
+
 let iter_files dirs skip suffix f =
   let rec visit dir =
     let entries = Sys.readdir dir in
