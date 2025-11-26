@@ -184,7 +184,7 @@ struct
     | ReturnCallRef of X.idx
     | ReturnCallIndirect of X.idx * X.typeuse
     | Drop
-    | Select of X.valtype option
+    | Select of X.valtype list option
     | LocalGet of X.idx
     | LocalSet of X.idx
     | LocalTee of X.idx

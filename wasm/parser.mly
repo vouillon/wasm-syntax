@@ -477,15 +477,19 @@ callindirect(cont):
   { with_loc $sloc
       (ReturnCallIndirect (Ast.no_loc (Num 0l), fst t)) :: snd t }
 
-%inline selectinstr:
-| SELECT "(" RESULT typ = valtype ")"
-  { with_loc $sloc (Select (Some typ)) }
-| SELECT
-  { with_loc $sloc (Select None) }
+select_results(cont):
+| c = cont { (([], None), c) }
+| "(" RESULT l = valtype * ")" rem = select_results(cont)
+  { map_fst
+      (fun (l', loc) ->
+         (l :: l', Some (Option.value ~default:$endpos($4) loc)))
+      rem }
 
 select(cont):
-| s = selectinstr c = cont
-  { s :: c }
+| SELECT p = select_results(cont)
+  { let ((l, loc), c) = p in
+    with_loc ($symbolstartpos, Option.value ~default:$endpos($1) loc)
+      (Select (if l = [] then None else Some (List.concat l))) :: c }
 
 ambiguous_instr(cont):
 | l = callindirect(cont)

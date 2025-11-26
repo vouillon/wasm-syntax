@@ -375,7 +375,8 @@ let rec instr i =
         (Atom "return_call_indirect"
         :: ((if id.desc = Num 0l then [] else [ index id ]) @ typeuse' typ))
   | Call f -> Block [ Atom "call"; index f ]
-  | Select t -> Block (Atom "select" :: option (fun t -> [ valtype t ]) t)
+  | Select t ->
+      Block (Atom "select" :: option (fun t -> valtype_list "result" t) t)
   | Pop ty -> Block [ Atom "pop"; valtype ty ]
   | RefFunc i -> Block [ Atom "ref.func"; index i ]
   | RefIsNull -> Block [ Atom "ref.is_null" ]
