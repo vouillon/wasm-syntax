@@ -194,7 +194,9 @@ let map_fst f (x, y) = (f x, y)
 
 %%
 
-u32: n = NAT { n (*ZZZ overflow / unsigned*) }
+u32: n = NAT { Uint32.of_string n }
+
+u64: n = NAT { Uint64.of_string n }
 
 i32:
   n = NAT { n }
@@ -215,7 +217,7 @@ f64:
 | f = FLOAT { f }
 
 idx:
-| n = u32 { with_loc $sloc (Num (Int32.of_string n)) }
+| n = u32 { with_loc $sloc (Num n) }
 | i = ID { with_loc $sloc (Id i) }
 
 name: s = STRING
@@ -328,8 +330,8 @@ subtype:
 | typ = comptype { {final = true; supertype = None; typ } }
 
 limits:
-| mi = u32 { {mi = Int32.of_string mi; ma = None} }
-| mi = u32 ma = u32 { {mi = Int32.of_string mi; ma = Some (Int32.of_string ma)} }
+| mi = u64 { {mi; ma = None} }
+| mi = u64 ma = u64 { {mi; ma = Some ma} }
 
 memtype:
 | l = limits { l }
@@ -376,10 +378,10 @@ blocktype(cont):
     snd r }
 
 %inline memidx:
-| i = ioption(idx) { Option.value ~default:(with_loc $sloc (Num 0l)) i}
+| i = ioption(idx) { Option.value ~default:(with_loc $sloc (Num Uint32.zero)) i}
 
 %inline tableidx:
-| i = ioption(idx) { Option.value ~default:(with_loc $sloc (Num 0l)) i}
+| i = ioption(idx) { Option.value ~default:(with_loc $sloc (Num Uint32.zero)) i}
 
 plaininstr:
 | THROW i = idx { with_loc $sloc (Throw i) }
@@ -404,17 +406,20 @@ plaininstr:
 | LOCAL_TEE i = idx { with_loc $sloc (LocalTee i) }
 | GLOBAL_GET i = idx { with_loc $sloc (GlobalGet i) }
 | GLOBAL_SET i = idx { with_loc $sloc (GlobalSet i) }
-| sz = LOAD i = memidx m = memarg { with_loc $sloc (Load (i, m 1l, sz)) }
+| sz = LOAD i = memidx m = memarg
+  { with_loc $sloc (Load (i, m (Uint64.one), sz)) }
 | k = LOADS i = memidx m = memarg
-  { let (sz, sz', s) = k in with_loc $sloc (LoadS (i, m 1l, sz, sz', s)) }
-| sz = STORE i = memidx m = memarg { with_loc $sloc (Store (i, m 1l, sz)) }
+  { let (sz, sz', s) = k in
+    with_loc $sloc (LoadS (i, m Uint64.one, sz, sz', s)) }
+| sz = STORE i = memidx m = memarg
+  { with_loc $sloc (Store (i, m Uint64.one, sz)) }
 | sz = STORES i = memidx m = memarg
-  { with_loc $sloc (StoreS (i, m 1l, fst sz, snd sz)) }
+  { with_loc $sloc (StoreS (i, m Uint64.one, fst sz, snd sz)) }
 | MEMORY_SIZE i = memidx { with_loc $sloc (MemorySize i) }
 | MEMORY_GROW i = memidx { with_loc $sloc (MemoryGrow i) }
 | MEMORY_FILL i = memidx { with_loc $sloc (MemoryFill i) }
 | MEMORY_COPY p = option(i1 = idx i2 = idx { (i1, i2) })
-  { let zero = with_loc $loc(p) (Num 0l) in
+  { let zero = with_loc $loc(p) (Num Uint32.zero) in
     let (i, i') = Option.value ~default:(zero, zero) p in
     with_loc $sloc (MemoryCopy (i, i')) }
 | MEMORY_INIT i = memidx d = idx { with_loc $sloc (MemoryInit (i, d)) }
@@ -425,7 +430,7 @@ plaininstr:
 | TABLE_GROW i = tableidx { with_loc $sloc (TableGrow i) }
 | TABLE_FILL i = tableidx { with_loc $sloc (TableFill i) }
 | TABLE_COPY p = option(i1 = idx i2 = idx { (i1, i2) })
-  { let zero = with_loc $loc(p) (Num 0l) in
+  { let zero = with_loc $loc(p) (Num Uint32.zero) in
     let (i, i') = Option.value ~default:(zero, zero) p in
     with_loc $sloc (TableCopy (i, i')) }
 | TABLE_INIT i = tableidx d = idx { with_loc $sloc (TableInit (i, d)) }
@@ -441,7 +446,7 @@ plaininstr:
 | ARRAY_NEW i = idx { with_loc $sloc (ArrayNew i) }
 | ARRAY_NEW_DEFAULT i = idx { with_loc $sloc (ArrayNewDefault i) }
 | ARRAY_NEW_FIXED i = idx l = u32
-  { with_loc $sloc (ArrayNewFixed (i, Int32.of_string l)) }
+  { with_loc $sloc (ArrayNewFixed (i, l)) }
 | ARRAY_NEW_DATA i1 = idx i2 = idx { with_loc $sloc (ArrayNewData (i1, i2)) }
 | ARRAY_NEW_ELEM i1 = idx i2 = idx { with_loc $sloc (ArrayNewElem (i1, i2)) }
 | s = ARRAY_GET i = idx { with_loc $sloc (ArrayGet (s, i)) }
@@ -454,29 +459,29 @@ plaininstr:
 | I64_CONST i = i64 { with_loc $sloc (Const (I64 i)) }
 | F32_CONST f = f32 { with_loc $sloc (Const (F64 f)) }
 | F64_CONST f = f64 { with_loc $sloc (Const (F64 f)) }
-| TUPLE_MAKE l = u32 { with_loc $sloc (TupleMake (Int32.of_string l)) }
+| TUPLE_MAKE l = u32 { with_loc $sloc (TupleMake l) }
 | TUPLE_EXTRACT l = u32 i = u32
-  { with_loc $sloc (TupleExtract (Int32.of_string l, Int32.of_string i)) }
+  { with_loc $sloc (TupleExtract (l, i)) }
 | i = INSTR { with_loc $sloc i }
 
 memarg:
 | o = option(MEM_OFFSET) a = option(MEM_ALIGN)
   { fun width ->
-    (* ZZZ overflows *)
-    {offset = Option.value ~default:0l (Option.map Int32.of_string o);
-     align = Option.value ~default:width  (Option.map Int32.of_string a)} }
+    {offset = Option.value ~default:Uint64.zero (Option.map Uint64.of_string o);
+     align = Option.value ~default:width (Option.map Uint64.of_string a)} }
 
 callindirect(cont):
 | CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
   { with_loc ($symbolstartpos, $endpos(i)) (CallIndirect (i, fst t)) :: snd t }
 | CALL_INDIRECT t = typeuse_no_bindings(cont)
-  { with_loc $loc($1) (CallIndirect (Ast.no_loc (Num 0l), fst t)) :: snd t }
+  { with_loc $loc($1)
+      (CallIndirect (Ast.no_loc (Num Uint32.zero), fst t)) :: snd t }
 | RETURN_CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
   { with_loc ($symbolstartpos, $endpos(i))
       (ReturnCallIndirect (i, fst t)) :: snd t }
 | RETURN_CALL_INDIRECT t = typeuse_no_bindings(cont)
   { with_loc $loc($1)
-      (ReturnCallIndirect (Ast.no_loc (Num 0l), fst t)) :: snd t }
+      (ReturnCallIndirect (Ast.no_loc (Num Uint32.zero), fst t)) :: snd t }
 
 select_results(cont):
 | c = cont { (([], None), c) }
@@ -612,7 +617,7 @@ memory:
   { let (exports, limits) = r in Memory {id; limits; init = None; exports} }
 | "(" MEMORY id = ID? r = exports("(" DATA s = datastring ")" { s }) ")"
   { let (exports, s) = r in
-    let sz = Int32.of_int ((String.length s + 65535) lsr 16) in
+    let sz = Uint64.of_int ((String.length s + 65535) lsr 16) in
     Memory {id; limits = {mi = sz; ma = Some sz}; init = Some s; exports} }
 | "(" MEMORY id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
@@ -627,14 +632,14 @@ table:
 | "(" TABLE id = ID?
   r = exports(t = reftype "(" ELEM e = list(elemexpr) ")" {t, e}) ")"
    { let (exports, (reftype, elem)) = r in
-     let len = Int32.of_int (List.length elem) in
+     let len = Uint64.of_int (List.length elem) in
      Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
             init = None; elem = Some elem; exports} }
 | "(" TABLE id = ID?
   r = exports(t = reftype "(" ELEM
   e = nonempty_list(i = idx { [with_loc $loc(i) (RefFunc i)] }) ")" {t, e}) ")"
    { let (exports, (reftype, elem)) = r in
-     let len = Int32.of_int (List.length elem) in
+     let len = Uint64.of_int (List.length elem) in
      Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
             init = None; elem = Some elem; exports} }
 | "(" TABLE id = ID ?
@@ -689,7 +694,7 @@ elem:
   { let (typ, init) = l in Elem {id; mode = Declare; typ; init} }
 | "(" ELEM id = ID ? o = offset
   init = list(i = idx { [with_loc $loc(i) (RefFunc i)] }) ")"
-  { Elem {id; mode = Active (Ast.no_loc (Num 0l), o);
+  { Elem {id; mode = Active (Ast.no_loc (Num Uint32.zero), o);
           typ = { nullable =true ; typ = Func }; init} }
 
 elemlist:
@@ -703,7 +708,7 @@ elemexpr:
 
 %inline tableuse:
 | "(" TABLE i = idx ")" { i }
-| { with_loc $sloc (Num 0l) }
+| { with_loc $sloc (Num Uint32.zero) }
 
 data:
 | "(" DATA id = ID ? init = datastring ")"
@@ -720,7 +725,7 @@ datastring:
 
 %inline memuse:
 | "(" MEMORY i = idx ")" { i }
-| { with_loc $sloc (Num 0l) }
+| { with_loc $sloc (Num Uint32.zero) }
 
 modulefield:
 | f = rectype

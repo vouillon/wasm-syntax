@@ -62,7 +62,7 @@ let id x = Atom (Printf.sprintf "$%s" x)
 let opt_id = option (fun i -> [ id i ])
 
 let index x =
-  match x.Ast.desc with Num i -> Atom (Printf.sprintf "%ld" i) | Id s -> id s
+  match x.Ast.desc with Num i -> Atom (Uint32.to_string i) | Id s -> id s
 
 let heaptype (ty : heaptype) =
   match ty with
@@ -278,13 +278,16 @@ let select i32 i64 f32 f64 op =
   | F32 x -> f32 "32" x
   | F64 x -> f64 "64" x
 
-let memidx i = if i.Ast.desc = Num 0l then [] else [ index i ]
+let memidx i = if i.Ast.desc = Num Uint32.zero then [] else [ index i ]
 
 let memarg align' { offset; align } =
-  (if offset = 0l then [] else [ Atom (Printf.sprintf "offset=%ld" offset) ])
-  @ if align = align' then [] else [ Atom (Printf.sprintf "align=%ld" align) ]
+  (if offset = Uint64.zero then []
+   else [ Atom ("offset=" ^ Uint64.to_string offset) ])
+  @
+  if align = align' then []
+  else [ Atom (Printf.sprintf "align=" ^ Uint64.to_string align) ]
 
-let integer i = Atom (Int32.to_string i)
+let integer i = Atom (Uint32.to_string i)
 
 let rec instr i =
   match i.Ast.desc with
@@ -317,7 +320,7 @@ let rec instr i =
       let f s _ = s in
       Block
         (Atom (Printf.sprintf "%s.load" (select f f f f sz))
-        :: (memidx i @ memarg 1l m))
+        :: (memidx i @ memarg Uint64.one m))
   | LoadS (i, m, sz, sz', s) ->
       Block
         (Atom
@@ -326,19 +329,19 @@ let rec instr i =
                  (match sz with `I32 -> "i32" | `I64 -> "i64")
                  (match sz' with `I8 -> "8" | `I16 -> "i16" | `I32 -> "i32"))
               s)
-        :: (memidx i @ memarg 1l m))
+        :: (memidx i @ memarg Uint64.one m))
   | Store (i, m, sz) ->
       let f s _ = s in
       Block
         (Atom (Printf.sprintf "%s.store" (select f f f f sz))
-        :: (memidx i @ memarg 1l m))
+        :: (memidx i @ memarg Uint64.one m))
   | StoreS (i, m, sz, sz') ->
       Block
         (Atom
            (Printf.sprintf "%s.store%s"
               (match sz with `I32 -> "i32" | `I64 -> "i64")
               (match sz' with `I8 -> "8" | `I16 -> "i16" | `I32 -> "i32"))
-        :: (memidx i @ memarg 1l m))
+        :: (memidx i @ memarg Uint64.one m))
   | MemorySize m -> Block (Atom "memory.size" :: memidx m)
   | MemoryGrow m -> Block (Atom "memory.grow" :: memidx m)
   | MemoryFill m -> Block (Atom "memory.fill" :: memidx m)
@@ -346,7 +349,7 @@ let rec instr i =
       Block
         (Atom "memory.copy"
         ::
-        (if m.desc = Num 0l && m'.desc = Num 0l then []
+        (if m.desc = Num Uint32.zero && m'.desc = Num Uint32.zero then []
          else [ index m; index m' ]))
   | MemoryInit (m, d) -> Block (Atom "memory.init" :: (memidx m @ [ index d ]))
   | DataDrop d -> Block [ Atom "data.drop"; index d ]
@@ -359,7 +362,7 @@ let rec instr i =
       Block
         (Atom "table.copy"
         ::
-        (if m.desc = Num 0l && m'.desc = Num 0l then []
+        (if m.desc = Num Uint32.zero && m'.desc = Num Uint32.zero then []
          else [ index m; index m' ]))
   | TableInit (m, d) -> Block (Atom "table.init" :: (memidx m @ [ index d ]))
   | ElemDrop d -> Block [ Atom "elem.drop"; index d ]
@@ -369,11 +372,13 @@ let rec instr i =
   | CallIndirect (id, typ) ->
       Block
         (Atom "call_indirect"
-        :: ((if id.desc = Num 0l then [] else [ index id ]) @ typeuse' typ))
+        :: ((if id.desc = Num Uint32.zero then [] else [ index id ])
+           @ typeuse' typ))
   | ReturnCallIndirect (id, typ) ->
       Block
         (Atom "return_call_indirect"
-        :: ((if id.desc = Num 0l then [] else [ index id ]) @ typeuse' typ))
+        :: ((if id.desc = Num Uint32.zero then [] else [ index id ])
+           @ typeuse' typ))
   | Call f -> Block [ Atom "call"; index f ]
   | Select t ->
       Block (Atom "select" :: option (fun t -> valtype_list "result" t) t)
@@ -589,7 +594,7 @@ let modulefield f =
            @ (match mode with
              | Passive -> []
              | Active (i, e) -> (
-                 (if i.desc = Num 0l then []
+                 (if i.desc = Num Uint32.zero then []
                   else [ List [ Atom "memory"; index i ] ])
                  @
                  match e with

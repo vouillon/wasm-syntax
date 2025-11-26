@@ -3,9 +3,9 @@ open Ast.Binary.Types
 module Sequence = struct
   type 'a t = {
     name : string;
-    index_mapping : (int, 'a) Hashtbl.t;
+    index_mapping : (Uint32.t, 'a) Hashtbl.t;
     label_mapping : (string, 'a) Hashtbl.t;
-    mutable last_index : int;
+    mutable last_index : Uint32.t;
   }
 
   let make name =
@@ -13,21 +13,21 @@ module Sequence = struct
       name;
       index_mapping = Hashtbl.create 16;
       label_mapping = Hashtbl.create 16;
-      last_index = 0;
+      last_index = Uint32.zero;
     }
 
   let register seq id v =
     let idx = seq.last_index in
-    seq.last_index <- seq.last_index + 1;
+    seq.last_index <- Uint32.succ seq.last_index;
     Hashtbl.add seq.index_mapping idx v;
     Option.iter (fun id -> (*ZZZ*) Hashtbl.add seq.label_mapping id v) id
 
   let get seq (idx : Ast.Text.idx) =
     match idx.desc with
     | Num n -> (
-        try Hashtbl.find seq.index_mapping (Int32.to_int n)
+        try Hashtbl.find seq.index_mapping n
         with Not_found ->
-          Format.eprintf "Unbound %s %ld@." seq.name n;
+          Format.eprintf "Unbound %s %s@." seq.name (Uint32.to_string n);
           exit 1)
     | Id id -> (
         try Hashtbl.find seq.label_mapping id
@@ -38,16 +38,14 @@ end
 
 type type_context = {
   types : Types.t;
-  mutable last_index : int;
-  index_mapping : (int, int * (string * int) list) Hashtbl.t;
+  mutable last_index : Uint32.t;
+  index_mapping : (Uint32.t, int * (string * int) list) Hashtbl.t;
   label_mapping : (string, int * (string * int) list) Hashtbl.t;
 }
 
 let get_type_info ctx (idx : Ast.Text.idx) =
   match idx.desc with
-  | Num x ->
-      let x = Int32.to_int x in
-      Hashtbl.find ctx.index_mapping x
+  | Num x -> Hashtbl.find ctx.index_mapping x
   | Id id -> Hashtbl.find ctx.label_mapping id
 
 let resolve_type_index ctx idx = fst (get_type_info ctx idx)
@@ -189,9 +187,7 @@ let ( let* ) e f st =
   f v st
 
 let resolve_index tbl (idx : Ast.Text.idx) =
-  match idx.desc with
-  | Num i -> (*ZZZ overflow*) Int32.to_int i
-  | Id id -> (*ZZZ*) Hashtbl.find tbl id
+  match idx.desc with Num i -> i | Id id -> (*ZZZ*) Hashtbl.find tbl id
 
 let get_local ctx ?(initialize = false) i =
   ignore initialize;
@@ -283,7 +279,7 @@ let print_stack st =
 
 let branch_target ctx (idx : Ast.Text.idx) =
   match idx.desc with
-  | Num i -> snd (List.nth ctx.control_types (Int32.to_int i))
+  | Num i -> snd (List.nth ctx.control_types (Uint32.to_int i))
   | Id id ->
       let rec find l id =
         match l with
@@ -571,7 +567,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let n =
         match idx'.desc with
         | Id id -> List.assoc id fields
-        | Num n -> Int32.to_int n
+        | Num n -> Uint32.to_int n
       in
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct fields ->
@@ -584,7 +580,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let n =
         match idx'.desc with
         | Id id -> List.assoc id fields
-        | Num n -> Int32.to_int n
+        | Num n -> Uint32.to_int n
       in
       let* () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
@@ -610,7 +606,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let ty = resolve_type_index ctx.modul.types idx in
       let* () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
-        | Array field -> repeat (Int32.to_int n) (pop ctx (unpack_type field))
+        | Array field -> repeat (Uint32.to_int n) (pop ctx (unpack_type field))
         | _ -> (*ZZZ *) assert false
       in
       push (Ref { nullable = false; typ = Type ty })
@@ -763,7 +759,7 @@ let add_type ctx ty =
   Array.iteri
     (fun i (label, _) ->
       (*ZZZ Check unique names*)
-      Hashtbl.replace ctx.index_mapping (ctx.last_index + i) (lnot i, []);
+      Hashtbl.replace ctx.index_mapping (Uint32.succ ctx.last_index) (lnot i, []);
       Option.iter
         (fun label -> Hashtbl.replace ctx.label_mapping label (lnot i, []))
         label)
@@ -781,12 +777,14 @@ let add_type ctx ty =
             |> Array.to_list |> List.filter_map Fun.id
         | _ -> []
       in
-      Hashtbl.replace ctx.index_mapping (ctx.last_index + i) (i' + i, fields);
+      Hashtbl.replace ctx.index_mapping
+        (Uint32.add ctx.last_index (Uint32.of_int i))
+        (i' + i, fields);
       Option.iter
         (fun label -> Hashtbl.replace ctx.label_mapping label (i' + i, fields))
         label)
     ty;
-  ctx.last_index <- ctx.last_index + Array.length ty
+  ctx.last_index <- Uint32.add ctx.last_index (Uint32.of_int (Array.length ty))
 
 (*
   idx option * ((id option * valtype) list * valtype list) option
@@ -898,7 +896,7 @@ let f (_, fields) =
   let type_context =
     {
       types = Types.create ();
-      last_index = 0;
+      last_index = Uint32.zero;
       index_mapping = Hashtbl.create 16;
       label_mapping = Hashtbl.create 16;
     }

@@ -4,6 +4,7 @@
 - proper folding
 *)
 module Src = Wasm.Ast.Text
+module Uint32 = Wasm.Uint32
 module StringMap = Map.Make (String)
 
 module Namespace = struct
@@ -31,10 +32,10 @@ end
 module Sequence = struct
   type t = {
     name : string;
-    index_mapping : (int, string) Hashtbl.t;
+    index_mapping : (Uint32.t, string) Hashtbl.t;
     label_mapping : (string, string) Hashtbl.t;
-    mutable last_index : int;
-    mutable current_index : int;
+    mutable last_index : Uint32.t;
+    mutable current_index : Uint32.t;
     namespace : Namespace.t;
     default : string;
   }
@@ -44,8 +45,8 @@ module Sequence = struct
       name;
       index_mapping = Hashtbl.create 16;
       label_mapping = Hashtbl.create 16;
-      last_index = 0;
-      current_index = 0;
+      last_index = Uint32.zero;
+      current_index = Uint32.zero;
       namespace;
       default;
     }
@@ -60,7 +61,7 @@ module Sequence = struct
       Namespace.add seq.namespace name
     in
     let idx = seq.last_index in
-    seq.last_index <- seq.last_index + 1;
+    seq.last_index <- Uint32.succ seq.last_index;
     Hashtbl.add seq.index_mapping idx name;
     Option.iter (fun id -> Hashtbl.add seq.label_mapping id name) id;
     name
@@ -73,9 +74,9 @@ module Sequence = struct
       desc =
         (match idx.desc with
         | Num n -> (
-            try Hashtbl.find seq.index_mapping (Int32.to_int n)
+            try Hashtbl.find seq.index_mapping n
             with Not_found ->
-              Format.eprintf "Unbound %s %ld@." seq.name n;
+              Format.eprintf "Unbound %s %s@." seq.name (Uint32.to_string n);
               exit 1)
         | Id id -> (
             try Hashtbl.find seq.label_mapping id
@@ -86,7 +87,7 @@ module Sequence = struct
 
   let get_current seq =
     let i = seq.current_index in
-    seq.current_index <- i + 1;
+    seq.current_index <- Uint32.succ i;
     Ast.no_loc (Hashtbl.find seq.index_mapping i)
 
   let consume_currents seq = seq.current_index <- seq.last_index
@@ -108,7 +109,7 @@ module LabelStack = struct
   let get st (idx : Src.idx) =
     let name, used =
       match idx.desc with
-      | Num n -> snd (List.nth st.stack (Int32.to_int n))
+      | Num n -> snd (List.nth st.stack (Uint32.to_int n))
       | Id id -> List.assoc (Some id) st.stack
     in
     used := true;
@@ -203,7 +204,7 @@ let comptype st name (t : Src.comptype) : Ast.comptype =
                (Sequence.get seq
                   (Ast.no_loc
                      (match get_annot t with
-                      | None -> Num (Int32.of_int i)
+                      | None -> Num (Uint32.of_int i)
                       | Some id -> Id id
                        : Src.idx_desc)))
                (fieldtype st (get_type t)))
@@ -291,8 +292,8 @@ let reasonable_string =
 
 let string_args n args =
   try
-    if Int32.of_int (List.length args) <> n then raise Exit;
-    let b = Bytes.create (Int32.to_int n) in
+    if Uint32.of_int (List.length args) <> n then raise Exit;
+    let b = Bytes.create (Uint32.to_int n) in
     List.iteri
       (fun i arg ->
         match arg.Ast.desc with
@@ -629,7 +630,7 @@ let typeuse kind st (typ, sign) =
                            (Ast.no_loc
                               (match id with
                                | Some id -> Id id
-                               | None -> Num (Int32.of_int n)
+                               | None -> Num (Uint32.of_int n)
                                 : Src.idx_desc)))
                   | `Sig -> Option.map Ast.no_loc id),
                   valtype st t ))

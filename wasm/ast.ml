@@ -8,7 +8,7 @@ let no_loc desc =
 
 type packedtype = I8 | I16
 type 'typ muttype = { mut : bool; typ : 'typ }
-type limits = { mi : Int32.t; ma : Int32.t option }
+type limits = { mi : Uint64.t; ma : Uint64.t option }
 
 module Types (X : sig
   type idx
@@ -54,7 +54,7 @@ struct
 
   type subtype = { typ : comptype; supertype : X.idx option; final : bool }
   type rectype = subtype X.annotated_array
-  type nonrec limits = limits = { mi : Int32.t; ma : Int32.t option }
+  type nonrec limits = limits = { mi : Uint64.t; ma : Uint64.t option }
   type globaltype = valtype muttype
   type tabletype = { limits : limits; reftype : reftype }
 end
@@ -140,7 +140,11 @@ struct
     | Ge
 
   type blocktype = Typeuse of X.typeuse | Valtype of X.valtype
-  type memarg = { offset : Int32.t; align : Int32.t }
+
+  type memarg = {
+    offset : Uint64.t;
+    align : Uint64.t (* The wasm test suite contains large align values *);
+  }
 
   type 'info instr_desc =
     | Block of {
@@ -222,7 +226,7 @@ struct
     | StructSet of X.idx * X.idx
     | ArrayNew of X.idx
     | ArrayNewDefault of X.idx
-    | ArrayNewFixed of X.idx * Int32.t
+    | ArrayNewFixed of X.idx * Uint32.t
     | ArrayNewData of X.idx * X.idx
     | ArrayNewElem of X.idx * X.idx
     | ArrayGet of signage option * X.idx
@@ -246,8 +250,8 @@ struct
     | Folded of 'info instr * 'info instr list
     (* Binaryen extensions *)
     | Pop of X.valtype
-    | TupleMake of Int32.t
-    | TupleExtract of Int32.t * Int32.t
+    | TupleMake of Uint32.t
+    | TupleExtract of Uint32.t * Uint32.t
 
   and 'info instr = ('info instr_desc, 'info) annotated
 
@@ -258,7 +262,7 @@ end
 
 module Text = struct
   type id = string
-  type idx_desc = Num of Int32.t | Id of id
+  type idx_desc = Num of Uint32.t | Id of id
   type idx = (idx_desc, location) annotated
 
   module X = struct

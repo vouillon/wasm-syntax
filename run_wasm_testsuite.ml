@@ -61,5 +61,7 @@ let runtest filename =
 
 let () =
   iter_files dirs
-    (fun p -> List.mem p [ "memory64"; "simd"; "multi-memory"; "relaxed-simd" ])
+    (fun p ->
+      List.mem p
+        [ "spec-test-1"; "memory64"; "simd"; "multi-memory"; "relaxed-simd" ])
     ".wast" runtest

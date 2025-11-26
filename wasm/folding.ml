@@ -18,17 +18,22 @@ let map_instrs func (name, fields) =
 
 (****)
 
-module Int32Map = Map.Make (Int32)
+module Uint32Map = Map.Make (Uint32)
 module StringMap = Map.Make (String)
 
 module Tbl = struct
-  type 'a t = { by_index : 'a Int32Map.t; by_name : 'a StringMap.t; last : int }
+  type 'a t = {
+    by_index : 'a Uint32Map.t;
+    by_name : 'a StringMap.t;
+    last : int;
+  }
 
-  let empty = { by_index = Int32Map.empty; by_name = StringMap.empty; last = 0 }
+  let empty =
+    { by_index = Uint32Map.empty; by_name = StringMap.empty; last = 0 }
 
   let add id v tbl =
     {
-      by_index = Int32Map.add (Int32.of_int tbl.last) v tbl.by_index;
+      by_index = Uint32Map.add (Uint32.of_int tbl.last) v tbl.by_index;
       by_name =
         (match id with
         | None -> tbl.by_name
@@ -40,7 +45,7 @@ end
 let lookup (tbl : _ Tbl.t) idx =
   try
     match idx.Ast.desc with
-    | Num i -> Int32Map.find i tbl.by_index
+    | Num i -> Uint32Map.find i tbl.by_index
     | Id i -> StringMap.find i tbl.by_name
   with Not_found -> assert false (*ZZZ *)
 
@@ -164,7 +169,7 @@ let label_arity env idx =
         (List.find
            (fun e -> match e with Some id', _ -> id = id' | _ -> false)
            env.labels)
-  | Num i -> snd (List.nth env.labels (Int32.to_int i))
+  | Num i -> snd (List.nth env.labels (Uint32.to_int i))
 
 let arity env i =
   match i.Ast.desc with
@@ -247,7 +252,7 @@ let arity env i =
   | StructSet _ -> (2, 0)
   | ArrayNew _ -> (2, 1)
   | ArrayNewDefault _ -> (1, 1)
-  | ArrayNewFixed (_, n) -> (Int32.to_int n, 1)
+  | ArrayNewFixed (_, n) -> (Uint32.to_int n, 1)
   | ArrayNewData _ -> (2, 1)
   | ArrayNewElem _ -> (2, 1)
   | ArrayGet _ -> (2, 1)
@@ -271,8 +276,8 @@ let arity env i =
   | Folded _ -> assert false
   (* Binaryen extensions *)
   | Pop _ -> (0, 1)
-  | TupleMake n -> (Int32.to_int n, Int32.to_int n)
-  | TupleExtract (n, _) -> (Int32.to_int n, 1)
+  | TupleMake n -> (Uint32.to_int n, Uint32.to_int n)
+  | TupleExtract (n, _) -> (Uint32.to_int n, 1)
 
 (****)
 
