@@ -1,7 +1,7 @@
 module P =
   Wasm.Parsing.Make_parser
     (struct
-      type t = Ast.modulefield list
+      type t = Ast.location Ast.modulefield list
     end)
     (Parser)
     (Fast_parser)

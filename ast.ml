@@ -1,10 +1,13 @@
-type location = { loc_start : Lexing.position; loc_end : Lexing.position }
-type 'a with_loc = { descr : 'a; loc : location }
+type ('desc, 'info) annotated = ('desc, 'info) Wasm.Ast.annotated = {
+  desc : 'desc;
+  info : 'info;
+}
 
-let no_loc descr =
-  { descr; loc = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos } }
+type location = Wasm.Ast.location
 
-type idx = string with_loc
+let no_loc = Wasm.Ast.no_loc
+
+type idx = (string, location) annotated
 
 include Wasm.Ast.Types (struct
   type nonrec idx = idx
@@ -52,58 +55,63 @@ let format_signed_type typ signage strict =
     (match signage with Signed -> "s" | Unsigned -> "u")
     (if strict then "_strict" else "")
 
-type instr_descr =
-  | Block of label option * functype * instr list
-  | Loop of label option * functype * instr list
-  | If of label option * functype * instr * instr list * instr list option
+type 'info instr_descr =
+  | Block of label option * functype * 'info instr list
+  | Loop of label option * functype * 'info instr list
+  | If of
+      label option
+      * functype
+      * 'info instr
+      * 'info instr list
+      * 'info instr list option
   | Unreachable
   | Nop
   | Null
   | Get of idx
-  | Set of idx * instr
-  | Tee of idx * instr
-  | Call of instr * instr list
-  | TailCall of instr * instr list
+  | Set of idx * 'info instr
+  | Tee of idx * 'info instr
+  | Call of 'info instr * 'info instr list
+  | TailCall of 'info instr * 'info instr list
   | String of idx option * string
   | Int of string
   | Float of string
-  | Cast of instr * casttype
-  | Test of instr * reftype
-  | NonNull of instr
-  | Struct of idx option * (idx * instr) list
+  | Cast of 'info instr * casttype
+  | Test of 'info instr * reftype
+  | NonNull of 'info instr
+  | Struct of idx option * (idx * 'info instr) list
   | StructDefault of idx option
-  | StructGet of instr * idx
-  | StructSet of instr * idx * instr
-  | Array of idx option * instr * instr
-  | ArrayDefault of idx option * instr
-  | ArrayFixed of idx option * instr list
-  | ArrayGet of instr * instr
-  | ArraySet of instr * instr * instr
-  | BinOp of binop * instr * instr
-  | UnOp of unop * instr
-  | Let of (idx option * valtype option) list * instr option
-  | Br of label * instr option
-  | Br_if of label * instr
-  | Br_table of label list * instr
-  | Br_on_null of label * instr
-  | Br_on_non_null of label * instr
-  | Br_on_cast of label * reftype * instr
-  | Br_on_cast_fail of label * reftype * instr
-  | Throw of idx * instr list
-  | Return of instr option
-  | Sequence of instr list
-  | Select of instr * instr * instr
+  | StructGet of 'info instr * idx
+  | StructSet of 'info instr * idx * 'info instr
+  | Array of idx option * 'info instr * 'info instr
+  | ArrayDefault of idx option * 'info instr
+  | ArrayFixed of idx option * 'info instr list
+  | ArrayGet of 'info instr * 'info instr
+  | ArraySet of 'info instr * 'info instr * 'info instr
+  | BinOp of binop * 'info instr * 'info instr
+  | UnOp of unop * 'info instr
+  | Let of (idx option * valtype option) list * 'info instr option
+  | Br of label * 'info instr option
+  | Br_if of label * 'info instr
+  | Br_table of label list * 'info instr
+  | Br_on_null of label * 'info instr
+  | Br_on_non_null of label * 'info instr
+  | Br_on_cast of label * reftype * 'info instr
+  | Br_on_cast_fail of label * reftype * 'info instr
+  | Throw of idx * 'info instr list
+  | Return of 'info instr option
+  | Sequence of 'info instr list
+  | Select of 'info instr * 'info instr * 'info instr
 
-and instr = instr_descr with_loc
+and 'info instr = ('info instr_descr, 'info) annotated
 
 type funsig = {
   named_params : (idx option * valtype) list;
   results : valtype list;
 }
 
-type attributes = (string * instr) list
+type attributes = (string * location instr) list
 
-type modulefield =
+type 'info modulefield =
   | Type of rectype
   | Fundecl of {
       name : idx;
@@ -115,7 +123,7 @@ type modulefield =
       name : idx;
       typ : idx option;
       sign : funsig option;
-      body : string option * instr list;
+      body : string option * 'info instr list;
       attributes : attributes;
     }
   | GlobalDecl of {
@@ -128,7 +136,7 @@ type modulefield =
       name : idx;
       mut : bool;
       typ : valtype option;
-      def : instr;
+      def : 'info instr;
       attributes : attributes;
     }
   | Tag of {

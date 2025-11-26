@@ -214,7 +214,7 @@ let rectype st (t : Src.rectype) : Ast.rectype =
   Array.map
     (fun t ->
       let name = Sequence.get_current st.types in
-      annotated name (subtype st name.descr (get_type t)))
+      annotated name (subtype st name.desc (get_type t)))
     t
 
 let globaltype st = muttype valtype st
@@ -255,7 +255,7 @@ let sequence_opt l =
   | [ i ] -> Some i
   | l -> Some (Ast.no_loc (Ast.Sequence l))
 
-let two_args l : Ast.instr * Ast.instr =
+let two_args l : _ Ast.instr * _ Ast.instr =
   match l with
   | [] -> (unit, unit)
   | [ x ] -> (unit, x)
@@ -264,7 +264,7 @@ let two_args l : Ast.instr * Ast.instr =
       (*ZZZ Should take arity into account *)
       (x, Ast.no_loc (Ast.Sequence r))
 
-let three_args l : Ast.instr * Ast.instr * Ast.instr =
+let three_args l : _ Ast.instr * _ Ast.instr * _ Ast.instr =
   match l with
   | [] -> (unit, unit, unit)
   | [ x ] -> (unit, unit, x)
@@ -288,7 +288,7 @@ let string_args n args =
     let b = Bytes.create (Int32.to_int n) in
     List.iteri
       (fun i arg ->
-        match arg.Ast.descr with
+        match arg.Ast.desc with
         | Ast.Int c
           when let c = int_of_string c in
                c >= 0 && c < 256 ->
@@ -317,7 +317,7 @@ let numtype (ty : Src.valtype) =
   | _ -> assert false
 
 let int_un_op sz (op : Src.int_un_op) args =
-  let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
+  let no_loc : _ Ast.instr_descr -> _ = Ast.no_loc in
   match op with
   | Clz -> no_loc (StructGet (sequence args, Ast.no_loc "clz"))
   | Ctz -> no_loc (StructGet (sequence args, Ast.no_loc "ctz"))
@@ -337,7 +337,7 @@ let int_un_op sz (op : Src.int_un_op) args =
   | ExtendS _ -> no_loc Unreachable (* ZZZ *)
 
 let int_bin_op (op : Src.int_bin_op) args =
-  let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
+  let no_loc : _ Ast.instr_descr -> _ = Ast.no_loc in
   let symbol op =
     let e1, e2 = two_args args in
     no_loc (BinOp (op, e1, e2))
@@ -367,7 +367,7 @@ let int_bin_op (op : Src.int_bin_op) args =
   | Ge s -> symbol (Ge (Some s))
 
 let float_un_op sz (op : Src.float_un_op) args =
-  let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
+  let no_loc : _ Ast.instr_descr -> _ = Ast.no_loc in
   match op with
   | Neg -> no_loc (UnOp (Neg, sequence args))
   | Abs -> no_loc (StructGet (sequence args, Ast.no_loc "abs"))
@@ -384,7 +384,7 @@ let float_un_op sz (op : Src.float_un_op) args =
   | Reinterpret -> no_loc (StructGet (sequence args, Ast.no_loc "from_bits"))
 
 let float_bin_op (op : Src.float_bin_op) args =
-  let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
+  let no_loc : _ Ast.instr_descr -> _ = Ast.no_loc in
   let symbol op =
     let e1, e2 = two_args args in
     no_loc (BinOp (op, e1, e2))
@@ -419,8 +419,8 @@ let blocktype ctx (typ : Src.blocktype option) =
           }
       | _, None -> assert false (*ZZZ*))
 
-let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
-  let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
+let rec instr st (i : Src.instr) (args : _ Ast.instr list) : _ Ast.instr =
+  let no_loc : _ Ast.instr_descr -> _ = Ast.no_loc in
   match i with
   | Block { label; typ; block } ->
       assert (args = []);
@@ -478,7 +478,7 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | UnOp (F32 op) -> float_un_op F32 op args
   | StructNew i ->
       let type_name = idx st `Type i in
-      let fields = snd (Hashtbl.find st.struct_fields type_name.descr) in
+      let fields = snd (Hashtbl.find st.struct_fields type_name.desc) in
       no_loc
         (Struct
            ( Some (idx st `Type i),
@@ -487,7 +487,7 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | StructGet (s, t, f) -> (
       let type_name = idx st `Type t in
       let name =
-        Sequence.get (fst (Hashtbl.find st.struct_fields type_name.descr)) f
+        Sequence.get (fst (Hashtbl.find st.struct_fields type_name.desc)) f
       in
       let e = no_loc (StructGet (sequence args, name)) in
       match s with
@@ -497,7 +497,7 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
   | StructSet (t, f) ->
       let type_name = idx st `Type t in
       let name =
-        Sequence.get (fst (Hashtbl.find st.struct_fields type_name.descr)) f
+        Sequence.get (fst (Hashtbl.find st.struct_fields type_name.desc)) f
       in
       let e1, e2 = two_args args in
       no_loc (StructSet (e1, name, e2))
@@ -634,7 +634,7 @@ let import (module_, name) =
            Ast.no_loc (Ast.String (None, name));
          ]) )
 
-let modulefield st (f : Src.modulefield) : Ast.modulefield option =
+let modulefield st (f : Src.modulefield) : _ Ast.modulefield option =
   match f with
   | Types t -> Some (Type (rectype st t))
   | Func { locals; instrs; typ; exports = e; _ } ->

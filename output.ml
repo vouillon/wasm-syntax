@@ -12,7 +12,7 @@ let heaptype f (t : heaptype) =
   | Struct -> Format.pp_print_string f "struct"
   | Array -> Format.pp_print_string f "array"
   | None_ -> Format.pp_print_string f "none"
-  | Type s -> Format.pp_print_string f s.descr
+  | Type s -> Format.pp_print_string f s.desc
 
 let reftype f { nullable; typ } =
   if nullable then Format.fprintf f "&?%a" heaptype typ
@@ -74,14 +74,14 @@ let comptype f (t : comptype) =
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@;<1 2>")
            (fun f (nm, t) ->
-             Format.fprintf f "@[<2>%s:@ %a@]" nm.descr fieldtype t))
+             Format.fprintf f "@[<2>%s:@ %a@]" nm.desc fieldtype t))
         (Array.to_list l)
   | Array t -> Format.fprintf f "@]@ [@[%a@]]" fieldtype t
 
 let subtype f (nm, { typ; supertype; final }) =
-  Format.fprintf f "@[<hv>@[type@ %s" nm.descr;
+  Format.fprintf f "@[<hv>@[type@ %s" nm.desc;
   (match supertype with
-  | Some supertype -> Format.fprintf f ":@ %s" supertype.descr
+  | Some supertype -> Format.fprintf f ":@ %s" supertype.desc
   | None -> ());
   Format.fprintf f "@ =%s%a@]" (if final then "" else " open") comptype typ
 
@@ -166,14 +166,14 @@ let prec_op op =
   | Gt _ | Lt _ | Ge _ | Le _ | Eq | Ne -> (Comparison, LogicalOr, LogicalOr)
 
 let long_block l =
-  let rec loop l n =
+  let rec loop (l : _ instr list) n =
     if n <= 0 then 0
     else
       match l with
       | [] -> n
-      | { descr = Ast.Block (_, _, l); _ } :: rem -> loop rem (loop l (n - 2))
-      | { descr = Ast.Loop (_, _, l); _ } :: rem -> loop rem (loop l (n - 2))
-      | { descr = Ast.If (_, _, _, l1, l2); _ } :: rem ->
+      | { desc = Block (_, _, l); _ } :: rem -> loop rem (loop l (n - 2))
+      | { desc = Loop (_, _, l); _ } :: rem -> loop rem (loop l (n - 2))
+      | { desc = If (_, _, _, l1, l2); _ } :: rem ->
           let n = loop l1 (n - 2) in
           let n = match l2 with None -> n | Some l2 -> loop l2 (n - 1) in
           loop rem n
@@ -190,7 +190,7 @@ let label_comment f (l, label) =
 
 let simple_pat f p =
   match p with
-  | Some x -> Format.pp_print_string f x.descr
+  | Some x -> Format.pp_print_string f x.desc
   | None -> Format.pp_print_string f "_"
 
 let need_blocktype bt = bt.params <> [||] || bt.results <> [||]
@@ -201,8 +201,8 @@ let casttype f ty =
   | Signedtype { typ; signage; strict } ->
       Format.fprintf f "%s" (Ast.format_signed_type typ signage strict)
 
-let rec instr prec f (i : instr) =
-  match i.descr with
+let rec instr prec f (i : _ instr) =
+  match i.desc with
   | Block (label, bt, l) ->
       parentheses prec Block f @@ fun () ->
       block f label (if need_blocktype bt then Some "do" else None) bt l
@@ -222,13 +222,13 @@ let rec instr prec f (i : instr) =
       | None -> Format.fprintf f "@[}%a@]@]@]" label_comment (l1, label))
   | Unreachable -> Format.pp_print_string f "unreachable"
   | Nop -> Format.pp_print_string f "nop"
-  | Get x -> Format.pp_print_string f x.descr
+  | Get x -> Format.pp_print_string f x.desc
   | Set (x, i) ->
       parentheses prec Assignement f @@ fun () ->
-      Format.fprintf f "@[<2>%s@ =@ %a@]" x.descr (instr Assignement) i
+      Format.fprintf f "@[<2>%s@ =@ %a@]" x.desc (instr Assignement) i
   | Tee (x, i) ->
       parentheses prec Assignement f @@ fun () ->
-      Format.fprintf f "@[<2>%s@ :=@ %a@]" x.descr (instr Assignement) i
+      Format.fprintf f "@[<2>%s@ :=@ %a@]" x.desc (instr Assignement) i
   | Call (i, l) ->
       parentheses prec Call f @@ fun () ->
       Format.fprintf f "@[<2>%a@,(@[%a@])@]" (instr Call) i
@@ -245,7 +245,7 @@ let rec instr prec f (i : instr) =
         l
   | String (t, s) ->
       Format.fprintf f "@[";
-      Option.iter (fun t -> Format.fprintf f "%s#" t.descr) t;
+      Option.iter (fun t -> Format.fprintf f "%s#" t.desc) t;
       Format.fprintf f "\"%a\"@]"
         (fun f s ->
           let len, s = Wasm.Output.escape_string s in
@@ -263,35 +263,35 @@ let rec instr prec f (i : instr) =
       Format.fprintf f "@[<2>%a@ @[is@ %a@]@]" (instr Cast) i reftype t
   | Struct (nm, l) ->
       Format.fprintf f "@[<hv>@[{";
-      Option.iter (fun nm -> Format.fprintf f "%s|" nm.descr) nm;
+      Option.iter (fun nm -> Format.fprintf f "%s|" nm.desc) nm;
       Format.fprintf f "@]@;<1 2>%a@ }@]"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@;<1 2>")
            (fun f (nm, i) ->
-             Format.fprintf f "@[<2>%s:@ %a@]" nm.descr (instr Instruction) i))
+             Format.fprintf f "@[<2>%s:@ %a@]" nm.desc (instr Instruction) i))
         l
   | StructDefault nm ->
       Format.fprintf f "@[<hv>@[{";
-      Option.iter (fun nm -> Format.fprintf f "%s|" nm.descr) nm;
+      Option.iter (fun nm -> Format.fprintf f "%s|" nm.desc) nm;
       Format.fprintf f "@]@;<1 2>..@ }@]"
   | StructGet (i, s) ->
       parentheses prec FieldAccess f @@ fun () ->
-      Format.fprintf f "%a.%s" (instr FieldAccess) i s.descr
+      Format.fprintf f "%a.%s" (instr FieldAccess) i s.desc
   | StructSet (i, s, i') ->
       parentheses prec FieldAccess f @@ fun () ->
-      Format.fprintf f "@[<2>%a.%s@ =@ %a@]" (instr FieldAccess) i s.descr
+      Format.fprintf f "@[<2>%a.%s@ =@ %a@]" (instr FieldAccess) i s.desc
         (instr Assignement) i'
   | Array (t, i, n) ->
       Format.fprintf f "[@[";
-      Option.iter (fun t -> Format.fprintf f "%s|@ " t.descr) t;
+      Option.iter (fun t -> Format.fprintf f "%s|@ " t.desc) t;
       Format.fprintf f "%a;@ %a@]]" (instr Instruction) i (instr Instruction) n
   | ArrayDefault (t, n) ->
       Format.fprintf f "[@[";
-      Option.iter (fun t -> Format.fprintf f "%s|@ " t.descr) t;
+      Option.iter (fun t -> Format.fprintf f "%s|@ " t.desc) t;
       Format.fprintf f "..;@ %a@]]" (instr Instruction) n
   | ArrayFixed (t, l) ->
       Format.fprintf f "[@[";
-      Option.iter (fun t -> Format.fprintf f "%s|@ " t.descr) t;
+      Option.iter (fun t -> Format.fprintf f "%s|@ " t.desc) t;
       Format.fprintf f "%a@]]"
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
@@ -367,7 +367,7 @@ let rec instr prec f (i : instr) =
       Format.fprintf f "@]"
   | Throw (tag, l) ->
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[<2>throw@ %s@,(@[%a@])@]@]" tag.descr
+      Format.fprintf f "@[<2>throw@ %s@,(@[%a@])@]@]" tag.desc
         (Format.pp_print_list
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))
@@ -384,15 +384,15 @@ let rec instr prec f (i : instr) =
         i2 (instr Select) i3
   | Null -> Format.pp_print_string f "null"
 
-and block f label kind bt l =
+and block f label kind bt (l : _ instr list) =
   Format.fprintf f "@[<hv>@[%a%a%a{@]%a@[}%a@]@]" block_label label
     (fun f kind -> Option.iter (fun kind -> Format.fprintf f "%s@ " kind) kind)
     kind
     (fun f bt -> if need_blocktype bt then Format.fprintf f "%a@ " blocktype bt)
     bt block_contents l label_comment (l, label)
 
-and deliminated_instr f (i : instr) =
-  match i.descr with
+and deliminated_instr f (i : _ instr) =
+  match i.desc with
   | Block _ | Loop _ | If _ -> instr Instruction f i
   | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | TailCall _ | String _
   | Int _ | Float _ | Cast _ | NonNull _ | Test _ | Struct _ | StructDefault _
@@ -402,19 +402,19 @@ and deliminated_instr f (i : instr) =
   | Br_on_cast_fail _ | Return _ | Throw _ | Sequence _ | Null | Select _ ->
       Format.fprintf f "@[%a;@]" (instr Instruction) i
 
-and block_instrs f l =
+and block_instrs f (l : _ instr list) =
   match l with
   | [] -> ()
   | [ i ] -> instr Instruction f i
   | i :: rem ->
       Format.fprintf f "%a@;<1 2>%a" deliminated_instr i block_instrs rem
 
-and block_contents f l =
+and block_contents f (l : _ instr list) =
   match l with [] -> () | _ -> Format.fprintf f "@;<1 2>%a@ " block_instrs l
 
 let fundecl ~tag f (name, typ, sign) =
-  Format.fprintf f "%s@ %s" (if tag then "tag" else "fn") name.descr;
-  Option.iter (fun typ -> Format.fprintf f ": %s@ " typ.descr) typ;
+  Format.fprintf f "%s@ %s" (if tag then "tag" else "fn") name.desc;
+  Option.iter (fun typ -> Format.fprintf f ": %s@ " typ.desc) typ;
   Option.iter
     (fun { named_params; results } ->
       Format.fprintf f "@,(@[%a@])"
@@ -441,7 +441,7 @@ let modulefield f field =
   | Global { name; mut; typ; def; attributes = a } ->
       Format.fprintf f "@[<hv>%a@[<2>%s@ %s" attributes a
         (if mut then "let" else "const")
-        name.descr;
+        name.desc;
       Option.iter (fun t -> Format.fprintf f ":@ %a" valtype t) typ;
       Format.fprintf f "@ =@ %a@]@]" (instr Instruction) def
   | Fundecl { name; typ; sign; attributes = a } ->
@@ -453,7 +453,7 @@ let modulefield f field =
   | GlobalDecl { name; mut; typ; attributes = a } ->
       Format.fprintf f "@[<hv>%a@[<2>%s@ %s:@ %a@]@]" attributes a
         (if mut then "let" else "const")
-        name.descr valtype typ
+        name.desc valtype typ
 
 let module_ f l =
   Format.fprintf f "@[<hv>%a@]@."
@@ -462,4 +462,4 @@ let module_ f l =
        modulefield)
     l
 
-let instr = instr Instruction
+let instr i = instr Instruction i

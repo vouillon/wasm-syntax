@@ -145,12 +145,13 @@ let storagetype_tbl =
      "i32", Value I32; "i64", Value I64; "f32", Value F32; "f64", Value F64;
      "v128", Value V128]
 
-let with_loc (loc_start, loc_end) descr = {descr; loc = { loc_start; loc_end }}
+let with_loc (loc_start, loc_end) desc = {desc; info =
+  { Wasm.Ast.loc_start; loc_end }}
 
 let blocktype bt = Option.value ~default:{params = [||]; results = [||]} bt
 %}
 
-%start <modulefield list> parse
+%start <location modulefield list> parse
 
 %%
 
@@ -158,7 +159,7 @@ let blocktype bt = Option.value ~default:{params = [||]; results = [||]} bt
 | t = IDENT { with_loc $sloc t }
 
 heaptype:
-| t = ident { try Hashtbl.find absheaptype_tbl t.descr with Not_found -> Type t }
+| t = ident { try Hashtbl.find absheaptype_tbl t.desc with Not_found -> Type t }
 
 reftype:
 | "&" nullable = boption("?") typ = heaptype
