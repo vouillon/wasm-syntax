@@ -21,6 +21,10 @@ Syntax changes:
 - names in result type (symmetry with params)
 - no need to have func type for tags
 
+Syntax ideas:
+- dispatch foo ['a 'b ... else 'c] { 'a { } 'b { } ... }
+- br 'a (e1, ..., en) if cond
+
 Misc:
 - blocks in an expression context return one value; otherwise, no value by default
 *)
@@ -1186,11 +1190,14 @@ let rec instruction ctx i =
       let* () =
         pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
       in
+      let len = List.length (branch_target ctx (List.hd labels)) in
       let* () =
         with_current_stack (fun st ->
             List.iter
               (fun label ->
                 let params = branch_target ctx label in
+                assert (List.length params = len);
+                (*ZZZ*)
                 ignore
                   (pop_args ctx
                      (List.map (fun typ -> UnionFind.make (Valtype typ)) params)

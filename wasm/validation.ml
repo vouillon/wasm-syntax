@@ -364,16 +364,16 @@ let rec instruction ctx (i : Ast.Text.instr) =
       push_results params
   | Br_table (lst, idx) ->
       let* () = pop ctx I32 in
+      let len = List.length (branch_target ctx idx) in
       let* () =
         with_current_stack (fun st ->
             List.iter
               (fun idx ->
                 let params = branch_target ctx idx in
+                assert (List.length params = len);
                 ignore (pop_args ctx params st))
-              lst)
+              (idx :: lst))
       in
-      let params = branch_target ctx idx in
-      let* () = pop_args ctx params in
       unreachable
   | Br_on_null idx -> (
       let* ty = pop_any in

@@ -356,6 +356,10 @@ plaininstr:
   { with_loc $sloc (Br (l, i)) } %prec prec_branch
 | BR_IF "'" l = IDENT i = instr
   { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
+(*
+| BR "'" l = IDENT IF i = instr
+  { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
+*)
 | DISPATCH instr "["   list("'" IDENT { () }) ELSE "'" IDENT "]" "{" instr "}"
  { with_loc $sloc Nop }
 | BR_TABLE "[" lst = list("'" i = IDENT { i }) ELSE "'" l = IDENT  "]" i = instr
