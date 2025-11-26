@@ -2,7 +2,7 @@ open Parser
 
 let white = [%sedlex.regexp? Plus (' ' | '\t')]
 let newline = [%sedlex.regexp? '\r' | '\n' | "\r\n"]
-let ident = [%sedlex.regexp? (xid_start | '_'), Star xid_continue]
+let ident = [%sedlex.regexp? (xid_start | '_'), Star (xid_continue | '\'')]
 let string = [%sedlex.regexp? '"', Star (Sub (any, '"')), '"']
 let sign = [%sedlex.regexp? Opt ('+' | '-')]
 let digit = [%sedlex.regexp? '0' .. '9']
@@ -156,3 +156,7 @@ let rec token lexbuf =
            ( Sedlexing.lexing_positions lexbuf,
              Printf.sprintf "Unexpected character '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))
+
+let is_valid_identifier s =
+  let buf = Sedlexing.Utf8.from_string s in
+  match%sedlex buf with ident, eof -> true | _ -> false

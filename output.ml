@@ -199,14 +199,7 @@ let casttype f ty =
   match ty with
   | Valtype ty -> valtype f ty
   | Signedtype { typ; signage; strict } ->
-      Format.fprintf f "%s%s%s"
-        (match typ with
-        | `I32 -> "i32"
-        | `I64 -> "i64"
-        | `F32 -> "f32"
-        | `F64 -> "f64")
-        (match signage with Signed -> "_s" | Unsigned -> "_")
-        (if strict then "_strict" else "")
+      Format.fprintf f "%s" (Ast.format_signed_type typ signage strict)
 
 let rec instr prec f (i : instr) =
   match i.descr with
@@ -217,7 +210,7 @@ let rec instr prec f (i : instr) =
       parentheses prec Block f @@ fun () -> block f label (Some "loop") bt l
   | If (label, bt, i, l1, l2) -> (
       parentheses prec Block f @@ fun () ->
-      Format.fprintf f "@[@[<hv>@[%aif@ %a" block_label label
+      Format.fprintf f "@[@[<hv>@[%aif@;<1 2>%a" block_label label
         (instr Instruction) i;
       if need_blocktype bt then Format.fprintf f "@ @[<2>=> %a@]" blocktype bt;
       Format.fprintf f "@ {@]%a" block_contents l1;
@@ -361,12 +354,12 @@ let rec instr prec f (i : instr) =
       Format.fprintf f "@[<2>br_on_cast_fail@ '%s@ %a@ %a@]" label reftype ty
         (instr Branch) i
   | Br_table (labels, i) ->
+      let labels = List.rev labels in
       parentheses prec Branch f @@ fun () ->
-      Format.fprintf f "@[<2>br_table@ @[<2>{@ %a@ }@]@ %a@]"
-        (Format.pp_print_list
-           ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-           (fun f label -> Format.fprintf f "'%s" label))
-        labels (instr Branch) i
+      Format.fprintf f "@[<2>br_table@ @[<2>[%a@ else '%s@ ]@]@ %a@]"
+        (Format.pp_print_list (fun f label -> Format.fprintf f "@ '%s" label))
+        (List.rev (List.tl labels))
+        (List.hd labels) (instr Branch) i
   | Return i ->
       parentheses prec Branch f @@ fun () ->
       Format.fprintf f "@[<2>return";

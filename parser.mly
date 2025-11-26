@@ -67,6 +67,7 @@
 %token BR BR_IF BR_TABLE RETURN THROW
 %token BR_ON_CAST BR_ON_CAST_FAIL
 %token BR_ON_NULL BR_ON_NON_NULL
+%token DISPATCH
 
 %nonassoc LET
 %nonassoc IDENT prec_branch RBRACE
@@ -119,6 +120,25 @@ let valtype_tbl =
   tbl_from_list
     ["i32", (I32 : valtype); "i64", I64; "f32", F32; "f64", F64; "v128", V128]
 
+let casttype_tbl =
+  let f t s s' =
+    format_signed_type t s s', Signedtype {typ = t; signage = s; strict = s'} in
+  tbl_from_list
+    [
+      f `I32 Signed false;
+      f `I32 Signed true;
+      f `I32 Unsigned false;
+      f `I32 Unsigned true;
+      f `I64 Signed false;
+      f `I64 Signed true;
+      f `I64 Unsigned false;
+      f `I64 Unsigned true;
+      f `F32 Signed false;
+      f `F32 Unsigned false;
+      f `F64 Signed false;
+      f `F64 Unsigned false;
+    ]
+
 let storagetype_tbl =
   tbl_from_list
     ["i8", (Packed I8 : storagetype); "i16", Packed I16;
@@ -149,6 +169,15 @@ valtype:
    { try Hashtbl.find valtype_tbl t with Not_found ->
        raise (Wasm.Parsing.Syntax_error ($sloc, Printf.sprintf "Identifier '%s' is not a value type.\n" t )) }
 | t = reftype { Ref t }
+
+casttype:
+| t = IDENT
+   { try Valtype (Hashtbl.find valtype_tbl t) with Not_found ->
+       try Hashtbl.find casttype_tbl t with Not_found ->
+         raise (Wasm.Parsing.Syntax_error
+                  ($sloc, Printf.sprintf "Identifier '%s' is not a cast type.\n" t )) }
+| t = reftype { Valtype (Ref t) }
+
 
 resulttype:
 | "(" ")" { [] }
@@ -280,7 +309,7 @@ plaininstr:
    { with_loc $sloc (TailCall(i, l)) }
 | x = ident "=" i = instr { with_loc $sloc (Set (x, i)) }
 | x = ident ":=" i = instr { with_loc $sloc (Tee (x, i)) }
-| i = instr AS t = valtype { with_loc $sloc (Cast(i, t)) }
+| i = instr AS t = casttype { with_loc $sloc (Cast(i, t)) }
 | i = instr IS t = reftype { with_loc $sloc (Test(i, t)) }
 | i = instr "." x = ident { with_loc $sloc (StructGet(i, x)) }
 | i = instr "." x = ident "=" j = instr { with_loc $sloc (StructSet(i, x, j)) }
@@ -327,13 +356,15 @@ plaininstr:
   { with_loc $sloc (Br (l, i)) } %prec prec_branch
 | BR_IF "'" l = IDENT i = instr
   { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
-| BR_TABLE "{" l = nonempty_list("'" i = IDENT { i }) "}" i = instr
-  { with_loc $sloc (Br_table (l, i)) } %prec prec_branch
+| DISPATCH instr "["   list("'" IDENT { () }) ELSE "'" IDENT "]" "{" instr "}"
+ { with_loc $sloc Nop }
+| BR_TABLE "[" lst = list("'" i = IDENT { i }) ELSE "'" l = IDENT  "]" i = instr
+  { with_loc $sloc (Br_table (lst @ [l], i)) } %prec prec_branch
 | BR_ON_NULL "'" l = IDENT i = instr { with_loc $sloc (Br_on_null (l, i)) } %prec prec_branch
 | BR_ON_NON_NULL "'" l = IDENT i = instr { with_loc $sloc (Br_on_non_null (l, i)) } %prec prec_branch
 | BR_ON_CAST "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
 | BR_ON_CAST_FAIL "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
-| RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec prec_branch
+| RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec SHARP
 | THROW t = ident  "(" l = separated_list(",", instr) ")"
   { with_loc $sloc (Throw (t, l)) }
 | i1 = instr "[" i2 = instr "]" { with_loc $sloc (ArrayGet (i1, i2)) }

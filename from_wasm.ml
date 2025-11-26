@@ -3,7 +3,6 @@
 - type checker
 - proper folding
 *)
-
 module Src = Wasm.Ast.Text
 module StringMap = Map.Make (String)
 
@@ -55,8 +54,7 @@ module Sequence = struct
     let name =
       let name =
         match (id, exports) with
-        | Some nm, _ -> nm
-        | None, nm :: _ -> nm
+        | (Some nm, _ | None, nm :: _) when Lexer.is_valid_identifier nm -> nm
         | _ -> seq.default
       in
       Namespace.add seq.namespace name
@@ -321,10 +319,9 @@ let numtype (ty : Src.valtype) =
 let int_un_op sz (op : Src.int_un_op) args =
   let no_loc : Ast.instr_descr -> _ = Ast.no_loc in
   match op with
-  | Clz -> no_loc (Call (no_loc (Get (Ast.no_loc "clz")), [ sequence args ]))
-  | Ctz -> no_loc (Call (no_loc (Get (Ast.no_loc "ctz")), [ sequence args ]))
-  | Popcnt ->
-      no_loc (Call (no_loc (Get (Ast.no_loc "popcnt")), [ sequence args ]))
+  | Clz -> no_loc (StructGet (sequence args, Ast.no_loc "clz"))
+  | Ctz -> no_loc (StructGet (sequence args, Ast.no_loc "ctz"))
+  | Popcnt -> no_loc (StructGet (sequence args, Ast.no_loc "popcnt"))
   | Eqz -> no_loc (UnOp (Not, sequence args))
   | Trunc (_, signage) ->
       no_loc
@@ -571,17 +568,14 @@ let rec instr st (i : Src.instr) (args : Ast.instr list) : Ast.instr =
         (Cast (sequence args, Valtype (Ref { nullable = true; typ = Any })))
   | ArrayNewData (t, _) ->
       no_loc (String (Some (idx st `Type t), "foo")) (*ZZZ*)
-  | ArrayLen -> no_loc (Call (no_loc (Get (Ast.no_loc "array_len")), args))
+  | ArrayLen -> no_loc (StructGet (sequence args, Ast.no_loc "length"))
   | RefCast t -> no_loc (Cast (sequence args, Valtype (Ref (reftype st t))))
   | RefTest t -> no_loc (Test (sequence args, reftype st t))
   | RefEq ->
       let e1, e2 = two_args args in
       no_loc (BinOp (Eq, e1, e2))
   | RefFunc f -> no_loc (Get (idx st `Func f))
-  | RefNull t ->
-      no_loc
-        (Cast
-           (no_loc Null, Valtype (Ref { nullable = true; typ = heaptype st t })))
+  | RefNull _ -> no_loc Null
   | RefIsNull -> no_loc (UnOp (Not, sequence args))
   | Select _ ->
       let e1, e2, e = three_args args in

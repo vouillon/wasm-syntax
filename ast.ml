@@ -42,6 +42,16 @@ type casttype =
       strict : bool;
     }
 
+let format_signed_type typ signage strict =
+  Printf.sprintf "%s_%s%s"
+    (match typ with
+    | `I32 -> "i32"
+    | `I64 -> "i64"
+    | `F32 -> "f32"
+    | `F64 -> "f64")
+    (match signage with Signed -> "s" | Unsigned -> "u")
+    (if strict then "_strict" else "")
+
 type instr_descr =
   | Block of label option * functype * instr list
   | Loop of label option * functype * instr list

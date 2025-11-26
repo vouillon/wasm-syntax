@@ -6,7 +6,14 @@ TODO:
 - check that underscores are properly placed
 - error messages
 - locations on the heap when push several values?
-- array.len(a) => a.length
+- more methods rather than global functions?
+  clz, ctz, popcnt, rotl(..), rotr(..), min(..), max(..), copysign(..)
+- tests:
+  - short pieces of syntaxe, read / write / error
+  - write the translated files, parse/validate them, translate/validate them back
+  - webassembly testsuite => parse everything we can / reproduce errors
+- move lets at more appriate places
+- cast to number might need to be duplicated (initial type then final type)
 
 Syntax changes:
 - names in result type (symmetry with params)
@@ -342,7 +349,7 @@ let signed_cast ctx ty ty' =
   | Valtype { internal = I32 | I64; _ }, (`F32 | `F64)
   | Valtype { internal = F32 | F64; _ }, (`I32 | `I64) ->
       true
-  | (Number | Int), (`I32 | `F32 | `F64)
+  | (Number | Int), (`I32 | `F32 | `F64) (* Floating types can make this fail *)
   | Valtype { internal = I32; _ }, `I32
   | Valtype { internal = I64; _ }, (`I32 | `I64)
   | Valtype { internal = F32 | F64; _ }, (`F32 | `F64)
@@ -633,18 +640,6 @@ let rec instruction ctx i =
               match Tbl.find_opt ctx.functions idx with
               | Some _ -> assert false (*ZZZ*)
               | None -> assert false)))
-  | Call ({ descr = Get { descr = "array_len"; _ }; _ }, [ i ]) ->
-      let* () = instruction ctx i in
-      let* () =
-        pop ctx
-          (UnionFind.make
-             (Valtype
-                {
-                  typ = Ref { nullable = true; typ = Array };
-                  internal = Ref { nullable = true; typ = Array };
-                }))
-      in
-      push i.loc (UnionFind.make (Valtype { typ = I32; internal = I32 }))
   | Call ({ descr = Get { descr = "rotl" | "rotr"; _ }; _ }, [ i1; i2 ]) -> (
       let* () = instruction ctx i1 in
       let* () = instruction ctx i2 in
@@ -853,7 +848,13 @@ let rec instruction ctx i =
                   with
                   | None -> assert false
                   | Some typ -> push i.loc (UnionFind.make (fieldtype ctx typ)))
+              | _, Array _ when field.descr = "length" ->
+                  push i.loc
+                    (UnionFind.make (Valtype { typ = I32; internal = I32 }))
               | _ -> assert false)
+          | Valtype { typ = Ref { typ = Array; _ }; _ }, "length" ->
+              push i.loc
+                (UnionFind.make (Valtype { typ = I32; internal = I32 }))
           | Valtype { typ = I32; _ }, "from_bits" ->
               push i.loc
                 (UnionFind.make (Valtype { typ = F32; internal = F32 }))
