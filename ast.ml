@@ -55,7 +55,7 @@ let format_signed_type typ signage strict =
     (match signage with Signed -> "s" | Unsigned -> "u")
     (if strict then "_strict" else "")
 
-type 'info instr_descr =
+type 'info instr_desc =
   | Block of label option * functype * 'info instr list
   | Loop of label option * functype * 'info instr list
   | If of
@@ -102,7 +102,7 @@ type 'info instr_descr =
   | Sequence of 'info instr list
   | Select of 'info instr * 'info instr * 'info instr
 
-and 'info instr = ('info instr_descr, 'info) annotated
+and 'info instr = ('info instr_desc, 'info) annotated
 
 type funsig = {
   named_params : (idx option * valtype) list;

@@ -3,7 +3,7 @@ open Wasm
 module P =
   Parsing.Make_parser
     (struct
-      type t = string option * Ast.Text.modulefield list
+      type t = string option * Ast.location Ast.Text.modulefield list
     end)
     (Parser)
     (Fast_parser)

@@ -37,7 +37,7 @@ end
 
 let lookup (tbl : _ Tbl.t) idx =
   try
-    match idx with
+    match idx.Ast.desc with
     | Num i -> Int32Map.find i tbl.by_index
     | Id i -> StringMap.find i tbl.by_name
   with Not_found -> assert false (*ZZZ *)
@@ -156,7 +156,7 @@ let local_arity env l = valtype_arity (lookup env.outer_env.locals l)
 let unreachable = 100_000
 
 let label_arity env idx =
-  match idx with
+  match idx.Ast.desc with
   | Id id ->
       snd
         (List.find
@@ -165,7 +165,7 @@ let label_arity env idx =
   | Num i -> snd (List.nth env.labels (Int32.to_int i))
 
 let arity env i =
-  match i with
+  match i.Ast.desc with
   | Block { typ; _ } | Loop { typ; _ } | Try { typ; _ } ->
       blocktype_arity env typ
   | If { typ; _ } ->
@@ -277,10 +277,10 @@ let rec consume n folded =
         if n >= n' then (0, i) :: consume (n - n') folded
         else (n' - n, i) :: rem
 
-let rec fold_stream env folded stream : Ast.Text.instr list =
+let rec fold_stream env folded stream : _ Ast.Text.instr list =
   match stream with
   | [] -> List.rev (List.map snd folded)
-  | (Block ({ label; typ; block; _ } as b) as i) :: rem ->
+  | ({ Ast.desc = Block ({ label; typ; block; _ } as b); _ } as i) :: rem ->
       let block =
         let _, i = blocktype_arity env typ in
         let env = { env with labels = (label, i) :: env.labels } in
@@ -289,9 +289,14 @@ let rec fold_stream env folded stream : Ast.Text.instr list =
       let inputs, outputs = arity env i in
       let folded = consume inputs folded in
       fold_stream env
-        ((outputs, Folded (Block { b with block }, [])) :: folded)
+        (( outputs,
+           {
+             i with
+             desc = Folded ({ i with desc = Block { b with block } }, []);
+           } )
+        :: folded)
         rem
-  | (Loop ({ label; typ; block; _ } as b) as i) :: rem ->
+  | ({ Ast.desc = Loop ({ label; typ; block; _ } as b); _ } as i) :: rem ->
       let block =
         let i, _ = blocktype_arity env typ in
         let env = { env with labels = (label, i) :: env.labels } in
@@ -300,9 +305,15 @@ let rec fold_stream env folded stream : Ast.Text.instr list =
       let inputs, outputs = arity env i in
       let folded = consume inputs folded in
       fold_stream env
-        ((outputs, Folded (Loop { b with block }, [])) :: folded)
+        (( outputs,
+           {
+             i with
+             desc = Folded ({ i with desc = Loop { b with block } }, []);
+           } )
+        :: folded)
         rem
-  | (If ({ label; typ; if_block; else_block; _ } as b) as i) :: rem ->
+  | ({ Ast.desc = If ({ label; typ; if_block; else_block; _ } as b); _ } as i)
+    :: rem ->
       let env' =
         let i, _ = blocktype_arity env typ in
         { env with labels = (label, i) :: env.labels }
@@ -311,9 +322,11 @@ let rec fold_stream env folded stream : Ast.Text.instr list =
       let else_block = fold_stream env' [] else_block in
       let inputs, outputs = arity env i in
       fold_instr env folded [] [] rem
-        (If { b with if_block; else_block })
+        { i with desc = If { b with if_block; else_block } }
         inputs outputs
-  | (Try ({ label; typ; block; catches; catch_all; _ } as b) as i) :: rem ->
+  | ({ Ast.desc = Try ({ label; typ; block; catches; catch_all; _ } as b); _ }
+     as i)
+    :: rem ->
       let env' =
         let i, _ = blocktype_arity env typ in
         { env with labels = (label, i) :: env.labels }
@@ -326,10 +339,17 @@ let rec fold_stream env folded stream : Ast.Text.instr list =
       let inputs, outputs = arity env i in
       let folded = consume inputs folded in
       fold_stream env
-        ((outputs, Folded (Try { b with block; catches; catch_all }, []))
+        (( outputs,
+           {
+             i with
+             desc =
+               Folded
+                 ({ i with desc = Try { b with block; catches; catch_all } }, []);
+           } )
         :: folded)
         rem
-  | Folded (i, l) :: rem -> fold_stream env folded (l @ (i :: rem))
+  | { Ast.desc = Folded (i, l); _ } :: rem ->
+      fold_stream env folded (l @ (i :: rem))
   | i :: rem ->
       let inputs, outputs = arity env i in
       fold_instr env folded [] [] rem i inputs outputs
@@ -337,13 +357,15 @@ let rec fold_stream env folded stream : Ast.Text.instr list =
 and fold_instr env folded args tentative_args stream i inputs outputs =
   if inputs = 0 then
     fold_stream env
-      ((outputs, Folded (i, args)) :: push_back tentative_args folded)
+      ((outputs, { i with desc = Folded (i, args) })
+      :: push_back tentative_args folded)
       stream
   else
     match folded with
     | [] ->
         fold_stream env
-          ((outputs, Folded (i, args)) :: push_back tentative_args folded)
+          ((outputs, { i with desc = Folded (i, args) })
+          :: push_back tentative_args folded)
           stream
     | (n, i') :: folded' ->
         if n <= inputs then
@@ -355,7 +377,7 @@ and fold_instr env folded args tentative_args stream i inputs outputs =
             fold_instr env folded' args tentative_args stream i inputs outputs
         else
           fold_stream env
-            ((outputs, Folded (i, args))
+            ((outputs, { i with desc = Folded (i, args) })
             :: push_back tentative_args ((n - inputs, i') :: folded'))
             stream
 
@@ -384,7 +406,7 @@ let rec unfold_stream stream start =
   List.fold_left
     (fun start i ->
       let unfold_block i =
-        match i with
+        match i.Ast.desc with
         | Block ({ block; _ } as b) ->
             Block { b with block = unfold_instrs block }
         | Loop ({ block; _ } as b) ->
@@ -405,11 +427,12 @@ let rec unfold_stream stream start =
                 catch_all = Option.map unfold_instrs catch_all;
               }
         | Folded _ -> assert false
-        | _ -> i
+        | _ -> i.desc
       in
-      match i with
-      | Folded (i, l) -> unfold_block i :: unfold_stream l start
-      | _ -> unfold_block i :: start)
+      match i.Ast.desc with
+      | Folded (i, l) ->
+          { i with desc = unfold_block i } :: unfold_stream l start
+      | _ -> { i with desc = unfold_block i } :: start)
     start stream
 
 and unfold_instrs l = List.rev (unfold_stream l [])

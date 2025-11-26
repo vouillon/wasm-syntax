@@ -68,19 +68,21 @@ module Sequence = struct
   let register seq id exports = ignore (register' seq id exports)
 
   let get seq (idx : Src.idx) =
-    Ast.no_loc
-    @@
-    match idx with
-    | Num n -> (
-        try Hashtbl.find seq.index_mapping (Int32.to_int n)
-        with Not_found ->
-          Format.eprintf "Unbound %s %ld@." seq.name n;
-          exit 1)
-    | Id id -> (
-        try Hashtbl.find seq.label_mapping id
-        with Not_found ->
-          Format.eprintf "Unbound %s $%s@." seq.name id;
-          if true then raise Not_found else exit 1)
+    {
+      idx with
+      desc =
+        (match idx.desc with
+        | Num n -> (
+            try Hashtbl.find seq.index_mapping (Int32.to_int n)
+            with Not_found ->
+              Format.eprintf "Unbound %s %ld@." seq.name n;
+              exit 1)
+        | Id id -> (
+            try Hashtbl.find seq.label_mapping id
+            with Not_found ->
+              Format.eprintf "Unbound %s $%s@." seq.name id;
+              if true then raise Not_found else exit 1));
+    }
 
   let get_current seq =
     let i = seq.current_index in
@@ -105,7 +107,7 @@ module LabelStack = struct
 
   let get st (idx : Src.idx) =
     let name, used =
-      match idx with
+      match idx.desc with
       | Num n -> snd (List.nth st.stack (Int32.to_int n))
       | Id id -> List.assoc (Some id) st.stack
     in
@@ -196,9 +198,11 @@ let comptype st name (t : Src.comptype) : Ast.comptype =
            (fun i t ->
              annotated
                (Sequence.get seq
-                  (match get_annot t with
-                  | None -> Num (Int32.of_int i)
-                  | Some id -> Id id))
+                  (Ast.no_loc
+                     (match get_annot t with
+                      | None -> Num (Int32.of_int i)
+                      | Some id -> Id id
+                       : Src.idx_desc)))
                (fieldtype st (get_type t)))
            l)
   | Array t -> Array (fieldtype st t)
@@ -316,31 +320,31 @@ let numtype (ty : Src.valtype) =
   | F64 -> `F64
   | _ -> assert false
 
-let int_un_op sz (op : Src.int_un_op) args =
-  let no_loc : _ Ast.instr_descr -> _ = Ast.no_loc in
+let int_un_op i0 sz (op : Src.int_un_op) args =
+  let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
   match op with
-  | Clz -> no_loc (StructGet (sequence args, Ast.no_loc "clz"))
-  | Ctz -> no_loc (StructGet (sequence args, Ast.no_loc "ctz"))
-  | Popcnt -> no_loc (StructGet (sequence args, Ast.no_loc "popcnt"))
-  | Eqz -> no_loc (UnOp (Not, sequence args))
+  | Clz -> with_loc (StructGet (sequence args, Ast.no_loc "clz"))
+  | Ctz -> with_loc (StructGet (sequence args, Ast.no_loc "ctz"))
+  | Popcnt -> with_loc (StructGet (sequence args, Ast.no_loc "popcnt"))
+  | Eqz -> with_loc (UnOp (Not, sequence args))
   | Trunc (_, signage) ->
-      no_loc
+      with_loc
         (Cast
            ( sequence args,
              Signedtype { typ = numtype sz; signage; strict = true } ))
   | TruncSat (_, signage) ->
-      no_loc
+      with_loc
         (Cast
            ( sequence args,
              Signedtype { typ = numtype sz; signage; strict = false } ))
-  | Reinterpret -> no_loc (StructGet (sequence args, Ast.no_loc "to_bits"))
-  | ExtendS _ -> no_loc Unreachable (* ZZZ *)
+  | Reinterpret -> with_loc (StructGet (sequence args, Ast.no_loc "to_bits"))
+  | ExtendS _ -> with_loc Unreachable (* ZZZ *)
 
-let int_bin_op (op : Src.int_bin_op) args =
-  let no_loc : _ Ast.instr_descr -> _ = Ast.no_loc in
+let int_bin_op i0 (op : Src.int_bin_op) args =
+  let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
   let symbol op =
     let e1, e2 = two_args args in
-    no_loc (BinOp (op, e1, e2))
+    with_loc (BinOp (op, e1, e2))
   in
   match op with
   | Add -> symbol Add
@@ -355,10 +359,10 @@ let int_bin_op (op : Src.int_bin_op) args =
   | Shr s -> symbol (Shr s)
   | Rotl ->
       let e1, e2 = two_args args in
-      no_loc (Call (no_loc (Get (Ast.no_loc "rotl")), [ e1; e2 ]))
+      with_loc (Call (with_loc (Get (Ast.no_loc "rotl")), [ e1; e2 ]))
   | Rotr ->
       let e1, e2 = two_args args in
-      no_loc (Call (no_loc (Get (Ast.no_loc "rotr")), [ e1; e2 ]))
+      with_loc (Call (with_loc (Get (Ast.no_loc "rotr")), [ e1; e2 ]))
   | Eq -> symbol Eq
   | Ne -> symbol Ne
   | Lt s -> symbol (Lt (Some s))
@@ -366,39 +370,41 @@ let int_bin_op (op : Src.int_bin_op) args =
   | Le s -> symbol (Le (Some s))
   | Ge s -> symbol (Ge (Some s))
 
-let float_un_op sz (op : Src.float_un_op) args =
-  let no_loc : _ Ast.instr_descr -> _ = Ast.no_loc in
+let float_un_op i0 sz (op : Src.float_un_op) args =
+  let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
   match op with
-  | Neg -> no_loc (UnOp (Neg, sequence args))
-  | Abs -> no_loc (StructGet (sequence args, Ast.no_loc "abs"))
-  | Ceil -> no_loc (StructGet (sequence args, Ast.no_loc "ceil"))
-  | Floor -> no_loc (StructGet (sequence args, Ast.no_loc "floor"))
-  | Trunc -> no_loc (StructGet (sequence args, Ast.no_loc "trunc"))
-  | Nearest -> no_loc (StructGet (sequence args, Ast.no_loc "nearest"))
-  | Sqrt -> no_loc (StructGet (sequence args, Ast.no_loc "sqrt"))
+  | Neg -> with_loc (UnOp (Neg, sequence args))
+  | Abs -> with_loc (StructGet (sequence args, Ast.no_loc "abs"))
+  | Ceil -> with_loc (StructGet (sequence args, Ast.no_loc "ceil"))
+  | Floor -> with_loc (StructGet (sequence args, Ast.no_loc "floor"))
+  | Trunc -> with_loc (StructGet (sequence args, Ast.no_loc "trunc"))
+  | Nearest -> with_loc (StructGet (sequence args, Ast.no_loc "nearest"))
+  | Sqrt -> with_loc (StructGet (sequence args, Ast.no_loc "sqrt"))
   | Convert (_, signage) ->
-      no_loc
+      with_loc
         (Cast
            ( sequence args,
              Signedtype { typ = numtype sz; signage; strict = false } ))
-  | Reinterpret -> no_loc (StructGet (sequence args, Ast.no_loc "from_bits"))
+  | Reinterpret -> with_loc (StructGet (sequence args, Ast.no_loc "from_bits"))
 
-let float_bin_op (op : Src.float_bin_op) args =
-  let no_loc : _ Ast.instr_descr -> _ = Ast.no_loc in
+let float_bin_op i0 (op : Src.float_bin_op) args =
+  let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
   let symbol op =
     let e1, e2 = two_args args in
-    no_loc (BinOp (op, e1, e2))
+    with_loc (BinOp (op, e1, e2))
   in
   match op with
   | Add -> symbol Add
   | Sub -> symbol Sub
   | Mul -> symbol Mul
   | Div -> symbol (Div None)
-  | Min -> no_loc (Call (no_loc (Get (Ast.no_loc "min")), [ sequence args ]))
-  | Max -> no_loc (Call (no_loc (Get (Ast.no_loc "max")), [ sequence args ]))
+  | Min ->
+      with_loc (Call (with_loc (Get (Ast.no_loc "min")), [ sequence args ]))
+  | Max ->
+      with_loc (Call (with_loc (Get (Ast.no_loc "max")), [ sequence args ]))
   | CopySign ->
       let e1, e2 = two_args args in
-      no_loc (Call (no_loc (Get (Ast.no_loc "copysign")), [ e1; e2 ]))
+      with_loc (Call (with_loc (Get (Ast.no_loc "copysign")), [ e1; e2 ]))
   | Eq -> symbol Eq
   | Ne -> symbol Ne
   | Lt -> symbol (Lt None)
@@ -419,21 +425,21 @@ let blocktype ctx (typ : Src.blocktype option) =
           }
       | _, None -> assert false (*ZZZ*))
 
-let rec instr st (i : Src.instr) (args : _ Ast.instr list) : _ Ast.instr =
-  let no_loc : _ Ast.instr_descr -> _ = Ast.no_loc in
-  match i with
+let rec instr st (i : _ Src.instr) (args : _ Ast.instr list) : _ Ast.instr =
+  let with_loc (i' : _ Ast.instr_desc) = { i with Ast.desc = i' } in
+  match i.desc with
   | Block { label; typ; block } ->
       assert (args = []);
       let label, labels = LabelStack.push st.labels label in
       let st = { st with labels } in
       let body = List.map (fun i -> instr st i []) block in
-      no_loc (Block (label (), blocktype st typ, body))
+      with_loc (Block (label (), blocktype st typ, body))
   | Loop { label; typ; block } ->
       assert (args = []);
       let label, labels = LabelStack.push st.labels label in
       let st = { st with labels } in
       let body = List.map (fun i -> instr st i []) block in
-      no_loc (Loop (label (), blocktype st typ, body))
+      with_loc (Loop (label (), blocktype st typ, body))
   | If { label; typ; if_block; else_block } ->
       let label, labels = LabelStack.push st.labels label in
       let st = { st with labels } in
@@ -442,154 +448,156 @@ let rec instr st (i : Src.instr) (args : _ Ast.instr list) : _ Ast.instr =
         if else_block = [] then None
         else Some (List.map (fun i -> instr st i []) else_block)
       in
-      no_loc
+      with_loc
         (If (label (), blocktype st typ, sequence args, if_body, else_body))
-  | Unreachable -> sequence (args @ [ no_loc Unreachable ])
-  | Nop -> sequence (args @ [ no_loc Nop ])
+  | Unreachable -> sequence (args @ [ with_loc Unreachable ])
+  | Nop -> sequence (args @ [ with_loc Nop ])
   | Pop _ -> sequence []
-  | Drop -> no_loc (Let ([ (None, None) ], Some (sequence args)))
-  | Br i -> no_loc (Br (label st i, sequence_opt args))
-  | Br_if i -> no_loc (Br_if (label st i, sequence args))
-  | Br_on_null i -> no_loc (Br_on_null (label st i, sequence args))
-  | Br_on_non_null i -> no_loc (Br_on_null (label st i, sequence args))
+  | Drop -> with_loc (Let ([ (None, None) ], Some (sequence args)))
+  | Br i -> with_loc (Br (label st i, sequence_opt args))
+  | Br_if i -> with_loc (Br_if (label st i, sequence args))
+  | Br_on_null i -> with_loc (Br_on_null (label st i, sequence args))
+  | Br_on_non_null i -> with_loc (Br_on_null (label st i, sequence args))
   | Br_on_cast (i, _, t) ->
       (* ZZZ cast? *)
-      no_loc (Br_on_cast (label st i, reftype st t, sequence args))
+      with_loc (Br_on_cast (label st i, reftype st t, sequence args))
   | Br_on_cast_fail (i, _, t) ->
       (* ZZZ cast? *)
-      no_loc (Br_on_cast_fail (label st i, reftype st t, sequence args))
+      with_loc (Br_on_cast_fail (label st i, reftype st t, sequence args))
   | Br_table (labels, lab) ->
-      no_loc
+      with_loc
         (Br_table
            (List.map (fun i -> label st i) (labels @ [ lab ]), sequence args))
   | Folded (i, args') ->
       assert (args = []);
       instr st i (List.map (fun i -> instr st i []) args')
-  | LocalGet x -> sequence (args @ [ no_loc (Get (idx st `Local x)) ])
-  | GlobalGet x -> sequence (args @ [ no_loc (Get (idx st `Global x)) ])
-  | LocalSet x -> no_loc (Set (idx st `Local x, sequence args))
-  | GlobalSet x -> no_loc (Set (idx st `Global x, sequence args))
-  | LocalTee x -> no_loc (Tee (idx st `Local x, sequence args))
-  | BinOp (I32 op) | BinOp (I64 op) -> int_bin_op op args
-  | BinOp (F32 op) | BinOp (F64 op) -> float_bin_op op args
-  | UnOp (I64 op) -> int_un_op I64 op args
-  | UnOp (I32 op) -> int_un_op I32 op args
-  | UnOp (F64 op) -> float_un_op F64 op args
-  | UnOp (F32 op) -> float_un_op F32 op args
+  | LocalGet x -> sequence (args @ [ with_loc (Get (idx st `Local x)) ])
+  | GlobalGet x -> sequence (args @ [ with_loc (Get (idx st `Global x)) ])
+  | LocalSet x -> with_loc (Set (idx st `Local x, sequence args))
+  | GlobalSet x -> with_loc (Set (idx st `Global x, sequence args))
+  | LocalTee x -> with_loc (Tee (idx st `Local x, sequence args))
+  | BinOp (I32 op) | BinOp (I64 op) -> int_bin_op i op args
+  | BinOp (F32 op) | BinOp (F64 op) -> float_bin_op i op args
+  | UnOp (I64 op) -> int_un_op i I64 op args
+  | UnOp (I32 op) -> int_un_op i I32 op args
+  | UnOp (F64 op) -> float_un_op i F64 op args
+  | UnOp (F32 op) -> float_un_op i F32 op args
   | StructNew i ->
       let type_name = idx st `Type i in
       let fields = snd (Hashtbl.find st.struct_fields type_name.desc) in
-      no_loc
+      with_loc
         (Struct
            ( Some (idx st `Type i),
              List.map2 (fun nm i -> (Ast.no_loc nm, i)) fields args ))
-  | StructNewDefault i -> no_loc (StructDefault (Some (idx st `Type i)))
+  | StructNewDefault i -> with_loc (StructDefault (Some (idx st `Type i)))
   | StructGet (s, t, f) -> (
       let type_name = idx st `Type t in
       let name =
         Sequence.get (fst (Hashtbl.find st.struct_fields type_name.desc)) f
       in
-      let e = no_loc (StructGet (sequence args, name)) in
+      let e = with_loc (StructGet (sequence args, name)) in
       match s with
       | None -> e
       | Some signage ->
-          no_loc (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
+          with_loc
+            (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
   | StructSet (t, f) ->
       let type_name = idx st `Type t in
       let name =
         Sequence.get (fst (Hashtbl.find st.struct_fields type_name.desc)) f
       in
       let e1, e2 = two_args args in
-      no_loc (StructSet (e1, name, e2))
+      with_loc (StructSet (e1, name, e2))
   | ArrayNew t ->
       let e1, e2 = two_args args in
-      no_loc (Array (Some (idx st `Type t), e1, e2))
+      with_loc (Array (Some (idx st `Type t), e1, e2))
   | ArrayNewDefault t ->
-      no_loc (ArrayDefault (Some (idx st `Type t), sequence args))
+      with_loc (ArrayDefault (Some (idx st `Type t), sequence args))
   | ArrayNewFixed (t, n) -> (
       match string_args n args with
       | Some s ->
-          no_loc
+          with_loc
             (Cast
-               ( no_loc (String (Some (idx st `Type t), s)),
+               ( with_loc (String (Some (idx st `Type t), s)),
                  Valtype (Ref { nullable = false; typ = Type (idx st `Type t) })
                ))
       | None ->
           (*ZZZ take n into account *)
-          no_loc (ArrayFixed (Some (idx st `Type t), args)))
+          with_loc (ArrayFixed (Some (idx st `Type t), args)))
   | ArrayGet (s, _t) -> (
       let e1, e2 = two_args args in
-      let e = no_loc (ArrayGet (e1, e2)) in
+      let e = with_loc (ArrayGet (e1, e2)) in
       match s with
       | None -> e
       | Some signage ->
-          no_loc (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
+          with_loc
+            (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
   | ArraySet _t ->
       let e1, e2, e3 = three_args args in
-      no_loc (ArraySet (e1, e2, e3))
-  | Call x -> no_loc (Call (no_loc (Get (idx st `Func x)), args))
+      with_loc (ArraySet (e1, e2, e3))
+  | Call x -> with_loc (Call (with_loc (Get (idx st `Func x)), args))
   | CallRef _ ->
       (* ZZZ cast? *)
-      if args = [] then no_loc (Call (unit, []))
+      if args = [] then with_loc (Call (unit, []))
       else
         let f, l = split_last args in
-        no_loc (Call (f, l))
-  | ReturnCall x -> no_loc (TailCall (no_loc (Get (idx st `Func x)), args))
+        with_loc (Call (f, l))
+  | ReturnCall x -> with_loc (TailCall (with_loc (Get (idx st `Func x)), args))
   | ReturnCallRef _ ->
       (* ZZZ cast? *)
-      if args = [] then no_loc (TailCall (unit, []))
+      if args = [] then with_loc (TailCall (unit, []))
       else
         let f, l = split_last args in
-        no_loc (TailCall (f, l))
-  | Return -> no_loc (Return (sequence_opt args))
-  | TupleMake _ -> no_loc Unreachable (*ZZZ*)
+        with_loc (TailCall (f, l))
+  | Return -> with_loc (Return (sequence_opt args))
+  | TupleMake _ -> with_loc Unreachable (*ZZZ*)
   | Const (I32 n) | Const (I64 n) ->
-      no_loc (Int n) (*ZZZ Negative ints / floats *)
+      with_loc (Int n) (*ZZZ Negative ints / floats *)
   | Const (F32 f) | Const (F64 f) ->
       let f = if is_integer f then f ^ "." else f in
-      no_loc (Float f)
+      with_loc (Float f)
   | RefI31 ->
-      no_loc
+      with_loc
         (Cast (sequence args, Valtype (Ref { nullable = false; typ = I31 })))
   | I31Get signage ->
-      no_loc
+      with_loc
         (Cast (sequence args, Signedtype { typ = `I32; signage; strict = false }))
   | I64ExtendI32 signage ->
-      no_loc
+      with_loc
         (Cast (sequence args, Signedtype { typ = `I64; signage; strict = false }))
-  | I32WrapI64 -> no_loc (Cast (sequence args, Valtype I32))
-  | F64PromoteF32 -> no_loc (Cast (sequence args, Valtype F64))
-  | F32DemoteF64 -> no_loc (Cast (sequence args, Valtype F32))
+  | I32WrapI64 -> with_loc (Cast (sequence args, Valtype I32))
+  | F64PromoteF32 -> with_loc (Cast (sequence args, Valtype F64))
+  | F32DemoteF64 -> with_loc (Cast (sequence args, Valtype F32))
   | ExternConvertAny ->
-      no_loc
+      with_loc
         (Cast (sequence args, Valtype (Ref { nullable = true; typ = Extern })))
   | AnyConvertExtern ->
-      no_loc
+      with_loc
         (Cast (sequence args, Valtype (Ref { nullable = true; typ = Any })))
   | ArrayNewData (t, _) ->
-      no_loc (String (Some (idx st `Type t), "foo")) (*ZZZ*)
-  | ArrayLen -> no_loc (StructGet (sequence args, Ast.no_loc "length"))
-  | RefCast t -> no_loc (Cast (sequence args, Valtype (Ref (reftype st t))))
-  | RefTest t -> no_loc (Test (sequence args, reftype st t))
+      with_loc (String (Some (idx st `Type t), "foo")) (*ZZZ*)
+  | ArrayLen -> with_loc (StructGet (sequence args, Ast.no_loc "length"))
+  | RefCast t -> with_loc (Cast (sequence args, Valtype (Ref (reftype st t))))
+  | RefTest t -> with_loc (Test (sequence args, reftype st t))
   | RefEq ->
       let e1, e2 = two_args args in
-      no_loc (BinOp (Eq, e1, e2))
-  | RefFunc f -> no_loc (Get (idx st `Func f))
-  | RefNull _ -> no_loc Null
-  | RefIsNull -> no_loc (UnOp (Not, sequence args))
+      with_loc (BinOp (Eq, e1, e2))
+  | RefFunc f -> with_loc (Get (idx st `Func f))
+  | RefNull _ -> with_loc Null
+  | RefIsNull -> with_loc (UnOp (Not, sequence args))
   | Select _ ->
       let e1, e2, e = three_args args in
-      no_loc (Select (e, e1, e2))
+      with_loc (Select (e, e1, e2))
   (* ZZZZ To implement now *)
   | Try _ | TupleExtract _ | ArrayFill _ | ArrayCopy _ ->
-      no_loc Unreachable (* ZZZ *)
-  | Throw t -> no_loc (Throw (idx st `Tag t, args))
-  | RefAsNonNull -> no_loc (NonNull (sequence args))
+      with_loc Unreachable (* ZZZ *)
+  | Throw t -> with_loc (Throw (idx st `Tag t, args))
+  | RefAsNonNull -> with_loc (NonNull (sequence args))
   (* signed(x as i8) as i32 ? *)
   (* Later *)
   | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _ | ArrayInitData _
   | ArrayNewElem _ | I32Load8 _ | I32Store8 _ ->
-      no_loc Unreachable (* ZZZ *)
+      with_loc Unreachable (* ZZZ *)
 
 let bind_locals st l =
   List.map
@@ -612,9 +620,11 @@ let typeuse kind st (typ, sign) =
                   | `Func ->
                       Some
                         (idx st `Local
-                           (match id with
-                           | Some id -> Id id
-                           | None -> Num (Int32.of_int n)))
+                           (Ast.no_loc
+                              (match id with
+                               | Some id -> Id id
+                               | None -> Num (Int32.of_int n)
+                                : Src.idx_desc)))
                   | `Sig -> Option.map Ast.no_loc id),
                   valtype st t ))
               p;
@@ -634,7 +644,7 @@ let import (module_, name) =
            Ast.no_loc (Ast.String (None, name));
          ]) )
 
-let modulefield st (f : Src.modulefield) : _ Ast.modulefield option =
+let modulefield st (f : _ Src.modulefield) : _ Ast.modulefield option =
   match f with
   | Types t -> Some (Type (rectype st t))
   | Func { locals; instrs; typ; exports = e; _ } ->
@@ -732,7 +742,7 @@ let modulefield st (f : Src.modulefield) : _ Ast.modulefield option =
 *)
 let register_names ctx fields =
   List.iter
-    (fun (field : Src.modulefield) ->
+    (fun (field : _ Src.modulefield) ->
       match field with
       | Import { id; desc; exports; _ } -> (
           (* ZZZ Check for non-import fields *)
@@ -764,7 +774,7 @@ let register_names ctx fields =
       | Tag { id; exports; _ } -> Sequence.register ctx.tags id exports)
     fields;
   List.iter
-    (fun (field : Src.modulefield) ->
+    (fun (field : _ Src.modulefield) ->
       match field with
       | Import { id; desc; exports; _ } -> (
           (* ZZZ Check for non-import fields *)

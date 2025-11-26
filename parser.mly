@@ -145,8 +145,8 @@ let storagetype_tbl =
      "i32", Value I32; "i64", Value I64; "f32", Value F32; "f64", Value F64;
      "v128", Value V128]
 
-let with_loc (loc_start, loc_end) desc = {desc; info =
-  { Wasm.Ast.loc_start; loc_end }}
+let with_loc (loc_start, loc_end) desc =
+  {desc; info = { Wasm.Ast.loc_start; loc_end }}
 
 let blocktype bt = Option.value ~default:{params = [||]; results = [||]} bt
 %}

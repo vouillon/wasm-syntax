@@ -107,7 +107,7 @@ ZZZ
 %token I64_CONST
 %token F32_CONST
 %token F64_CONST
-%token <Ast.Text.instr> INSTR
+%token <Ast.location Ast.Text.instr_desc> INSTR
 %token TAG
 %token TRY
 %token DO
@@ -128,10 +128,13 @@ module Wasm = struct end
 
 open Ast.Text
 
+let with_loc (loc_start, loc_end) desc =
+  {Ast.desc; info = { Ast.loc_start; loc_end }}
+
 let map_fst f (x, y) = (f x, y)
 %}
 
-%start <string option * Ast.Text.modulefield list> parse
+%start <string option * Ast.location Ast.Text.modulefield list> parse
 
 %%
 
@@ -156,8 +159,8 @@ f64:
 | f = FLOAT { f }
 
 idx:
-| n = u32 { Num (Int32.of_string n) }
-| i = ID { Id i }
+| n = u32 { with_loc $sloc (Num (Int32.of_string n)) }
+| i = ID { with_loc $sloc (Id i) }
 
 name: s = STRING
   { if not (String.is_valid_utf_8 s) then
@@ -275,22 +278,22 @@ memtype:
 
 blockinstr:
 | BLOCK label = label bti = blocktype(instrs(END))
-  { let (typ, block) = bti in Block {label; typ; block} }
+  { let (typ, block) = bti in with_loc $sloc (Block {label; typ; block}) }
 | LOOP label = label bti = blocktype(instrs(END))
-  { let (typ, block) = bti in Loop {label; typ; block} }
+  { let (typ, block) = bti in with_loc $sloc (Loop {label; typ; block}) }
 | IF label = label bti = blocktype(instrs(ELSE))
   label else_block = instrs(END)
   label (*ZZZ labels must match *)
   { let (typ, if_block) = bti in
-    If {label; typ; if_block; else_block } }
+    with_loc $sloc (If {label; typ; if_block; else_block }) }
 | IF label = label bti = blocktype(instrs(END))
   label (*ZZZ labels must match *)
   { let (typ, if_block) = bti in
-    If {label; typ; if_block; else_block = [] } }
+    with_loc $sloc (If {label; typ; if_block; else_block = [] }) }
 | TRY label = label bti = blocktype(instrs({})) c = catches END
   { let (typ, block) = bti in
-  let (catches, catch_all) = c in
-  Try {label; typ; block; catches; catch_all} }
+    let (catches, catch_all) = c in
+    with_loc $sloc (Try {label; typ; block; catches; catch_all}) }
 
 catches:
 | END { [], None }
@@ -310,55 +313,58 @@ blocktype(cont):
     snd r }
 
 plaininstr:
-| THROW i = idx { Throw i }
-| BR i = idx { Br i }
-| BR_IF i = idx { Br_if i }
+| THROW i = idx { with_loc $sloc (Throw i) }
+| BR i = idx { with_loc $sloc (Br i) }
+| BR_IF i = idx { with_loc $sloc (Br_if i) }
 | BR_TABLE l = idx +
-  { let l = List.rev l in Br_table (List.rev (List.tl l), List.hd l) }
-| BR_ON_NULL i = idx { Br_on_null i }
-| BR_ON_NON_NULL i = idx { Br_on_non_null i }
+  { let l = List.rev l in
+    with_loc $sloc (Br_table (List.rev (List.tl l), List.hd l)) }
+| BR_ON_NULL i = idx { with_loc $sloc (Br_on_null i) }
+| BR_ON_NON_NULL i = idx { with_loc $sloc (Br_on_non_null i) }
 | BR_ON_CAST i = idx t1 = reftype t2 = reftype
-  { Br_on_cast (i, t1, t2) }
+  { with_loc $sloc (Br_on_cast (i, t1, t2)) }
 | BR_ON_CAST_FAIL i = idx t1 = reftype t2 = reftype
-  { Br_on_cast_fail (i, t1, t2) }
-| CALL i = idx { Call i }
-| CALL_REF i = idx { CallRef i }
-| RETURN_CALL i = idx { ReturnCall i }
-| RETURN_CALL_REF i = idx { ReturnCallRef i }
-| POP t = valtype { Pop t }
-| LOCAL_GET i = idx { LocalGet i }
-| LOCAL_SET i = idx { LocalSet i }
-| LOCAL_TEE i = idx { LocalTee i }
-| GLOBAL_GET i = idx { GlobalGet i }
-| GLOBAL_SET i = idx { GlobalSet i }
-| s = I32LOAD8 m = memarg { I32Load8 (s, m 1l) }
-| I32STORE8 m = memarg { I32Store8 (m 1l) }
-| REF_NULL t = heaptype { RefNull t }
-| REF_FUNC i = idx { RefFunc i }
-| REF_TEST t = reftype { RefTest t }
-| REF_CAST t = reftype { RefCast t }
-| STRUCT_NEW i = idx { StructNew i }
-| STRUCT_NEW_DEFAULT i = idx { StructNewDefault i }
-| s = STRUCT_GET i1 = idx i2 = idx { StructGet (s, i1, i2) }
-| STRUCT_SET i1 = idx i2 = idx { StructSet (i1, i2) }
-| ARRAY_NEW i = idx { ArrayNew i }
-| ARRAY_NEW_DEFAULT i = idx { ArrayNewDefault i }
-| ARRAY_NEW_FIXED i = idx l = u32 { ArrayNewFixed (i, Int32.of_string l) }
-| ARRAY_NEW_DATA i1 = idx i2 = idx { ArrayNewData (i1, i2) }
-| ARRAY_NEW_ELEM i1 = idx i2 = idx { ArrayNewElem (i1, i2) }
-| s = ARRAY_GET i = idx { ArrayGet (s, i) }
-| ARRAY_SET i = idx { ArraySet i }
-| ARRAY_FILL i = idx { ArrayFill i }
-| ARRAY_COPY i1 = idx i2 = idx { ArrayCopy (i1, i2) }
-| ARRAY_INIT_DATA i1 = idx i2 = idx { ArrayInitData (i1, i2) }
-| ARRAY_INIT_ELEM i1 = idx i2 = idx { ArrayInitElem (i1, i2) }
-| I32_CONST i = i32 { Const (I32 i) }
-| I64_CONST i = i64 { Const (I64 i) }
-| F32_CONST f = f32 { Const (F64 f) }
-| F64_CONST f = f64 { Const (F64 f) }
-| TUPLE_MAKE l = u32 { TupleMake (Int32.of_string l) }
-| TUPLE_EXTRACT l = u32 i = u32 { TupleExtract (Int32.of_string l, Int32.of_string i) }
-| i = INSTR { i }
+  { with_loc $sloc (Br_on_cast_fail (i, t1, t2)) }
+| CALL i = idx { with_loc $sloc (Call i) }
+| CALL_REF i = idx { with_loc $sloc (CallRef i) }
+| RETURN_CALL i = idx { with_loc $sloc (ReturnCall i) }
+| RETURN_CALL_REF i = idx { with_loc $sloc (ReturnCallRef i) }
+| POP t = valtype { with_loc $sloc (Pop t) }
+| LOCAL_GET i = idx { with_loc $sloc (LocalGet i) }
+| LOCAL_SET i = idx { with_loc $sloc (LocalSet i) }
+| LOCAL_TEE i = idx { with_loc $sloc (LocalTee i) }
+| GLOBAL_GET i = idx { with_loc $sloc (GlobalGet i) }
+| GLOBAL_SET i = idx { with_loc $sloc (GlobalSet i) }
+| s = I32LOAD8 m = memarg { with_loc $sloc (I32Load8 (s, m 1l)) }
+| I32STORE8 m = memarg { with_loc $sloc (I32Store8 (m 1l)) }
+| REF_NULL t = heaptype { with_loc $sloc (RefNull t) }
+| REF_FUNC i = idx { with_loc $sloc (RefFunc i) }
+| REF_TEST t = reftype { with_loc $sloc (RefTest t) }
+| REF_CAST t = reftype { with_loc $sloc (RefCast t) }
+| STRUCT_NEW i = idx { with_loc $sloc (StructNew i) }
+| STRUCT_NEW_DEFAULT i = idx { with_loc $sloc (StructNewDefault i) }
+| s = STRUCT_GET i1 = idx i2 = idx { with_loc $sloc (StructGet (s, i1, i2)) }
+| STRUCT_SET i1 = idx i2 = idx { with_loc $sloc (StructSet (i1, i2)) }
+| ARRAY_NEW i = idx { with_loc $sloc (ArrayNew i) }
+| ARRAY_NEW_DEFAULT i = idx { with_loc $sloc (ArrayNewDefault i) }
+| ARRAY_NEW_FIXED i = idx l = u32
+  { with_loc $sloc (ArrayNewFixed (i, Int32.of_string l)) }
+| ARRAY_NEW_DATA i1 = idx i2 = idx { with_loc $sloc (ArrayNewData (i1, i2)) }
+| ARRAY_NEW_ELEM i1 = idx i2 = idx { with_loc $sloc (ArrayNewElem (i1, i2)) }
+| s = ARRAY_GET i = idx { with_loc $sloc (ArrayGet (s, i)) }
+| ARRAY_SET i = idx { with_loc $sloc (ArraySet i) }
+| ARRAY_FILL i = idx { with_loc $sloc (ArrayFill i) }
+| ARRAY_COPY i1 = idx i2 = idx { with_loc $sloc (ArrayCopy (i1, i2)) }
+| ARRAY_INIT_DATA i1 = idx i2 = idx { with_loc $sloc (ArrayInitData (i1, i2)) }
+| ARRAY_INIT_ELEM i1 = idx i2 = idx { with_loc $sloc (ArrayInitElem (i1, i2)) }
+| I32_CONST i = i32 { with_loc $sloc (Const (I32 i)) }
+| I64_CONST i = i64 { with_loc $sloc (Const (I64 i)) }
+| F32_CONST f = f32 { with_loc $sloc (Const (F64 f)) }
+| F64_CONST f = f64 { with_loc $sloc (Const (F64 f)) }
+| TUPLE_MAKE l = u32 { with_loc $sloc (TupleMake (Int32.of_string l)) }
+| TUPLE_EXTRACT l = u32 i = u32
+  { with_loc $sloc (TupleExtract (Int32.of_string l, Int32.of_string i)) }
+| i = INSTR { with_loc $sloc i }
 
 memarg:
 | o = option(MEM_OFFSET) a = option(MEM_ALIGN)
@@ -369,19 +375,24 @@ memarg:
 
 callindirect(cont):
 | CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
-  { CallIndirect (i, fst t) :: snd t }
+  { with_loc $sloc (CallIndirect (i, fst t)) :: snd t }
 | CALL_INDIRECT t = typeuse_no_bindings(cont)
-  { CallIndirect (Num 0l, fst t) :: snd t }
+  { with_loc $sloc (CallIndirect (Ast.no_loc (Num 0l), fst t)) :: snd t }
 | RETURN_CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
-  { ReturnCallIndirect (i, fst t) :: snd t }
+  { with_loc $sloc (ReturnCallIndirect (i, fst t)) :: snd t }
 | RETURN_CALL_INDIRECT t = typeuse_no_bindings(cont)
-  { ReturnCallIndirect (Num 0l, fst t) :: snd t }
+  { with_loc $sloc
+      (ReturnCallIndirect (Ast.no_loc (Num 0l), fst t)) :: snd t }
+
+%inline selectinstr:
+| SELECT "(" RESULT typ = valtype ")"
+  { with_loc $sloc (Select (Some typ)) }
+| SELECT
+  { with_loc $sloc (Select None) }
 
 select(cont):
-| SELECT "(" RESULT typ = valtype ")" c = cont
-  { Select (Some typ) :: c }
-| SELECT c = cont
-  { Select None :: c }
+| s = selectinstr c = cont
+  { s :: c }
 
 ambiguous_instr(cont):
 | l = callindirect(cont)
@@ -403,29 +414,34 @@ instrs (cont):
 
 foldedinstr:
 | "(" i = plaininstr l = foldedinstr * ")"
-  { Folded (i, l) }
+  { with_loc $sloc (Folded (i, l)) }
 | "(" l = ambiguous_instr(foldedinstr *) ")"
-  { Folded (List.hd l, List.tl l) }
+  { with_loc $sloc (Folded (List.hd l, List.tl l)) }
 | "(" BLOCK label = label btx = blocktype (instrs(")"))
   { let (typ, block) = btx in
-    Folded (Block {label; typ; block}, []) }
+    with_loc $sloc (Folded (with_loc $sloc (Block {label; typ; block}), [])) }
 | "(" LOOP label = label btx = blocktype (instrs(")"))
   { let (typ, block) = btx in
-    Folded (Loop {label; typ; block}, []) }
+    with_loc $sloc (Folded (with_loc $sloc (Loop {label; typ; block}), [])) }
 | "(" IF label = label
   btx = blocktype (foldedinstrs("(" THEN l =  instrs(")") {l}))
   else_block = option("(" ELSE l = instrs(")") { l })
   ")"
   { let (typ, (l, if_block)) = btx in
-    Folded (If {label; typ; if_block;
-                else_block = Option.value ~default:[] else_block },
-            l) }
+    with_loc $sloc
+      (Folded
+        (with_loc $sloc
+          (If {label; typ; if_block;
+               else_block = Option.value ~default:[] else_block }),
+         l)) }
 | "(" TRY label = label
   btb = blocktype("(" DO l = instrs(")") { l })
   c = foldedcatches ")"
-{ let (typ, block) = btb in
-  let (catches, catch_all) = c in
-  Folded (Try {label; typ; block; catches; catch_all}, []) }
+  { let (typ, block) = btb in
+    let (catches, catch_all) = c in
+    with_loc $sloc
+      (Folded
+        (with_loc $sloc (Try {label; typ; block; catches; catch_all}), [])) }
 
 foldedcatches:
 | { [], None }
@@ -552,8 +568,8 @@ elem:
 
 elemlist:
 | t = reftype l = elemexpr * { (t, l) }
-| FUNC l = idx *
-  { ({nullable = false; typ = Func}, List.map (fun i -> [RefFunc i]) l) }
+| FUNC l = list(i = idx { [with_loc $sloc (RefFunc i)] })
+  { ({nullable = false; typ = Func}, l) }
 
 elemexpr:
 | "(" ITEM  e = expr ")" {e}
@@ -571,7 +587,7 @@ datastring:
 
 %inline memuse:
 | "(" MEMORY i = idx ")" { i }
-| { Num 0l }
+| { with_loc $sloc (Num 0l) }
 
 modulefield:
 | f = rectype

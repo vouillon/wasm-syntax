@@ -62,7 +62,7 @@ let id x = Atom (Printf.sprintf "$%s" x)
 let opt_id = option (fun i -> [ id i ])
 
 let index x =
-  match x with Num i -> Atom (Printf.sprintf "%ld" i) | Id s -> id s
+  match x.Ast.desc with Num i -> Atom (Printf.sprintf "%ld" i) | Id s -> id s
 
 let heaptype (ty : heaptype) =
   match ty with
@@ -283,7 +283,7 @@ let memarg align' { offset; align } =
 let integer i = Atom (Int32.to_string i)
 
 let rec instr i =
-  match i with
+  match i.Ast.desc with
   | ExternConvertAny -> Atom "extern.convert_any"
   | AnyConvertExtern -> Atom "any.convert_extern"
   | Const op ->
@@ -316,11 +316,11 @@ let rec instr i =
   | CallIndirect (id, typ) ->
       Block
         (Atom "call_indirect"
-        :: ((if id = Num 0l then [] else [ index id ]) @ typeuse' typ))
+        :: ((if id.desc = Num 0l then [] else [ index id ]) @ typeuse' typ))
   | ReturnCallIndirect (id, typ) ->
       Block
         (Atom "return_call_indirect"
-        :: ((if id = Num 0l then [] else [ index id ]) @ typeuse' typ))
+        :: ((if id.desc = Num 0l then [] else [ index id ]) @ typeuse' typ))
   | Call f -> Block [ Atom "call"; index f ]
   | Select t -> Block (Atom "select" :: option (fun t -> [ valtype t ]) t)
   | Pop ty -> Block [ Atom "pop"; valtype ty ]
@@ -421,26 +421,26 @@ let rec instr i =
   | ReturnCallRef typ -> Block [ Atom "return_call_ref"; index typ ]
   | TupleMake i -> Block [ Atom "tuple.make"; integer i ]
   | TupleExtract (i, j) -> Block [ Atom "tuple.extract"; integer i; integer j ]
-  | Folded (If { label; typ; if_block; else_block }, l) ->
+  | Folded ({ desc = If { label; typ; if_block; else_block }; _ }, l) ->
       List
         (Block
            (Block (Atom "if" :: (opt_id label @ blocktype typ))
            :: List.map instr l)
         :: (list ~always:true "then" (List.map instr) if_block
            @ list "else" (List.map instr) else_block))
-  | Folded (Block { label; typ; block }, l) ->
+  | Folded ({ desc = Block { label; typ; block }; _ }, l) ->
       assert (l = []);
       List
         (Block (Atom "block" :: (opt_id label @ blocktype typ))
         :: List.map instr block)
       (*ZZZ Comment?*)
-  | Folded (Loop { label; typ; block }, l) ->
+  | Folded ({ desc = Loop { label; typ; block }; _ }, l) ->
       assert (l = []);
       List
         (Block (Atom "loop" :: (opt_id label @ blocktype typ))
         :: List.map instr block)
       (*ZZZ Comment?*)
-  | Folded (Try { label; typ; block; catches; catch_all }, l) ->
+  | Folded ({ desc = Try { label; typ; block; catches; catch_all }; _ }, l) ->
       assert (l = []);
       List
         (Block (Atom "try" :: (opt_id label @ blocktype typ))
@@ -535,7 +535,8 @@ let modulefield f =
            @ (match mode with
              | Passive -> []
              | Active (i, e) -> (
-                 (if i = Num 0l then [] else [ List [ Atom "memory"; index i ] ])
+                 (if i.desc = Num 0l then []
+                  else [ List [ Atom "memory"; index i ] ])
                  @
                  match e with
                  | [ i ] -> [ instr i ]

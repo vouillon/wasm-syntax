@@ -1,2 +1,2 @@
-val fold : Ast.Text.module_ -> Ast.Text.module_
-val unfold : Ast.Text.module_ -> Ast.Text.module_
+val fold : 'info Ast.Text.module_ -> 'info Ast.Text.module_
+val unfold : 'info Ast.Text.module_ -> 'info Ast.Text.module_

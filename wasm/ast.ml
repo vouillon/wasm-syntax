@@ -139,21 +139,29 @@ struct
   type blocktype = Typeuse of X.typeuse | Valtype of X.valtype
   type memarg = { offset : Int32.t; align : Int32.t }
 
-  type instr =
-    | Block of { label : X.label; typ : blocktype option; block : instr list }
-    | Loop of { label : X.label; typ : blocktype option; block : instr list }
+  type 'info instr_desc =
+    | Block of {
+        label : X.label;
+        typ : blocktype option;
+        block : 'info instr list;
+      }
+    | Loop of {
+        label : X.label;
+        typ : blocktype option;
+        block : 'info instr list;
+      }
     | If of {
         label : X.label;
         typ : blocktype option;
-        if_block : instr list;
-        else_block : instr list;
+        if_block : 'info instr list;
+        else_block : 'info instr list;
       }
     | Try of {
         label : X.label;
         typ : blocktype option;
-        block : instr list;
-        catches : (X.idx * instr list) list;
-        catch_all : instr list option;
+        block : 'info instr list;
+        catches : (X.idx * 'info instr list) list;
+        catch_all : 'info instr list option;
       }
     | Unreachable
     | Nop
@@ -215,20 +223,23 @@ struct
     | F64PromoteF32
     | ExternConvertAny
     | AnyConvertExtern
-    | Folded of instr * instr list
+    | Folded of 'info instr * 'info instr list
     (* Binaryen extensions *)
     | Pop of X.valtype
     | TupleMake of Int32.t
     | TupleExtract of Int32.t * Int32.t
 
-  type expr = instr list
+  and 'info instr = ('info instr_desc, 'info) annotated
+
+  type 'info expr = 'info instr list
 end
 
 (* Modules *)
 
 module Text = struct
   type id = string
-  type idx = Num of Int32.t | Id of id
+  type idx_desc = Num of Int32.t | Id of id
+  type idx = (idx_desc, location) annotated
 
   module X = struct
     type nonrec idx = idx
@@ -259,9 +270,9 @@ module Text = struct
     | Tag of typeuse
 
   type exportable = Func | Memory | Tag | Global
-  type datamode = Passive | Active of idx * expr
+  type 'info datamode = Passive | Active of idx * 'info expr
 
-  type modulefield =
+  type 'info modulefield =
     | Types of rectype
     | Import of {
         module_ : string;
@@ -274,7 +285,7 @@ module Text = struct
         id : id option;
         typ : typeuse;
         locals : (id option * valtype) list;
-        instrs : instr list;
+        instrs : 'info instr list;
         exports : string list;
       }
     | Memory of {
@@ -287,15 +298,15 @@ module Text = struct
     | Global of {
         id : id option;
         typ : globaltype;
-        init : expr;
+        init : 'info expr;
         exports : string list;
       }
     | Export of { name : string; kind : exportable; index : idx }
     | Start of idx
-    | Elem of { id : id option; typ : reftype; init : expr list }
-    | Data of { id : id option; init : string; mode : datamode }
+    | Elem of { id : id option; typ : reftype; init : 'info expr list }
+    | Data of { id : id option; init : string; mode : 'info datamode }
 
-  type module_ = string option * modulefield list
+  type 'info module_ = string option * 'info modulefield list
 end
 
 module Binary = struct
@@ -330,9 +341,9 @@ module Binary = struct
     | Tag of typeuse
 
   type exportable = Func | Memory | Tag | Global
-  type datamode = Passive | Active of idx * expr
+  type 'info datamode = Passive | Active of idx * 'info expr
 
-  type modulefield =
+  type 'info modulefield =
     | Types of rectype
     | Import of {
         module_ : string;
@@ -345,7 +356,7 @@ module Binary = struct
         id : id option;
         typ : typeuse;
         locals : (id option * valtype) list;
-        instrs : instr list;
+        instrs : 'info instr list;
         exports : string list;
       }
     | Memory of {
@@ -358,11 +369,11 @@ module Binary = struct
     | Global of {
         id : id option;
         typ : globaltype;
-        init : expr;
+        init : 'info expr;
         exports : string list;
       }
     | Export of { name : string; kind : exportable; index : idx }
     | Start of idx
-    | Elem of { id : id option; typ : reftype; init : expr list }
-    | Data of { id : id option; init : string; mode : datamode }
+    | Elem of { id : id option; typ : reftype; init : 'info expr list }
+    | Data of { id : id option; init : string; mode : 'info datamode }
 end

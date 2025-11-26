@@ -23,7 +23,7 @@ module Sequence = struct
     Option.iter (fun id -> (*ZZZ*) Hashtbl.add seq.label_mapping id v) id
 
   let get seq (idx : Ast.Text.idx) =
-    match idx with
+    match idx.desc with
     | Num n -> (
         try Hashtbl.find seq.index_mapping (Int32.to_int n)
         with Not_found ->
@@ -44,7 +44,7 @@ type type_context = {
 }
 
 let get_type_info ctx (idx : Ast.Text.idx) =
-  match idx with
+  match idx.desc with
   | Num x ->
       let x = Int32.to_int x in
       Hashtbl.find ctx.index_mapping x
@@ -180,7 +180,7 @@ let ( let* ) e f st =
   f v st
 
 let resolve_index tbl (idx : Ast.Text.idx) =
-  match idx with
+  match idx.desc with
   | Num i -> (*ZZZ overflow*) Int32.to_int i
   | Id id -> (*ZZZ*) Hashtbl.find tbl id
 
@@ -273,7 +273,7 @@ let print_stack st =
   (st, ())
 
 let branch_target ctx (idx : Ast.Text.idx) =
-  match idx with
+  match idx.desc with
   | Num i -> snd (List.nth ctx.control_types (Int32.to_int i))
   | Id id ->
       let rec find l id =
@@ -309,8 +309,8 @@ let rec repeat n f =
     let* () = f in
     repeat (n - 1) f
 
-let rec instruction ctx (i : Ast.Text.instr) =
-  match i with
+let rec instruction ctx (i : _ Ast.Text.instr) =
+  match i.desc with
   | Block { label; typ; block = b } ->
       let params, results = blocktype ctx.modul.types typ in
       let* () = pop_args ctx params in
@@ -559,7 +559,7 @@ let rec instruction ctx (i : Ast.Text.instr) =
       let ty, fields = get_type_info ctx.modul.types idx in
       let* () = pop ctx (Ref { nullable = true; typ = Type ty }) in
       let n =
-        match idx' with
+        match idx'.desc with
         | Id id -> List.assoc id fields
         | Num n -> Int32.to_int n
       in
@@ -572,7 +572,7 @@ let rec instruction ctx (i : Ast.Text.instr) =
   | StructSet (idx, idx') ->
       let ty, fields = get_type_info ctx.modul.types idx in
       let n =
-        match idx' with
+        match idx'.desc with
         | Id id -> List.assoc id fields
         | Num n -> Int32.to_int n
       in
@@ -801,7 +801,7 @@ let typeuse ctx (idx, sign) =
 
 let build_initial_env ctx fields =
   List.iter
-    (fun (field : Ast.Text.modulefield) ->
+    (fun (field : _ Ast.Text.modulefield) ->
       match field with
       | Import { id; desc; _ } -> (
           (* ZZZ Check for non-import fields *)
@@ -823,7 +823,7 @@ let build_initial_env ctx fields =
 
 let globals ctx fields =
   List.iter
-    (fun (field : Ast.Text.modulefield) ->
+    (fun (field : _ Ast.Text.modulefield) ->
       match field with
       | Global { id; typ; init; _ } ->
           let typ = globaltype ctx.types typ in
@@ -844,7 +844,7 @@ let globals ctx fields =
 
 let functions ctx fields =
   List.iter
-    (fun (field : Ast.Text.modulefield) ->
+    (fun (field : _ Ast.Text.modulefield) ->
       match field with
       | Func { id; typ; locals = locs; instrs; _ } ->
           let func_typ =
@@ -892,7 +892,7 @@ let f (_, fields) =
     }
   in
   List.iter
-    (fun (field : Ast.Text.modulefield) ->
+    (fun (field : _ Ast.Text.modulefield) ->
       match field with
       | Types rectype -> add_type type_context rectype
       | _ -> ())
