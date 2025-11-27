@@ -402,9 +402,9 @@ let rec token lexbuf =
   | "f64.reinterpret_i64" -> INSTR (UnOp (F64 Reinterpret))
   | "i32.extend8_s" -> INSTR (UnOp (I32 (ExtendS `_8)))
   | "i32.extend16_s" -> INSTR (UnOp (I32 (ExtendS `_8)))
-  | "i64.extend8_s" -> INSTR (UnOp (I32 (ExtendS `_8)))
-  | "i64.extend16_s" -> INSTR (UnOp (I32 (ExtendS `_16)))
-  | "i64.extend32_s" -> INSTR (UnOp (I32 (ExtendS `_32)))
+  | "i64.extend8_s" -> INSTR (UnOp (I64 (ExtendS `_8)))
+  | "i64.extend16_s" -> INSTR (UnOp (I64 (ExtendS `_16)))
+  | "i64.extend32_s" -> INSTR (UnOp (I64 (ExtendS `_32)))
   | "extern.convert_any" -> INSTR ExternConvertAny
   | "any.convert_extern" -> INSTR AnyConvertExtern
   | "tuple" -> TUPLE

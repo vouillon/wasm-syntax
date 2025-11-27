@@ -97,8 +97,8 @@ struct
     with Syntax_error (loc, msg) -> report_syntax_error loc msg
 
   let parse_from_string ~filename text =
+    let lexbuf = initialize_lexing filename text in
     try
-      let lexbuf = initialize_lexing filename text in
       let supplier = lexer_lexbuf_to_supplier Lexer.token lexbuf in
       let revised_parser =
         MenhirLib.Convert.Simplified.traditional2revised Fast_parser.parse
@@ -107,6 +107,10 @@ struct
     with
     | Fast_parser.Error -> parse_with_errors filename text
     | Syntax_error (loc, msg) -> report_syntax_error loc msg
+    | Sedlexing.InvalidCodepoint _ | Sedlexing.MalFormed ->
+        report_syntax_error
+          (Sedlexing.lexing_positions lexbuf)
+          "Input file contains malformed UTF-8 byte sequences\n"
 
   let parse ~filename = parse_from_string ~filename (read filename)
 end

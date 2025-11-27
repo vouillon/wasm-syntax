@@ -630,20 +630,20 @@ memory:
 table:
 | "(" TABLE id = ID? r = exports(tabletype(expr)) ")"
    { let (exports, (typ, e)) = r in
-     Table {id; typ; init = Some e; elem = None; exports} }
+     Table {id; typ; init = Init_expr e; exports} }
 | "(" TABLE id = ID?
   r = exports(t = reftype "(" ELEM e = list(elemexpr) ")" {t, e}) ")"
    { let (exports, (reftype, elem)) = r in
      let len = Uint64.of_int (List.length elem) in
      Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
-            init = None; elem = Some elem; exports} }
+            init = Init_segment elem; exports} }
 | "(" TABLE id = ID?
   r = exports(t = reftype "(" ELEM
   e = nonempty_list(i = idx { [with_loc $loc(i) (RefFunc i)] }) ")" {t, e}) ")"
    { let (exports, (reftype, elem)) = r in
      let len = Uint64.of_int (List.length elem) in
      Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
-            init = None; elem = Some elem; exports} }
+            init = Init_segment elem; exports} }
 | "(" TABLE id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = tabletype({}) ")"

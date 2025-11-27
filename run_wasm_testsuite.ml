@@ -92,21 +92,20 @@ let runtest filename =
                   None)
             lst
         in
-        (*
         List.iter
           (fun (_, m) ->
             let text = Format.asprintf "%a@." Wasm.Output.module_ m in
-            (*            prerr_endline text;*)
+            if false then prerr_endline text;
             let _ast = ModuleParser.parse_from_string ~filename text in
             ())
           lst;
-*)
-        List.iter
-          (fun (status, m) ->
-            match (status, m) with
-            | `Valid, m -> Wasm.Validation.f m
-            | `Invalid, _ -> (* validate (should fail) *) ())
-          lst)
+        if false then
+          List.iter
+            (fun (status, m) ->
+              match (status, m) with
+              | `Valid, m -> Wasm.Validation.f m
+              | `Invalid, _ -> (* validate (should fail) *) ())
+            lst)
   in
   ()
 

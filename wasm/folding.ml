@@ -9,7 +9,15 @@ let map_instrs func (name, fields) =
             Func { f with instrs = func (Some (typ, locals)) instrs }
         | Global ({ init; _ } as g) -> Global { g with init = func None init }
         | Table ({ init; _ } as t) ->
-            Table { t with init = Option.map (fun e -> func None e) init }
+            Table
+              {
+                t with
+                init =
+                  (match init with
+                  | Init_expr init -> Init_expr (func None init)
+                  | Init_segment seg ->
+                      Init_segment (List.map (fun e -> func None e) seg));
+              }
         | Elem ({ init; _ } as e) ->
             Elem { e with init = List.map (fun l -> func None l) init }
         | Types _ | Import _ | Memory _ | Tag _ | Export _ | Start _ | Data _ ->

@@ -298,6 +298,10 @@ module Text = struct
   type 'info datamode = Passive | Active of idx * 'info expr
   type 'info elemmode = Passive | Active of idx * 'info expr | Declare
 
+  type 'info tableinit =
+    | Init_expr of 'info expr
+    | Init_segment of 'info expr list
+
   type 'info modulefield =
     | Types of rectype
     | Import of {
@@ -323,8 +327,7 @@ module Text = struct
     | Table of {
         id : id option;
         typ : tabletype;
-        init : 'info expr option;
-        elem : 'info expr list option;
+        init : 'info tableinit;
         exports : string list;
       }
     | Tag of { id : id option; typ : typeuse; exports : string list }

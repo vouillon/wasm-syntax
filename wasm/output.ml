@@ -60,9 +60,9 @@ let rec format_sexp first f s =
 let option f x = match x with None -> [] | Some x -> f x
 let id x = Atom (Printf.sprintf "$%s" x)
 let opt_id = option (fun i -> [ id i ])
-
-let index x =
-  match x.Ast.desc with Num i -> Atom (Uint32.to_string i) | Id s -> id s
+let u32 i = Atom (Uint32.to_string i)
+let u64 i = Atom (Uint64.to_string i)
+let index x = match x.Ast.desc with Num i -> u32 i | Id s -> id s
 
 let heaptype (ty : heaptype) =
   match ty with
@@ -145,6 +145,9 @@ let blocktype =
   | Valtype t -> [ List [ Atom "result"; valtype t ] ]
   | Typeuse t -> typeuse' t
 
+let limits { mi; ma } = u64 mi :: option (fun i -> [ u64 i ]) ma
+let tabletype { limits = l; reftype = typ } = limits l @ [ reftype typ ]
+
 let utf8_length s =
   let segmenter = Uuseg.create `Grapheme_cluster in
   let has_grapheme = ref false in
@@ -174,7 +177,7 @@ let escape_string s =
   let b = Buffer.create (String.length s + 2) in
   for i = 0 to String.length s - 1 do
     let c = s.[i] in
-    if c >= ' ' && c <> '\x7f' && c <> '"' && c <> '\\' then Buffer.add_char b c
+    if c >= ' ' && c < '\x7f' && c <> '"' && c <> '\\' then Buffer.add_char b c
     else
       match c with
       | '\t' -> Buffer.add_string b "\\t"
@@ -214,8 +217,8 @@ let int_un_op width op =
   | Ctz -> "ctz"
   | Popcnt -> "popcnt"
   | Eqz -> "eqz"
-  | Trunc (sz, s) -> signage "trunc" s ^ "_" ^ size sz
-  | TruncSat (sz, s) -> signage "trunc_sat" s ^ "_" ^ size sz
+  | Trunc (sz, s) -> signage ("trunc_" ^ size sz) s
+  | TruncSat (sz, s) -> signage ("trunc_sat_" ^ size sz) s
   | Reinterpret -> "reinterpret_f" ^ width
   | ExtendS sz -> (
       match sz with
@@ -289,8 +292,6 @@ let memarg align' { offset; align } =
   if align = align' then []
   else [ Atom (Printf.sprintf "align=" ^ Uint64.to_string align) ]
 
-let integer i = Atom (Uint32.to_string i)
-
 let rec instr i =
   match i.Ast.desc with
   | ExternConvertAny -> Atom "extern.convert_any"
@@ -319,9 +320,11 @@ let rec instr i =
   | F32DemoteF64 -> Atom "f32.demote_f64"
   | F64PromoteF32 -> Atom "f64.promote_f32"
   | Load (i, m, sz) ->
-      let f s _ = s in
+      let f s s' _ = s ^ s' in
       Block
-        (Atom (Printf.sprintf "%s.load" (select f f f f sz))
+        (Atom
+           (Printf.sprintf "%s.load"
+              (select (f "i") (f "i") (f "f") (f "f") sz))
         :: (memidx i @ memarg Uint64.one m))
   | LoadS (i, m, sz, sz', s) ->
       Block
@@ -329,20 +332,22 @@ let rec instr i =
            (signage
               (Printf.sprintf "%s.load%s"
                  (match sz with `I32 -> "i32" | `I64 -> "i64")
-                 (match sz' with `I8 -> "8" | `I16 -> "i16" | `I32 -> "i32"))
+                 (match sz' with `I8 -> "8" | `I16 -> "16" | `I32 -> "32"))
               s)
         :: (memidx i @ memarg Uint64.one m))
   | Store (i, m, sz) ->
-      let f s _ = s in
+      let f s s' _ = s ^ s' in
       Block
-        (Atom (Printf.sprintf "%s.store" (select f f f f sz))
+        (Atom
+           (Printf.sprintf "%s.store"
+              (select (f "i") (f "i") (f "f") (f "f") sz))
         :: (memidx i @ memarg Uint64.one m))
   | StoreS (i, m, sz, sz') ->
       Block
         (Atom
            (Printf.sprintf "%s.store%s"
               (match sz with `I32 -> "i32" | `I64 -> "i64")
-              (match sz' with `I8 -> "8" | `I16 -> "i16" | `I32 -> "i32"))
+              (match sz' with `I8 -> "8" | `I16 -> "16" | `I32 -> "32"))
         :: (memidx i @ memarg Uint64.one m))
   | MemorySize m -> Block (Atom "memory.size" :: memidx m)
   | MemoryGrow m -> Block (Atom "memory.grow" :: memidx m)
@@ -393,7 +398,7 @@ let rec instr i =
   | I31Get s -> Atom (signage "i31.get" s)
   | ArrayNew t -> Block [ Atom "array.new"; index t ]
   | ArrayNewDefault t -> Block [ Atom "array.new_default"; index t ]
-  | ArrayNewFixed (t, i) -> Block [ Atom "array.new_fixed"; index t; integer i ]
+  | ArrayNewFixed (t, i) -> Block [ Atom "array.new_fixed"; index t; u32 i ]
   | ArrayNewElem (i, i') -> Block [ Atom "array.new_fixed"; index i; index i' ]
   | ArrayNewData (typ, data) ->
       Block [ Atom "array.new_data"; index typ; index data ]
@@ -479,8 +484,8 @@ let rec instr i =
   | StructSet (typ, i) -> Block [ Atom "struct.set"; index typ; index i ]
   | ReturnCall f -> Block [ Atom "return_call"; index f ]
   | ReturnCallRef typ -> Block [ Atom "return_call_ref"; index typ ]
-  | TupleMake i -> Block [ Atom "tuple.make"; integer i ]
-  | TupleExtract (i, j) -> Block [ Atom "tuple.extract"; integer i; integer j ]
+  | TupleMake i -> Block [ Atom "tuple.make"; u32 i ]
+  | TupleExtract (i, j) -> Block [ Atom "tuple.extract"; u32 i; u32 j ]
   | Folded ({ desc = If { label; typ; if_block; else_block }; _ }, l) ->
       List
         (Block
@@ -515,7 +520,7 @@ let rec instr i =
            | Some l -> [ List (Atom "catch_all" :: List.map instr l) ]))
   | Folded (i, l) -> List [ Block (instr i :: List.map instr l) ]
 
-let instrs l = VerticalBlock (List.map instr l)
+let instrs l = if l = [] then [] else [ VerticalBlock (List.map instr l) ]
 
 let subtype (id, { typ; supertype; final }) =
   if final && Option.is_none supertype then
@@ -547,6 +552,11 @@ let fundecl (idx, typ) =
         @ valtype_list "result" results)
       typ
 
+let expr name e =
+  match e with
+  | [ ({ Ast.desc = Folded _; _ } as i) ] -> instr i
+  | _ -> List (Atom name :: instrs e)
+
 let modulefield f =
   match f with
   | Types [| t |] -> subtype t
@@ -563,30 +573,41 @@ let modulefield f =
                         List (Atom "local" :: (opt_id i @ [ valtype t ])))
                       locals);
                ])
-           @ [ instrs i ]))
-  | Import { module_; name; id; desc; exports = e } ->
-      List
-        [
-          Block
-            (Block [ Atom "import"; quoted_string module_; quoted_string name ]
-            :: exports e);
+           @ instrs i))
+  | Import { module_; name; id; desc; exports = e } -> (
+      let kind, typ =
+        match desc with
+        | Func typ -> ("func", opt_id id @ fundecl typ)
+        | Global ty -> ("global", opt_id id @ [ globaltype ty ])
+        | Tag typ -> ("tag", opt_id id @ fundecl typ)
+        | Memory l -> ("memory", limits l)
+        | Table ty -> ("table", tabletype ty)
+      in
+      match e with
+      | [] ->
           List
             [
-              Block
-                (match desc with
-                | Func typ -> Atom "func" :: (opt_id id @ fundecl typ)
-                | Global ty -> Atom "global" :: (opt_id id @ [ globaltype ty ])
-                | Tag typ -> Atom "tag" :: (opt_id id @ fundecl typ)
-                | Memory _ -> [ Atom "memory" ] (*ZZZ*)
-                | Table _ -> [ Atom "table" ] (*ZZZ*));
-            ];
-        ]
+              Block [ Atom "import"; quoted_string module_; quoted_string name ];
+              List [ Block (Atom kind :: typ) ];
+            ]
+      | _ ->
+          List
+            (Block
+               (Atom kind
+               :: (opt_id id @ exports e
+                  @ [
+                      List
+                        [
+                          Atom "import";
+                          quoted_string module_;
+                          quoted_string name;
+                        ];
+                    ]))
+            :: typ))
   | Global { id; typ; init; exports = e } ->
       List
-        [
-          Block (Atom "global" :: (opt_id id @ exports e @ [ globaltype typ ]));
-          instrs init;
-        ]
+        (Block (Atom "global" :: (opt_id id @ exports e @ [ globaltype typ ]))
+        :: instrs init)
   | Tag { id; typ; exports = e } ->
       List (Atom "tag" :: (opt_id id @ exports e @ fundecl typ))
   | Data { id; init; mode } ->
@@ -601,11 +622,66 @@ let modulefield f =
                  @
                  match e with
                  | [ i ] -> [ instr i ]
-                 | _ -> [ List [ Atom "offset"; instrs e ] ]))
+                 | _ -> [ expr "offset" e ]))
            @ [ quoted_string init ]))
   | Start idx -> List [ Atom "start"; index idx ]
-  | Memory _ | Table _ | Export _ | Elem _ -> List [ Atom "other" ]
-(*ZZZ*)
+  | Memory { id; limits = l; init; exports = e } ->
+      List
+        (Block
+           (Atom "memory"
+           :: (opt_id id @ exports e
+              @ match init with None -> limits l | Some _ -> []))
+        ::
+        (match init with
+        | None -> []
+        | Some init -> [ List [ Atom "data"; quoted_string init ] ]))
+  (*ZZZ*)
+  | Table { id; typ; init; exports = e } ->
+      List
+        (Block
+           (Atom "table"
+           :: (opt_id id @ exports e
+              @
+              match init with
+              | Init_expr _ -> tabletype typ
+              | Init_segment _ -> [ reftype typ.reftype ]))
+        ::
+        (match init with
+        | Init_expr i -> instrs i
+        | Init_segment seg ->
+            [ List (Atom "elem" :: List.map (fun e -> expr "item" e) seg) ]))
+  | Export { name; kind; index = i } ->
+      List
+        [
+          Atom "export";
+          quoted_string name;
+          List
+            [
+              Atom
+                (match kind with
+                | Func -> "func"
+                | Memory -> "memory"
+                | Table -> "table"
+                | Tag -> "tag"
+                | Global -> "global");
+              index i;
+            ];
+        ]
+  | Elem { id; typ; init; mode } ->
+      List
+        (Block
+           (Atom "elem"
+           :: (opt_id id
+              @
+              match mode with
+              | Passive -> []
+              | Active (idx, ofs) ->
+                  (if idx.desc = Num Uint32.zero then []
+                   else [ List [ Atom "table"; index idx ] ])
+                  @ [ expr "offset" ofs ]
+              | Declare -> [ Atom "declare" ]))
+        :: reftype typ
+        :: List.map (fun e -> expr "item" e) init)
 
 let module_ f (id, fields) =
   Format.fprintf f "%a@." (format_sexp false)
