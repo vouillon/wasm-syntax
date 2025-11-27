@@ -1,3 +1,13 @@
+(*
+ZZZ
+- resolve all type uses
+- uninitialized locals
+- validation of subtype relation declaration
+- array/struct.new_default
+- name parameters in function types
+- ref.func declarations (can be relaxed)
+*)
+
 open Ast.Binary.Types
 
 module Sequence = struct
@@ -1084,7 +1094,7 @@ let tables_and_memories ctx fields =
           limits typ.limits max_table_size;
           let typ = tabletype ctx.types typ in
           (match init with
-          | Init_default -> ()
+          | Init_default -> assert typ.reftype.nullable
           | Init_expr e -> constant_expression ctx (Ref typ.reftype) e
           | Init_segment _ -> ());
           Sequence.register ctx.tables id typ;
