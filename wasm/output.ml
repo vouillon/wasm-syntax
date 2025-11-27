@@ -587,7 +587,7 @@ let function_indices typ lst =
     match i with [ { Ast.desc = RefFunc idx; _ } ] -> Some idx | _ -> None
   in
   match typ with
-  | { nullable = true; typ = Func } ->
+  | { nullable = false; typ = Func } ->
       if List.for_all (fun i -> extract i <> None) lst then
         Some (List.filter_map extract lst)
       else None
@@ -678,10 +678,11 @@ let modulefield f =
            :: (opt_id id @ exports e
               @
               match init with
-              | Init_expr _ -> tabletype typ
+              | Init_default | Init_expr _ -> tabletype typ
               | Init_segment _ -> [ reftype typ.reftype ]))
         ::
         (match init with
+        | Init_default -> []
         | Init_expr i -> instrs i
         | Init_segment seg ->
             [

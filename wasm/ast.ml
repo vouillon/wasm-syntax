@@ -311,6 +311,7 @@ module Text = struct
   type 'info elemmode = Passive | Active of idx * 'info expr | Declare
 
   type 'info tableinit =
+    | Init_default
     | Init_expr of 'info expr
     | Init_segment of 'info expr list
 

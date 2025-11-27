@@ -10,5 +10,10 @@ let of_string s =
 
 let to_string s = Printf.sprintf "%Lu" s
 let of_int i = Int64.of_int i
+
+let to_int i =
+  match Int64.unsigned_to_int i with Some i -> i | None -> assert false
+
 let zero = 0L
 let one = 1L
+let compare = Int64.unsigned_compare

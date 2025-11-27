@@ -653,7 +653,8 @@ memory:
 table:
 | "(" TABLE id = ID? r = exports(tabletype(expr)) ")"
    { let (exports, (typ, e)) = r in
-     Table {id; typ; init = Init_expr e; exports} }
+     let init = if e = [] then Init_default else Init_expr e in
+     Table {id; typ; init; exports} }
 | "(" TABLE id = ID?
   r = exports(t = reftype "(" ELEM e = list(elemexpr) ")" {t, e}) ")"
    { let (exports, (reftype, elem)) = r in
@@ -720,7 +721,7 @@ elem:
 | "(" ELEM id = ID ? o = offset init = list(idx) ")"
   { let init = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) init in
     Elem {id; mode = Active (Ast.no_loc (Num Uint32.zero), o);
-          typ = { nullable =true ; typ = Func }; init} }
+          typ = { nullable = false ; typ = Func }; init} }
 
 elemlist:
 | t = reftype l = elemexpr * { (t, l) }

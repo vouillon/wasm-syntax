@@ -14,6 +14,7 @@ let map_instrs func (name, fields) =
                 t with
                 init =
                   (match init with
+                  | Init_default -> Init_default
                   | Init_expr init -> Init_expr (func None init)
                   | Init_segment seg ->
                       Init_segment (List.map (fun e -> func None e) seg));

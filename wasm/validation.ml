@@ -113,6 +113,34 @@ let subtype ctx { Ast.Text.typ; supertype; final } =
 
 let rectype ctx ty = Array.map (fun (_, ty) -> subtype ctx ty) ty
 
+let signature ctx (params, results) =
+  {
+    params = Array.of_list (List.map (fun (_, ty) -> valtype ctx ty) params);
+    results = Array.of_list (List.map (valtype ctx) results);
+  }
+
+let typeuse ctx (idx, sign) =
+  match (idx, sign) with
+  | Some idx, _ ->
+      (*ZZZ Validate signature *)
+      resolve_type_index ctx idx
+  | _, Some sign ->
+      Types.add_rectype ctx.types
+        [|
+          { typ = Func (signature ctx sign); supertype = None; final = true };
+        |]
+  | None, None -> assert false
+
+let typeuse' ctx (idx, sign) =
+  match (idx, sign) with
+  | Some idx, _ ->
+      (*ZZZ Validate signature *)
+      resolve_type_index ctx idx
+  | _, Some sign ->
+      Types.add_rectype ctx.types
+        [| { typ = Func (functype ctx sign); supertype = None; final = true } |]
+  | None, None -> assert false
+
 type module_context = {
   types : type_context;
   subtyping_info : Types.subtyping_info;
@@ -121,6 +149,8 @@ type module_context = {
   tables : tabletype Sequence.t;
   globals : globaltype Sequence.t;
   tags : int Sequence.t;
+  data : unit Sequence.t;
+  elem : reftype Sequence.t;
   exports : (string, unit) Hashtbl.t;
 }
 
@@ -320,6 +350,29 @@ let rec repeat n f =
     let* () = f in
     repeat (n - 1) f
 
+let max_offset = Uint64.of_string "0x1_0000_0000"
+let max_align = Uint64.of_int 8
+
+let check_memarg _ sz { Ast.Text.offset; align } =
+  (*ZZZ*)
+  assert (Uint64.compare offset max_offset < 0);
+  assert (Uint64.compare align max_align <= 8);
+  assert (
+    match (Uint64.to_int align, sz) with
+    | 1, (`I8 | `I16 | `I32 | `I64) -> true
+    | 2, (`I16 | `I32 | `I64) -> true
+    | 4, (`I32 | `I64) -> true
+    | 8, `I64 -> true
+    | _ -> false);
+  assert (Uint64.compare align max_align <= 0)
+
+let memory_instruction_type_and_size ty =
+  match (ty : _ Ast.Text.op) with
+  | I32 _ -> (I32, `I32)
+  | F32 _ -> (F32, `I32)
+  | I64 _ -> (I64, `I64)
+  | F64 _ -> (F64, `I64)
+
 let rec instruction ctx (i : _ Ast.Text.instr) =
   if false then Format.eprintf "%a@." Output.instr i;
   match i.desc with
@@ -341,13 +394,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       block ctx label params results results else_block;
       push_results results
   (*
-    | Try of {
-        label : X.label;
-        typ : blocktype option;
-        block : instr list;
-        catches : (X.idx * instr list) list;
-        catch_all : instr list option;
-      }
+    | TryTable
 *)
   | Try { label; typ; block = b; catches = _; catch_all = _ } ->
       (*ZZZ handlers*)
@@ -449,9 +496,18 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           let* () = pop ctx (Ref { nullable = true; typ = Type ty }) in
           let* () = pop_args ctx (Array.to_list params) in
           push_results (Array.to_list results))
-  (*
-    | CallIndirect of X.idx * X.typeuse
-*)
+  | CallIndirect (idx, tu) -> (
+      let typ = Sequence.get ctx.modul.tables idx in
+      let ty = typeuse' ctx.modul.types tu in
+      assert (
+        Types.val_subtype ctx.modul.subtyping_info (Ref typ.reftype)
+          (Ref { nullable = true; typ = Func }));
+      match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+      | Struct _ | Array _ -> assert false (*ZZZ*)
+      | Func { params; results } ->
+          let* () = pop ctx I32 in
+          let* () = pop_args ctx (Array.to_list params) in
+          push_results (Array.to_list results))
   | ReturnCall idx -> (
       let ty = Sequence.get ctx.modul.functions idx in
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
@@ -473,9 +529,21 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
             (let* () = push_results (Array.to_list results) in
              pop_args ctx ctx.return_types);
           unreachable)
-  (*
-    | ReturnCallIndirect of X.idx * X.typeuse
-*)
+  | ReturnCallIndirect (idx, tu) -> (
+      let typ = Sequence.get ctx.modul.tables idx in
+      let ty = typeuse' ctx.modul.types tu in
+      assert (
+        Types.val_subtype ctx.modul.subtyping_info (Ref typ.reftype)
+          (Ref { nullable = true; typ = Func }));
+      match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+      | Struct _ | Array _ -> assert false (*ZZZ*)
+      | Func { params; results } ->
+          let* () = pop ctx I32 in
+          let* () = pop_args ctx (Array.to_list params) in
+          with_empty_stack
+            (let* () = push_results (Array.to_list results) in
+             pop_args ctx ctx.return_types);
+          unreachable)
   | Drop ->
       let* _ = pop_any in
       return ()
@@ -495,9 +563,15 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           assert (number_or_vec ty);
           (*ZZZ*)
           push ty)
-  (*
-    | Select of X.valtype option
-*)
+  | Select (Some lst) -> (
+      match lst with
+      | [ typ ] ->
+          let typ = valtype ctx.modul.types typ in
+          let* () = pop ctx I32 in
+          let* () = pop ctx typ in
+          let* () = pop ctx typ in
+          push typ
+      | _ -> assert false)
   | LocalGet i -> push (get_local ctx i)
   | LocalSet i -> pop ctx (get_local ~initialize:true ctx i)
   | LocalTee i ->
@@ -512,9 +586,105 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       assert ty.mut;
       (*ZZZ*)
       pop ctx ty.typ
+  | Load (idx, memarg, ty) ->
+      let limits = Sequence.get ctx.modul.memories idx in
+      let ty, sz = memory_instruction_type_and_size ty in
+      check_memarg limits sz memarg;
+      let* () = pop ctx I32 in
+      push ty
+  | LoadS (idx, memarg, ty, sz, _) ->
+      let limits = Sequence.get ctx.modul.memories idx in
+      let ty = match ty with `I32 -> I32 | `I64 -> I64 in
+      check_memarg limits (sz :> [ `I8 | `I16 | `I32 | `I64 ]) memarg;
+      let* () = pop ctx I32 in
+      push ty
+  | Store (idx, memarg, ty) ->
+      let limits = Sequence.get ctx.modul.memories idx in
+      let ty, sz = memory_instruction_type_and_size ty in
+      check_memarg limits sz memarg;
+      let* () = pop ctx ty in
+      pop ctx I32
+  | StoreS (idx, memarg, ty, sz) ->
+      let limits = Sequence.get ctx.modul.memories idx in
+      let ty = match ty with `I32 -> I32 | `I64 -> I64 in
+      check_memarg limits (sz :> [ `I8 | `I16 | `I32 | `I64 ]) memarg;
+      let* () = pop ctx ty in
+      pop ctx I32
+  | MemorySize idx ->
+      ignore (Sequence.get ctx.modul.memories idx);
+      push I32
+  | MemoryGrow idx ->
+      ignore (Sequence.get ctx.modul.memories idx);
+      let* () = pop ctx I32 in
+      push I32
+  | MemoryFill idx ->
+      ignore (Sequence.get ctx.modul.memories idx);
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      pop ctx I32
+  | MemoryCopy (idx, idx') ->
+      ignore (Sequence.get ctx.modul.memories idx);
+      ignore (Sequence.get ctx.modul.memories idx');
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      pop ctx I32
+  | MemoryInit (idx, idx') ->
+      ignore (Sequence.get ctx.modul.memories idx);
+      ignore (Sequence.get ctx.modul.data idx');
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      pop ctx I32
+  | DataDrop idx ->
+      ignore (Sequence.get ctx.modul.data idx);
+      return ()
+  | TableGet idx ->
+      let typ = Sequence.get ctx.modul.tables idx in
+      let* () = pop ctx I32 in
+      push (Ref typ.reftype)
+  | TableSet idx ->
+      let typ = Sequence.get ctx.modul.tables idx in
+      let* () = pop ctx (Ref typ.reftype) in
+      pop ctx I32
+  | TableSize idx ->
+      ignore (Sequence.get ctx.modul.tables idx);
+      push I32
+  | TableGrow idx ->
+      let typ = Sequence.get ctx.modul.tables idx in
+      let* () = pop ctx I32 in
+      let* () = pop ctx (Ref typ.reftype) in
+      push I32
+  | TableFill idx ->
+      let typ = Sequence.get ctx.modul.tables idx in
+      let* () = pop ctx I32 in
+      let* () = pop ctx (Ref typ.reftype) in
+      pop ctx I32
+  | TableCopy (idx, idx') ->
+      ignore (Sequence.get ctx.modul.tables idx);
+      ignore (Sequence.get ctx.modul.tables idx');
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      pop ctx I32
+  | TableInit (idx, idx') ->
+      let tabletype = Sequence.get ctx.modul.tables idx in
+      let typ = Sequence.get ctx.modul.elem idx' in
+      assert (
+        Types.val_subtype ctx.modul.subtyping_info (Ref typ)
+          (Ref tabletype.reftype));
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      pop ctx I32
+  | ElemDrop idx ->
+      ignore (Sequence.get ctx.modul.elem idx);
+      return ()
   (*
-    | I32Load8 of signage * memarg
-    | I32Store8 of memarg
+    | TableGet of X.idx
+    | TableSet of X.idx
+    | TableSize of X.idx
+    | TableGrow of X.idx
+    | TableFill of X.idx
+    | TableCopy of X.idx * X.idx
+    | TableInit of X.idx * X.idx
+    | ElemDrop of X.idx
 *)
   | RefNull typ ->
       let typ = heaptype ctx.modul.types typ in
@@ -765,11 +935,65 @@ and block ctx label params results br_params block =
      in
      pop_args ctx results)
 
+let rec check_constant_instruction ctx (i : _ Ast.Text.instr) =
+  match i.desc with
+  | GlobalGet idx -> assert (not (Sequence.get ctx.globals idx).mut)
+  | RefNull _ | RefFunc _ | StructNew _ | StructNewDefault _ | ArrayNew _
+  | ArrayNewDefault _ | ArrayNewFixed _ | RefI31 | Const _
+  | BinOp (I32 (Add | Sub | Mul) | I64 (Add | Sub | Mul))
+  | ExternConvertAny | AnyConvertExtern ->
+      ()
+  | Folded (i, l) ->
+      check_constant_instruction ctx i;
+      check_constant_instructions ctx l
+  | Block _ | Loop _ | If _ | TryTable _ | Try _ | Unreachable | Nop | Throw _
+  | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | Br_on_cast_fail _ | Return | Call _ | CallRef _ | CallIndirect _
+  | ReturnCall _ | ReturnCallRef _ | ReturnCallIndirect _ | Drop | Select _
+  | LocalGet _ | LocalSet _ | LocalTee _ | GlobalSet _ | Load _ | LoadS _
+  | Store _ | StoreS _ | MemorySize _ | MemoryGrow _ | MemoryFill _
+  | MemoryCopy _ | MemoryInit _ | DataDrop _ | TableGet _ | TableSet _
+  | TableSize _ | TableGrow _ | TableFill _ | TableCopy _ | TableInit _
+  | ElemDrop _ | RefIsNull | RefAsNonNull | RefEq | RefTest _ | RefCast _
+  | StructGet _ | StructSet _ | ArrayNewData _ | ArrayNewElem _ | ArrayGet _
+  | ArraySet _ | ArrayLen | ArrayFill _ | ArrayCopy _ | ArrayInitData _
+  | ArrayInitElem _ | I31Get _ | UnOp _
+  | BinOp
+      ( F32 _ | F64 _
+      | I32
+          ( Div _ | Rem _ | And | Or | Xor | Shl | Shr _ | Rotl | Rotr | Eq | Ne
+          | Lt _ | Gt _ | Le _ | Ge _ )
+      | I64
+          ( Div _ | Rem _ | And | Or | Xor | Shl | Shr _ | Rotl | Rotr | Eq | Ne
+          | Lt _ | Gt _ | Le _ | Ge _ ) )
+  | I32WrapI64 | I64ExtendI32 _ | F32DemoteF64 | F64PromoteF32 | Pop _
+  | TupleMake _ | TupleExtract _ ->
+      assert false
+
+and check_constant_instructions ctx l =
+  List.iter (fun i -> check_constant_instruction ctx i) l
+
+let constant_expression ctx ty expr =
+  check_constant_instructions ctx expr;
+  with_empty_stack
+    (let ctx =
+       {
+         locals = Sequence.make "local";
+         control_types = [];
+         return_types = [];
+         modul = ctx;
+       }
+     in
+     let* () = instructions ctx expr in
+     pop ctx ty)
+
 let add_type ctx ty =
   Array.iteri
     (fun i (label, _) ->
       (*ZZZ Check unique names*)
-      Hashtbl.replace ctx.index_mapping (Uint32.succ ctx.last_index) (lnot i, []);
+      Hashtbl.replace ctx.index_mapping
+        (Uint32.add ctx.last_index (Uint32.of_int i))
+        (lnot i, []);
       Option.iter
         (fun label -> Hashtbl.replace ctx.label_mapping label (lnot i, []))
         label)
@@ -796,27 +1020,6 @@ let add_type ctx ty =
     ty;
   ctx.last_index <- Uint32.add ctx.last_index (Uint32.of_int (Array.length ty))
 
-(*
-  idx option * ((id option * valtype) list * valtype list) option
-*)
-let signature ctx (params, results) =
-  {
-    params = Array.of_list (List.map (fun (_, ty) -> valtype ctx ty) params);
-    results = Array.of_list (List.map (valtype ctx) results);
-  }
-
-let typeuse ctx (idx, sign) =
-  match (idx, sign) with
-  | Some idx, _ ->
-      (*ZZZ Validate signature *)
-      resolve_type_index ctx idx
-  | _, Some sign ->
-      Types.add_rectype ctx.types
-        [|
-          { typ = Func (signature ctx sign); supertype = None; final = true };
-        |]
-  | None, None -> assert false
-
 let register_exports ctx lst =
   List.iter
     (fun name ->
@@ -824,6 +1027,15 @@ let register_exports ctx lst =
       (*ZZZ*)
       Hashtbl.add ctx.exports name ())
     lst
+
+let limits { mi; ma } max =
+  assert (
+    match ma with
+    | None -> Uint64.compare mi max <= 0
+    | Some ma -> Uint64.compare mi ma <= 0 && Uint64.compare ma max <= 0)
+
+let max_memory_size = Uint64.of_int 65536
+let max_table_size = Uint64.of_string "0xffff_ffff"
 
 let build_initial_env ctx fields =
   List.iter
@@ -834,19 +1046,49 @@ let build_initial_env ctx fields =
           register_exports ctx exports;
           match desc with
           | Func tu -> Sequence.register ctx.functions id (typeuse ctx.types tu)
-          | Memory limits -> Sequence.register ctx.memories id limits
+          | Memory lim ->
+              limits lim max_memory_size;
+              Sequence.register ctx.memories id lim
           | Table typ ->
+              limits typ.limits max_table_size;
               Sequence.register ctx.tables id (tabletype ctx.types typ)
           | Global ty ->
               Sequence.register ctx.globals id (globaltype ctx.types ty)
-          | Tag tu -> Sequence.register ctx.tags id (typeuse ctx.types tu))
+          | Tag tu ->
+              let ty = typeuse ctx.types tu in
+              (match (Types.get_subtype ctx.subtyping_info ty).typ with
+              | Func { results; _ } -> assert (results = [||])
+              | Struct _ | Array _ -> assert false (*ZZZ*));
+              Sequence.register ctx.tags id ty)
       | Func { id; typ; _ } ->
           Sequence.register ctx.functions id (typeuse ctx.types typ)
-      | Memory { id; limits; _ } ->
-          (*ZZZ init *)
-          Sequence.register ctx.memories id limits
-      | Tag { id; typ; _ } ->
-          Sequence.register ctx.tags id (typeuse ctx.types typ)
+      | Tag { id; typ; exports } ->
+          let ty = typeuse ctx.types typ in
+          (match (Types.get_subtype ctx.subtyping_info ty).typ with
+          | Func { results; _ } -> assert (results = [||])
+          | Struct _ | Array _ -> assert false (*ZZZ*));
+          register_exports ctx exports;
+          Sequence.register ctx.tags id ty
+      | _ -> ())
+    fields
+
+let tables_and_memories ctx fields =
+  List.iter
+    (fun (field : _ Ast.Text.modulefield) ->
+      match field with
+      | Memory { id; limits = lim; init = _; exports } ->
+          limits lim max_memory_size;
+          Sequence.register ctx.memories id lim;
+          register_exports ctx exports
+      | Table { id; typ; init; exports } ->
+          limits typ.limits max_table_size;
+          let typ = tabletype ctx.types typ in
+          (match init with
+          | Init_default -> ()
+          | Init_expr e -> constant_expression ctx (Ref typ.reftype) e
+          | Init_segment _ -> ());
+          Sequence.register ctx.tables id typ;
+          register_exports ctx exports
       | _ -> ())
     fields
 
@@ -856,19 +1098,46 @@ let globals ctx fields =
       match field with
       | Global { id; typ; init; exports } ->
           let typ = globaltype ctx.types typ in
-          with_empty_stack
-            (let ctx =
-               {
-                 locals = Sequence.make "local";
-                 control_types = [];
-                 return_types = [];
-                 modul = ctx;
-               }
-             in
-             let* () = instructions ctx init in
-             pop ctx typ.typ);
+          constant_expression ctx typ.typ init;
           Sequence.register ctx.globals id typ;
           register_exports ctx exports
+      | _ -> ())
+    fields
+
+let segments ctx fields =
+  List.iter
+    (fun (field : _ Ast.Text.modulefield) ->
+      match field with
+      | Memory { init; _ } -> (
+          match init with
+          | None -> ()
+          | Some _ -> Sequence.register ctx.data None ())
+      | Data { id; init = _; mode } ->
+          (match mode with
+          | Passive -> ()
+          | Active (i, e) ->
+              ignore (Sequence.get ctx.memories i);
+              constant_expression ctx I32 (*or I64*) e);
+          Sequence.register ctx.data id ()
+      | Table { typ; init; _ } -> (
+          match init with
+          | Init_default | Init_expr _ -> ()
+          | Init_segment lst ->
+              let typ = reftype ctx.types typ.reftype in
+              List.iter (fun e -> constant_expression ctx (Ref typ) e) lst;
+              Sequence.register ctx.elem None typ)
+      | Elem { id; typ; init; mode } ->
+          let typ = reftype ctx.types typ in
+          (match mode with
+          | Passive | Declare -> ()
+          | Active (i, e) ->
+              let tabletype = Sequence.get ctx.tables i in
+              assert (
+                Types.val_subtype ctx.subtyping_info (Ref typ)
+                  (Ref tabletype.reftype));
+              constant_expression ctx I32 e);
+          List.iter (fun e -> constant_expression ctx (Ref typ) e) init;
+          Sequence.register ctx.elem id typ
       | _ -> ())
     fields
 
@@ -892,7 +1161,10 @@ let functions ctx fields =
                 (fun (id, typ) ->
                   Sequence.register locals id (valtype ctx.types typ))
                 params
-          | _ -> ());
+          | _ ->
+              Array.iter
+                (fun typ -> Sequence.register locals None typ)
+                func_typ.params);
           List.iter
             (fun (id, typ) ->
               Sequence.register locals id (valtype ctx.types typ))
@@ -967,6 +1239,8 @@ let f (_, fields) =
       tables = Sequence.make "tables";
       globals = Sequence.make "global";
       tags = Sequence.make "tag";
+      data = Sequence.make "data";
+      elem = Sequence.make "data";
       exports = Hashtbl.create 16;
     }
   in
@@ -974,7 +1248,9 @@ let f (_, fields) =
   let ctx =
     { ctx with subtyping_info = Types.subtyping_info type_context.types }
   in
+  tables_and_memories ctx fields;
   globals ctx fields;
+  segments ctx fields;
   functions ctx fields;
   exports ctx fields;
   start ctx fields

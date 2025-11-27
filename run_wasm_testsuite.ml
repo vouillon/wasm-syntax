@@ -211,7 +211,5 @@ let () =
   iter_files dirs
     (fun p ->
       List.mem p
-        [
-          "spec-test-1" (* invalid syntax *); "memory64"; "simd"; "relaxed-simd";
-        ])
+        [ "spec-test-1"; "spec-test-2"; "memory64"; "simd"; "relaxed-simd" ])
     ".wast" runtest
