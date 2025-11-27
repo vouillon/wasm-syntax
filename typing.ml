@@ -385,7 +385,7 @@ let signed_cast ctx ty ty' =
 type stack =
   | Unreachable
   | Empty
-  | Cons of location * inferred_type UnionFind.t * stack
+  | Cons of location * inferred_type UnionFind.t option * stack
 
 let output_inferred_type f ty =
   match UnionFind.find ty with
@@ -402,7 +402,11 @@ let rec output_stack f st =
   | Empty -> ()
   | Unreachable -> Format.fprintf f "unreachable"
   | Cons (_, ty, st) ->
-      Format.fprintf f "%a;%a" output_inferred_type ty output_stack st
+      Format.fprintf f "@ %a%a"
+        (Format.pp_print_option
+           ~none:(fun f _ -> Format.fprintf f "bot")
+           output_inferred_type)
+        ty output_stack st
 
 let unreachable _ = (Unreachable, ())
 let return v st = (st, v)
@@ -414,13 +418,14 @@ let ( let* ) e f st =
 let pop_any st =
   match st with
   | Unreachable -> (Unreachable, None)
-  | Cons (_, ty, r) -> (r, Some ty)
+  | Cons (_, ty, r) -> (r, ty)
   | Empty -> assert false
 
 let pop ctx ty st =
   match st with
   | Unreachable -> (Unreachable, ())
-  | Cons (_, ty', r) ->
+  | Cons (_, None, r) -> (r, ())
+  | Cons (_, Some ty', r) ->
       let ok = subtype ctx ty' ty in
       if not ok then
         Format.eprintf "%a <: %a@." output_inferred_type ty'
@@ -429,7 +434,8 @@ let pop ctx ty st =
       (r, ())
   | Empty -> assert false
 
-let push loc ty st = (Cons (loc, ty, st), ())
+let push_poly loc ty st = (Cons (loc, ty, st), ())
+let push loc ty st = push_poly loc (Some ty) st
 
 let rec pop_args ctx args =
   match args with

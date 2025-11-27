@@ -131,7 +131,7 @@ type ctx = {
   modul : module_context;
 }
 
-type stack = Unreachable | Empty | Cons of valtype * stack
+type stack = Unreachable | Empty | Cons of valtype option * stack
 
 let print_heaptype f (ty : heaptype) =
   match ty with
@@ -165,13 +165,14 @@ let print_valtype f ty =
 let pop_any st =
   match st with
   | Unreachable -> (Unreachable, None)
-  | Cons (ty, r) -> (r, Some ty)
+  | Cons (ty, r) -> (r, ty)
   | Empty -> assert false
 
 let pop ctx ty st =
   match st with
   | Unreachable -> (Unreachable, ())
-  | Cons (ty', r) ->
+  | Cons (None, r) -> (r, ())
+  | Cons (Some ty', r) ->
       let ok = Types.val_subtype ctx.modul.subtyping_info ty' ty in
       if not ok then
         Format.eprintf "%a <: %a@." print_valtype ty' print_valtype ty;
@@ -179,7 +180,8 @@ let pop ctx ty st =
       (r, ())
   | Empty -> assert false
 
-let push ty st = (Cons (ty, st), ())
+let push_poly ty st = (Cons (ty, st), ())
+let push ty st = (Cons (Some ty, st), ())
 let unreachable _ = (Unreachable, ())
 let return v st = (st, v)
 
@@ -257,25 +259,27 @@ let rec push_results results =
       let* () = push ty in
       push_results rem
 
-let rec print_stack st =
+let rec output_stack f st =
   match st with
-  | Empty | Unreachable -> ()
+  | Empty -> ()
+  | Unreachable -> Format.fprintf f "unreachable"
   | Cons (ty, st) ->
-      Format.eprintf "%a@." print_valtype ty;
-      print_stack st
+      Format.fprintf f "@ %a%a"
+        (Format.pp_print_option
+           ~none:(fun f _ -> Format.fprintf f "bot")
+           print_valtype)
+        ty output_stack st
 
 let with_empty_stack f =
   let st, () = f Empty in
   match st with
   | Cons _ ->
-      prerr_endline "Stack:";
-      print_stack st;
+      Format.eprintf "Stack:%a@." output_stack st;
       assert false
   | Empty | Unreachable -> ()
 
 let print_stack st =
-  prerr_endline "Stack:";
-  print_stack st;
+  Format.eprintf "Stack:%a@." output_stack st;
   (st, ())
 
 let branch_target ctx (idx : Ast.Text.idx) =
@@ -480,7 +484,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* ty1 = pop_any in
       let* ty2 = pop_any in
       match (ty1, ty2) with
-      | None, None -> return ()
+      | None, None -> push_poly None
       | Some ty1, Some ty2 ->
           (*ZZZ*)
           assert (number_or_vec ty1);
@@ -488,8 +492,9 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           assert (ty1 = ty2);
           push ty1
       | Some ty, None | None, Some ty ->
+          assert (number_or_vec ty);
           (*ZZZ*)
-          assert false)
+          push ty)
   (*
     | Select of X.valtype option
 *)
@@ -907,8 +912,7 @@ let functions ctx fields =
       | _ -> ())
     fields
 
-let exports_and_start ctx fields =
-  let start_count = ref 0 in
+let exports ctx fields =
   List.iter
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
@@ -920,10 +924,22 @@ let exports_and_start ctx fields =
           | Table -> ignore (Sequence.get ctx.tables index)
           | Tag -> ignore (Sequence.get ctx.tags index)
           | Global -> ignore (Sequence.get ctx.globals index))
-      | Start idx ->
+      | _ -> ())
+    fields
+
+let start ctx fields =
+  let start_count = ref 0 in
+  List.iter
+    (fun (field : _ Ast.Text.modulefield) ->
+      match field with
+      | Start idx -> (
           assert (!start_count = 0);
           incr start_count;
-          ignore (Sequence.get ctx.functions idx)
+          let ty = Sequence.get ctx.functions idx in
+          match (Types.get_subtype ctx.subtyping_info ty).typ with
+          | Struct _ | Array _ -> assert false
+          | Func { params; results } -> assert (params = [||] && results = [||])
+          )
       | _ -> ())
     fields
 
@@ -960,4 +976,5 @@ let f (_, fields) =
   in
   globals ctx fields;
   functions ctx fields;
-  exports_and_start ctx fields
+  exports ctx fields;
+  start ctx fields

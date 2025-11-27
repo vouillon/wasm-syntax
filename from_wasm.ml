@@ -597,13 +597,12 @@ let rec instr st (i : _ Src.instr) (args : _ Ast.instr list) : _ Ast.instr =
       with_loc Unreachable (* ZZZ *)
   | Throw t -> with_loc (Throw (idx st `Tag t, args))
   | RefAsNonNull -> with_loc (NonNull (sequence args))
-  (* signed(x as i8) as i32 ? *)
   (* Later *)
-  | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _ | ArrayInitData _
-  | ArrayNewElem _ | Load _ | LoadS _ | Store _ | StoreS _ | MemorySize _
-  | MemoryGrow _ | MemoryFill _ | MemoryCopy _ | MemoryInit _ | DataDrop _
-  | TableGet _ | TableSet _ | TableSize _ | TableGrow _ | TableFill _
-  | TableCopy _ | TableInit _ | ElemDrop _ ->
+  | TryTable _ | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _
+  | ArrayInitData _ | ArrayNewElem _ | Load _ | LoadS _ | Store _ | StoreS _
+  | MemorySize _ | MemoryGrow _ | MemoryFill _ | MemoryCopy _ | MemoryInit _
+  | DataDrop _ | TableGet _ | TableSet _ | TableSize _ | TableGrow _
+  | TableFill _ | TableCopy _ | TableInit _ | ElemDrop _ ->
       with_loc Unreachable (* ZZZ *)
 
 let bind_locals st l =
