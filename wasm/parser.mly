@@ -134,7 +134,9 @@ ZZZ
 %token TRY_TABLE
 %token DO
 %token CATCH
+%token CATCH_REF
 %token CATCH_ALL
+%token CATCH_ALL_REF
 %token THROW
 %token <string> MEM_ALIGN
 %token <string> MEM_OFFSET
@@ -357,10 +359,25 @@ blockinstr:
   label (*ZZZ labels must match *)
   { let (typ, if_block) = bti in
     with_loc $sloc (If {label; typ; if_block; else_block = [] }) }
+| TRY_TABLE label = label bti = blocktype(tbl_catches(instrs({})))
+  END label
+   { let (typ, (catches, block)) = bti in
+     with_loc $sloc (TryTable {label; typ; catches; block}) }
 | TRY label = label bti = blocktype(instrs({})) c = catches END label
   { let (typ, block) = bti in
     let (catches, catch_all) = c in
     with_loc $sloc (Try {label; typ; block; catches; catch_all}) }
+
+tbl_catches(cont):
+| c = cont { [], c }
+| "(" CATCH x = idx l = idx ")" c = tbl_catches(cont)
+  { map_fst (fun r -> Catch(x, l) :: r) c }
+| "(" CATCH_REF x = idx l = idx ")" c = tbl_catches(cont)
+  { map_fst (fun r -> CatchRef(x, l) :: r) c }
+| "(" CATCH_ALL l = idx ")" c = tbl_catches(cont)
+  { map_fst (fun r -> CatchAll l :: r) c }
+| "(" CATCH_ALL_REF l = idx ")" c = tbl_catches(cont)
+  { map_fst (fun r -> CatchAllRef l :: r) c }
 
 catches:
 | END { [], None }
@@ -533,6 +550,12 @@ foldedinstr:
           (If {label; typ; if_block;
                else_block = Option.value ~default:[] else_block }),
          l)) }
+| "(" TRY_TABLE label = label bti = blocktype(tbl_catches(instrs(")")))
+   { let (typ, (catches, block)) = bti in
+     with_loc $sloc
+       (Folded
+          (with_loc $sloc (TryTable {label; typ; catches; block}),
+          [])) }
 | "(" TRY label = label
   btb = blocktype("(" DO l = instrs(")") { l })
   c = foldedcatches ")"
@@ -638,10 +661,10 @@ table:
      Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
             init = Init_segment elem; exports} }
 | "(" TABLE id = ID?
-  r = exports(t = reftype "(" ELEM
-  e = nonempty_list(i = idx { [with_loc $loc(i) (RefFunc i)] }) ")" {t, e}) ")"
+  r = exports(t = reftype "(" ELEM e = nonempty_list(idx) ")" {t, e}) ")"
    { let (exports, (reftype, elem)) = r in
      let len = Uint64.of_int (List.length elem) in
+     let elem = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) elem in
      Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
             init = Init_segment elem; exports} }
 | "(" TABLE id = ID ?
@@ -694,15 +717,16 @@ elem:
   { let (typ, init) = l in Elem {id; mode = Active (t, o); typ; init} }
 | "(" ELEM id = ID ? DECLARE l = elemlist ")"
   { let (typ, init) = l in Elem {id; mode = Declare; typ; init} }
-| "(" ELEM id = ID ? o = offset
-  init = list(i = idx { [with_loc $loc(i) (RefFunc i)] }) ")"
-  { Elem {id; mode = Active (Ast.no_loc (Num Uint32.zero), o);
+| "(" ELEM id = ID ? o = offset init = list(idx) ")"
+  { let init = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) init in
+    Elem {id; mode = Active (Ast.no_loc (Num Uint32.zero), o);
           typ = { nullable =true ; typ = Func }; init} }
 
 elemlist:
 | t = reftype l = elemexpr * { (t, l) }
-| FUNC l = list(i = idx { [with_loc $loc(i) (RefFunc i)] })
-  { ({nullable = false; typ = Func}, l) }
+| FUNC l = list(idx)
+  { let l = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) l in
+    ({nullable = false; typ = Func}, l) }
 
 elemexpr:
 | "(" ITEM  e = expr ")" { e }

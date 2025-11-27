@@ -181,7 +181,7 @@ let label_arity env idx =
 
 let arity env i =
   match i.Ast.desc with
-  | Block { typ; _ } | Loop { typ; _ } | Try { typ; _ } ->
+  | Block { typ; _ } | Loop { typ; _ } | Try { typ; _ } | TryTable { typ; _ } ->
       blocktype_arity env typ
   | If { typ; _ } ->
       let i, o = blocktype_arity env typ in
@@ -348,6 +348,22 @@ let rec fold_stream env folded stream : _ Ast.Text.instr list =
       fold_instr env folded [] [] rem
         { i with desc = If { b with if_block; else_block } }
         inputs outputs
+  | ({ Ast.desc = TryTable ({ label; typ; block; _ } as b); _ } as i) :: rem ->
+      let block =
+        let i, _ = blocktype_arity env typ in
+        let env = { env with labels = (label, i) :: env.labels } in
+        fold_stream env [] block
+      in
+      let inputs, outputs = arity env i in
+      let folded = consume inputs folded in
+      fold_stream env
+        (( outputs,
+           {
+             i with
+             desc = Folded ({ i with desc = TryTable { b with block } }, []);
+           } )
+        :: folded)
+        rem
   | ({ Ast.desc = Try ({ label; typ; block; catches; catch_all; _ } as b); _ }
      as i)
     :: rem ->
@@ -442,6 +458,8 @@ let rec unfold_stream stream start =
                 if_block = unfold_instrs if_block;
                 else_block = unfold_instrs else_block;
               }
+        | TryTable ({ block; _ } as b) ->
+            TryTable { b with block = unfold_instrs block }
         | Try ({ block; catches; catch_all; _ } as b) ->
             Try
               {

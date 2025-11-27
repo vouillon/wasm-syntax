@@ -63,9 +63,13 @@ module ScriptParser =
     (Fast_parser)
     (Wasm.Lexer)
 
-let in_child_process f =
+let in_child_process ?(quiet = false) f =
   match Unix.fork () with
   | 0 ->
+      if quiet then (
+        let dev_null = Unix.openfile "/dev/null" [ Unix.O_WRONLY ] 0o666 in
+        Unix.dup2 dev_null Unix.stderr;
+        Unix.close dev_null);
       f ();
       exit 0
   | pid ->
@@ -74,7 +78,7 @@ let in_child_process f =
       status = Unix.WEXITED 0
 
 let runtest filename =
-  prerr_endline filename;
+  if false then prerr_endline filename;
   let _ =
     in_child_process (fun () ->
         let lst = ScriptParser.parse ~filename in

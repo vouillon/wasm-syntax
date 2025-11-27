@@ -292,6 +292,16 @@ let memarg align' { offset; align } =
   if align = align' then []
   else [ Atom (Printf.sprintf "align=" ^ Uint64.to_string align) ]
 
+let catches l =
+  List.map
+    (fun c ->
+      match c with
+      | Catch (x, l) -> List [ Atom "catch"; index x; index l ]
+      | CatchRef (x, l) -> List [ Atom "catch_ref"; index x; index l ]
+      | CatchAll l -> List [ Atom "catch_all"; index l ]
+      | CatchAllRef l -> List [ Atom "catch_all_ref"; index l ])
+    l
+
 let rec instr i =
   match i.Ast.desc with
   | ExternConvertAny -> Atom "extern.convert_any"
@@ -399,7 +409,7 @@ let rec instr i =
   | ArrayNew t -> Block [ Atom "array.new"; index t ]
   | ArrayNewDefault t -> Block [ Atom "array.new_default"; index t ]
   | ArrayNewFixed (t, i) -> Block [ Atom "array.new_fixed"; index t; u32 i ]
-  | ArrayNewElem (i, i') -> Block [ Atom "array.new_fixed"; index i; index i' ]
+  | ArrayNewElem (i, i') -> Block [ Atom "array.new_elem"; index i; index i' ]
   | ArrayNewData (typ, data) ->
       Block [ Atom "array.new_data"; index typ; index data ]
   | ArrayInitData (i, i') -> Block [ Atom "array.init_data"; index i; index i' ]
@@ -446,6 +456,14 @@ let rec instr i =
         [
           Delimiter (Block (Atom "loop" :: (opt_id label @ blocktype typ)));
           Contents (List.map instr block);
+          Delimiter (Atom "end");
+          (*ZZZ Comment?*)
+        ]
+  | TryTable { label; typ; catches = c; block } ->
+      StructuredBlock
+        [
+          Delimiter (Block (Atom "try_table" :: (opt_id label @ blocktype typ)));
+          Contents (catches c @ List.map instr block);
           Delimiter (Atom "end");
           (*ZZZ Comment?*)
         ]
@@ -505,6 +523,13 @@ let rec instr i =
         (Block (Atom "loop" :: (opt_id label @ blocktype typ))
         :: List.map instr block)
       (*ZZZ Comment?*)
+  | Folded ({ desc = TryTable { label; typ; catches = c; block }; _ }, l) ->
+      assert (l = []);
+      List
+        (Block (Atom "try_table" :: (opt_id label @ blocktype typ))
+        :: Block (catches c)
+        :: List.map instr block)
+      (*ZZZ Comment?*)
   | Folded ({ desc = Try { label; typ; block; catches; catch_all }; _ }, l) ->
       assert (l = []);
       List
@@ -557,6 +582,17 @@ let expr name e =
   | [ ({ Ast.desc = Folded _; _ } as i) ] -> instr i
   | _ -> List (Atom name :: instrs e)
 
+let function_indices typ lst =
+  let extract i =
+    match i with [ { Ast.desc = RefFunc idx; _ } ] -> Some idx | _ -> None
+  in
+  match typ with
+  | { nullable = true; typ = Func } ->
+      if List.for_all (fun i -> extract i <> None) lst then
+        Some (List.filter_map extract lst)
+      else None
+  | _ -> None
+
 let modulefield f =
   match f with
   | Types [| t |] -> subtype t
@@ -577,9 +613,9 @@ let modulefield f =
   | Import { module_; name; id; desc; exports = e } -> (
       let kind, typ =
         match desc with
-        | Func typ -> ("func", opt_id id @ fundecl typ)
-        | Global ty -> ("global", opt_id id @ [ globaltype ty ])
-        | Tag typ -> ("tag", opt_id id @ fundecl typ)
+        | Func typ -> ("func", fundecl typ)
+        | Global ty -> ("global", [ globaltype ty ])
+        | Tag typ -> ("tag", fundecl typ)
         | Memory l -> ("memory", limits l)
         | Table ty -> ("table", tabletype ty)
       in
@@ -588,7 +624,7 @@ let modulefield f =
           List
             [
               Block [ Atom "import"; quoted_string module_; quoted_string name ];
-              List [ Block (Atom kind :: typ) ];
+              List [ Block (Atom kind :: (opt_id id @ typ)) ];
             ]
       | _ ->
           List
@@ -635,7 +671,6 @@ let modulefield f =
         (match init with
         | None -> []
         | Some init -> [ List [ Atom "data"; quoted_string init ] ]))
-  (*ZZZ*)
   | Table { id; typ; init; exports = e } ->
       List
         (Block
@@ -649,7 +684,14 @@ let modulefield f =
         (match init with
         | Init_expr i -> instrs i
         | Init_segment seg ->
-            [ List (Atom "elem" :: List.map (fun e -> expr "item" e) seg) ]))
+            [
+              List
+                (Atom "elem"
+                ::
+                (match function_indices typ.reftype seg with
+                | Some lst -> List.map index lst
+                | None -> List.map (fun e -> expr "item" e) seg));
+            ]))
   | Export { name; kind; index = i } ->
       List
         [
@@ -680,8 +722,10 @@ let modulefield f =
                    else [ List [ Atom "table"; index idx ] ])
                   @ [ expr "offset" ofs ]
               | Declare -> [ Atom "declare" ]))
-        :: reftype typ
-        :: List.map (fun e -> expr "item" e) init)
+        ::
+        (match function_indices typ init with
+        | Some lst -> Atom "func" :: List.map index lst
+        | None -> reftype typ :: List.map (fun e -> expr "item" e) init))
 
 let module_ f (id, fields) =
   Format.fprintf f "%a@." (format_sexp false)

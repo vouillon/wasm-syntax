@@ -146,6 +146,12 @@ struct
     align : Uint64.t (* The wasm test suite contains large align values *);
   }
 
+  type catch =
+    | Catch of X.idx * X.idx
+    | CatchRef of X.idx * X.idx
+    | CatchAll of X.idx
+    | CatchAllRef of X.idx
+
   type 'info instr_desc =
     | Block of {
         label : X.label;
@@ -162,6 +168,12 @@ struct
         typ : blocktype option;
         if_block : 'info instr list;
         else_block : 'info instr list;
+      }
+    | TryTable of {
+        label : X.label;
+        typ : blocktype option;
+        catches : catch list;
+        block : 'info instr list;
       }
     | Try of {
         label : X.label;

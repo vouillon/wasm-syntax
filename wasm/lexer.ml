@@ -415,7 +415,9 @@ let rec token lexbuf =
   | "try_table" -> TRY_TABLE
   | "do" -> DO
   | "catch" -> CATCH
+  | "catch_ref" -> CATCH_REF
   | "catch_all" -> CATCH_ALL
+  | "catch_all_ref" -> CATCH_ALL_REF
   | "throw" -> THROW
   | "align=", uN ->
       MEM_ALIGN
