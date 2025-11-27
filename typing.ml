@@ -730,27 +730,27 @@ let rec instruction ctx i =
                                    }))
                             typ.params))
                   in
-                  let* () =
-                    push_results
-                      (Array.to_list
-                         (Array.map
-                            (fun typ ->
-                              ( i.info,
-                                (*ZZZ*)
-                                UnionFind.make
-                                  (Valtype
-                                     {
-                                       typ;
-                                       internal = valtype ctx.type_context typ;
-                                     }) ))
-                            typ.results))
-                  in
-                  let* () =
-                    pop_args ctx
-                      (List.map
-                         (fun typ -> UnionFind.make (Valtype typ))
-                         ctx.return_types)
-                  in
+                  with_empty_stack
+                    (let* () =
+                       push_results
+                         (Array.to_list
+                            (Array.map
+                               (fun typ ->
+                                 ( i.info,
+                                   (*ZZZ*)
+                                   UnionFind.make
+                                     (Valtype
+                                        {
+                                          typ;
+                                          internal =
+                                            valtype ctx.type_context typ;
+                                        }) ))
+                               typ.results))
+                     in
+                     pop_args ctx
+                       (List.map
+                          (fun typ -> UnionFind.make (Valtype typ))
+                          ctx.return_types));
                   unreachable
               | _ -> assert false)
           | _ -> assert false (*ZZZ*)))
@@ -1380,8 +1380,7 @@ let rec instruction ctx i =
       let* ty2 = pop_any in
       match (ty1, ty2) with
       | None, None -> return ()
-      | Some ty1, None -> push i.info ty1
-      | None, Some ty2 -> push i.info ty2
+      | Some _, None | None, Some _ -> assert false (*ZZZ*)
       | Some ty1, Some ty2 -> (
           match (UnionFind.find ty1, UnionFind.find ty2) with
           | Valtype { internal = I32; _ }, Valtype { internal = I32; _ }

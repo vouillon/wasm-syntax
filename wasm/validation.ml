@@ -121,6 +121,7 @@ type module_context = {
   tables : tabletype Sequence.t;
   globals : globaltype Sequence.t;
   tags : int Sequence.t;
+  exports : (string, unit) Hashtbl.t;
 }
 
 type ctx = {
@@ -157,8 +158,8 @@ let print_valtype f ty =
   | V128 -> Format.fprintf f "v128"
   | Ref { nullable; typ } ->
       if nullable then
-        Format.fprintf f "@[<1>(ref@ null@ %a)]" print_heaptype typ
-      else Format.fprintf f "@[<1>(ref@ %a)]" print_heaptype typ
+        Format.fprintf f "@[<1>(ref@ null@ %a)@]" print_heaptype typ
+      else Format.fprintf f "@[<1>(ref@ %a)@]" print_heaptype typ
   | Tuple _ -> assert false
 
 let pop_any st =
@@ -316,6 +317,7 @@ let rec repeat n f =
     repeat (n - 1) f
 
 let rec instruction ctx (i : _ Ast.Text.instr) =
+  if false then Format.eprintf "%a@." Output.instr i;
   match i.desc with
   | Block { label; typ; block = b } ->
       let params, results = blocktype ctx.modul.types typ in
@@ -399,7 +401,9 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           let* () = push (Ref { nullable = false; typ }) in
           let params = branch_target ctx idx in
           let* () = pop_args ctx params in
-          push_results params
+          let* () = push_results params in
+          let* _ = pop_any in
+          return ()
       | Some _ -> assert false (*ZZZ*))
   | Br_on_cast (idx, ty1, ty2) ->
       let ty1 = reftype ctx.modul.types ty1 in
@@ -450,8 +454,9 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       | Struct _ | Array _ -> assert false (*ZZZ*)
       | Func { params; results } ->
           let* () = pop_args ctx (Array.to_list params) in
-          let* () = push_results (Array.to_list results) in
-          let* () = pop_args ctx ctx.return_types in
+          with_empty_stack
+            (let* () = push_results (Array.to_list results) in
+             pop_args ctx ctx.return_types);
           unreachable)
   | ReturnCallRef idx -> (
       let ty = resolve_type_index ctx.modul.types idx in
@@ -460,8 +465,9 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       | Func { params; results } ->
           let* () = pop ctx (Ref { nullable = true; typ = Type ty }) in
           let* () = pop_args ctx (Array.to_list params) in
-          let* () = push_results (Array.to_list results) in
-          let* () = pop_args ctx ctx.return_types in
+          with_empty_stack
+            (let* () = push_results (Array.to_list results) in
+             pop_args ctx ctx.return_types);
           unreachable)
   (*
     | ReturnCallIndirect of X.idx * X.typeuse
@@ -483,8 +489,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           push ty1
       | Some ty, None | None, Some ty ->
           (*ZZZ*)
-          assert (number_or_vec ty);
-          push ty)
+          assert false)
   (*
     | Select of X.valtype option
 *)
@@ -736,7 +741,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
 *)
   | _ ->
       Format.eprintf "%a@." Output.instr i;
-      assert false
+      raise Exit
 
 and instructions ctx l =
   match l with
@@ -807,12 +812,21 @@ let typeuse ctx (idx, sign) =
         |]
   | None, None -> assert false
 
+let register_exports ctx lst =
+  List.iter
+    (fun name ->
+      assert (not (Hashtbl.mem ctx.exports name));
+      (*ZZZ*)
+      Hashtbl.add ctx.exports name ())
+    lst
+
 let build_initial_env ctx fields =
   List.iter
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
-      | Import { id; desc; _ } -> (
+      | Import { id; desc; exports; module_ = _; name = _ } -> (
           (* ZZZ Check for non-import fields *)
+          register_exports ctx exports;
           match desc with
           | Func tu -> Sequence.register ctx.functions id (typeuse ctx.types tu)
           | Memory limits -> Sequence.register ctx.memories id limits
@@ -835,7 +849,7 @@ let globals ctx fields =
   List.iter
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
-      | Global { id; typ; init; _ } ->
+      | Global { id; typ; init; exports } ->
           let typ = globaltype ctx.types typ in
           with_empty_stack
             (let ctx =
@@ -848,7 +862,8 @@ let globals ctx fields =
              in
              let* () = instructions ctx init in
              pop ctx typ.typ);
-          Sequence.register ctx.globals id typ
+          Sequence.register ctx.globals id typ;
+          register_exports ctx exports
       | _ -> ())
     fields
 
@@ -856,7 +871,7 @@ let functions ctx fields =
   List.iter
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
-      | Func { typ; locals = locs; instrs; _ } ->
+      | Func { id = _; typ; locals = locs; instrs; exports } ->
           let func_typ =
             match
               (Types.get_subtype ctx.subtyping_info (typeuse ctx.types typ)).typ
@@ -887,7 +902,28 @@ let functions ctx fields =
                }
              in
              let* () = instructions ctx instrs in
-             pop_args ctx return_types)
+             pop_args ctx return_types);
+          register_exports ctx exports
+      | _ -> ())
+    fields
+
+let exports_and_start ctx fields =
+  let start_count = ref 0 in
+  List.iter
+    (fun (field : _ Ast.Text.modulefield) ->
+      match field with
+      | Export { name; kind; index } -> (
+          register_exports ctx [ name ];
+          match kind with
+          | Func -> ignore (Sequence.get ctx.functions index)
+          | Memory -> ignore (Sequence.get ctx.memories index)
+          | Table -> ignore (Sequence.get ctx.tables index)
+          | Tag -> ignore (Sequence.get ctx.tags index)
+          | Global -> ignore (Sequence.get ctx.globals index))
+      | Start idx ->
+          assert (!start_count = 0);
+          incr start_count;
+          ignore (Sequence.get ctx.functions idx)
       | _ -> ())
     fields
 
@@ -915,6 +951,7 @@ let f (_, fields) =
       tables = Sequence.make "tables";
       globals = Sequence.make "global";
       tags = Sequence.make "tag";
+      exports = Hashtbl.create 16;
     }
   in
   build_initial_env ctx fields;
@@ -922,4 +959,5 @@ let f (_, fields) =
     { ctx with subtyping_info = Types.subtyping_info type_context.types }
   in
   globals ctx fields;
-  functions ctx fields
+  functions ctx fields;
+  exports_and_start ctx fields

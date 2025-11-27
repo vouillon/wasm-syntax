@@ -167,6 +167,7 @@ let runtest filename =
                         let ast =
                           ModuleParser.parse_from_string ~filename txt
                         in
+                        Wasm.Validation.f ast;
                         check_wellformed ast;
                         if false then
                           Format.printf "@[<2>Result:@ %a@]@."
@@ -185,12 +186,23 @@ let runtest filename =
             let _ast = ModuleParser.parse_from_string ~filename text in
             ())
           lst;
-        if false then
+        if true then
           List.iter
             (fun (status, m) ->
               match (status, m) with
               | `Valid, m -> Wasm.Validation.f m
-              | `Invalid _, _ -> (* validate (should fail) *) ())
+              | `Invalid reason, m ->
+                  let ok =
+                    in_child_process ~quiet:true (fun () ->
+                        Wasm.Validation.f m;
+                        if false then
+                          Format.printf "@[<2>Result:@ %a@]@."
+                            Wasm.Output.module_ m)
+                  in
+                  if ok then
+                    Format.eprintf
+                      "@[<2>Validation should have failed (%s):@ %a@]@." reason
+                      Wasm.Output.module_ m)
             lst)
   in
   ()

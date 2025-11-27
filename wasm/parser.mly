@@ -476,7 +476,7 @@ plaininstr:
 | ARRAY_INIT_ELEM i1 = idx i2 = idx { with_loc $sloc (ArrayInitElem (i1, i2)) }
 | I32_CONST i = i32 { with_loc $sloc (Const (I32 i)) }
 | I64_CONST i = i64 { with_loc $sloc (Const (I64 i)) }
-| F32_CONST f = f32 { with_loc $sloc (Const (F64 f)) }
+| F32_CONST f = f32 { with_loc $sloc (Const (F32 f)) }
 | F64_CONST f = f64 { with_loc $sloc (Const (F64 f)) }
 | TUPLE_MAKE l = u32 { with_loc $sloc (TupleMake l) }
 | TUPLE_EXTRACT l = u32 i = u32

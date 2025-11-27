@@ -167,6 +167,14 @@ let heap_subtype (subtyping_info : subtype array) (ty : heaptype)
       match subtyping_info.(i).typ with
       | Func _ -> true
       | Struct _ | Array _ -> false)
+  | None_, Type i -> (
+      match subtyping_info.(i).typ with
+      | Struct _ | Array _ -> true
+      | Func _ -> false)
+  | NoFunc, Type i -> (
+      match subtyping_info.(i).typ with
+      | Func _ -> true
+      | Struct _ | Array _ -> false)
   | Type i, Type i' -> subtype subtyping_info i i'
   | _ -> false
 
