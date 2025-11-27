@@ -192,7 +192,7 @@ let map_fst f (x, y) = (f x, y)
 %}
 
 %start <string option * Ast.location modulefield list> parse
-%start <([`Valid | `Invalid | `Malformed ] *
+%start <([`Valid | `Invalid of string | `Malformed of string ] *
          [`Parsed of string option * Ast.location modulefield list
          | `Text of string ]) list> parse_script
 
@@ -841,8 +841,8 @@ assertion:
 | "(" ASSERT_EXCEPTION action ")" { [] }
 | "(" ASSERT_TRAP action STRING ")" { [] }
 | "(" ASSERT_EXHAUSTION action STRING ")" { [] }
-| "(" ASSERT_MALFORMED m = module_ STRING ")" { m `Malformed }
-| "(" ASSERT_INVALID m = module_ STRING ")" { m `Invalid }
+| "(" ASSERT_MALFORMED m = module_ r = STRING ")" { m (`Malformed r) }
+| "(" ASSERT_INVALID m = module_ r = STRING ")" { m (`Invalid r) }
 | "(" ASSERT_UNLINKABLE m = script_instance STRING ")" { m `Valid }
 | "(" ASSERT_TRAP m = script_instance STRING ")" { m `Valid }
 

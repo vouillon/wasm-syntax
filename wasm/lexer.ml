@@ -31,6 +31,16 @@ let newline = [%sedlex.regexp? 10 | 13 | 13, 10]
 let linecomment = [%sedlex.regexp? ";;", Star linechar, (newline | eof)]
 let format = [%sedlex.regexp? '\n' | 9]
 
+let stringchar =
+  [%sedlex.regexp?
+    ( Sub (any, (0 .. 31 | 0x7f | '"' | '\\'))
+    | "\\t" | "\\n" | "\\r" | "\\'" | "\\\"" | "\\\\"
+    | "\\u{", hexnum, "}" )]
+
+let stringelem = [%sedlex.regexp? stringchar | "\\", hexdigit, hexdigit]
+let string = [%sedlex.regexp? '"', Star stringelem, '"']
+let reserved = [%sedlex.regexp? Plus (idchar | ',' | '[' | ']' | '{' | '}')]
+
 (*
 let space = [%sedlex.regexp? ' ' | format | comment]
 *)
@@ -57,6 +67,12 @@ let rec string lexbuf =
       let s = Buffer.contents string_buffer in
       Buffer.clear string_buffer;
       s
+  | '"', ('"' | reserved) ->
+      raise
+        (Parsing.Syntax_error
+           ( Sedlexing.lexing_positions lexbuf,
+             Printf.sprintf "Unknown operator '%s'.\n"
+               (Sedlexing.Utf8.lexeme lexbuf) ))
   | Plus (Sub (any, (0 .. 31 | 0x7f | '"' | '\\'))) ->
       Buffer.add_string string_buffer (Sedlexing.Utf8.lexeme lexbuf);
       string lexbuf
@@ -464,7 +480,13 @@ let rec token lexbuf =
       raise
         (Parsing.Syntax_error
            ( Sedlexing.lexing_positions lexbuf,
-             Printf.sprintf "Unkown keyword '%s'.\n"
+             Printf.sprintf "Unknown keyword '%s'.\n"
+               (Sedlexing.Utf8.lexeme lexbuf) ))
+  | reserved, Opt '"' ->
+      raise
+        (Parsing.Syntax_error
+           ( Sedlexing.lexing_positions lexbuf,
+             Printf.sprintf "Unknown operator '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))
   | _ ->
       raise

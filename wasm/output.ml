@@ -728,7 +728,7 @@ let modulefield f =
         | None -> reftype typ :: List.map (fun e -> expr "item" e) init))
 
 let module_ f (id, fields) =
-  Format.fprintf f "%a@." (format_sexp false)
+  Format.fprintf f "%a" (format_sexp false)
     (List [ Atom "module"; Block (opt_id id @ List.map modulefield fields) ])
 
-let instr f i = Format.fprintf f "%a@." (format_sexp false) (instr i)
+let instr f i = Format.fprintf f "%a" (format_sexp false) (instr i)
