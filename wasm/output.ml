@@ -141,7 +141,9 @@ let typeuse' (idx, typ) = option typeuse idx @ option functype typ
 
 let blocktype =
   option @@ fun t ->
-  match t with Valtype t -> [ valtype t ] | Typeuse t -> typeuse' t
+  match t with
+  | Valtype t -> [ List [ Atom "result"; valtype t ] ]
+  | Typeuse t -> typeuse' t
 
 let utf8_length s =
   let segmenter = Uuseg.create `Grapheme_cluster in
@@ -212,8 +214,8 @@ let int_un_op width op =
   | Ctz -> "ctz"
   | Popcnt -> "popcnt"
   | Eqz -> "eqz"
-  | Trunc (sz, s) -> signage "trunc_" s ^ size sz
-  | TruncSat (sz, s) -> signage "trunc_sat_" s ^ size sz
+  | Trunc (sz, s) -> signage "trunc" s ^ "_" ^ size sz
+  | TruncSat (sz, s) -> signage "trunc_sat" s ^ "_" ^ size sz
   | Reinterpret -> "reinterpret_f" ^ width
   | ExtendS sz -> (
       match sz with

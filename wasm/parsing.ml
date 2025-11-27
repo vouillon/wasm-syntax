@@ -96,8 +96,7 @@ struct
         checkpoint
     with Syntax_error (loc, msg) -> report_syntax_error loc msg
 
-  let parse ~filename =
-    let text = read filename in
+  let parse_from_string ~filename text =
     try
       let lexbuf = initialize_lexing filename text in
       let supplier = lexer_lexbuf_to_supplier Lexer.token lexbuf in
@@ -108,4 +107,6 @@ struct
     with
     | Fast_parser.Error -> parse_with_errors filename text
     | Syntax_error (loc, msg) -> report_syntax_error loc msg
+
+  let parse ~filename = parse_from_string ~filename (read filename)
 end

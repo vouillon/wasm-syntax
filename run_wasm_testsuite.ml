@@ -1,6 +1,8 @@
 (*
 - perform parsing and validation tests
 - output the tests and read them back to test the text output
+  ==> we need to isolate the tests from what is parsed
+- fix remaining issues
 - conversion to rust-like format and typing
 *)
 
@@ -23,6 +25,12 @@ let dirs =
     "/home/jerome/sources/Wasm/spectec/test-interpreter";
   ]
 
+type script =
+  ([ `Valid | `Invalid | `Malformed ]
+  * [ `Parsed of string option * Ast.location Wasm.Ast.Text.modulefield list
+    | `Text of string ])
+  list
+
 module Parser = struct
   include Wasm.Parser
 
@@ -37,10 +45,19 @@ module Fast_parser = struct
   let parse = Wasm.Fast_parser.parse_script
 end
 
-module P =
+module ModuleParser =
   Wasm.Parsing.Make_parser
     (struct
-      type t = unit list
+      type t = string option * Ast.location Wasm.Ast.Text.modulefield list
+    end)
+    (Wasm.Parser)
+    (Wasm.Fast_parser)
+    (Wasm.Lexer)
+
+module ScriptParser =
+  Wasm.Parsing.Make_parser
+    (struct
+      type t = script
     end)
     (Parser)
     (Fast_parser)
@@ -60,8 +77,34 @@ let runtest filename =
   prerr_endline filename;
   let _ =
     in_child_process (fun () ->
-        let _ast = P.parse ~filename in
-        ())
+        let lst = ScriptParser.parse ~filename in
+        (* Parsing *)
+        let lst =
+          List.filter_map
+            (fun (status, m) ->
+              match (status, m) with
+              | ((`Valid | `Invalid) as status), `Parsed m -> Some (status, m)
+              | ((`Valid | `Invalid) as status), `Text txt ->
+                  Some (status, ModuleParser.parse_from_string ~filename txt)
+              | `Malformed, `Parsed _ -> assert false
+              | `Malformed, `Text _ ->
+                  (* parse (should fail) *)
+                  None)
+            lst
+        in
+        List.iter
+          (fun (_, m) ->
+            let text = Format.asprintf "%a@." Wasm.Output.module_ m in
+            (*            prerr_endline text;*)
+            let _ast = ModuleParser.parse_from_string ~filename text in
+            ())
+          lst;
+        List.iter
+          (fun (status, m) ->
+            match (status, m) with
+            | `Valid, _ -> (* validate *) ()
+            | `Invalid, _ -> (* validate (should fail) *) ())
+          lst)
   in
   ()
 
@@ -69,5 +112,7 @@ let () =
   iter_files dirs
     (fun p ->
       List.mem p
-        [ "spec-test-1"; "memory64"; "simd"; "multi-memory"; "relaxed-simd" ])
+        [
+          "spec-test-1" (* invalid syntax *); "memory64"; "simd"; "relaxed-simd";
+        ])
     ".wast" runtest

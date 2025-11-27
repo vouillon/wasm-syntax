@@ -19,4 +19,5 @@ end) (_ : sig
   val token : Sedlexing.lexbuf -> Parser.token
 end) : sig
   val parse : filename:string -> Output.t
+  val parse_from_string : filename:string -> string -> Output.t
 end

@@ -189,8 +189,10 @@ let with_loc (loc_start, loc_end) desc =
 let map_fst f (x, y) = (f x, y)
 %}
 
-%start <string option * Ast.location Ast.Text.modulefield list> parse
-%start <unit list> parse_script
+%start <string option * Ast.location modulefield list> parse
+%start <([`Valid | `Invalid | `Malformed ] *
+         [`Parsed of string option * Ast.location modulefield list
+         | `Text of string ]) list> parse_script
 
 %%
 
@@ -752,31 +754,33 @@ parse_script:
 | inline_module EOF { [] }
 
 script:
-| c = cmd* { c }
+| c = cmd* { List.concat c }
 
 inline_module:
-| modulefield + { }
+| l = modulefield + { [(`Valid, `Parsed (None, l))] }
 
 cmd:
-| c = module_
-| c = instance
-| c = register
-| c = action
-| c = assertion
-| c = meta
-  { c }
+| m = module_ { m `Valid }
+| instance { [] }
+| register { [] }
+| action { [] }
+| c = assertion { c }
+| c = meta { c }
+
 
 module_:
-| "(" MODULE DEFINITION ? name = ID ? l = modulefield * ")" { ignore (name, l) }
-| "(" MODULE DEFINITION ? ID ? BINARY STRING *  ")" {}
-| "(" MODULE DEFINITION ? ID ? QUOTE STRING *  ")" {}
+| "(" MODULE DEFINITION ? name = ID ? l = modulefield * ")"
+  { fun status -> [(status, `Parsed (name, l))] }
+| "(" MODULE DEFINITION ? ID ? BINARY STRING *  ")" { fun _ -> [] }
+| "(" MODULE DEFINITION ? ID ? QUOTE s = STRING *  ")"
+  { fun status -> [(status, `Text (String.concat "" s))] }
 
 script_instance:
-| instance { }
-| module_ { }
+| instance { fun _ -> [] }
+| m = module_ { m }
 
 instance:
-| "(" MODULE INSTANCE option(ID ID ? {}) ")" {}
+| "(" MODULE INSTANCE option(ID ID ? {}) ")" { }
 
 register:
 | "(" REGISTER STRING ID ? ")" {}
@@ -808,16 +812,15 @@ vec_shape:
 {}
 
 assertion:
-| "(" ASSERT_RETURN action result_pat* ")"
-| "(" ASSERT_RETURN_NAN action ")"
-| "(" ASSERT_EXCEPTION action ")"
-| "(" ASSERT_TRAP action STRING ")"
-| "(" ASSERT_EXHAUSTION action STRING ")"
-| "(" ASSERT_MALFORMED module_ STRING ")"
-| "(" ASSERT_INVALID module_ STRING ")"
-| "(" ASSERT_UNLINKABLE script_instance STRING ")"
-| "(" ASSERT_TRAP script_instance STRING ")"
-{}
+| "(" ASSERT_RETURN action result_pat* ")" { [] }
+| "(" ASSERT_RETURN_NAN action ")" { [] }
+| "(" ASSERT_EXCEPTION action ")" { [] }
+| "(" ASSERT_TRAP action STRING ")" { [] }
+| "(" ASSERT_EXHAUSTION action STRING ")" { [] }
+| "(" ASSERT_MALFORMED m = module_ STRING ")" { m `Malformed }
+| "(" ASSERT_INVALID m = module_ STRING ")" { m `Invalid }
+| "(" ASSERT_UNLINKABLE m = script_instance STRING ")" { m `Valid }
+| "(" ASSERT_TRAP m = script_instance STRING ")" { m `Valid }
 
 result_pat:
 | "(" I32_CONST i32 ")"
@@ -841,7 +844,6 @@ result_pat:
 {}
 
 meta:
-| "(" SCRIPT ID? script ")"
-| "(" INPUT ID? STRING ")"
-| "(" OUTPUT ID? STRING? ")"
-{}
+| "(" SCRIPT ID? s = script ")" { s }
+| "(" INPUT ID? STRING ")" { [] }
+| "(" OUTPUT ID? STRING? ")" { [] }
