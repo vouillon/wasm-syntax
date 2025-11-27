@@ -604,7 +604,7 @@ let modulefield f =
                  | _ -> [ List [ Atom "offset"; instrs e ] ]))
            @ [ quoted_string init ]))
   | Start idx -> List [ Atom "start"; index idx ]
-  | _ -> List [ Atom "other" ]
+  | Memory _ | Table _ | Export _ | Elem _ -> List [ Atom "other" ]
 (*ZZZ*)
 
 let module_ f (id, fields) =

@@ -856,7 +856,7 @@ let functions ctx fields =
   List.iter
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
-      | Func { id; typ; locals = locs; instrs; _ } ->
+      | Func { typ; locals = locs; instrs; _ } ->
           let func_typ =
             match
               (Types.get_subtype ctx.subtyping_info (typeuse ctx.types typ)).typ
@@ -877,7 +877,6 @@ let functions ctx fields =
             (fun (id, typ) ->
               Sequence.register locals id (valtype ctx.types typ))
             locs;
-          Format.eprintf "=== %s@." (Option.value ~default:"" id);
           with_empty_stack
             (let ctx =
                {
