@@ -189,6 +189,14 @@ let with_loc (loc_start, loc_end) desc =
   {Ast.desc; info = { Ast.loc_start; loc_end }}
 
 let map_fst f (x, y) = (f x, y)
+
+
+let check_constant f loc s =
+  if not (f s) then
+    raise
+      (Parsing.Syntax_error
+         ( loc,
+           Printf.sprintf "Constant %s is out of range.\n" s))
 %}
 
 %start <string option * Ast.location modulefield list> parse
@@ -211,14 +219,16 @@ i64:
 | i = INT { i }
 
 f32:
-  n = NAT { n }
-| i = INT { i }
-| f = FLOAT { f }
+  f = NAT
+| f = INT
+| f = FLOAT
+ { f }
 
 f64:
-  n = NAT { n }
-| i = INT { i }
-| f = FLOAT { f }
+  f = NAT
+| f = INT
+| f = FLOAT
+ { f }
 
 idx:
 | n = u32 { with_loc $sloc (Num n) }
@@ -474,10 +484,14 @@ plaininstr:
 | ARRAY_COPY i1 = idx i2 = idx { with_loc $sloc (ArrayCopy (i1, i2)) }
 | ARRAY_INIT_DATA i1 = idx i2 = idx { with_loc $sloc (ArrayInitData (i1, i2)) }
 | ARRAY_INIT_ELEM i1 = idx i2 = idx { with_loc $sloc (ArrayInitElem (i1, i2)) }
-| I32_CONST i = i32 { with_loc $sloc (Const (I32 i)) }
-| I64_CONST i = i64 { with_loc $sloc (Const (I64 i)) }
-| F32_CONST f = f32 { with_loc $sloc (Const (F32 f)) }
-| F64_CONST f = f64 { with_loc $sloc (Const (F64 f)) }
+| I32_CONST i = i32
+  { check_constant Misc.is_int32 $sloc i; with_loc $sloc (Const (I32 i)) }
+| I64_CONST i = i64
+  { check_constant Misc.is_int64 $sloc i; with_loc $sloc (Const (I64 i)) }
+| F32_CONST f = f32
+  { check_constant Misc.is_float32 $sloc f; with_loc $sloc (Const (F32 f)) }
+| F64_CONST f = f64
+  { check_constant Misc.is_float64 $sloc f; with_loc $sloc (Const (F64 f)) }
 | TUPLE_MAKE l = u32 { with_loc $sloc (TupleMake l) }
 | TUPLE_EXTRACT l = u32 i = u32
   { with_loc $sloc (TupleExtract (l, i)) }

@@ -4,6 +4,8 @@
   ==> we need to isolate the tests from what is parsed
 - fix remaining issues
 - conversion to rust-like format and typing
+- Somehow checks that round-tripping yield the identity
+  (on unfolded code without identifiers?)
 *)
 
 type pending_process = {
