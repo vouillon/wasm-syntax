@@ -9,6 +9,10 @@ ZZZ
 - ref.func declarations (can be relaxed)
 *)
 
+(* Check that all occurences of instructions ref.func uses a function
+   index that occurs in the module outside functions *)
+let validate_refs = ref true
+
 open Ast.Binary.Types
 
 module Sequence = struct
@@ -163,6 +167,7 @@ type module_context = {
   data : unit Sequence.t;
   elem : reftype Sequence.t;
   exports : (string, unit) Hashtbl.t;
+  refs : (int, unit) Hashtbl.t;
 }
 
 type ctx = {
@@ -347,6 +352,16 @@ let top_heap_type ctx (t : heaptype) : heaptype =
       | Struct _ | Array _ -> Any
       | Func _ -> Func)
 
+let storage_subtype info ty ty' =
+  match (ty, ty') with
+  | Packed I8, Packed I8 | Packed I16, Packed I16 -> true
+  | Value ty, Value ty' -> Types.val_subtype info ty ty'
+  | Packed I8, Packed I16
+  | Packed I16, Packed I8
+  | Packed _, Value _
+  | Value _, Packed _ ->
+      false
+
 let diff_ref_type t1 t2 =
   { nullable = t1.nullable && not t2.nullable; typ = t1.typ }
 
@@ -489,13 +504,13 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop_args ctx params in
       let* () = push_results params in
       let* _ = pop_any in
-      push (Ref (diff_ref_type ty2 ty1))
+      push (Ref (diff_ref_type ty1 ty2))
   | Br_on_cast_fail (idx, ty1, ty2) ->
       let ty1 = reftype ctx.modul.types ty1 in
       let ty2 = reftype ctx.modul.types ty2 in
       assert (Types.val_subtype ctx.modul.subtyping_info (Ref ty2) (Ref ty1));
       let* () = pop ctx (Ref ty1) in
-      let* () = push (Ref (diff_ref_type ty2 ty1)) in
+      let* () = push (Ref (diff_ref_type ty1 ty2)) in
       let params = branch_target ctx idx in
       let* () = pop_args ctx params in
       let* () = push_results params in
@@ -682,8 +697,11 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop ctx (Ref typ.reftype) in
       pop ctx I32
   | TableCopy (idx, idx') ->
-      ignore (Sequence.get ctx.modul.tables idx);
-      ignore (Sequence.get ctx.modul.tables idx');
+      let ty = Sequence.get ctx.modul.tables idx in
+      let ty' = Sequence.get ctx.modul.tables idx' in
+      assert (
+        Types.val_subtype ctx.modul.subtyping_info (Ref ty'.reftype)
+          (Ref ty.reftype));
       let* () = pop ctx I32 in
       let* () = pop ctx I32 in
       pop ctx I32
@@ -713,12 +731,9 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let typ = heaptype ctx.modul.types typ in
       push (Ref { nullable = true; typ })
   | RefFunc idx ->
-      push
-        (Ref
-           {
-             nullable = false;
-             typ = Type (Sequence.get ctx.modul.functions idx);
-           })
+      let i = Sequence.get ctx.modul.functions idx in
+      assert ((not !validate_refs) || Hashtbl.mem ctx.modul.refs i);
+      push (Ref { nullable = false; typ = Type i })
   | RefIsNull -> (
       let* ty = pop_any in
       match ty with
@@ -792,6 +807,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
         | Struct fields ->
             (*ZZZ*)
+            assert fields.(n).mut;
             pop ctx (unpack_type fields.(n))
         | Array _ | Func _ -> assert false (*ZZZ*)
       in
@@ -876,9 +892,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
        with
       | Array field1, Array field2 ->
           assert field1.mut;
-          assert (
-            Types.val_subtype ctx.modul.subtyping_info (unpack_type field2)
-              (unpack_type field1))
+          assert (storage_subtype ctx.modul.subtyping_info field1.typ field2.typ)
       | _ -> (*ZZZ *) assert false);
       let* () = pop ctx I32 in
       let* () = pop ctx I32 in
@@ -997,7 +1011,8 @@ and block ctx label params results br_params block =
 let rec check_constant_instruction ctx (i : _ Ast.Text.instr) =
   match i.desc with
   | GlobalGet idx -> assert (not (Sequence.get ctx.globals idx).mut)
-  | RefNull _ | RefFunc _ | StructNew _ | StructNewDefault _ | ArrayNew _
+  | RefFunc i -> Hashtbl.replace ctx.refs (Sequence.get ctx.functions i) ()
+  | RefNull _ | StructNew _ | StructNewDefault _ | ArrayNew _
   | ArrayNewDefault _ | ArrayNewFixed _ | RefI31 | Const _
   | BinOp (I32 (Add | Sub | Mul) | I64 (Add | Sub | Mul))
   | ExternConvertAny | AnyConvertExtern ->
@@ -1305,6 +1320,7 @@ let f (_, fields) =
       data = Sequence.make "data";
       elem = Sequence.make "data";
       exports = Hashtbl.create 16;
+      refs = Hashtbl.create 16;
     }
   in
   build_initial_env ctx fields;

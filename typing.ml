@@ -227,6 +227,19 @@ let diff_ref_type t1 t2 =
 let diff_ref_type_internal (t1 : Internal.reftype) (t2 : Internal.reftype) =
   { Internal.nullable = t1.nullable && not t2.nullable; typ = t1.typ }
 
+let storage_subtype ctx ty ty' =
+  match (ty, ty') with
+  | Packed I8, Packed I8 | Packed I16, Packed I16 -> true
+  | Value ty, Value ty' ->
+      Wasm.Types.val_subtype ctx.subtyping_info
+        (valtype ctx.type_context ty)
+        (valtype ctx.type_context ty')
+  | Packed I8, Packed I16
+  | Packed I16, Packed I8
+  | Packed _, Value _
+  | Value _, Packed _ ->
+      false
+
 let subtype ctx ty ty' =
   let ity = UnionFind.find ty in
   let ity' = UnionFind.find ty' in
@@ -733,24 +746,7 @@ let rec instruction ctx i =
               match (Tbl.find ctx.types ty, Tbl.find ctx.types ty') with
               | (_, Array typ), (_, Array typ') ->
                   assert typ.mut;
-                  let typ = unpack_type typ in
-                  let typ' = unpack_type typ' in
-                  let ty =
-                    UnionFind.make
-                      (Valtype { typ; internal = valtype ctx.type_context typ })
-                  in
-                  let ty' =
-                    UnionFind.make
-                      (Valtype
-                         {
-                           typ = typ';
-                           internal = valtype ctx.type_context typ';
-                         })
-                  in
-                  let ok = subtype ctx ty' ty in
-                  if not ok then
-                    Format.eprintf "%a <: %a@." output_inferred_type ty'
-                      output_inferred_type ty;
+                  let ok = storage_subtype ctx typ'.typ typ.typ in
                   assert ok;
                   return ()
               | _ -> assert false)
@@ -1044,6 +1040,7 @@ let rec instruction ctx i =
                       Format.eprintf "struct.set %s/%s@." ty.desc field.desc;
                       assert false
                   | Some typ -> (
+                      assert typ.mut;
                       let typ = unpack_type typ in
                       let ty =
                         UnionFind.make
