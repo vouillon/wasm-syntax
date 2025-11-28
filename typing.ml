@@ -1168,9 +1168,90 @@ let rec instruction ctx i =
               | _ -> assert false (*ZZZ*));
               push i.info
                 (UnionFind.make (Valtype { typ = I32; internal = I32 })))
-      | _ ->
-          Format.eprintf "%a@." Output.instr i;
-          assert false)
+      | Some typ, None | None, Some typ -> (
+          match op with
+          | Eq ->
+              (match UnionFind.find typ with
+              | Valtype { internal = Ref _ as ty; _ } ->
+                  assert (
+                    Wasm.Types.val_subtype ctx.subtyping_info ty
+                      (Ref { nullable = true; typ = Eq }))
+              | Null ->
+                  UnionFind.set typ
+                    (Valtype
+                       {
+                         typ = Ref { nullable = true; typ = Eq };
+                         internal = Ref { nullable = true; typ = Eq };
+                       })
+              | Valtype { internal = I32; _ }
+              | Valtype { internal = I64; _ }
+              | Valtype { internal = F32; _ }
+              | Valtype { internal = F64; _ }
+              | Number | Int | Float ->
+                  ()
+              | _ -> assert false (*ZZZ*));
+              push i.info
+                (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+          | Add | Sub | Mul ->
+              (match UnionFind.find typ with
+              | Valtype { internal = I32; _ }
+              | Valtype { internal = I64; _ }
+              | Valtype { internal = F32; _ }
+              | Valtype { internal = F64; _ }
+              | Number | Int | Float ->
+                  ()
+              | _ -> assert false (*ZZZ*));
+              push i.info typ
+          | Div (Some _) | Rem _ | And | Or | Xor | Shl | Shr _ ->
+              check_int_bin_op i typ typ
+          | Div None -> check_float_bin_op i typ typ
+          | Lt (Some _) | Gt (Some _) | Le (Some _) | Ge (Some _) ->
+              (match UnionFind.find typ with
+              | Valtype { internal = I32; _ }
+              | Valtype { internal = I64; _ }
+              | Number | Int | Float ->
+                  ()
+              | _ -> assert false (*ZZZ*));
+              push i.info
+                (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+          | Lt None | Gt None | Le None | Ge None ->
+              (match UnionFind.find typ with
+              | Valtype { internal = F32; _ }
+              | Valtype { internal = F64; _ }
+              | Number | Int | Float ->
+                  ()
+              | _ -> assert false (*ZZZ*));
+              push i.info
+                (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+          | Ne ->
+              (match UnionFind.find typ with
+              | Valtype { internal = I32; _ }
+              | Valtype { internal = I64; _ }
+              | Valtype { internal = F32; _ }
+              | Valtype { internal = F64; _ }
+              | Number | Int | Float ->
+                  ()
+              | _ -> assert false (*ZZZ*));
+              push i.info
+                (UnionFind.make (Valtype { typ = I32; internal = I32 })))
+      | None, None -> (
+          match op with
+          | Add | Sub | Mul -> push i.info (UnionFind.make Number)
+          | Div (Some _) | Rem _ | And | Or | Xor | Shl | Shr _ ->
+              push i.info (UnionFind.make Int)
+          | Div None -> push i.info (UnionFind.make Float)
+          | Eq
+          | Lt (Some _)
+          | Gt (Some _)
+          | Le (Some _)
+          | Ge (Some _)
+          | Lt None
+          | Gt None
+          | Le None
+          | Ge None
+          | Ne ->
+              push i.info
+                (UnionFind.make (Valtype { typ = I32; internal = I32 }))))
   | UnOp (op, i') -> (
       let* () = instruction ctx i' in
       let* typ = pop_any in
