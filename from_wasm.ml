@@ -310,7 +310,7 @@ module Stack = struct
   type stack = (int option * Ast.location Ast.instr) list
   type 'a t = stack -> stack * 'a
 
-  (* Consume some arguments from the stack *)
+  (* 
   let rec consume n stack =
     if n = 0 then stack
     else
@@ -319,6 +319,7 @@ module Stack = struct
       | (Some n', i) :: rem ->
           if n >= n' then (Some 0, i) :: consume (n - n') stack
           else (Some (n' - n), i) :: rem
+*)
 
   let rec complete n cur =
     if n = 0 then cur else complete (n - 1) (Ast.no_loc Ast.Pop :: cur)
@@ -328,9 +329,14 @@ module Stack = struct
     else
       match stack with
       | (Some 1, instr) :: rem -> grab_rec (n - 1) rem (instr :: cur)
-      | _ -> (consume (n - 1) stack, complete n cur)
+      | _ -> (stack, complete n cur)
 
-  let consume n stack = (consume n stack, ())
+  let consume _ stack =
+    ( (match stack with
+      | (Some 1, instr) :: rem -> (None, instr) :: rem
+      | _ -> stack),
+      () )
+
   let grab n stack = grab_rec n stack []
   let push arity i stack = ((Some arity, i) :: stack, ())
   let push_poly i stack = ((None, i) :: stack, ())
@@ -339,6 +345,9 @@ module Stack = struct
     match stack with
     | (Some 1, i) :: rem -> (rem, i)
     | _ -> (stack, Ast.no_loc Ast.Pop)
+
+  let try_pop stack =
+    match stack with (Some 1, i) :: rem -> (rem, Some i) | _ -> (stack, None)
 
   let run f =
     let st, () = f [] in
@@ -401,30 +410,51 @@ let string_args n args =
     else None
   with Exit -> None
 
-let numtype (ty : Src.valtype) =
+let inttype ty : Ast.valtype =
   match ty with
-  | I32 -> `I32
-  | I64 -> `I64
-  | F32 -> `F32
-  | F64 -> `F64
+  | `I32 -> I32
+  | `I64 -> I64
+  | `F32 -> I32
+  | `F64 -> I64
+  | _ -> assert false
+
+let floattype ty : Ast.valtype =
+  match ty with
+  | `I32 -> F32
+  | `I64 -> F64
+  | `F32 -> F32
+  | `F64 -> F64
   | _ -> assert false
 
 let int_un_op i0 sz (op : Src.int_un_op) =
   let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
-  let* e = Stack.pop in
+  let* e' = Stack.try_pop in
+  let e ty =
+    match e' with
+    | Some e -> e
+    | None -> Ast.no_loc (Ast.Cast (Ast.no_loc Ast.Pop, Valtype ty))
+  in
   Stack.push 1
     (match op with
-    | Clz -> with_loc (StructGet (e, Ast.no_loc "clz"))
-    | Ctz -> with_loc (StructGet (e, Ast.no_loc "ctz"))
-    | Popcnt -> with_loc (StructGet (e, Ast.no_loc "popcnt"))
-    | Eqz -> with_loc (UnOp (Not, e))
+    | Clz -> with_loc (StructGet (e (inttype sz), Ast.no_loc "clz"))
+    | Ctz -> with_loc (StructGet (e (inttype sz), Ast.no_loc "ctz"))
+    | Popcnt -> with_loc (StructGet (e (inttype sz), Ast.no_loc "popcnt"))
+    | Eqz -> with_loc (UnOp (Not, e (inttype sz)))
     | Trunc (_, signage) ->
         with_loc
-          (Cast (e, Signedtype { typ = numtype sz; signage; strict = true }))
+          (Cast
+             (e (floattype sz), Signedtype { typ = sz; signage; strict = true }))
     | TruncSat (_, signage) ->
         with_loc
-          (Cast (e, Signedtype { typ = numtype sz; signage; strict = false }))
-    | Reinterpret -> with_loc (StructGet (e, Ast.no_loc "to_bits"))
+          (Cast
+             (e (floattype sz), Signedtype { typ = sz; signage; strict = false }))
+    | Reinterpret ->
+        with_loc
+          (StructGet
+             ( (let e = e (floattype sz) in
+                if e' = None then e
+                else { e with desc = Ast.Cast (e, Valtype (floattype sz)) }),
+               Ast.no_loc "to_bits" ))
     | ExtendS _ -> with_loc Unreachable (* ZZZ *))
 
 let int_bin_op i0 (op : Src.int_bin_op) =
@@ -460,20 +490,33 @@ let int_bin_op i0 (op : Src.int_bin_op) =
 
 let float_un_op i0 sz (op : Src.float_un_op) =
   let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
-  let* e = Stack.pop in
+  let* e' = Stack.try_pop in
+  let e ty =
+    match e' with
+    | Some e -> e
+    | None -> Ast.no_loc (Ast.Cast (Ast.no_loc Ast.Pop, Valtype ty))
+  in
   Stack.push 1
     (match op with
-    | Neg -> with_loc (UnOp (Neg, e))
-    | Abs -> with_loc (StructGet (e, Ast.no_loc "abs"))
-    | Ceil -> with_loc (StructGet (e, Ast.no_loc "ceil"))
-    | Floor -> with_loc (StructGet (e, Ast.no_loc "floor"))
-    | Trunc -> with_loc (StructGet (e, Ast.no_loc "trunc"))
-    | Nearest -> with_loc (StructGet (e, Ast.no_loc "nearest"))
-    | Sqrt -> with_loc (StructGet (e, Ast.no_loc "sqrt"))
-    | Convert (_, signage) ->
+    | Neg -> with_loc (UnOp (Neg, e (floattype sz)))
+    | Abs -> with_loc (StructGet (e (floattype sz), Ast.no_loc "abs"))
+    | Ceil -> with_loc (StructGet (e (floattype sz), Ast.no_loc "ceil"))
+    | Floor -> with_loc (StructGet (e (floattype sz), Ast.no_loc "floor"))
+    | Trunc -> with_loc (StructGet (e (floattype sz), Ast.no_loc "trunc"))
+    | Nearest -> with_loc (StructGet (e (floattype sz), Ast.no_loc "nearest"))
+    | Sqrt -> with_loc (StructGet (e (floattype sz), Ast.no_loc "sqrt"))
+    | Convert (sz', signage) ->
         with_loc
-          (Cast (e, Signedtype { typ = numtype sz; signage; strict = false }))
-    | Reinterpret -> with_loc (StructGet (e, Ast.no_loc "from_bits")))
+          (Cast
+             ( e (inttype (sz' :> [ `I32 | `I64 | `F32 | `F64 ])),
+               Signedtype { typ = sz; signage; strict = false } ))
+    | Reinterpret ->
+        with_loc
+          (StructGet
+             ( (let e = e (inttype sz) in
+                if e' = None then e
+                else { e with desc = Ast.Cast (e, Valtype (inttype sz)) }),
+               Ast.no_loc "from_bits" )))
 
 let float_bin_op i0 (op : Src.float_bin_op) =
   let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
@@ -610,10 +653,10 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       Stack.push 1 (with_loc (Tee (idx ctx `Local x, e)))
   | BinOp (I32 op) | BinOp (I64 op) -> int_bin_op i op
   | BinOp (F32 op) | BinOp (F64 op) -> float_bin_op i op
-  | UnOp (I64 op) -> int_un_op i I64 op
-  | UnOp (I32 op) -> int_un_op i I32 op
-  | UnOp (F64 op) -> float_un_op i F64 op
-  | UnOp (F32 op) -> float_un_op i F32 op
+  | UnOp (I64 op) -> int_un_op i `I64 op
+  | UnOp (I32 op) -> int_un_op i `I32 op
+  | UnOp (F64 op) -> float_un_op i `F64 op
+  | UnOp (F32 op) -> float_un_op i `F32 op
   | StructNew i ->
       let type_name = idx ctx `Type i in
       let fields = snd (Hashtbl.find ctx.struct_fields type_name.desc) in
@@ -687,6 +730,16 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   | CallRef t ->
       let input, output = type_arity ctx t in
       let* f = Stack.pop in
+      let f =
+        {
+          f with
+          desc =
+            Ast.Cast
+              ( f,
+                Valtype (Ref { nullable = true; typ = Type (idx ctx `Type t) })
+              );
+        }
+      in
       let* args = Stack.grab input in
       Stack.push output (with_loc (Call (f, args)))
   | ReturnCall f ->
@@ -697,6 +750,16 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   | ReturnCallRef t ->
       let input, _ = type_arity ctx t in
       let* f = Stack.pop in
+      let f =
+        {
+          f with
+          desc =
+            Ast.Cast
+              ( f,
+                Valtype (Ref { nullable = true; typ = Type (idx ctx `Type t) })
+              );
+        }
+      in
       let* args = Stack.grab input in
       Stack.push_poly (with_loc (TailCall (f, args)))
   | Return ->
@@ -757,7 +820,12 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       let* e1 = Stack.pop in
       Stack.push 1 (with_loc (BinOp (Eq, e1, e2)))
   | RefFunc f -> Stack.push 1 (with_loc (Get (idx ctx `Func f)))
-  | RefNull _ -> Stack.push 1 (with_loc Null)
+  | RefNull typ ->
+      Stack.push 1
+        (with_loc
+           (Cast
+              ( with_loc Null,
+                Valtype (Ref { nullable = true; typ = heaptype ctx typ }) )))
   | RefIsNull ->
       let* e = Stack.pop in
       Stack.push 1 (with_loc (UnOp (Not, e)))
@@ -1011,7 +1079,7 @@ let module_ (_, fields) =
     }
   in
   register_names ctx fields;
-  List.map (fun f -> modulefield ctx f) fields
+  List.filter_map (fun f -> modulefield ctx f) fields
 
 (*
 - Collect exports to associate them to the corresponding module field
