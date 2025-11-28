@@ -485,6 +485,14 @@ let int_un_op i0 sz (op : Src.int_un_op) =
                 if e' = None then e
                 else { e with desc = Ast.Cast (e, Valtype (floattype sz)) }),
                Ast.no_loc "to_bits" ))
+    | ExtendS `_32 ->
+        (* i64.extend32_s *)
+        with_loc
+          (Cast
+             ( (let e = e (inttype `I32) in
+                if e' = None then e
+                else { e with desc = Ast.Cast (e, Valtype (inttype `I32)) }),
+               Signedtype { typ = sz; signage = Signed; strict = false } ))
     | ExtendS _ -> with_loc Unreachable (* ZZZ *))
 
 let int_bin_op i0 (op : Src.int_bin_op) =

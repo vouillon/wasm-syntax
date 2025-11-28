@@ -817,7 +817,16 @@ let rec instruction ctx i =
               assert ok;
               push i.info (UnionFind.make (Valtype { typ; internal = ty }))
           | Signedtype { typ; _ } ->
-              assert (signed_cast ctx ty' typ);
+              let ok = signed_cast ctx ty' typ in
+              if not ok then (
+                Format.eprintf "%a@." Output.instr i;
+                Format.eprintf "signed cast %a => %s@." output_inferred_type ty'
+                  (match typ with
+                  | `I32 -> "i32"
+                  | `I64 -> "i64"
+                  | `F32 -> "f32"
+                  | `F64 -> "f64"));
+              assert ok;
               let typ, (ty : Internal.valtype) =
                 match typ with
                 | `I32 -> (I32, I32)
