@@ -447,7 +447,7 @@ let modulefield f field =
         (if mut then "let" else "const")
         name.desc;
       Option.iter (fun t -> Format.fprintf f ":@ %a" valtype t) typ;
-      Format.fprintf f "@ =@ %a@]@]" (instr Instruction) def
+      Format.fprintf f "@ =@ %a;@]@]" (instr Instruction) def
   | Fundecl { name; typ; sign; attributes = a } ->
       Format.fprintf f "@[<hv>%a@[%a@]@]" attributes a (fundecl ~tag:false)
         (name, typ, sign)

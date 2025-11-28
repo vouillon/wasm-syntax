@@ -121,7 +121,7 @@ type script =
     | `Text of string ])
   list
 
-module Parser = struct
+module Script_parser = struct
   include Wasm.Parser
 
   module Incremental = struct
@@ -129,7 +129,7 @@ module Parser = struct
   end
 end
 
-module Fast_parser = struct
+module Fast_script_parser = struct
   include Wasm.Fast_parser
 
   let parse = Wasm.Fast_parser.parse_script
@@ -149,9 +149,18 @@ module ScriptParser =
     (struct
       type t = script
     end)
+    (Script_parser)
+    (Fast_script_parser)
+    (Wasm.Lexer)
+
+module FancyParser =
+  Wasm.Parsing.Make_parser
+    (struct
+      type t = Ast.location Ast.modulefield list
+    end)
     (Parser)
     (Fast_parser)
-    (Wasm.Lexer)
+    (Lexer)
 
 let check_wellformed (_, lst) =
   let types = Hashtbl.create 16 in
@@ -284,12 +293,20 @@ let runtest filename =
   List.iter
     (fun m ->
       match From_wasm.module_ m with
-      | m ->
-          let ok = in_child_process (fun () -> Typing.f m) in
-          if not ok then Format.eprintf "@[%a@]@." Output.module_ m
       | exception e ->
           prerr_endline (Printexc.to_string e);
-          Format.eprintf "@[%a@]@." Wasm.Output.module_ m)
+          Format.eprintf "@[%a@]@." Wasm.Output.module_ m
+      | m ->
+          let ok = in_child_process (fun () -> Typing.f m) in
+          if not ok then Format.eprintf "@[%a@]@." Output.module_ m;
+          let text = Format.asprintf "%a@." Output.module_ m in
+          let ok =
+            in_child_process (fun () ->
+                let m = FancyParser.parse_from_string ~filename text in
+                let ok = in_child_process (fun () -> Typing.f m) in
+                if not ok then Format.eprintf "@[%a@]@." Output.module_ m)
+          in
+          if not ok then prerr_endline text)
     lst
 
 let () =

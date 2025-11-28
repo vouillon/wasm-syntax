@@ -3,6 +3,41 @@ module Uint32 = Wasm.Uint32
 module StringMap = Map.Make (String)
 
 module Namespace = struct
+  let reserved =
+    (*ZZZ *)
+    StringMap.of_list
+      (List.map
+         (fun s -> (s, 1))
+         [
+           "as";
+           "become";
+           "br";
+           "br_if";
+           "br_on_cast";
+           "br_on_cast_fail";
+           "br_on_non_null";
+           "br_on_null";
+           "br_table";
+           "const";
+           "do";
+           "else";
+           "fn";
+           "if";
+           "is";
+           "let";
+           "loop";
+           "mut";
+           "nop";
+           "null";
+           "open";
+           "rec";
+           "return";
+           "tag";
+           "throw";
+           "type";
+           "unreachable";
+         ])
+
   type t = { mutable existing_names : int StringMap.t }
 
   let rec add_indexed ns x i =
@@ -21,7 +56,7 @@ module Namespace = struct
         x
 
   let dup { existing_names } = { existing_names }
-  let make () = { existing_names = StringMap.empty }
+  let make () = { existing_names = reserved }
 end
 
 module Sequence = struct
@@ -87,7 +122,12 @@ module LabelStack = struct
   let push st label =
     let ns = Namespace.dup st.ns in
     let used = ref false in
-    let name = Namespace.add ns (Option.value ~default:"l" label) in
+    let name =
+      Namespace.add ns
+        (match label with
+        | Some label when Lexer.is_valid_identifier label -> label
+        | _ -> "l")
+    in
     ( (fun () -> if !used then Some name else None),
       { ns; stack = (label, (name, used)) :: st.stack } )
 

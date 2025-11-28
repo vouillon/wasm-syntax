@@ -2,7 +2,11 @@ open Parser
 
 let white = [%sedlex.regexp? Plus (' ' | '\t')]
 let newline = [%sedlex.regexp? '\r' | '\n' | "\r\n"]
-let ident = [%sedlex.regexp? (xid_start | '_'), Star (xid_continue | '\'')]
+
+let ident =
+  [%sedlex.regexp?
+    xid_start, Star (xid_continue | '\'') | '_', Plus (xid_continue | '\'')]
+
 let string = [%sedlex.regexp? '"', Star (Sub (any, '"')), '"']
 let sign = [%sedlex.regexp? Opt ('+' | '-')]
 let digit = [%sedlex.regexp? '0' .. '9']
@@ -21,7 +25,23 @@ let hexfloat =
     | "0x", hexnum, '.', Opt hexnum )]
 
 let float =
-  [%sedlex.regexp? decfloat | hexfloat | "inf" | "nan" | "nan:", hexnum]
+  [%sedlex.regexp? decfloat | hexfloat | "inf" | "nan" | "nan:0x", hexnum]
+
+let linechar = [%sedlex.regexp? Sub (any, (10 | 13))]
+let linecomment = [%sedlex.regexp? "//", Star linechar, (newline | eof)]
+
+let rec comment lexbuf =
+  match%sedlex lexbuf with
+  | "*/" -> ()
+  | "/*" ->
+      comment lexbuf;
+      comment lexbuf
+  | '*' | '/' | Plus (Sub (any, ('*' | '/'))) -> comment lexbuf
+  | _ ->
+      raise
+        (Wasm.Parsing.Syntax_error
+           ( Sedlexing.lexing_positions lexbuf,
+             Printf.sprintf "Malformed comment.\n" ))
 
 let string_buffer = Buffer.create 256
 
@@ -71,7 +91,10 @@ let rec string lexbuf =
 
 let rec token lexbuf =
   match%sedlex lexbuf with
-  | white | newline -> token lexbuf
+  | white | newline | linecomment -> token lexbuf
+  | "/*" ->
+      comment lexbuf;
+      token lexbuf
   | ';' -> SEMI
   | '#' -> SHARP
   | '?' -> QUESTIONMARK
@@ -89,6 +112,8 @@ let rec token lexbuf =
   | ":=" -> COLONEQUAL
   | "'" -> QUOTE
   | "." -> DOT
+  | ".." -> DOTDOT
+  | "!" -> BANG
   | "+" -> PLUS
   | "-" -> MINUS
   | "*" -> STAR

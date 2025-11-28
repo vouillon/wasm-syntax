@@ -188,9 +188,10 @@ resulttype:
 | "(" l = separated_nonempty_list(",", valtype) ")" { l }
 
 functype:
-| FN "(" params = separated_nonempty_list(",", valtype) ")" "->"
-  result = resulttype
-  { {params = Array.of_list params; results = Array.of_list result} }
+| FN "(" params = separated_list(",", valtype) ")"
+  results = option ("->" r = resulttype {r})
+  { {params = Array.of_list params;
+     results = Array.of_list (Option.value ~default:[] results)} }
 
 storagetype:
 | t = IDENT
@@ -238,7 +239,8 @@ fundecl:
 | FN name = ident
   t = ioption(":" t = ident { t } )
   sign = option ("(" named_params = funcparams ")"
-  "->" results = resulttype { {named_params; results} })
+                 results = option("->" r = resulttype {r})
+                 { {named_params; results = Option.value ~default:[] results} })
   { (name, t, sign) }
 
 func:
@@ -250,7 +252,8 @@ tag:
 | TAG name = ident
   t = ioption(":" t = ident { t } )
   sign = option ("(" named_params = funcparams ")"
-  "->" results = resulttype { {named_params; results} })
+                 results = option("->" r = resulttype {r})
+                 { {named_params; results = Option.value ~default:[] results} })
   { (name, t, sign) }
 
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
@@ -402,7 +405,7 @@ globalmut:
 global:
 | attributes = list(attribute) mut = globalmut name = ident
   typ = option(":" typ = valtype { typ })
-  "=" def = instr option(";")
+  "=" def = instr ";"
   { Global {name; mut; typ; def; attributes} }
 
 globaldecl:
