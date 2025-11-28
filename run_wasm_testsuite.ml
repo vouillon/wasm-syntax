@@ -3,6 +3,7 @@
 - output the tests and read them back to test the text output
   ==> we need to isolate the tests from what is parsed
 - fix remaining issues
+- try to convert non-validating code to test more failure cases
 - conversion to rust-like format and typing
 - Somehow checks that round-tripping yield the identity
   (on unfolded code without identifiers?)
@@ -97,20 +98,21 @@ let in_child_process ?(quiet = false) f =
 
 let iter_files dirs skip suffix f =
   let pool = create_pool (Domain.recommended_domain_count ()) in
-  let rec visit dir =
-    let entries = Sys.readdir dir in
+  let rec visit root dir =
+    let entries = Sys.readdir (Filename.concat root dir) in
     Array.iter
       (fun entry ->
         let path = Filename.concat dir entry in
         if not (skip entry) then
-          if Sys.is_directory path then visit path
+          let full_path = Filename.concat root path in
+          if Sys.is_directory full_path then visit root path
           else if Filename.check_suffix entry suffix then
             in_child_process_async pool
               ~on_termination:(fun _ s -> print_flushed s)
-              (fun () -> f path))
+              (fun () -> f full_path path))
       entries
   in
-  List.iter visit dirs;
+  List.iter (fun root -> visit root "") dirs;
   wait_all_children pool
 
 let dirs =
@@ -236,8 +238,8 @@ let check_wellformed (_, lst) =
          lst)
     <= 1)
 
-let runtest filename =
-  if true then prerr_endline filename;
+let runtest filename path =
+  if true then Format.eprintf "==== %s ====@." path;
   let lst = ScriptParser.parse ~filename in
   (* Parsing *)
   let lst =
