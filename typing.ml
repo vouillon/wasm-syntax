@@ -16,6 +16,8 @@ TODO:
 - remove redundant type annotations/casts
 - cast to number might need to be duplicated (initial type then final type);
   need cast before to_bits/from_bits also
+- take into account that locals can shadow globals to get better local names
+  (if a global is not used in a function, we can reuse its name)
 
 Syntax changes:
 - names in result type (symmetry with params)
@@ -27,6 +29,12 @@ Syntax ideas:
 
 Misc:
 - blocks in an expression context return one value; otherwise, no value by default
+
+Explicit types?
+   fn(..)->(..)
+==> for function types
+==> for call_indirect
+(We don't have a cast to a typeuse in WAT)
 *)
 
 open Ast

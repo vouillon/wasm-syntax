@@ -1,8 +1,3 @@
-(*
-- field names
-- type checker
-- proper folding
-*)
 module Src = Wasm.Ast.Text
 module Uint32 = Wasm.Uint32
 module StringMap = Map.Make (String)
@@ -118,6 +113,14 @@ module LabelStack = struct
   let make () = { ns = Namespace.make (); stack = [] }
 end
 
+module Tbl = struct
+  type 'a t = (string, 'a) Hashtbl.t
+
+  let make () = Hashtbl.create 16
+  let find = Hashtbl.find
+  let add = Hashtbl.add
+end
+
 type ctx = {
   common_namespace : Namespace.t;
   types : Sequence.t;
@@ -129,6 +132,13 @@ type ctx = {
   tags : Sequence.t;
   locals : Sequence.t;
   labels : LabelStack.t;
+  type_defs : Src.subtype Tbl.t;
+  function_types : Src.typeuse Tbl.t;
+  global_types : Src.globaltype Tbl.t;
+  tag_types : Src.typeuse Tbl.t;
+  local_types : Src.valtype Tbl.t;
+  label_arities : (Src.id option * int) list;
+  return_arity : int;
 }
 
 let get_annot (a, _) = a
@@ -226,6 +236,189 @@ let rectype st (t : Src.rectype) : Ast.rectype =
     t
 
 let globaltype st = muttype valtype st
+
+type _ kind =
+  | Type : Src.subtype kind
+  | Global : Src.globaltype kind
+  | Func : Src.typeuse kind
+  | Tag : Src.typeuse kind
+  | Local : Src.valtype kind
+
+let lookup_type (type typ) ctx (kind : typ kind) idx : typ =
+  let get seq tbl idx = Tbl.find tbl (Sequence.get seq idx).desc in
+  match kind with
+  | Type -> get ctx.types ctx.type_defs idx
+  | Global -> get ctx.globals ctx.global_types idx
+  | Func -> get ctx.functions ctx.function_types idx
+  | Tag -> get ctx.tags ctx.tag_types idx
+  | Local -> get ctx.locals ctx.local_types idx
+
+let register_type (type typ) ctx (kind : typ kind) idx exports (typ : typ) =
+  let register seq tbl idx =
+    Tbl.add tbl (Sequence.register' seq idx exports) typ
+  in
+  match kind with
+  | Type -> assert false
+  | Global -> register ctx.globals ctx.global_types idx
+  | Func -> register ctx.functions ctx.function_types idx
+  | Tag -> register ctx.tags ctx.tag_types idx
+  | Local -> register ctx.locals ctx.local_types idx
+
+let functype_no_bindings_arity { Src.params; results } =
+  (Array.length params, Array.length results)
+
+let functype_arity (params, results) = (List.length params, List.length results)
+
+let type_arity ctx idx =
+  match (lookup_type ctx Type idx).typ with
+  | Func ty -> functype_no_bindings_arity ty
+  | Struct _ | Array _ -> assert false (*ZZZ*)
+
+let typeuse_no_bindings_arity ctx (i, ty) =
+  match (i, ty) with
+  | _, Some t -> functype_no_bindings_arity t
+  | Some i, None -> type_arity ctx i
+  | None, None -> assert false
+
+let typeuse_arity ctx (i, ty) =
+  match (i, ty) with
+  | _, Some t -> functype_arity t
+  | Some i, None -> type_arity ctx i
+  | None, None -> assert false
+
+let blocktype_arity ctx (t : Src.blocktype option) =
+  match t with
+  | None -> (0, 0)
+  | Some (Valtype _) -> (0, 1)
+  | Some (Typeuse t) -> typeuse_no_bindings_arity ctx t
+
+let function_arity ctx f = typeuse_arity ctx (lookup_type ctx Func f)
+
+let valtype_arity (t : Src.valtype) =
+  match t with Tuple l -> List.length l | _ -> 1
+
+let globaltype_arity (t : Src.globaltype) = valtype_arity t.typ
+let global_arity ctx g = globaltype_arity (lookup_type ctx Global g)
+let tag_arity ctx t = typeuse_arity ctx (lookup_type ctx Tag t)
+let local_arity ctx l = valtype_arity (lookup_type ctx Local l)
+let unreachable = 100_000
+
+let label_arity ctx (idx : Src.idx) =
+  match idx.desc with
+  | Id id ->
+      snd
+        (List.find
+           (fun e -> match e with Some id', _ -> id = id' | _ -> false)
+           ctx.label_arities)
+  | Num i -> snd (List.nth ctx.label_arities (Uint32.to_int i))
+
+let _arity ctx (i : _ Src.instr) =
+  match i.Ast.desc with
+  | Block { typ; _ } | Loop { typ; _ } | Try { typ; _ } | TryTable { typ; _ } ->
+      blocktype_arity ctx typ
+  | If { typ; _ } ->
+      let i, o = blocktype_arity ctx typ in
+      (i + 1, o)
+  | Call f -> function_arity ctx f
+  | ReturnCall f ->
+      let i, _ = function_arity ctx f in
+      (i, unreachable)
+  | CallRef t ->
+      let i, o = type_arity ctx t in
+      (i + 1, o)
+  | ReturnCallRef t ->
+      let i, _ = type_arity ctx t in
+      (i + 1, unreachable)
+  | Br l ->
+      let i = label_arity ctx l in
+      (i, unreachable)
+  | Br_if l ->
+      let i = label_arity ctx l in
+      (i + 1, i)
+  | Br_table (_, l) ->
+      let i = label_arity ctx l in
+      (i + 1, unreachable)
+  | Br_on_null l ->
+      let i = label_arity ctx l in
+      (i + 1, i + 1)
+  | Br_on_non_null l ->
+      let i = label_arity ctx l in
+      (i + 1, i)
+  | Br_on_cast (l, _, _) | Br_on_cast_fail (l, _, _) ->
+      let i = label_arity ctx l in
+      (i + 1, i + 1)
+  | Return -> (ctx.return_arity, unreachable)
+  | ReturnCallIndirect (_, ty) ->
+      let i, _ = typeuse_no_bindings_arity ctx ty in
+      (i + 1, unreachable)
+  | CallIndirect (_, ty) ->
+      let i, o = typeuse_no_bindings_arity ctx ty in
+      (i + 1, o)
+  | Unreachable -> (0, unreachable)
+  | Nop -> (0, 0)
+  | Throw t -> (fst (tag_arity ctx t), unreachable)
+  | Drop -> (1, 0)
+  | Select _ -> (3, 1)
+  | LocalGet l -> (0, local_arity ctx l)
+  | LocalSet l -> (local_arity ctx l, 0)
+  | LocalTee l ->
+      let i = local_arity ctx l in
+      (i, i)
+  | GlobalGet g -> (0, global_arity ctx g)
+  | GlobalSet g -> (global_arity ctx g, 0)
+  | Load _ | LoadS _ | Store _ | StoreS _ -> (1, 1)
+  | MemorySize _ -> (0, 1)
+  | MemoryGrow _ -> (1, 1)
+  | MemoryFill _ | MemoryCopy _ | MemoryInit _ -> (3, 0)
+  | DataDrop _ -> (0, 0)
+  | TableGet _ -> (1, 1)
+  | TableSet _ -> (2, 0)
+  | TableSize _ -> (0, 1)
+  | TableGrow _ -> (2, 1)
+  | TableFill _ | TableCopy _ | TableInit _ -> (3, 0)
+  | ElemDrop _ -> (0, 0)
+  | RefNull _ -> (0, 1)
+  | RefFunc _ -> (0, 1)
+  | RefIsNull -> (1, 1)
+  | RefAsNonNull -> (1, 1)
+  | RefEq -> (2, 1)
+  | RefTest _ -> (1, 1)
+  | RefCast _ -> (1, 1)
+  | StructNew t -> (
+      match (lookup_type ctx Type t).typ with
+      | Struct f -> (Array.length f, 1)
+      | Func _ | Array _ -> assert false (*ZZZ*))
+  | StructNewDefault _ -> (0, 1)
+  | StructGet _ -> (1, 1)
+  | StructSet _ -> (2, 0)
+  | ArrayNew _ -> (2, 1)
+  | ArrayNewDefault _ -> (1, 1)
+  | ArrayNewFixed (_, n) -> (Uint32.to_int n, 1)
+  | ArrayNewData _ -> (2, 1)
+  | ArrayNewElem _ -> (2, 1)
+  | ArrayGet _ -> (2, 1)
+  | ArraySet _ -> (3, 0)
+  | ArrayLen -> (1, 1)
+  | ArrayFill _ -> (4, 0)
+  | ArrayCopy _ -> (5, 0)
+  | ArrayInitData _ -> (4, 0)
+  | ArrayInitElem _ -> (4, 0)
+  | RefI31 -> (1, 1)
+  | I31Get _ -> (1, 1)
+  | Const _ -> (0, 1)
+  | UnOp _ -> (1, 1)
+  | BinOp _ -> (2, 1)
+  | I32WrapI64 -> (1, 1)
+  | I64ExtendI32 _ -> (1, 1)
+  | F32DemoteF64 -> (1, 1)
+  | F64PromoteF32 -> (1, 1)
+  | ExternConvertAny -> (1, 1)
+  | AnyConvertExtern -> (1, 1)
+  | Folded _ -> assert false
+  (* Binaryen extensions *)
+  | Pop _ -> (0, 1)
+  | TupleMake n -> (Uint32.to_int n, Uint32.to_int n)
+  | TupleExtract (n, _) -> (Uint32.to_int n, 1)
 
 (*
 Step 1: traverse types and find existing names
@@ -650,83 +843,84 @@ let import (module_, name) =
            Ast.no_loc (Ast.String (None, name));
          ]) )
 
-let modulefield st (f : _ Src.modulefield) : _ Ast.modulefield option =
+let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
   match f with
-  | Types t -> Some (Type (rectype st t))
+  | Types t -> Some (Type (rectype ctx t))
   | Func { locals; instrs; typ; exports = e; _ } ->
-      let st =
-        let seq =
-          Sequence.make (Namespace.dup st.common_namespace) "local" "x"
-        in
-        (match typ with
-        | _, Some (params, _) ->
-            List.iter (fun (id, _) -> Sequence.register seq id []) params;
-            Sequence.consume_currents seq
-        | _ -> ());
-        List.iter (fun (id, _) -> Sequence.register seq id []) locals;
-        { st with locals = seq }
+      let ctx =
+        {
+          ctx with
+          locals =
+            Sequence.make (Namespace.dup ctx.common_namespace) "local" "x";
+        }
       in
-      let locals = bind_locals st locals in
-      let typ, sign = typeuse `Func st typ in
+      (match typ with
+      | _, Some (params, _) ->
+          List.iter (fun (id, typ) -> register_type ctx Local id [] typ) params;
+          Sequence.consume_currents ctx.locals
+      | _ -> ());
+      List.iter (fun (id, typ) -> register_type ctx Local id [] typ) locals;
+      let locals = bind_locals ctx locals in
+      let typ, sign = typeuse `Func ctx typ in
       Some
         (Func
            {
-             name = Sequence.get_current st.functions;
+             name = Sequence.get_current ctx.functions;
              typ;
              sign;
-             body = (None, locals @ List.map (fun i -> instr st i []) instrs);
+             body = (None, locals @ List.map (fun i -> instr ctx i []) instrs);
              attributes = exports e;
            })
   | Import { module_; name; desc; exports = e; _ } -> (
       match desc with
       | Func typ ->
-          let typ, sign = typeuse `Sig st typ in
+          let typ, sign = typeuse `Sig ctx typ in
           Some
             (Fundecl
                {
-                 name = Sequence.get_current st.functions;
+                 name = Sequence.get_current ctx.functions;
                  typ;
                  sign;
                  attributes = import (module_, name) :: exports e;
                })
       | Tag typ ->
-          let typ, sign = typeuse `Sig st typ in
+          let typ, sign = typeuse `Sig ctx typ in
           Some
             (Tag
                {
-                 name = Sequence.get_current st.tags;
+                 name = Sequence.get_current ctx.tags;
                  typ;
                  sign;
                  attributes = import (module_, name) :: exports e;
                })
       | Global typ ->
-          let typ' = globaltype st typ in
+          let typ' = globaltype ctx typ in
           Some
             (GlobalDecl
                {
-                 name = Sequence.get_current st.globals;
+                 name = Sequence.get_current ctx.globals;
                  mut = typ'.mut;
                  typ = typ'.typ;
                  attributes = import (module_, name) :: exports e;
                })
       | Memory _ | Table _ -> None (*ZZZ*))
   | Global { typ; init; exports = e; _ } ->
-      let typ' = globaltype st typ in
+      let typ' = globaltype ctx typ in
       Some
         (Global
            {
-             name = Sequence.get_current st.globals;
+             name = Sequence.get_current ctx.globals;
              mut = typ'.mut;
              typ = Some typ'.typ;
-             def = sequence (List.map (fun i -> instr st i []) init);
+             def = sequence (List.map (fun i -> instr ctx i []) init);
              attributes = exports e;
            })
   | Tag { typ; exports = e; _ } ->
-      let typ, sign = typeuse `Sig st typ in
+      let typ, sign = typeuse `Sig ctx typ in
       Some
         (Tag
            {
-             name = Sequence.get_current st.tags;
+             name = Sequence.get_current ctx.tags;
              typ;
              sign;
              attributes = exports e;
@@ -756,12 +950,13 @@ let register_names ctx fields =
           | Func _ -> ()
           | Memory _ -> Sequence.register ctx.memories id exports
           | Table _ -> Sequence.register ctx.tables id exports
-          | Global _ -> Sequence.register ctx.globals id exports
-          | Tag _ -> Sequence.register ctx.tags id exports)
+          | Global ty -> register_type ctx Global id exports ty
+          | Tag ty -> register_type ctx Tag id exports ty)
       | Types rectype ->
           Array.iter
             (fun (id, ty) ->
               let name = Sequence.register' ctx.types id [] in
+              Tbl.add ctx.type_defs name ty;
               match (ty : Src.subtype).typ with
               | Func _ | Array _ -> ()
               | Struct l ->
@@ -774,12 +969,13 @@ let register_names ctx fields =
                   Hashtbl.replace ctx.struct_fields name
                     (seq, Array.to_list fields))
             rectype
-      | Global { id; exports; _ } -> Sequence.register ctx.globals id exports
+      | Global { id; exports; typ; _ } ->
+          register_type ctx Global id exports typ
       | Func _ | Export _ | Start _ -> ()
       | Elem _ | Data _ -> () (*ZZZ*)
       | Memory { id; exports; _ } -> Sequence.register ctx.memories id exports
       | Table { id; exports; _ } -> Sequence.register ctx.tables id exports
-      | Tag { id; exports; _ } -> Sequence.register ctx.tags id exports)
+      | Tag { id; exports; typ; _ } -> register_type ctx Tag id exports typ)
     fields;
   List.iter
     (fun (field : _ Src.modulefield) ->
@@ -787,9 +983,9 @@ let register_names ctx fields =
       | Import { id; desc; exports; _ } -> (
           (* ZZZ Check for non-import fields *)
           match desc with
-          | Func _ -> Sequence.register ctx.functions id exports
+          | Func typ -> register_type ctx Func id exports typ
           | Memory _ | Table _ | Global _ | Tag _ -> ())
-      | Func { id; exports; _ } -> Sequence.register ctx.functions id exports
+      | Func { id; exports; typ; _ } -> register_type ctx Func id exports typ
       | Types _ | Global _ | Export _ | Start _ | Elem _ | Data _ | Memory _
       | Table _ | Tag _ ->
           ())
@@ -809,14 +1005,20 @@ let module_ (_, fields) =
       tables = Sequence.make (Namespace.make ()) "table" "m";
       labels = LabelStack.make ();
       tags = Sequence.make (Namespace.make ()) "tag" "t";
+      type_defs = Tbl.make ();
+      function_types = Tbl.make ();
+      global_types = Tbl.make ();
+      tag_types = Tbl.make ();
+      local_types = Tbl.make ();
+      label_arities = [];
+      return_arity = 0;
     }
   in
   register_names ctx fields;
   List.map (fun f -> modulefield ctx f) fields
 
 (*
-Use imports and exports as hints for naming functions
-Collect exports to associate them to the corresponding module field
+- Collect exports to associate them to the corresponding module field
 
 - get existing type names
 - scan types, allocating new types + build array of type definitions

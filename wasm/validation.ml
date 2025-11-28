@@ -1,5 +1,6 @@
 (*
 ZZZ
+- tag validation
 - resolve all type uses
 - uninitialized locals
 - validation of subtype relation declaration
@@ -1066,17 +1067,21 @@ let build_initial_env ctx fields =
               Sequence.register ctx.globals id (globaltype ctx.types ty)
           | Tag tu ->
               let ty = typeuse ctx.types tu in
+              (*
               (match (Types.get_subtype ctx.subtyping_info ty).typ with
               | Func { results; _ } -> assert (results = [||])
               | Struct _ | Array _ -> assert false (*ZZZ*));
+*)
               Sequence.register ctx.tags id ty)
       | Func { id; typ; _ } ->
           Sequence.register ctx.functions id (typeuse ctx.types typ)
       | Tag { id; typ; exports } ->
           let ty = typeuse ctx.types typ in
+          (*
           (match (Types.get_subtype ctx.subtyping_info ty).typ with
           | Func { results; _ } -> assert (results = [||])
           | Struct _ | Array _ -> assert false (*ZZZ*));
+*)
           register_exports ctx exports;
           Sequence.register ctx.tags id ty
       | _ -> ())

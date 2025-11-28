@@ -62,6 +62,7 @@ type outer_env = {
   types : subtype Tbl.t;
   functions : typeuse Tbl.t;
   globals : globaltype Tbl.t;
+  tags : typeuse Tbl.t;
   locals : valtype Tbl.t;
 }
 
@@ -100,6 +101,18 @@ let globals f =
           tbl)
     Tbl.empty f
 
+let tags f =
+  List.fold_left
+    (fun tbl f ->
+      match f with
+      | Tag { id; typ; _ } | Import { id; desc = Tag typ; _ } ->
+          Tbl.add id typ tbl
+      | Import { desc = Func _ | Memory _ | Table _ | Global _; _ }
+      | Types _ | Func _ | Memory _ | Table _ | Global _ | Export _ | Start _
+      | Elem _ | Data _ ->
+          tbl)
+    Tbl.empty f
+
 let locals env typ l =
   let tbl =
     match typ with
@@ -123,6 +136,7 @@ let module_env (_, m) =
     types = types m;
     functions = functions m;
     globals = globals m;
+    tags = tags m;
     locals = Tbl.empty;
   }
 
@@ -168,6 +182,11 @@ let function_arity env f = typeuse_arity env (lookup env.outer_env.functions f)
 let valtype_arity t = match t with Tuple l -> List.length l | _ -> 1
 let globaltype_arity (t : globaltype) = valtype_arity t.typ
 let global_arity env g = globaltype_arity (lookup env.outer_env.globals g)
+
+let tag_arity env t =
+  let t = lookup env.outer_env.tags t in
+  typeuse_arity env t
+
 let local_arity env l = valtype_arity (lookup env.outer_env.locals l)
 let unreachable = 100_000
 
@@ -224,7 +243,7 @@ let arity env i =
       (i + 1, o)
   | Unreachable -> (0, unreachable)
   | Nop -> (0, 0)
-  | Throw _ -> (1, unreachable)
+  | Throw idx -> (fst (tag_arity env idx), unreachable)
   | Drop -> (1, 0)
   | Select _ -> (3, 1)
   | LocalGet l -> (0, local_arity env l)
