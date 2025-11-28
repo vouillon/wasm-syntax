@@ -70,6 +70,7 @@
 %token DISPATCH
 
 %nonassoc LET
+%right RETURN
 %nonassoc IDENT prec_branch RBRACE
 %nonassoc LBRACE LBRACKET
 %right EQUAL COLONEQUAL
@@ -82,9 +83,10 @@
 %left MINUS PLUS
 %left STAR SLASH SLASHS SLASHU PERCENTS PERCENTU
 %left AS IS
-%right prec_unary BANG
+%right prec_unary
+%right BANG
 %left DOT LPAREN
-%left SHARP
+
 (* BR foo 1 + 2 understood as BR foo (1 + 2)
    BR_TABLE { ...} 1 + 2 understood as BR_TABLE { ...} (1 + 2)
    BR foo { ... } understood as a single instruction
@@ -281,7 +283,7 @@ simpleinstr:
 | NOP { with_loc $sloc Nop }
 | UNREACHABLE { with_loc $sloc Unreachable }
 | NULL { with_loc $sloc Null }
-| "_" {with_loc $sloc Nop }
+| "_" {with_loc $sloc Pop }
 | x = ident { with_loc $sloc (Get x) }
 | "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
 | i = simpleinstr "(" l = separated_list(",", instr) ")"
@@ -375,7 +377,7 @@ plaininstr:
 | BR_ON_NON_NULL "'" l = IDENT i = instr { with_loc $sloc (Br_on_non_null (l, i)) } %prec prec_branch
 | BR_ON_CAST "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
 | BR_ON_CAST_FAIL "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
-| RETURN i = ioption(instr) { with_loc $sloc (Return i) } %prec SHARP
+| RETURN i = ioption(instr) { with_loc $sloc (Return i) }
 | THROW t = ident  "(" l = separated_list(",", instr) ")"
   { with_loc $sloc (Throw (t, l)) }
 | i1 = instr "[" i2 = instr "]" { with_loc $sloc (ArrayGet (i1, i2)) }

@@ -170,9 +170,9 @@ let rec token lexbuf =
   | "br_on_cast_fail" -> BR_ON_CAST_FAIL
   | "return" -> RETURN
   | "throw" -> THROW
-  | ident -> IDENT (Sedlexing.Utf8.lexeme lexbuf)
   | int -> INT (Sedlexing.Utf8.lexeme lexbuf)
   | float -> FLOAT (Sedlexing.Utf8.lexeme lexbuf)
+  | ident -> IDENT (Sedlexing.Utf8.lexeme lexbuf)
   | '"' -> STRING (string lexbuf)
   | eof -> EOF
   | _ ->

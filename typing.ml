@@ -11,14 +11,14 @@ TODO:
 - tests:
   - short pieces of syntax, read / write / error
   - write the translated files, parse/validate them, translate/validate them back
-- move lets at more appriate places
+- move lets at more appropriate places
 - remove redundant type annotations/casts
 - take into account that locals can shadow globals to get better local names
   (if a global is not used in a function, we can reuse its name)
 
 Syntax changes:
 - names in result type (symmetry with params)
-- no need to have func type for tags
+- no need to have func type for tags (declaration tag : ty)
 
 Syntax ideas:
 - dispatch foo ['a 'b ... else 'c] { 'a { } 'b { } ... }
@@ -521,8 +521,8 @@ let with_current_stack f st = (st, f st)
 let rec instruction ctx i =
   (*
   let* () = print_stack in
-  if true then Format.eprintf "%a@." Output.instr i;
 *)
+  if false then Format.eprintf "%a@." Output.instr i;
   match i.desc with
   | Block (label, bt, instrs) ->
       let { params; results } = bt in

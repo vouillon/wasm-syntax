@@ -302,9 +302,12 @@ let runtest filename =
           let text = Format.asprintf "%a@." Output.module_ m in
           let ok =
             in_child_process (fun () ->
-                let m = FancyParser.parse_from_string ~filename text in
-                let ok = in_child_process (fun () -> Typing.f m) in
-                if not ok then Format.eprintf "@[%a@]@." Output.module_ m)
+                let m' = FancyParser.parse_from_string ~filename text in
+                let ok = in_child_process (fun () -> Typing.f m') in
+                if not ok then (
+                  Format.eprintf "@[%a@]@." Output.module_ m';
+                  prerr_endline "===";
+                  Format.eprintf "@[%a@]@." Output.module_ m))
           in
           if not ok then prerr_endline text)
     lst
