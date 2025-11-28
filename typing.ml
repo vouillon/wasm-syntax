@@ -668,6 +668,93 @@ let rec instruction ctx i =
               match Tbl.find_opt ctx.functions idx with
               | Some _ -> assert false (*ZZZ*)
               | None -> assert false)))
+  | Call ({ desc = StructGet (a, { desc = "fill"; _ }); _ }, [ i; v; n ]) -> (
+      let* () = instruction ctx a in
+      let* () = instruction ctx i in
+      let* () = instruction ctx v in
+      let* () = instruction ctx n in
+      let* () =
+        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+      in
+      let* ty' = pop_any in
+      let* () =
+        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+      in
+      let* ty = pop_any in
+      match ty with
+      | None -> return ()
+      | Some ty -> (
+          match UnionFind.find ty with
+          | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
+              match Tbl.find ctx.types ty with
+              | _, Array typ -> (
+                  assert typ.mut;
+                  let typ = unpack_type typ in
+                  match ty' with
+                  | None -> return ()
+                  | Some ty' ->
+                      let ty =
+                        UnionFind.make
+                          (Valtype
+                             { typ; internal = valtype ctx.type_context typ })
+                      in
+                      let ok = subtype ctx ty' ty in
+                      if not ok then
+                        Format.eprintf "%a <: %a@." output_inferred_type ty'
+                          output_inferred_type ty;
+                      assert ok;
+                      return ())
+              | _ -> assert false)
+          | _ -> assert false (*ZZZ*)))
+  | Call ({ desc = StructGet (a1, { desc = "copy"; _ }); _ }, [ i1; a2; i2; n ])
+    -> (
+      let* () = instruction ctx a1 in
+      let* () = instruction ctx i1 in
+      let* () = instruction ctx a2 in
+      let* () = instruction ctx i2 in
+      let* () = instruction ctx n in
+      let* () =
+        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+      in
+      let* () =
+        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+      in
+      let* ty' = pop_any in
+      let* () =
+        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+      in
+      let* ty = pop_any in
+      match (ty, ty') with
+      | None, _ | _, None -> return ()
+      | Some ty, Some ty' -> (
+          match (UnionFind.find ty, UnionFind.find ty') with
+          | ( Valtype { typ = Ref { typ = Type ty; _ }; _ },
+              Valtype { typ = Ref { typ = Type ty'; _ }; _ } ) -> (
+              match (Tbl.find ctx.types ty, Tbl.find ctx.types ty') with
+              | (_, Array typ), (_, Array typ') ->
+                  assert typ.mut;
+                  let typ = unpack_type typ in
+                  let typ' = unpack_type typ' in
+                  let ty =
+                    UnionFind.make
+                      (Valtype { typ; internal = valtype ctx.type_context typ })
+                  in
+                  let ty' =
+                    UnionFind.make
+                      (Valtype
+                         {
+                           typ = typ';
+                           internal = valtype ctx.type_context typ';
+                         })
+                  in
+                  let ok = subtype ctx ty' ty in
+                  if not ok then
+                    Format.eprintf "%a <: %a@." output_inferred_type ty'
+                      output_inferred_type ty;
+                  assert ok;
+                  return ()
+              | _ -> assert false)
+          | _ -> assert false (*ZZZ*)))
   | Call ({ desc = Get { desc = "rotl" | "rotr"; _ }; _ }, [ i1; i2 ]) -> (
       let* () = instruction ctx i1 in
       let* () = instruction ctx i2 in

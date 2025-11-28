@@ -882,15 +882,32 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   | RefAsNonNull ->
       let* e = Stack.pop in
       Stack.push 1 (with_loc (NonNull e))
+  | ArrayFill _ ->
+      let* n = Stack.pop in
+      let* v = Stack.pop in
+      let* i = Stack.pop in
+      let* a = Stack.pop in
+      Stack.push 0
+        (with_loc
+           (Call (with_loc (StructGet (a, Ast.no_loc "fill")), [ i; v; n ])))
+  | ArrayCopy _ ->
+      let* n = Stack.pop in
+      let* i2 = Stack.pop in
+      let* a2 = Stack.pop in
+      let* i1 = Stack.pop in
+      let* a1 = Stack.pop in
+      Stack.push 0
+        (with_loc
+           (Call
+              (with_loc (StructGet (a1, Ast.no_loc "copy")), [ i1; a2; i2; n ])))
   (* ZZZZ To implement now *)
-  | Try _ | TupleExtract _ | ArrayFill _ | ArrayCopy _ ->
-      Stack.push_poly (with_loc Unreachable) (* ZZZ *)
+  | Try _ -> Stack.push_poly (with_loc Unreachable) (* ZZZ *)
   (* Later *)
   | TryTable _ | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _
   | ArrayInitData _ | ArrayNewElem _ | Load _ | LoadS _ | Store _ | StoreS _
   | MemorySize _ | MemoryGrow _ | MemoryFill _ | MemoryCopy _ | MemoryInit _
   | DataDrop _ | TableGet _ | TableSet _ | TableSize _ | TableGrow _
-  | TableFill _ | TableCopy _ | TableInit _ | ElemDrop _ ->
+  | TableFill _ | TableCopy _ | TableInit _ | ElemDrop _ | TupleExtract _ ->
       Stack.push_poly (with_loc Unreachable)
 (* ZZZ *)
 
@@ -1170,5 +1187,4 @@ let module_ (_, fields) =
 
 List of reserved names:
 - all keywords
-- signed, unsigned, array_len, min, max, copysign, rotr, rotl, reinterpret ...
 *)

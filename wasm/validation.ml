@@ -384,6 +384,15 @@ let memory_instruction_type_and_size ty =
   | I64 _ -> (I64, `I64)
   | F64 _ -> (F64, `I64)
 
+let field_has_default (ty : fieldtype) =
+  match ty.typ with
+  | Packed _ -> true
+  | Value ty -> (
+      match ty with
+      | I32 | I64 | F32 | F64 | V128 -> true
+      | Ref { nullable; _ } -> nullable
+      | Tuple _ -> assert false)
+
 let rec instruction ctx (i : _ Ast.Text.instr) =
   if false then Format.eprintf "%a@." Output.instr i;
   match i.desc with
@@ -752,9 +761,12 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         | _ -> (*ZZZ *) assert false
       in
       push (Ref { nullable = false; typ = Type ty })
-  (*
-    | StructNewDefault of X.idx
-*)
+  | StructNewDefault idx ->
+      let ty = resolve_type_index ctx.modul.types idx in
+      (match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+      | Struct fields -> assert (Array.for_all field_has_default fields)
+      | _ -> (*ZZZ *) assert false);
+      push (Ref { nullable = false; typ = Type ty })
   | StructGet (signage, idx, idx') -> (
       let ty, fields = get_type_info ctx.modul.types idx in
       let* () = pop ctx (Ref { nullable = true; typ = Type ty }) in
@@ -793,9 +805,13 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         | _ -> (*ZZZ *) assert false
       in
       push (Ref { nullable = false; typ = Type ty })
-  (*
-    | ArrayNewDefault of X.idx
-*)
+  | ArrayNewDefault idx ->
+      let ty = resolve_type_index ctx.modul.types idx in
+      (match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+      | Array field -> assert (field_has_default field)
+      | _ -> (*ZZZ *) assert false);
+      let* () = pop ctx I32 in
+      push (Ref { nullable = false; typ = Type ty })
   | ArrayNewFixed (idx, n) ->
       let ty = resolve_type_index ctx.modul.types idx in
       let* () =
@@ -839,9 +855,37 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | ArrayLen ->
       let* () = pop ctx (Ref { nullable = true; typ = Array }) in
       push I32
+  | ArrayFill idx ->
+      let ty = resolve_type_index ctx.modul.types idx in
+      let* () = pop ctx I32 in
+      let* () =
+        match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+        | Array field ->
+            assert field.mut;
+            pop ctx (unpack_type field)
+        | _ -> (*ZZZ *) assert false
+      in
+      let* () = pop ctx I32 in
+      pop ctx (Ref { nullable = true; typ = Type ty })
+  | ArrayCopy (idx1, idx2) ->
+      let ty1 = resolve_type_index ctx.modul.types idx1 in
+      let ty2 = resolve_type_index ctx.modul.types idx2 in
+      (match
+         ( (Types.get_subtype ctx.modul.subtyping_info ty1).typ,
+           (Types.get_subtype ctx.modul.subtyping_info ty2).typ )
+       with
+      | Array field1, Array field2 ->
+          assert field1.mut;
+          assert (
+            Types.val_subtype ctx.modul.subtyping_info (unpack_type field2)
+              (unpack_type field1))
+      | _ -> (*ZZZ *) assert false);
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      let* () = pop ctx (Ref { nullable = true; typ = Type ty2 }) in
+      let* () = pop ctx I32 in
+      pop ctx (Ref { nullable = true; typ = Type ty1 })
   (*
-    | ArrayFill of X.idx
-    | ArrayCopy of X.idx * X.idx
     | ArrayInitData of X.idx * X.idx
     | ArrayInitElem of X.idx * X.idx
 *)
@@ -922,6 +966,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | Folded (i, l) ->
       let* () = instructions ctx l in
       instruction ctx i
+  | TupleMake _ -> return ()
   (*
     (* Binaryen extensions *)
     | Pop of X.valtype
