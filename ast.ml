@@ -99,6 +99,7 @@ type 'info instr_desc =
   | Br_on_cast of label * reftype * 'info instr
   | Br_on_cast_fail of label * reftype * 'info instr
   | Throw of idx * 'info instr list
+  | ThrowRef of 'info instr
   | Return of 'info instr option
   | Sequence of 'info instr list
   | Select of 'info instr * 'info instr * 'info instr

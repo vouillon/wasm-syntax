@@ -185,6 +185,7 @@ struct
     | Unreachable
     | Nop
     | Throw of X.idx
+    | ThrowRef
     | Br of X.idx
     | Br_if of X.idx
     | Br_table of X.idx list * X.idx

@@ -868,6 +868,9 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       let input, _ = tag_arity ctx t in
       let* args = Stack.grab input in
       Stack.push_poly (with_loc (Throw (idx ctx `Tag t, args)))
+  | ThrowRef ->
+      let* e = Stack.pop in
+      Stack.push_poly (with_loc (ThrowRef e))
   | RefAsNonNull ->
       let* e = Stack.pop in
       Stack.push 1 (with_loc (NonNull e))

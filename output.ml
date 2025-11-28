@@ -375,6 +375,9 @@ let rec instr prec f (i : _ instr) =
            ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
            (instr Instruction))
         l
+  | ThrowRef i ->
+      parentheses prec Branch f @@ fun () ->
+      Format.fprintf f "@[<2>throw@ %a@]" (instr Branch) i
   | Sequence l ->
       Format.fprintf f "(@[%a@])"
         (Format.pp_print_list
@@ -402,7 +405,8 @@ and deliminated_instr f (i : _ instr) =
   | StructDefault _ | StructGet _ | StructSet _ | Array _ | ArrayDefault _
   | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _ | Let _ | Br _
   | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
-  | Br_on_cast_fail _ | Return _ | Throw _ | Sequence _ | Null | Select _ ->
+  | Br_on_cast_fail _ | Return _ | Throw _ | ThrowRef _ | Sequence _ | Null
+  | Select _ ->
       Format.fprintf f "@[%a;@]" (instr Instruction) i
 
 and block_instrs f (l : _ instr list) =

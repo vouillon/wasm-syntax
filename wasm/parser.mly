@@ -138,6 +138,7 @@ ZZZ
 %token CATCH_ALL
 %token CATCH_ALL_REF
 %token THROW
+%token THROW_REF
 %token <string> MEM_ALIGN
 %token <string> MEM_OFFSET
 (* Binaryen extensions *)
@@ -189,7 +190,6 @@ let with_loc (loc_start, loc_end) desc =
   {Ast.desc; info = { Ast.loc_start; loc_end }}
 
 let map_fst f (x, y) = (f x, y)
-
 
 let check_constant f loc s =
   if not (f s) then
@@ -414,6 +414,7 @@ blocktype(cont):
 
 plaininstr:
 | THROW i = idx { with_loc $sloc (Throw i) }
+| THROW_REF { with_loc $sloc ThrowRef }
 | BR i = idx { with_loc $sloc (Br i) }
 | BR_IF i = idx { with_loc $sloc (Br_if i) }
 | BR_TABLE l = idx +

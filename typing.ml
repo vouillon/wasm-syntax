@@ -1487,6 +1487,15 @@ let rec instruction ctx i =
                 params))
       in
       unreachable
+  | ThrowRef i' ->
+      let* () = instruction ctx i' in
+      let* () =
+        let typ = Ref { nullable = true; typ = Exn } in
+        pop ctx
+          (UnionFind.make
+             (Valtype { typ; internal = valtype ctx.type_context typ }))
+      in
+      unreachable
   | NonNull i' -> (
       let* () = instruction ctx i' in
       let* ty = pop_any in

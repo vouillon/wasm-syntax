@@ -496,6 +496,7 @@ let rec instr i =
       Block [ Atom "br_on_cast_fail"; index i; reftype ty; reftype ty' ]
   | Return -> Atom "return"
   | Throw tag -> Block [ Atom "throw"; index tag ]
+  | ThrowRef -> Block [ Atom "throw_ref" ]
   | Nop -> Atom "nop"
   | Unreachable -> Atom "unreachable"
   | ArraySet typ -> Block [ Atom "array.set"; index typ ]

@@ -64,13 +64,13 @@
 %token DO LOOP IF ELSE
 %token CONST LET AS IS
 %token BECOME
-%token BR BR_IF BR_TABLE RETURN THROW
+%token BR BR_IF BR_TABLE RETURN THROW THROW_REF
 %token BR_ON_CAST BR_ON_CAST_FAIL
 %token BR_ON_NULL BR_ON_NON_NULL
 %token DISPATCH
 
 %nonassoc LET
-%right RETURN
+%right RETURN THROW_REF
 %nonassoc IDENT prec_branch RBRACE
 %nonassoc LBRACE LBRACKET
 %right EQUAL COLONEQUAL
@@ -380,6 +380,8 @@ plaininstr:
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) }
 | THROW t = ident  "(" l = separated_list(",", instr) ")"
   { with_loc $sloc (Throw (t, l)) }
+| THROW_REF i = instr
+  { with_loc $sloc (ThrowRef i) }
 | i1 = instr "[" i2 = instr "]" { with_loc $sloc (ArrayGet (i1, i2)) }
 | i1 = instr "[" i2 = instr "]" "=" i3 = instr
   { with_loc $sloc (ArraySet (i1, i2, i3)) }

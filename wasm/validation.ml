@@ -423,6 +423,9 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           assert (results = [||]);
           let* () = pop_args ctx (Array.to_list params) in
           unreachable)
+  | ThrowRef ->
+      let* () = pop ctx (Ref { nullable = true; typ = Exn }) in
+      unreachable
   | Br idx ->
       let params = branch_target ctx idx in
       let* () = pop_args ctx params in
@@ -958,17 +961,17 @@ let rec check_constant_instruction ctx (i : _ Ast.Text.instr) =
       check_constant_instruction ctx i;
       check_constant_instructions ctx l
   | Block _ | Loop _ | If _ | TryTable _ | Try _ | Unreachable | Nop | Throw _
-  | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
-  | Br_on_cast_fail _ | Return | Call _ | CallRef _ | CallIndirect _
-  | ReturnCall _ | ReturnCallRef _ | ReturnCallIndirect _ | Drop | Select _
-  | LocalGet _ | LocalSet _ | LocalTee _ | GlobalSet _ | Load _ | LoadS _
-  | Store _ | StoreS _ | MemorySize _ | MemoryGrow _ | MemoryFill _
-  | MemoryCopy _ | MemoryInit _ | DataDrop _ | TableGet _ | TableSet _
-  | TableSize _ | TableGrow _ | TableFill _ | TableCopy _ | TableInit _
-  | ElemDrop _ | RefIsNull | RefAsNonNull | RefEq | RefTest _ | RefCast _
-  | StructGet _ | StructSet _ | ArrayNewData _ | ArrayNewElem _ | ArrayGet _
-  | ArraySet _ | ArrayLen | ArrayFill _ | ArrayCopy _ | ArrayInitData _
-  | ArrayInitElem _ | I31Get _ | UnOp _
+  | ThrowRef | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _
+  | Br_on_cast _ | Br_on_cast_fail _ | Return | Call _ | CallRef _
+  | CallIndirect _ | ReturnCall _ | ReturnCallRef _ | ReturnCallIndirect _
+  | Drop | Select _ | LocalGet _ | LocalSet _ | LocalTee _ | GlobalSet _
+  | Load _ | LoadS _ | Store _ | StoreS _ | MemorySize _ | MemoryGrow _
+  | MemoryFill _ | MemoryCopy _ | MemoryInit _ | DataDrop _ | TableGet _
+  | TableSet _ | TableSize _ | TableGrow _ | TableFill _ | TableCopy _
+  | TableInit _ | ElemDrop _ | RefIsNull | RefAsNonNull | RefEq | RefTest _
+  | RefCast _ | StructGet _ | StructSet _ | ArrayNewData _ | ArrayNewElem _
+  | ArrayGet _ | ArraySet _ | ArrayLen | ArrayFill _ | ArrayCopy _
+  | ArrayInitData _ | ArrayInitElem _ | I31Get _ | UnOp _
   | BinOp
       ( F32 _ | F64 _
       | I32

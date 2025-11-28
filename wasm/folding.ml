@@ -244,6 +244,7 @@ let arity env i =
   | Unreachable -> (0, unreachable)
   | Nop -> (0, 0)
   | Throw idx -> (fst (tag_arity env idx), unreachable)
+  | ThrowRef -> (1, unreachable)
   | Drop -> (1, 0)
   | Select _ -> (3, 1)
   | LocalGet l -> (0, local_arity env l)

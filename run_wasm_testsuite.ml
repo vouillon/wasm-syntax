@@ -8,6 +8,10 @@
   (on unfolded code without identifiers?)
 *)
 
+let print_flushed s =
+  print_string s;
+  flush stdout
+
 type pending_process = {
   pid : int;
   output_file : string;
@@ -102,9 +106,7 @@ let iter_files dirs skip suffix f =
           if Sys.is_directory path then visit path
           else if Filename.check_suffix entry suffix then
             in_child_process_async pool
-              ~on_termination:(fun _ s ->
-                print_string s;
-                flush stdout)
+              ~on_termination:(fun _ s -> print_flushed s)
               (fun () -> f path))
       entries
   in
@@ -265,7 +267,7 @@ let runtest filename =
     List.map
       (fun (status, m) ->
         let text = Format.asprintf "%a@." Wasm.Output.module_ m in
-        if false then prerr_endline text;
+        if false then print_flushed text;
         (status, ModuleParser.parse_from_string ~filename text))
       lst
   in
@@ -306,12 +308,15 @@ let runtest filename =
             in_child_process (fun () ->
                 let m' = FancyParser.parse_from_string ~filename text in
                 let ok = in_child_process (fun () -> Typing.f m') in
-                if not ok then (
-                  Format.eprintf "@[%a@]@." Output.module_ m';
-                  prerr_endline "===";
-                  Format.eprintf "@[%a@]@." Output.module_ m))
+                if not ok then
+                  if true then prerr_endline "(after parsing)"
+                  else (
+                    Format.eprintf "@[%a@]@." Output.module_ m';
+                    prerr_endline "===";
+                    Format.eprintf "@[%a@]@." Output.module_ m))
           in
-          if not ok then prerr_endline text)
+          if not ok then
+            if true then prerr_endline "(parsing)" else print_flushed text)
     lst
 
 let () =

@@ -435,6 +435,7 @@ let rec token lexbuf =
   | "catch_all" -> CATCH_ALL
   | "catch_all_ref" -> CATCH_ALL_REF
   | "throw" -> THROW
+  | "throw_ref" -> THROW_REF
   | "align=", uN ->
       MEM_ALIGN
         (Sedlexing.Utf8.sub_lexeme lexbuf 6
