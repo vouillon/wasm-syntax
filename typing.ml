@@ -9,13 +9,10 @@ TODO:
 - more methods rather than global functions (no ambiguity)?
   rotl(..), rotr(..), min(..), max(..), copysign(..)
 - tests:
-  - short pieces of syntaxe, read / write / error
+  - short pieces of syntax, read / write / error
   - write the translated files, parse/validate them, translate/validate them back
-  - webassembly testsuite => parse everything we can / reproduce errors
 - move lets at more appriate places
 - remove redundant type annotations/casts
-- cast to number might need to be duplicated (initial type then final type);
-  need cast before to_bits/from_bits also
 - take into account that locals can shadow globals to get better local names
   (if a global is not used in a function, we can reuse its name)
 
@@ -679,7 +676,8 @@ let rec instruction ctx i =
       match (typ1, typ2) with
       | Some typ1, Some typ2 -> check_int_bin_op i typ1 typ2
       | _ -> assert false (*ZZZ*))
-  | Call ({ desc = Get { desc = "copysign"; _ }; _ }, [ i1; i2 ]) -> (
+  | Call ({ desc = Get { desc = "copysign" | "min" | "max"; _ }; _ }, [ i1; i2 ])
+    -> (
       let* () = instruction ctx i1 in
       let* () = instruction ctx i2 in
       let* typ2 = pop_any in

@@ -26,7 +26,6 @@ end
 
 module Sequence = struct
   type t = {
-    name : string;
     index_mapping : (Uint32.t, string) Hashtbl.t;
     label_mapping : (string, string) Hashtbl.t;
     mutable last_index : Uint32.t;
@@ -35,9 +34,8 @@ module Sequence = struct
     default : string;
   }
 
-  let make namespace name default =
+  let make namespace default =
     {
-      name;
       index_mapping = Hashtbl.create 16;
       label_mapping = Hashtbl.create 16;
       last_index = Uint32.zero;
@@ -68,16 +66,8 @@ module Sequence = struct
       idx with
       desc =
         (match idx.desc with
-        | Num n -> (
-            try Hashtbl.find seq.index_mapping n
-            with Not_found ->
-              Format.eprintf "Unbound %s %s@." seq.name (Uint32.to_string n);
-              exit 1)
-        | Id id -> (
-            try Hashtbl.find seq.label_mapping id
-            with Not_found ->
-              Format.eprintf "Unbound %s $%s@." seq.name id;
-              if true then raise Not_found else exit 1));
+        | Num n -> Hashtbl.find seq.index_mapping n
+        | Id id -> Hashtbl.find seq.label_mapping id);
     }
 
   let get_current seq =
@@ -869,29 +859,56 @@ let bind_locals st l =
              None )))
     l
 
-let typeuse kind st (typ, sign) =
-  ( Option.map (fun i -> idx st `Type i) typ,
-    Option.map
-      (fun (p, r) ->
-        {
-          Ast.named_params =
-            List.mapi
-              (fun n (id, t) ->
-                ( (match kind with
-                  | `Func ->
-                      Some
-                        (idx st `Local
-                           (Ast.no_loc
-                              (match id with
-                               | Some id -> Id id
-                               | None -> Num (Uint32.of_int n)
-                                : Src.idx_desc)))
-                  | `Sig -> Option.map Ast.no_loc id),
-                  valtype st t ))
-              p;
-          results = List.map (fun t -> valtype st t) r;
-        })
-      sign )
+let typeuse kind ctx (typ, sign) =
+  ( Option.map (fun i -> idx ctx `Type i) typ,
+    match (kind, typ, sign) with
+    | `Sig, _, None -> None
+    | `Sig, _, Some (p, r) ->
+        Some
+          {
+            Ast.named_params =
+              List.mapi
+                (fun _ (id, t) -> (Option.map Ast.no_loc id, valtype ctx t))
+                p;
+            results = List.map (fun t -> valtype ctx t) r;
+          }
+    | `Func, None, None -> assert false
+    | `Func, Some typ, None -> (
+        match (lookup_type ctx Type typ).typ with
+        | Struct _ | Array _ -> assert false
+        | Func ty ->
+            Some
+              {
+                Ast.named_params =
+                  Array.to_list
+                    (Array.mapi
+                       (fun n t ->
+                         ( Some
+                             (idx ctx `Local
+                                (Ast.no_loc
+                                   (Num (Uint32.of_int n) : Src.idx_desc))),
+                           valtype ctx t ))
+                       ty.params);
+                results =
+                  Array.to_list (Array.map (fun t -> valtype ctx t) ty.results);
+              })
+    | `Func, _, Some (p, r) ->
+        Some
+          {
+            Ast.named_params =
+              List.mapi
+                (fun n (id, t) ->
+                  ( Some
+                      (idx ctx `Local
+                         (Ast.no_loc
+                            (match id with
+                             | Some id -> Id id
+                             | None -> Num (Uint32.of_int n)
+                              : Src.idx_desc))),
+                    valtype ctx t ))
+                p;
+            results = List.map (fun t -> valtype ctx t) r;
+          } )
 
 let exports e =
   List.map (fun nm -> ("export", Ast.no_loc (Ast.String (None, nm)))) e
@@ -914,8 +931,7 @@ let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
         let return_arity = snd (typeuse_arity ctx typ) in
         {
           ctx with
-          locals =
-            Sequence.make (Namespace.dup ctx.common_namespace) "local" "x";
+          locals = Sequence.make (Namespace.dup ctx.common_namespace) "x";
           labels;
           label_arities = [ (None, return_arity) ];
           return_arity;
@@ -925,7 +941,14 @@ let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
       | _, Some (params, _) ->
           List.iter (fun (id, _) -> Sequence.register ctx.locals id []) params;
           Sequence.consume_currents ctx.locals
-      | _ -> ());
+      | Some idx, _ -> (
+          match (lookup_type ctx Type idx).typ with
+          | Func ty ->
+              Array.iter
+                (fun _ -> Sequence.register ctx.locals None [])
+                ty.params
+          | Struct _ | Array _ -> assert false)
+      | None, None -> ());
       List.iter (fun (id, _) -> Sequence.register ctx.locals id []) locals;
       let locals = bind_locals ctx locals in
       let typ, sign = typeuse `Func ctx typ in
@@ -1027,7 +1050,7 @@ let register_names ctx fields =
               match (ty : Src.subtype).typ with
               | Func _ | Array _ -> ()
               | Struct l ->
-                  let seq = Sequence.make (Namespace.make ()) "field" "f" in
+                  let seq = Sequence.make (Namespace.make ()) "f" in
                   let fields =
                     Array.map
                       (fun t -> Sequence.register' seq (get_annot t) [])
@@ -1062,15 +1085,15 @@ let module_ (_, fields) =
     let common_namespace = Namespace.make () in
     {
       common_namespace;
-      types = Sequence.make (Namespace.make ()) "type" "t";
+      types = Sequence.make (Namespace.make ()) "t";
       struct_fields = Hashtbl.create 16;
-      globals = Sequence.make common_namespace "global" "x";
-      functions = Sequence.make common_namespace "function" "f";
-      locals = Sequence.make common_namespace "local" "x";
-      memories = Sequence.make (Namespace.make ()) "memory" "m";
-      tables = Sequence.make (Namespace.make ()) "table" "m";
+      globals = Sequence.make common_namespace "x";
+      functions = Sequence.make common_namespace "f";
+      locals = Sequence.make common_namespace "x";
+      memories = Sequence.make (Namespace.make ()) "m";
+      tables = Sequence.make (Namespace.make ()) "m";
       labels = LabelStack.make ();
-      tags = Sequence.make (Namespace.make ()) "tag" "t";
+      tags = Sequence.make (Namespace.make ()) "t";
       type_defs = Tbl.make ();
       function_types = Tbl.make ();
       tag_types = Tbl.make ();

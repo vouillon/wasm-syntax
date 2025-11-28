@@ -283,9 +283,13 @@ let runtest filename =
   (* Translation to new syntax *)
   List.iter
     (fun m ->
-      let m = From_wasm.module_ m in
-      let ok = in_child_process (fun () -> Typing.f m) in
-      if not ok then Format.eprintf "@[%a@]@." Output.module_ m)
+      match From_wasm.module_ m with
+      | m ->
+          let ok = in_child_process (fun () -> Typing.f m) in
+          if not ok then Format.eprintf "@[%a@]@." Output.module_ m
+      | exception e ->
+          prerr_endline (Printexc.to_string e);
+          Format.eprintf "@[%a@]@." Wasm.Output.module_ m)
     lst
 
 let () =
