@@ -408,7 +408,7 @@ let output_inferred_type f ty =
 let rec output_stack f st =
   match st with
   | Empty -> ()
-  | Unreachable -> Format.fprintf f "unreachable"
+  | Unreachable -> Format.fprintf f "@ unreachable"
   | Cons (_, ty, st) ->
       Format.fprintf f "@ %a%a"
         (Format.pp_print_option
@@ -460,7 +460,7 @@ let rec push_results results =
       push_results rem
 
 let print_stack st =
-  Format.eprintf "Stack: %a@." output_stack st;
+  Format.eprintf "@[<2>Stack: %a@]@." output_stack st;
   (st, ())
 
 let rec repeat n f =
@@ -473,10 +473,7 @@ let with_empty_stack f =
   let st, () = f Empty in
   match st with
   | Cons _ ->
-      (*ZZZ
-      prerr_endline "Stack:";
-      print_stack st;
-*)
+      Format.eprintf "@[<2>Stack:%a@]@." output_stack st;
       assert false
   | Empty | Unreachable -> ()
 
@@ -525,6 +522,10 @@ let check_float_bin_op i typ1 typ2 =
 let with_current_stack f st = (st, f st)
 
 let rec instruction ctx i =
+  (*
+  let* () = print_stack in
+  if true then Format.eprintf "%a@." Output.instr i;
+*)
   match i.desc with
   | Block (label, bt, instrs) ->
       let { params; results } = bt in
@@ -610,6 +611,7 @@ let rec instruction ctx i =
            results)
   | Unreachable -> unreachable
   | Nop -> return ()
+  | Pop -> return ()
   | Null -> push i.info (UnionFind.make Null)
   | Get idx -> (
       match StringMap.find_opt idx.desc ctx.locals with
@@ -635,7 +637,11 @@ let rec instruction ctx i =
               | None ->
                   Format.eprintf "%a@." Output.instr i;
                   assert false)))
-  | Set (idx, i') -> (
+  | Set (None, i') ->
+      let* () = instruction ctx i' in
+      let* _ = pop_any in
+      return ()
+  | Set (Some idx, i') -> (
       let* () = instruction ctx i' in
       match StringMap.find_opt idx.desc ctx.locals with
       | Some ty -> pop ctx (UnionFind.make (Valtype ty))

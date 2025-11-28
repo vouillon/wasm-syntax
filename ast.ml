@@ -66,9 +66,10 @@ type 'info instr_desc =
       * 'info instr list option
   | Unreachable
   | Nop
+  | Pop
   | Null
   | Get of idx
-  | Set of idx * 'info instr
+  | Set of idx option * 'info instr
   | Tee of idx * 'info instr
   | Call of 'info instr * 'info instr list
   | TailCall of 'info instr * 'info instr list

@@ -224,10 +224,11 @@ let rec instr prec f (i : _ instr) =
       | None -> Format.fprintf f "@[}%a@]@]@]" label_comment (l1, label))
   | Unreachable -> Format.pp_print_string f "unreachable"
   | Nop -> Format.pp_print_string f "nop"
+  | Pop -> Format.pp_print_string f "_"
   | Get x -> Format.pp_print_string f x.desc
   | Set (x, i) ->
       parentheses prec Assignement f @@ fun () ->
-      Format.fprintf f "@[<2>%s@ =@ %a@]" x.desc (instr Assignement) i
+      Format.fprintf f "@[<2>%a@ =@ %a@]" simple_pat x (instr Assignement) i
   | Tee (x, i) ->
       parentheses prec Assignement f @@ fun () ->
       Format.fprintf f "@[<2>%s@ :=@ %a@]" x.desc (instr Assignement) i
@@ -396,11 +397,11 @@ and block f label kind bt (l : _ instr list) =
 and deliminated_instr f (i : _ instr) =
   match i.desc with
   | Block _ | Loop _ | If _ -> instr Instruction f i
-  | Unreachable | Nop | Get _ | Set _ | Tee _ | Call _ | TailCall _ | String _
-  | Int _ | Float _ | Cast _ | NonNull _ | Test _ | Struct _ | StructDefault _
-  | StructGet _ | StructSet _ | Array _ | ArrayDefault _ | ArrayFixed _
-  | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _ | Let _ | Br _ | Br_if _
-  | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | Unreachable | Nop | Pop | Get _ | Set _ | Tee _ | Call _ | TailCall _
+  | String _ | Int _ | Float _ | Cast _ | NonNull _ | Test _ | Struct _
+  | StructDefault _ | StructGet _ | StructSet _ | Array _ | ArrayDefault _
+  | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _ | Let _ | Br _
+  | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
   | Br_on_cast_fail _ | Return _ | Throw _ | Sequence _ | Null | Select _ ->
       Format.fprintf f "@[%a;@]" (instr Instruction) i
 
@@ -437,9 +438,10 @@ let attributes f attributes =
 let modulefield f field =
   match field with
   | Type t -> rectype f t
-  | Func { name; typ; sign; body = _lab, body; attributes = a } ->
-      Format.fprintf f "@[<hv>%a@[<hv>@[%a@ {@]%a}@]@]" attributes a
-        (fundecl ~tag:false) (name, typ, sign) block_contents body
+  | Func { name; typ; sign; body = label, body; attributes = a } ->
+      Format.fprintf f "@[<hv>%a@[<hv>@[%a@ %a{@]%a}@]@]" attributes a
+        (fundecl ~tag:false) (name, typ, sign) block_label label block_contents
+        body
   | Global { name; mut; typ; def; attributes = a } ->
       Format.fprintf f "@[<hv>%a@[<2>%s@ %s" attributes a
         (if mut then "let" else "const")

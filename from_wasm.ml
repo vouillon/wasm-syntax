@@ -134,9 +134,7 @@ type ctx = {
   labels : LabelStack.t;
   type_defs : Src.subtype Tbl.t;
   function_types : Src.typeuse Tbl.t;
-  global_types : Src.globaltype Tbl.t;
   tag_types : Src.typeuse Tbl.t;
-  local_types : Src.valtype Tbl.t;
   label_arities : (Src.id option * int) list;
   return_arity : int;
 }
@@ -239,19 +237,15 @@ let globaltype st = muttype valtype st
 
 type _ kind =
   | Type : Src.subtype kind
-  | Global : Src.globaltype kind
   | Func : Src.typeuse kind
   | Tag : Src.typeuse kind
-  | Local : Src.valtype kind
 
 let lookup_type (type typ) ctx (kind : typ kind) idx : typ =
   let get seq tbl idx = Tbl.find tbl (Sequence.get seq idx).desc in
   match kind with
   | Type -> get ctx.types ctx.type_defs idx
-  | Global -> get ctx.globals ctx.global_types idx
   | Func -> get ctx.functions ctx.function_types idx
   | Tag -> get ctx.tags ctx.tag_types idx
-  | Local -> get ctx.locals ctx.local_types idx
 
 let register_type (type typ) ctx (kind : typ kind) idx exports (typ : typ) =
   let register seq tbl idx =
@@ -259,10 +253,8 @@ let register_type (type typ) ctx (kind : typ kind) idx exports (typ : typ) =
   in
   match kind with
   | Type -> assert false
-  | Global -> register ctx.globals ctx.global_types idx
   | Func -> register ctx.functions ctx.function_types idx
   | Tag -> register ctx.tags ctx.tag_types idx
-  | Local -> register ctx.locals ctx.local_types idx
 
 let functype_no_bindings_arity { Src.params; results } =
   (Array.length params, Array.length results)
@@ -272,7 +264,7 @@ let functype_arity (params, results) = (List.length params, List.length results)
 let type_arity ctx idx =
   match (lookup_type ctx Type idx).typ with
   | Func ty -> functype_no_bindings_arity ty
-  | Struct _ | Array _ -> assert false (*ZZZ*)
+  | Struct _ | Array _ -> assert false
 
 let typeuse_no_bindings_arity ctx (i, ty) =
   match (i, ty) with
@@ -293,15 +285,7 @@ let blocktype_arity ctx (t : Src.blocktype option) =
   | Some (Typeuse t) -> typeuse_no_bindings_arity ctx t
 
 let function_arity ctx f = typeuse_arity ctx (lookup_type ctx Func f)
-
-let valtype_arity (t : Src.valtype) =
-  match t with Tuple l -> List.length l | _ -> 1
-
-let globaltype_arity (t : Src.globaltype) = valtype_arity t.typ
-let global_arity ctx g = globaltype_arity (lookup_type ctx Global g)
 let tag_arity ctx t = typeuse_arity ctx (lookup_type ctx Tag t)
-let local_arity ctx l = valtype_arity (lookup_type ctx Local l)
-let unreachable = 100_000
 
 let label_arity ctx (idx : Src.idx) =
   match idx.desc with
@@ -311,114 +295,6 @@ let label_arity ctx (idx : Src.idx) =
            (fun e -> match e with Some id', _ -> id = id' | _ -> false)
            ctx.label_arities)
   | Num i -> snd (List.nth ctx.label_arities (Uint32.to_int i))
-
-let _arity ctx (i : _ Src.instr) =
-  match i.Ast.desc with
-  | Block { typ; _ } | Loop { typ; _ } | Try { typ; _ } | TryTable { typ; _ } ->
-      blocktype_arity ctx typ
-  | If { typ; _ } ->
-      let i, o = blocktype_arity ctx typ in
-      (i + 1, o)
-  | Call f -> function_arity ctx f
-  | ReturnCall f ->
-      let i, _ = function_arity ctx f in
-      (i, unreachable)
-  | CallRef t ->
-      let i, o = type_arity ctx t in
-      (i + 1, o)
-  | ReturnCallRef t ->
-      let i, _ = type_arity ctx t in
-      (i + 1, unreachable)
-  | Br l ->
-      let i = label_arity ctx l in
-      (i, unreachable)
-  | Br_if l ->
-      let i = label_arity ctx l in
-      (i + 1, i)
-  | Br_table (_, l) ->
-      let i = label_arity ctx l in
-      (i + 1, unreachable)
-  | Br_on_null l ->
-      let i = label_arity ctx l in
-      (i + 1, i + 1)
-  | Br_on_non_null l ->
-      let i = label_arity ctx l in
-      (i + 1, i)
-  | Br_on_cast (l, _, _) | Br_on_cast_fail (l, _, _) ->
-      let i = label_arity ctx l in
-      (i + 1, i + 1)
-  | Return -> (ctx.return_arity, unreachable)
-  | ReturnCallIndirect (_, ty) ->
-      let i, _ = typeuse_no_bindings_arity ctx ty in
-      (i + 1, unreachable)
-  | CallIndirect (_, ty) ->
-      let i, o = typeuse_no_bindings_arity ctx ty in
-      (i + 1, o)
-  | Unreachable -> (0, unreachable)
-  | Nop -> (0, 0)
-  | Throw t -> (fst (tag_arity ctx t), unreachable)
-  | Drop -> (1, 0)
-  | Select _ -> (3, 1)
-  | LocalGet l -> (0, local_arity ctx l)
-  | LocalSet l -> (local_arity ctx l, 0)
-  | LocalTee l ->
-      let i = local_arity ctx l in
-      (i, i)
-  | GlobalGet g -> (0, global_arity ctx g)
-  | GlobalSet g -> (global_arity ctx g, 0)
-  | Load _ | LoadS _ | Store _ | StoreS _ -> (1, 1)
-  | MemorySize _ -> (0, 1)
-  | MemoryGrow _ -> (1, 1)
-  | MemoryFill _ | MemoryCopy _ | MemoryInit _ -> (3, 0)
-  | DataDrop _ -> (0, 0)
-  | TableGet _ -> (1, 1)
-  | TableSet _ -> (2, 0)
-  | TableSize _ -> (0, 1)
-  | TableGrow _ -> (2, 1)
-  | TableFill _ | TableCopy _ | TableInit _ -> (3, 0)
-  | ElemDrop _ -> (0, 0)
-  | RefNull _ -> (0, 1)
-  | RefFunc _ -> (0, 1)
-  | RefIsNull -> (1, 1)
-  | RefAsNonNull -> (1, 1)
-  | RefEq -> (2, 1)
-  | RefTest _ -> (1, 1)
-  | RefCast _ -> (1, 1)
-  | StructNew t -> (
-      match (lookup_type ctx Type t).typ with
-      | Struct f -> (Array.length f, 1)
-      | Func _ | Array _ -> assert false (*ZZZ*))
-  | StructNewDefault _ -> (0, 1)
-  | StructGet _ -> (1, 1)
-  | StructSet _ -> (2, 0)
-  | ArrayNew _ -> (2, 1)
-  | ArrayNewDefault _ -> (1, 1)
-  | ArrayNewFixed (_, n) -> (Uint32.to_int n, 1)
-  | ArrayNewData _ -> (2, 1)
-  | ArrayNewElem _ -> (2, 1)
-  | ArrayGet _ -> (2, 1)
-  | ArraySet _ -> (3, 0)
-  | ArrayLen -> (1, 1)
-  | ArrayFill _ -> (4, 0)
-  | ArrayCopy _ -> (5, 0)
-  | ArrayInitData _ -> (4, 0)
-  | ArrayInitElem _ -> (4, 0)
-  | RefI31 -> (1, 1)
-  | I31Get _ -> (1, 1)
-  | Const _ -> (0, 1)
-  | UnOp _ -> (1, 1)
-  | BinOp _ -> (2, 1)
-  | I32WrapI64 -> (1, 1)
-  | I64ExtendI32 _ -> (1, 1)
-  | F32DemoteF64 -> (1, 1)
-  | F64PromoteF32 -> (1, 1)
-  | ExternConvertAny -> (1, 1)
-  | AnyConvertExtern -> (1, 1)
-  | Folded _ -> assert false
-  (* Binaryen extensions *)
-  | Pop _ -> (0, 1)
-  | TupleMake n -> (Uint32.to_int n, Uint32.to_int n)
-  | TupleExtract (n, _) -> (Uint32.to_int n, 1)
 
 (*
 Step 1: traverse types and find existing names
@@ -430,7 +306,50 @@ Step 2: use this info to generate using names without reusing existing names
   - explode tuples
 *)
 
-let unit = Ast.no_loc (Ast.Sequence [])
+module Stack = struct
+  type stack = (int option * Ast.location Ast.instr) list
+  type 'a t = stack -> stack * 'a
+
+  (* Consume some arguments from the stack *)
+  let rec consume n stack =
+    if n = 0 then stack
+    else
+      match stack with
+      | [] | (None, _) :: _ -> stack
+      | (Some n', i) :: rem ->
+          if n >= n' then (Some 0, i) :: consume (n - n') stack
+          else (Some (n' - n), i) :: rem
+
+  let rec complete n cur =
+    if n = 0 then cur else complete (n - 1) (Ast.no_loc Ast.Pop :: cur)
+
+  let rec grab_rec n stack cur =
+    if n = 0 then (stack, cur)
+    else
+      match stack with
+      | (Some 1, instr) :: rem -> grab_rec (n - 1) rem (instr :: cur)
+      | _ -> (consume (n - 1) stack, complete n cur)
+
+  let consume n stack = (consume n stack, ())
+  let grab n stack = grab_rec n stack []
+  let push arity i stack = ((Some arity, i) :: stack, ())
+  let push_poly i stack = ((None, i) :: stack, ())
+
+  let pop stack =
+    match stack with
+    | (Some 1, i) :: rem -> (rem, i)
+    | _ -> (stack, Ast.no_loc Ast.Pop)
+
+  let run f =
+    let st, () = f [] in
+    List.rev_map snd st
+end
+
+let ( let* ) e f st =
+  let st, v = e st in
+  f v st
+
+let return v st = (st, v)
 let sequence l = match l with [ i ] -> i | _ -> Ast.no_loc (Ast.Sequence l)
 
 let is_integer =
@@ -455,25 +374,6 @@ let sequence_opt l =
   | [] -> None
   | [ i ] -> Some i
   | l -> Some (Ast.no_loc (Ast.Sequence l))
-
-let two_args l : _ Ast.instr * _ Ast.instr =
-  match l with
-  | [] -> (unit, unit)
-  | [ x ] -> (unit, x)
-  | [ x; y ] -> (x, y)
-  | x :: r ->
-      (*ZZZ Should take arity into account *)
-      (x, Ast.no_loc (Ast.Sequence r))
-
-let three_args l : _ Ast.instr * _ Ast.instr * _ Ast.instr =
-  match l with
-  | [] -> (unit, unit, unit)
-  | [ x ] -> (unit, unit, x)
-  | [ x; y ] -> (unit, x, y)
-  | [ x; y; z ] -> (x, y, z)
-  | x :: y :: r ->
-      (*ZZZ Should take arity into account *)
-      (x, y, Ast.no_loc (Ast.Sequence r))
 
 let reasonable_string =
   Re.(
@@ -501,14 +401,6 @@ let string_args n args =
     else None
   with Exit -> None
 
-let rec split_last l =
-  match l with
-  | [] -> assert false
-  | [ x ] -> (x, [])
-  | y :: r ->
-      let x, l = split_last r in
-      (x, y :: l)
-
 let numtype (ty : Src.valtype) =
   match ty with
   | I32 -> `I32
@@ -517,31 +409,30 @@ let numtype (ty : Src.valtype) =
   | F64 -> `F64
   | _ -> assert false
 
-let int_un_op i0 sz (op : Src.int_un_op) args =
+let int_un_op i0 sz (op : Src.int_un_op) =
   let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
-  match op with
-  | Clz -> with_loc (StructGet (sequence args, Ast.no_loc "clz"))
-  | Ctz -> with_loc (StructGet (sequence args, Ast.no_loc "ctz"))
-  | Popcnt -> with_loc (StructGet (sequence args, Ast.no_loc "popcnt"))
-  | Eqz -> with_loc (UnOp (Not, sequence args))
-  | Trunc (_, signage) ->
-      with_loc
-        (Cast
-           ( sequence args,
-             Signedtype { typ = numtype sz; signage; strict = true } ))
-  | TruncSat (_, signage) ->
-      with_loc
-        (Cast
-           ( sequence args,
-             Signedtype { typ = numtype sz; signage; strict = false } ))
-  | Reinterpret -> with_loc (StructGet (sequence args, Ast.no_loc "to_bits"))
-  | ExtendS _ -> with_loc Unreachable (* ZZZ *)
+  let* e = Stack.pop in
+  Stack.push 1
+    (match op with
+    | Clz -> with_loc (StructGet (e, Ast.no_loc "clz"))
+    | Ctz -> with_loc (StructGet (e, Ast.no_loc "ctz"))
+    | Popcnt -> with_loc (StructGet (e, Ast.no_loc "popcnt"))
+    | Eqz -> with_loc (UnOp (Not, e))
+    | Trunc (_, signage) ->
+        with_loc
+          (Cast (e, Signedtype { typ = numtype sz; signage; strict = true }))
+    | TruncSat (_, signage) ->
+        with_loc
+          (Cast (e, Signedtype { typ = numtype sz; signage; strict = false }))
+    | Reinterpret -> with_loc (StructGet (e, Ast.no_loc "to_bits"))
+    | ExtendS _ -> with_loc Unreachable (* ZZZ *))
 
-let int_bin_op i0 (op : Src.int_bin_op) args =
+let int_bin_op i0 (op : Src.int_bin_op) =
   let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
   let symbol op =
-    let e1, e2 = two_args args in
-    with_loc (BinOp (op, e1, e2))
+    let* e2 = Stack.pop in
+    let* e1 = Stack.pop in
+    Stack.push 1 (with_loc (BinOp (op, e1, e2)))
   in
   match op with
   | Add -> symbol Add
@@ -555,11 +446,11 @@ let int_bin_op i0 (op : Src.int_bin_op) args =
   | Shl -> symbol Shl
   | Shr s -> symbol (Shr s)
   | Rotl ->
-      let e1, e2 = two_args args in
-      with_loc (Call (with_loc (Get (Ast.no_loc "rotl")), [ e1; e2 ]))
+      let* args = Stack.grab 2 in
+      Stack.push 1 (with_loc (Call (with_loc (Get (Ast.no_loc "rotl")), args)))
   | Rotr ->
-      let e1, e2 = two_args args in
-      with_loc (Call (with_loc (Get (Ast.no_loc "rotr")), [ e1; e2 ]))
+      let* args = Stack.grab 2 in
+      Stack.push 1 (with_loc (Call (with_loc (Get (Ast.no_loc "rotr")), args)))
   | Eq -> symbol Eq
   | Ne -> symbol Ne
   | Lt s -> symbol (Lt (Some s))
@@ -567,28 +458,29 @@ let int_bin_op i0 (op : Src.int_bin_op) args =
   | Le s -> symbol (Le (Some s))
   | Ge s -> symbol (Ge (Some s))
 
-let float_un_op i0 sz (op : Src.float_un_op) args =
+let float_un_op i0 sz (op : Src.float_un_op) =
   let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
-  match op with
-  | Neg -> with_loc (UnOp (Neg, sequence args))
-  | Abs -> with_loc (StructGet (sequence args, Ast.no_loc "abs"))
-  | Ceil -> with_loc (StructGet (sequence args, Ast.no_loc "ceil"))
-  | Floor -> with_loc (StructGet (sequence args, Ast.no_loc "floor"))
-  | Trunc -> with_loc (StructGet (sequence args, Ast.no_loc "trunc"))
-  | Nearest -> with_loc (StructGet (sequence args, Ast.no_loc "nearest"))
-  | Sqrt -> with_loc (StructGet (sequence args, Ast.no_loc "sqrt"))
-  | Convert (_, signage) ->
-      with_loc
-        (Cast
-           ( sequence args,
-             Signedtype { typ = numtype sz; signage; strict = false } ))
-  | Reinterpret -> with_loc (StructGet (sequence args, Ast.no_loc "from_bits"))
+  let* e = Stack.pop in
+  Stack.push 1
+    (match op with
+    | Neg -> with_loc (UnOp (Neg, e))
+    | Abs -> with_loc (StructGet (e, Ast.no_loc "abs"))
+    | Ceil -> with_loc (StructGet (e, Ast.no_loc "ceil"))
+    | Floor -> with_loc (StructGet (e, Ast.no_loc "floor"))
+    | Trunc -> with_loc (StructGet (e, Ast.no_loc "trunc"))
+    | Nearest -> with_loc (StructGet (e, Ast.no_loc "nearest"))
+    | Sqrt -> with_loc (StructGet (e, Ast.no_loc "sqrt"))
+    | Convert (_, signage) ->
+        with_loc
+          (Cast (e, Signedtype { typ = numtype sz; signage; strict = false }))
+    | Reinterpret -> with_loc (StructGet (e, Ast.no_loc "from_bits")))
 
-let float_bin_op i0 (op : Src.float_bin_op) args =
+let float_bin_op i0 (op : Src.float_bin_op) =
   let with_loc (i : _ Ast.instr_desc) = { i0 with Ast.desc = i } in
   let symbol op =
-    let e1, e2 = two_args args in
-    with_loc (BinOp (op, e1, e2))
+    let* e2 = Stack.pop in
+    let* e1 = Stack.pop in
+    Stack.push 1 (with_loc (BinOp (op, e1, e2)))
   in
   match op with
   | Add -> symbol Add
@@ -596,12 +488,15 @@ let float_bin_op i0 (op : Src.float_bin_op) args =
   | Mul -> symbol Mul
   | Div -> symbol (Div None)
   | Min ->
-      with_loc (Call (with_loc (Get (Ast.no_loc "min")), [ sequence args ]))
+      let* args = Stack.grab 2 in
+      Stack.push 1 (with_loc (Call (with_loc (Get (Ast.no_loc "min")), args)))
   | Max ->
-      with_loc (Call (with_loc (Get (Ast.no_loc "max")), [ sequence args ]))
+      let* args = Stack.grab 2 in
+      Stack.push 1 (with_loc (Call (with_loc (Get (Ast.no_loc "max")), args)))
   | CopySign ->
-      let e1, e2 = two_args args in
-      with_loc (Call (with_loc (Get (Ast.no_loc "copysign")), [ e1; e2 ]))
+      let* args = Stack.grab 2 in
+      Stack.push 1
+        (with_loc (Call (with_loc (Get (Ast.no_loc "copysign")), args)))
   | Eq -> symbol Eq
   | Ne -> symbol Ne
   | Lt -> symbol (Lt None)
@@ -622,181 +517,280 @@ let blocktype ctx (typ : Src.blocktype option) =
           }
       | _, None -> assert false (*ZZZ*))
 
-let rec instr st (i : _ Src.instr) (args : _ Ast.instr list) : _ Ast.instr =
+let push_label ctx ~loop label typ =
+  let arity = blocktype_arity ctx typ in
+  let i = if loop then fst arity else snd arity in
+  let label_arities = (label, i) :: ctx.label_arities in
+  let label, labels = LabelStack.push ctx.labels label in
+  (label, { ctx with labels; label_arities })
+
+let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   let with_loc (i' : _ Ast.instr_desc) = { i with Ast.desc = i' } in
   match i.desc with
   | Block { label; typ; block } ->
-      assert (args = []);
-      let label, labels = LabelStack.push st.labels label in
-      let st = { st with labels } in
-      let body = List.map (fun i -> instr st i []) block in
-      with_loc (Block (label (), blocktype st typ, body))
+      let label, ctx = push_label ctx ~loop:false label typ in
+      let body = Stack.run (instructions ctx block) in
+      let inputs, outputs = blocktype_arity ctx typ in
+      let* () = Stack.consume inputs in
+      Stack.push outputs (with_loc (Block (label (), blocktype ctx typ, body)))
   | Loop { label; typ; block } ->
-      assert (args = []);
-      let label, labels = LabelStack.push st.labels label in
-      let st = { st with labels } in
-      let body = List.map (fun i -> instr st i []) block in
-      with_loc (Loop (label (), blocktype st typ, body))
+      let label, ctx = push_label ctx ~loop:false label typ in
+      let body = Stack.run (instructions ctx block) in
+      let inputs, outputs = blocktype_arity ctx typ in
+      let* () = Stack.consume inputs in
+      Stack.push outputs (with_loc (Loop (label (), blocktype ctx typ, body)))
   | If { label; typ; if_block; else_block } ->
-      let label, labels = LabelStack.push st.labels label in
-      let st = { st with labels } in
-      let if_body = List.map (fun i -> instr st i []) if_block in
+      let label, ctx = push_label ctx ~loop:false label typ in
+      let if_body = Stack.run (instructions ctx if_block) in
       let else_body =
         if else_block = [] then None
-        else Some (List.map (fun i -> instr st i []) else_block)
+        else Some (Stack.run (instructions ctx else_block))
       in
-      with_loc
-        (If (label (), blocktype st typ, sequence args, if_body, else_body))
-  | Unreachable -> sequence (args @ [ with_loc Unreachable ])
-  | Nop -> sequence (args @ [ with_loc Nop ])
-  | Pop _ -> sequence []
-  | Drop -> with_loc (Let ([ (None, None) ], Some (sequence args)))
-  | Br i -> with_loc (Br (label st i, sequence_opt args))
-  | Br_if i -> with_loc (Br_if (label st i, sequence args))
-  | Br_on_null i -> with_loc (Br_on_null (label st i, sequence args))
-  | Br_on_non_null i -> with_loc (Br_on_null (label st i, sequence args))
-  | Br_on_cast (i, _, t) ->
-      (* ZZZ cast? *)
-      with_loc (Br_on_cast (label st i, reftype st t, sequence args))
-  | Br_on_cast_fail (i, _, t) ->
-      (* ZZZ cast? *)
-      with_loc (Br_on_cast_fail (label st i, reftype st t, sequence args))
+      let inputs, outputs = blocktype_arity ctx typ in
+      let* cond = Stack.pop in
+      let* () = Stack.consume inputs in
+      Stack.push outputs
+        (with_loc (If (label (), blocktype ctx typ, cond, if_body, else_body)))
+  | Unreachable -> Stack.push_poly (with_loc Unreachable)
+  | Nop -> Stack.push 0 (with_loc Nop)
+  | Pop _ ->
+      let* () = Stack.consume 1 in
+      Stack.push 1 (with_loc Pop)
+  | Drop ->
+      let* e = Stack.pop in
+      Stack.push 0 (with_loc (Set (None, e)))
+  | Br i ->
+      let input = label_arity ctx i in
+      let* args = Stack.grab input in
+      Stack.push_poly (with_loc (Br (label ctx i, sequence_opt args)))
+  | Br_if i ->
+      let input = label_arity ctx i in
+      let* args = Stack.grab (input + 1) in
+      Stack.push input (with_loc (Br_if (label ctx i, sequence args)))
   | Br_table (labels, lab) ->
-      with_loc
-        (Br_table
-           (List.map (fun i -> label st i) (labels @ [ lab ]), sequence args))
-  | Folded (i, args') ->
-      assert (args = []);
-      instr st i (List.map (fun i -> instr st i []) args')
-  | LocalGet x -> sequence (args @ [ with_loc (Get (idx st `Local x)) ])
-  | GlobalGet x -> sequence (args @ [ with_loc (Get (idx st `Global x)) ])
-  | LocalSet x -> with_loc (Set (idx st `Local x, sequence args))
-  | GlobalSet x -> with_loc (Set (idx st `Global x, sequence args))
-  | LocalTee x -> with_loc (Tee (idx st `Local x, sequence args))
-  | BinOp (I32 op) | BinOp (I64 op) -> int_bin_op i op args
-  | BinOp (F32 op) | BinOp (F64 op) -> float_bin_op i op args
-  | UnOp (I64 op) -> int_un_op i I64 op args
-  | UnOp (I32 op) -> int_un_op i I32 op args
-  | UnOp (F64 op) -> float_un_op i F64 op args
-  | UnOp (F32 op) -> float_un_op i F32 op args
+      let input = label_arity ctx lab in
+      let* args = Stack.grab (input + 1) in
+      Stack.push_poly
+        (with_loc
+           (Br_table
+              (List.map (fun i -> label ctx i) (labels @ [ lab ]), sequence args)))
+  | Br_on_null i ->
+      let input = label_arity ctx i in
+      let* args = Stack.grab (input + 1) in
+      Stack.push (input + 1)
+        (with_loc (Br_on_null (label ctx i, sequence args)))
+  | Br_on_non_null i ->
+      let input = label_arity ctx i in
+      let* args = Stack.grab input in
+      Stack.push (input - 1)
+        (with_loc (Br_on_non_null (label ctx i, sequence args)))
+  | Br_on_cast (i, _, t) ->
+      let input = label_arity ctx i in
+      let* args = Stack.grab input in
+      Stack.push input
+        (with_loc (Br_on_cast (label ctx i, reftype ctx t, sequence args)))
+  | Br_on_cast_fail (i, _, t) ->
+      let input = label_arity ctx i in
+      let* args = Stack.grab input in
+      Stack.push input
+        (with_loc (Br_on_cast_fail (label ctx i, reftype ctx t, sequence args)))
+  | Folded (i, l) ->
+      let* () = instructions ctx l in
+      instruction ctx i
+  | LocalGet x -> Stack.push 1 (with_loc (Get (idx ctx `Local x)))
+  | GlobalGet x -> Stack.push 1 (with_loc (Get (idx ctx `Global x)))
+  | LocalSet x ->
+      let* e = Stack.pop in
+      Stack.push 0 (with_loc (Set (Some (idx ctx `Local x), e)))
+  | GlobalSet x ->
+      let* e = Stack.pop in
+      Stack.push 0 (with_loc (Set (Some (idx ctx `Global x), e)))
+  | LocalTee x ->
+      let* e = Stack.pop in
+      Stack.push 1 (with_loc (Tee (idx ctx `Local x, e)))
+  | BinOp (I32 op) | BinOp (I64 op) -> int_bin_op i op
+  | BinOp (F32 op) | BinOp (F64 op) -> float_bin_op i op
+  | UnOp (I64 op) -> int_un_op i I64 op
+  | UnOp (I32 op) -> int_un_op i I32 op
+  | UnOp (F64 op) -> float_un_op i F64 op
+  | UnOp (F32 op) -> float_un_op i F32 op
   | StructNew i ->
-      let type_name = idx st `Type i in
-      let fields = snd (Hashtbl.find st.struct_fields type_name.desc) in
-      with_loc
-        (Struct
-           ( Some (idx st `Type i),
-             List.map2 (fun nm i -> (Ast.no_loc nm, i)) fields args ))
-  | StructNewDefault i -> with_loc (StructDefault (Some (idx st `Type i)))
-  | StructGet (s, t, f) -> (
-      let type_name = idx st `Type t in
+      let type_name = idx ctx `Type i in
+      let fields = snd (Hashtbl.find ctx.struct_fields type_name.desc) in
+      let* args = Stack.grab (List.length fields) in
+      Stack.push 1
+        (with_loc
+           (Struct
+              ( Some (idx ctx `Type i),
+                List.map2 (fun nm i -> (Ast.no_loc nm, i)) fields args )))
+  | StructNewDefault i ->
+      Stack.push 1 (with_loc (StructDefault (Some (idx ctx `Type i))))
+  | StructGet (s, t, f) ->
+      let type_name = idx ctx `Type t in
       let name =
-        Sequence.get (fst (Hashtbl.find st.struct_fields type_name.desc)) f
+        Sequence.get (fst (Hashtbl.find ctx.struct_fields type_name.desc)) f
       in
-      let e = with_loc (StructGet (sequence args, name)) in
-      match s with
-      | None -> e
-      | Some signage ->
-          with_loc
-            (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
+      let* arg = Stack.pop in
+      let e = with_loc (StructGet (arg, name)) in
+      Stack.push 1
+        (match s with
+        | None -> e
+        | Some signage ->
+            with_loc
+              (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
   | StructSet (t, f) ->
-      let type_name = idx st `Type t in
+      let type_name = idx ctx `Type t in
       let name =
-        Sequence.get (fst (Hashtbl.find st.struct_fields type_name.desc)) f
+        Sequence.get (fst (Hashtbl.find ctx.struct_fields type_name.desc)) f
       in
-      let e1, e2 = two_args args in
-      with_loc (StructSet (e1, name, e2))
+      let* e2 = Stack.pop in
+      let* e1 = Stack.pop in
+      Stack.push 1 (with_loc (StructSet (e1, name, e2)))
   | ArrayNew t ->
-      let e1, e2 = two_args args in
-      with_loc (Array (Some (idx st `Type t), e1, e2))
+      let* len = Stack.pop in
+      let* v = Stack.pop in
+      Stack.push 1 (with_loc (Array (Some (idx ctx `Type t), v, len)))
   | ArrayNewDefault t ->
-      with_loc (ArrayDefault (Some (idx st `Type t), sequence args))
-  | ArrayNewFixed (t, n) -> (
-      match string_args n args with
-      | Some s ->
-          with_loc
-            (Cast
-               ( with_loc (String (Some (idx st `Type t), s)),
-                 Valtype (Ref { nullable = false; typ = Type (idx st `Type t) })
-               ))
-      | None ->
-          (*ZZZ take n into account *)
-          with_loc (ArrayFixed (Some (idx st `Type t), args)))
-  | ArrayGet (s, _t) -> (
-      let e1, e2 = two_args args in
+      let* len = Stack.pop in
+      Stack.push 1 (with_loc (ArrayDefault (Some (idx ctx `Type t), len)))
+  | ArrayNewFixed (t, n) ->
+      let* args = Stack.grab (Uint32.to_int n) in
+      Stack.push 1
+        (match string_args n args with
+        | Some s ->
+            with_loc
+              (Cast
+                 ( with_loc (String (Some (idx ctx `Type t), s)),
+                   Valtype
+                     (Ref { nullable = false; typ = Type (idx ctx `Type t) }) ))
+        | None -> with_loc (ArrayFixed (Some (idx ctx `Type t), args)))
+  | ArrayGet (s, _t) ->
+      let* e2 = Stack.pop in
+      let* e1 = Stack.pop in
       let e = with_loc (ArrayGet (e1, e2)) in
-      match s with
-      | None -> e
-      | Some signage ->
-          with_loc
-            (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
+      Stack.push 1
+        (match s with
+        | None -> e
+        | Some signage ->
+            with_loc
+              (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
   | ArraySet _t ->
-      let e1, e2, e3 = three_args args in
-      with_loc (ArraySet (e1, e2, e3))
-  | Call x -> with_loc (Call (with_loc (Get (idx st `Func x)), args))
-  | CallRef _ ->
-      (* ZZZ cast? *)
-      if args = [] then with_loc (Call (unit, []))
-      else
-        let f, l = split_last args in
-        with_loc (Call (f, l))
-  | ReturnCall x -> with_loc (TailCall (with_loc (Get (idx st `Func x)), args))
-  | ReturnCallRef _ ->
-      (* ZZZ cast? *)
-      if args = [] then with_loc (TailCall (unit, []))
-      else
-        let f, l = split_last args in
-        with_loc (TailCall (f, l))
-  | Return -> with_loc (Return (sequence_opt args))
-  | TupleMake _ -> with_loc Unreachable (*ZZZ*)
+      let* e3 = Stack.pop in
+      let* e2 = Stack.pop in
+      let* e1 = Stack.pop in
+      Stack.push 1 (with_loc (ArraySet (e1, e2, e3)))
+  | Call f ->
+      let input, output = function_arity ctx f in
+      let* args = Stack.grab input in
+      Stack.push output
+        (with_loc (Call (with_loc (Get (idx ctx `Func f)), args)))
+  | CallRef t ->
+      let input, output = type_arity ctx t in
+      let* f = Stack.pop in
+      let* args = Stack.grab input in
+      Stack.push output (with_loc (Call (f, args)))
+  | ReturnCall f ->
+      let input, _ = function_arity ctx f in
+      let* args = Stack.grab input in
+      Stack.push_poly
+        (with_loc (TailCall (with_loc (Get (idx ctx `Func f)), args)))
+  | ReturnCallRef t ->
+      let input, _ = type_arity ctx t in
+      let* f = Stack.pop in
+      let* args = Stack.grab input in
+      Stack.push_poly (with_loc (TailCall (f, args)))
+  | Return ->
+      let* args = Stack.grab ctx.return_arity in
+      Stack.push_poly (with_loc (Return (sequence_opt args)))
+  | TupleMake _ -> Stack.push_poly (with_loc Unreachable (*ZZZ*))
   | Const (I32 n) | Const (I64 n) ->
-      with_loc (Int n) (*ZZZ Negative ints / floats *)
+      Stack.push 1 (with_loc (Int n)) (*ZZZ Negative ints / floats *)
   | Const (F32 f) | Const (F64 f) ->
       let f = if is_integer f then f ^ "." else f in
-      with_loc (Float f)
+      Stack.push 1 (with_loc (Float f))
   | RefI31 ->
-      with_loc
-        (Cast (sequence args, Valtype (Ref { nullable = false; typ = I31 })))
+      let* e = Stack.pop in
+      Stack.push 1
+        (with_loc (Cast (e, Valtype (Ref { nullable = false; typ = I31 }))))
   | I31Get signage ->
-      with_loc
-        (Cast (sequence args, Signedtype { typ = `I32; signage; strict = false }))
+      let* e = Stack.pop in
+      Stack.push 1
+        (with_loc
+           (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
   | I64ExtendI32 signage ->
-      with_loc
-        (Cast (sequence args, Signedtype { typ = `I64; signage; strict = false }))
-  | I32WrapI64 -> with_loc (Cast (sequence args, Valtype I32))
-  | F64PromoteF32 -> with_loc (Cast (sequence args, Valtype F64))
-  | F32DemoteF64 -> with_loc (Cast (sequence args, Valtype F32))
+      let* e = Stack.pop in
+      Stack.push 1
+        (with_loc
+           (Cast (e, Signedtype { typ = `I64; signage; strict = false })))
+  | I32WrapI64 ->
+      let* e = Stack.pop in
+      Stack.push 1 (with_loc (Cast (e, Valtype I32)))
+  | F64PromoteF32 ->
+      let* e = Stack.pop in
+      Stack.push 1 (with_loc (Cast (e, Valtype F64)))
+  | F32DemoteF64 ->
+      let* e = Stack.pop in
+      Stack.push 1 (with_loc (Cast (e, Valtype F32)))
   | ExternConvertAny ->
-      with_loc
-        (Cast (sequence args, Valtype (Ref { nullable = true; typ = Extern })))
+      let* e = Stack.pop in
+      Stack.push 1
+        (with_loc (Cast (e, Valtype (Ref { nullable = true; typ = Extern }))))
   | AnyConvertExtern ->
-      with_loc
-        (Cast (sequence args, Valtype (Ref { nullable = true; typ = Any })))
+      let* e = Stack.pop in
+      Stack.push 1
+        (with_loc (Cast (e, Valtype (Ref { nullable = true; typ = Any }))))
   | ArrayNewData (t, _) ->
-      with_loc (String (Some (idx st `Type t), "foo")) (*ZZZ*)
-  | ArrayLen -> with_loc (StructGet (sequence args, Ast.no_loc "length"))
-  | RefCast t -> with_loc (Cast (sequence args, Valtype (Ref (reftype st t))))
-  | RefTest t -> with_loc (Test (sequence args, reftype st t))
+      (*ZZZ*)
+      let* _ = Stack.grab 2 in
+      Stack.push 1 (with_loc (String (Some (idx ctx `Type t), "foo")))
+  | ArrayLen ->
+      let* e = Stack.pop in
+      Stack.push 1 (with_loc (StructGet (e, Ast.no_loc "length")))
+  | RefCast t ->
+      let* e = Stack.pop in
+      Stack.push 1 (with_loc (Cast (e, Valtype (Ref (reftype ctx t)))))
+  | RefTest t ->
+      let* e = Stack.pop in
+      Stack.push 1 (with_loc (Test (e, reftype ctx t)))
   | RefEq ->
-      let e1, e2 = two_args args in
-      with_loc (BinOp (Eq, e1, e2))
-  | RefFunc f -> with_loc (Get (idx st `Func f))
-  | RefNull _ -> with_loc Null
-  | RefIsNull -> with_loc (UnOp (Not, sequence args))
+      let* e2 = Stack.pop in
+      let* e1 = Stack.pop in
+      Stack.push 1 (with_loc (BinOp (Eq, e1, e2)))
+  | RefFunc f -> Stack.push 1 (with_loc (Get (idx ctx `Func f)))
+  | RefNull _ -> Stack.push 1 (with_loc Null)
+  | RefIsNull ->
+      let* e = Stack.pop in
+      Stack.push 1 (with_loc (UnOp (Not, e)))
   | Select _ ->
-      let e1, e2, e = three_args args in
-      with_loc (Select (e, e1, e2))
+      let* cond = Stack.pop in
+      let* e2 = Stack.pop in
+      let* e1 = Stack.pop in
+      Stack.push 1 (with_loc (Select (cond, e1, e2)))
+  | Throw t ->
+      let input, _ = tag_arity ctx t in
+      let* args = Stack.grab input in
+      Stack.push_poly (with_loc (Throw (idx ctx `Tag t, args)))
+  | RefAsNonNull ->
+      let* e = Stack.pop in
+      Stack.push 1 (with_loc (NonNull e))
   (* ZZZZ To implement now *)
   | Try _ | TupleExtract _ | ArrayFill _ | ArrayCopy _ ->
-      with_loc Unreachable (* ZZZ *)
-  | Throw t -> with_loc (Throw (idx st `Tag t, args))
-  | RefAsNonNull -> with_loc (NonNull (sequence args))
+      Stack.push_poly (with_loc Unreachable) (* ZZZ *)
   (* Later *)
   | TryTable _ | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _
   | ArrayInitData _ | ArrayNewElem _ | Load _ | LoadS _ | Store _ | StoreS _
   | MemorySize _ | MemoryGrow _ | MemoryFill _ | MemoryCopy _ | MemoryInit _
   | DataDrop _ | TableGet _ | TableSet _ | TableSize _ | TableGrow _
   | TableFill _ | TableCopy _ | TableInit _ | ElemDrop _ ->
-      with_loc Unreachable (* ZZZ *)
+      Stack.push_poly (with_loc Unreachable)
+(* ZZZ *)
+
+and instructions ctx l =
+  match l with
+  | [] -> return ()
+  | i :: rem ->
+      let* () = instruction ctx i in
+      instructions ctx rem
 
 let bind_locals st l =
   List.map
@@ -847,19 +841,24 @@ let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
   match f with
   | Types t -> Some (Type (rectype ctx t))
   | Func { locals; instrs; typ; exports = e; _ } ->
+      let label, labels = LabelStack.push (LabelStack.make ()) None in
       let ctx =
+        let return_arity = snd (typeuse_arity ctx typ) in
         {
           ctx with
           locals =
             Sequence.make (Namespace.dup ctx.common_namespace) "local" "x";
+          labels;
+          label_arities = [ (None, return_arity) ];
+          return_arity;
         }
       in
       (match typ with
       | _, Some (params, _) ->
-          List.iter (fun (id, typ) -> register_type ctx Local id [] typ) params;
+          List.iter (fun (id, _) -> Sequence.register ctx.locals id []) params;
           Sequence.consume_currents ctx.locals
       | _ -> ());
-      List.iter (fun (id, typ) -> register_type ctx Local id [] typ) locals;
+      List.iter (fun (id, _) -> Sequence.register ctx.locals id []) locals;
       let locals = bind_locals ctx locals in
       let typ, sign = typeuse `Func ctx typ in
       Some
@@ -868,7 +867,7 @@ let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
              name = Sequence.get_current ctx.functions;
              typ;
              sign;
-             body = (None, locals @ List.map (fun i -> instr ctx i []) instrs);
+             body = (label (), locals @ Stack.run (instructions ctx instrs));
              attributes = exports e;
            })
   | Import { module_; name; desc; exports = e; _ } -> (
@@ -912,7 +911,7 @@ let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
              name = Sequence.get_current ctx.globals;
              mut = typ'.mut;
              typ = Some typ'.typ;
-             def = sequence (List.map (fun i -> instr ctx i []) init);
+             def = sequence (Stack.run (instructions ctx init));
              attributes = exports e;
            })
   | Tag { typ; exports = e; _ } ->
@@ -950,7 +949,7 @@ let register_names ctx fields =
           | Func _ -> ()
           | Memory _ -> Sequence.register ctx.memories id exports
           | Table _ -> Sequence.register ctx.tables id exports
-          | Global ty -> register_type ctx Global id exports ty
+          | Global _ -> Sequence.register ctx.globals id exports
           | Tag ty -> register_type ctx Tag id exports ty)
       | Types rectype ->
           Array.iter
@@ -969,8 +968,7 @@ let register_names ctx fields =
                   Hashtbl.replace ctx.struct_fields name
                     (seq, Array.to_list fields))
             rectype
-      | Global { id; exports; typ; _ } ->
-          register_type ctx Global id exports typ
+      | Global { id; exports; _ } -> Sequence.register ctx.globals id exports
       | Func _ | Export _ | Start _ -> ()
       | Elem _ | Data _ -> () (*ZZZ*)
       | Memory { id; exports; _ } -> Sequence.register ctx.memories id exports
@@ -1007,9 +1005,7 @@ let module_ (_, fields) =
       tags = Sequence.make (Namespace.make ()) "tag" "t";
       type_defs = Tbl.make ();
       function_types = Tbl.make ();
-      global_types = Tbl.make ();
       tag_types = Tbl.make ();
-      local_types = Tbl.make ();
       label_arities = [];
       return_arity = 0;
     }

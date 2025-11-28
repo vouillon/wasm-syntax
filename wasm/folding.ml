@@ -230,10 +230,10 @@ let arity env i =
       (i + 1, i + 1)
   | Br_on_non_null l ->
       let i = label_arity env l in
-      (i + 1, i)
+      (i, i - 1)
   | Br_on_cast (l, _, _) | Br_on_cast_fail (l, _, _) ->
       let i = label_arity env l in
-      (i + 1, i + 1)
+      (i, i)
   | Return -> (env.return_arity, unreachable)
   | ReturnCallIndirect (_, ty) ->
       let i, _ = typeuse_no_bindings_arity env ty in
@@ -359,7 +359,7 @@ let rec fold_stream env folded stream : _ Ast.Text.instr list =
   | ({ Ast.desc = If ({ label; typ; if_block; else_block; _ } as b); _ } as i)
     :: rem ->
       let env' =
-        let i, _ = blocktype_arity env typ in
+        let _, i = blocktype_arity env typ in
         { env with labels = (label, i) :: env.labels }
       in
       let if_block = fold_stream env' [] if_block in
@@ -370,7 +370,7 @@ let rec fold_stream env folded stream : _ Ast.Text.instr list =
         inputs outputs
   | ({ Ast.desc = TryTable ({ label; typ; block; _ } as b); _ } as i) :: rem ->
       let block =
-        let i, _ = blocktype_arity env typ in
+        let _, i = blocktype_arity env typ in
         let env = { env with labels = (label, i) :: env.labels } in
         fold_stream env [] block
       in
@@ -388,7 +388,7 @@ let rec fold_stream env folded stream : _ Ast.Text.instr list =
      as i)
     :: rem ->
       let env' =
-        let i, _ = blocktype_arity env typ in
+        let _, i = blocktype_arity env typ in
         { env with labels = (label, i) :: env.labels }
       in
       let block = fold_stream env' [] block in

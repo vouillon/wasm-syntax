@@ -278,6 +278,7 @@ simpleinstr:
 | NOP { with_loc $sloc Nop }
 | UNREACHABLE { with_loc $sloc Unreachable }
 | NULL { with_loc $sloc Null }
+| "_" {with_loc $sloc Nop }
 | x = ident { with_loc $sloc (Get x) }
 | "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
 | i = simpleinstr "(" l = separated_list(",", instr) ")"
@@ -310,7 +311,7 @@ plaininstr:
 | i = simpleinstr { i }
 | BECOME i = instr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (TailCall(i, l)) }
-| x = ident "=" i = instr { with_loc $sloc (Set (x, i)) }
+| x = simple_pat "=" i = instr { with_loc $sloc (Set (x, i)) }
 | x = ident ":=" i = instr { with_loc $sloc (Tee (x, i)) }
 | i = instr AS t = casttype { with_loc $sloc (Cast(i, t)) }
 | i = instr IS t = reftype { with_loc $sloc (Test(i, t)) }
