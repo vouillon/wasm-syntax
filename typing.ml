@@ -16,6 +16,8 @@ TODO:
 - take into account that locals can shadow globals to get better local names
   (if a global is not used in a function, we can reuse its name)
 - check constant expressions
+- option to tighten casts to any/extern / eliminate redundant casts
+  and type annotations
 
 Syntax changes:
 - names in result type (symmetry with params)

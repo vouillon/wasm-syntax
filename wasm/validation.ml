@@ -438,14 +438,67 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       block ctx label params results results if_block;
       block ctx label params results results else_block;
       push_results results
-  (*
-    | TryTable
-*)
-  | Try { label; typ; block = b; catches = _; catch_all = _ } ->
-      (*ZZZ handlers*)
+  | TryTable { label; typ; block = b; catches } ->
       let params, results = blocktype ctx.modul.types typ in
       let* () = pop_args ctx params in
       block ctx label params results results b;
+      List.iter
+        (fun (catch : Ast.Text.catch) ->
+          match catch with
+          | Catch (tag, label) ->
+              let ty = Sequence.get ctx.modul.tags tag in
+              let args =
+                match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+                | Struct _ | Array _ -> assert false (*ZZZ*)
+                | Func { params; results } ->
+                    assert (results = [||]);
+                    params
+              in
+              let params = branch_target ctx label in
+              with_empty_stack
+                (let* () = push_results (Array.to_list args) in
+                 pop_args ctx params)
+          | CatchRef (tag, label) ->
+              let ty = Sequence.get ctx.modul.tags tag in
+              let args =
+                match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+                | Struct _ | Array _ -> assert false (*ZZZ*)
+                | Func { params; results } ->
+                    assert (results = [||]);
+                    params
+              in
+              let params = branch_target ctx label in
+              with_empty_stack
+                (let* () = push_results (Array.to_list args) in
+                 let* () = push (Ref { nullable = false; typ = Exn }) in
+                 pop_args ctx params)
+          | CatchAll label ->
+              let params = branch_target ctx label in
+              with_empty_stack (pop_args ctx params)
+          | CatchAllRef label ->
+              let params = branch_target ctx label in
+              with_empty_stack
+                (let* () = push (Ref { nullable = false; typ = Exn }) in
+                 pop_args ctx params))
+        catches;
+      push_results results
+  | Try { label; typ; block = b; catches; catch_all } ->
+      let params, results = blocktype ctx.modul.types typ in
+      let* () = pop_args ctx params in
+      block ctx label params results results b;
+      List.iter
+        (fun (tag, b) ->
+          let ty = Sequence.get ctx.modul.tags tag in
+          let params' =
+            match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+            | Struct _ | Array _ -> assert false (*ZZZ*)
+            | Func { params; results } ->
+                assert (results = [||]);
+                params
+          in
+          block ctx label (Array.to_list params') results results b)
+        catches;
+      Option.iter (fun b -> block ctx label params results results b) catch_all;
       push_results results
   | Unreachable -> unreachable
   | Nop -> return ()
@@ -727,16 +780,6 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | ElemDrop idx ->
       ignore (Sequence.get ctx.modul.elem idx);
       return ()
-  (*
-    | TableGet of X.idx
-    | TableSet of X.idx
-    | TableSize of X.idx
-    | TableGrow of X.idx
-    | TableFill of X.idx
-    | TableCopy of X.idx * X.idx
-    | TableInit of X.idx * X.idx
-    | ElemDrop of X.idx
-*)
   | RefNull typ ->
       let typ = heaptype ctx.modul.types typ in
       push (Ref { nullable = true; typ })
@@ -846,21 +889,37 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         | _ -> (*ZZZ *) assert false
       in
       push (Ref { nullable = false; typ = Type ty })
-  | ArrayNewData (idx, _idx') ->
-      (*ZZZ data *)
+  | ArrayNewData (idx, idx') ->
       let ty = resolve_type_index ctx.modul.types idx in
+      ignore (Sequence.get ctx.modul.data idx');
       let () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
-        | Array _ -> ()
+        | Array field ->
+            assert (
+              match field.typ with
+              | Packed _ | Value (I32 | I64 | F32 | F64 | V128) -> true
+              | Value (Ref _ | Tuple _) -> false)
         | _ -> (*ZZZ *) assert false
       in
       let* () = pop ctx I32 in
       let* () = pop ctx I32 in
       push (Ref { nullable = false; typ = Type ty })
-  (*
-    | ArrayNewData of X.idx * X.idx
-    | ArrayNewElem of X.idx * X.idx
-*)
+  | ArrayNewElem (idx, idx') ->
+      let ty = resolve_type_index ctx.modul.types idx in
+      let ty' = Sequence.get ctx.modul.elem idx' in
+      let () =
+        match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+        | Array field ->
+            assert (
+              match field.typ with
+              | Packed _ -> false
+              | Value ty ->
+                  Types.val_subtype ctx.modul.subtyping_info (Ref ty') ty)
+        | _ -> (*ZZZ *) assert false
+      in
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      push (Ref { nullable = false; typ = Type ty })
   | ArrayGet (_signage, idx) -> (
       (*ZZZ signage *)
       let ty = resolve_type_index ctx.modul.types idx in
@@ -873,7 +932,9 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let ty = resolve_type_index ctx.modul.types idx in
       let* () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
-        | Array field -> pop ctx (unpack_type field)
+        | Array field ->
+            assert field.mut;
+            pop ctx (unpack_type field)
         | _ -> (*ZZZ *) assert false
       in
       let* () = pop ctx I32 in
@@ -909,10 +970,41 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop ctx (Ref { nullable = true; typ = Type ty2 }) in
       let* () = pop ctx I32 in
       pop ctx (Ref { nullable = true; typ = Type ty1 })
-  (*
-    | ArrayInitData of X.idx * X.idx
-    | ArrayInitElem of X.idx * X.idx
-*)
+  | ArrayInitData (idx, idx') ->
+      let ty = resolve_type_index ctx.modul.types idx in
+      ignore (Sequence.get ctx.modul.data idx');
+      let () =
+        match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+        | Array field ->
+            assert field.mut;
+            assert (
+              match field.typ with
+              | Packed _ | Value (I32 | I64 | F32 | F64 | V128) -> true
+              | Value (Ref _ | Tuple _) -> false)
+        | _ -> (*ZZZ *) assert false
+      in
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      pop ctx (Ref { nullable = true; typ = Type ty })
+  | ArrayInitElem (idx, idx') ->
+      let ty = resolve_type_index ctx.modul.types idx in
+      let ty' = Sequence.get ctx.modul.elem idx' in
+      let () =
+        match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+        | Array field ->
+            assert field.mut;
+            assert (
+              match field.typ with
+              | Packed _ -> false
+              | Value ty ->
+                  Types.val_subtype ctx.modul.subtyping_info (Ref ty') ty)
+        | _ -> (*ZZZ *) assert false
+      in
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      let* () = pop ctx I32 in
+      pop ctx (Ref { nullable = true; typ = Type ty })
   | RefI31 ->
       let* () = pop ctx I32 in
       push (Ref { nullable = false; typ = I31 })

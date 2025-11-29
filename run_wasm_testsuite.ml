@@ -115,12 +115,6 @@ let iter_files dirs skip suffix f =
   List.iter (fun root -> visit root "") dirs;
   wait_all_children pool
 
-let dirs =
-  [
-    "/home/jerome/sources/Wasm/test/core";
-    "/home/jerome/sources/Wasm/spectec/test-interpreter";
-  ]
-
 type script =
   ([ `Valid | `Invalid of string | `Malformed of string ]
   * [ `Parsed of string option * Ast.location Wasm.Ast.Text.modulefield list
@@ -311,7 +305,7 @@ let runtest filename path =
                 let m' = FancyParser.parse_from_string ~filename text in
                 let ok = in_child_process (fun () -> Typing.f m') in
                 if not ok then
-                  if false then prerr_endline "(after parsing)"
+                  if true then prerr_endline "(after parsing)"
                   else (
                     Format.eprintf "@[%a@]@." Output.module_ m';
                     prerr_endline "===";
@@ -321,9 +315,24 @@ let runtest filename path =
             if true then prerr_endline "(parsing)" else print_flushed text)
     lst
 
+let dirs =
+  [
+    "/home/jerome/sources/Wasm/test/core";
+    "/home/jerome/sources/Wasm/test/legacy";
+    "/home/jerome/sources/Wasm/spectec/test-interpreter";
+  ]
+
 let () =
   iter_files dirs
     (fun p ->
       List.mem p
-        [ "spec-test-1"; "spec-test-2"; "memory64"; "simd"; "relaxed-simd" ])
+        [
+          "spec-test-1";
+          "spec-test-2";
+          "memory64";
+          "simd";
+          "relaxed-simd";
+          "try_delegate.wast";
+          "rethrow.wast";
+        ])
     ".wast" runtest

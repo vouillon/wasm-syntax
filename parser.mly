@@ -414,7 +414,7 @@ global:
 
 globaldecl:
 | attributes = list(attribute) mut = globalmut name = ident
-  ":" typ = valtype
+  ":" typ = valtype option(";")
   { GlobalDecl {name; mut; typ; attributes} }
 
 modulefield:

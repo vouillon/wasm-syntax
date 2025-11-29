@@ -140,6 +140,7 @@ let float32_of_string s =
   let z = float_of_string s in
   (* If value is already infinite we are done. *)
   if abs_float z = 1.0 /. 0.0 then z
+  else if abs_float z <= 0x1.fffffep+127 then z
   else
     (* Else, bit twiddling to see what rounding to target precision will do. *)
     let open Int64 in

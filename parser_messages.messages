@@ -248,7 +248,7 @@ parse: LET IDENT UNREACHABLE
 ## Ends in an error in state: 472.
 ##
 ## global -> list(attribute) globalmut IDENT . option(__anonymous_24) EQUAL instr SEMI [ TYPE TAG SHARP REC LET FN EOF CONST ]
-## globaldecl -> list(attribute) globalmut IDENT . COLON valtype [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## globaldecl -> list(attribute) globalmut IDENT . COLON valtype option(SEMI) [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) globalmut IDENT
@@ -260,7 +260,7 @@ parse: LET IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 473.
 ##
-## globaldecl -> list(attribute) globalmut IDENT COLON . valtype [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## globaldecl -> list(attribute) globalmut IDENT COLON . valtype option(SEMI) [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ## option(__anonymous_24) -> COLON . valtype [ EQUAL ]
 ##
 ## The known suffix of the stack is as follows:
@@ -273,7 +273,7 @@ parse: LET IDENT COLON IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 474.
 ##
-## globaldecl -> list(attribute) globalmut IDENT COLON valtype . [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## globaldecl -> list(attribute) globalmut IDENT COLON valtype . option(SEMI) [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ## option(__anonymous_24) -> COLON valtype . [ EQUAL ]
 ##
 ## The known suffix of the stack is as follows:
@@ -570,7 +570,7 @@ Expecting a module field.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 ##
-## Ends in an error in state: 479.
+## Ends in an error in state: 480.
 ##
 ## func -> list(attribute) fundecl . LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ## func -> list(attribute) fundecl . QUOTE IDENT COLON LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
@@ -584,7 +584,7 @@ Expecting a label, the start of the function body, or another module field.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE UNREACHABLE
 ##
-## Ends in an error in state: 480.
+## Ends in an error in state: 481.
 ##
 ## func -> list(attribute) fundecl QUOTE . IDENT COLON LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ##
@@ -596,7 +596,7 @@ Expecting a label name.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 481.
+## Ends in an error in state: 482.
 ##
 ## func -> list(attribute) fundecl QUOTE IDENT . COLON LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ##
@@ -608,7 +608,7 @@ Expecting a colon ':' after the label name.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 482.
+## Ends in an error in state: 483.
 ##
 ## func -> list(attribute) fundecl QUOTE IDENT COLON . LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ##
@@ -6804,7 +6804,7 @@ parse: CONST UNREACHABLE
 ## Ends in an error in state: 471.
 ##
 ## global -> list(attribute) globalmut . IDENT option(__anonymous_24) EQUAL instr SEMI [ TYPE TAG SHARP REC LET FN EOF CONST ]
-## globaldecl -> list(attribute) globalmut . IDENT COLON valtype [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## globaldecl -> list(attribute) globalmut . IDENT COLON valtype option(SEMI) [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) globalmut
@@ -6814,7 +6814,7 @@ parse: CONST UNREACHABLE
 
 parse: CONST IDENT EQUAL TYPE
 ##
-## Ends in an error in state: 476.
+## Ends in an error in state: 477.
 ##
 ## global -> list(attribute) globalmut IDENT option(__anonymous_24) EQUAL . instr SEMI [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ##
@@ -6826,7 +6826,7 @@ parse: CONST IDENT EQUAL TYPE
 
 parse: CONST IDENT EQUAL STRING COLON
 ##
-## Ends in an error in state: 477.
+## Ends in an error in state: 478.
 ##
 ## global -> list(attribute) globalmut IDENT option(__anonymous_24) EQUAL instr . SEMI [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ## plaininstr -> instr . AS casttype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI QUESTIONMARK PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL BANG AS AMPERSAND ]
@@ -6881,7 +6881,7 @@ parse: CONST IDENT EQUAL STRING COLON
 
 parse: FN IDENT QUOTE IDENT COLON LBRACE TYPE
 ##
-## Ends in an error in state: 483.
+## Ends in an error in state: 484.
 ##
 ## func -> list(attribute) fundecl QUOTE IDENT COLON LBRACE . delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ##
@@ -6893,7 +6893,7 @@ parse: FN IDENT QUOTE IDENT COLON LBRACE TYPE
 
 parse: FN IDENT LBRACE TYPE
 ##
-## Ends in an error in state: 486.
+## Ends in an error in state: 487.
 ##
 ## func -> list(attribute) fundecl LBRACE . delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
 ##
@@ -6905,7 +6905,7 @@ parse: FN IDENT LBRACE TYPE
 
 parse: SHARP LBRACKET IDENT EQUAL STRING RBRACKET UNREACHABLE
 ##
-## Ends in an error in state: 493.
+## Ends in an error in state: 494.
 ##
 ## list(attribute) -> attribute . list(attribute) [ TAG LET FN CONST ]
 ##
