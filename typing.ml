@@ -15,10 +15,12 @@ TODO:
 - remove redundant type annotations/casts
 - take into account that locals can shadow globals to get better local names
   (if a global is not used in a function, we can reuse its name)
+- check constant expressions
 
 Syntax changes:
 - names in result type (symmetry with params)
 - no need to have func type for tags (declaration tag : ty)
+- we may not need Sequence (change branch expressions instead)
 
 Syntax ideas:
 - dispatch foo ['a 'b ... else 'c] { 'a { } 'b { } ... }
@@ -75,6 +77,7 @@ module Tbl = struct
         (Type_error (x.info, Printf.sprintf "Unbound %s %s\n" env.kind x.desc))
 
   let find_opt env x = Hashtbl.find_opt env.tbl x.desc
+  let iter env f = Hashtbl.iter f env.tbl
 end
 
 type type_context = {
@@ -239,6 +242,23 @@ let storage_subtype ctx ty ty' =
   | Packed _, Value _
   | Value _, Packed _ ->
       false
+
+let storage_subtype' ctx (ty : Wasm.Ast.Binary.storagetype)
+    (ty' : Wasm.Ast.Binary.storagetype) =
+  match (ty, ty') with
+  | Packed I8, Packed I8 | Packed I16, Packed I16 -> true
+  | Value ty, Value ty' -> Wasm.Types.val_subtype ctx.subtyping_info ty ty'
+  | Packed I8, Packed I16
+  | Packed I16, Packed I8
+  | Packed _, Value _
+  | Value _, Packed _ ->
+      false
+
+let field_subtype info (ty : Wasm.Ast.Binary.fieldtype)
+    (ty' : Wasm.Ast.Binary.fieldtype) =
+  ty.mut = ty'.mut
+  && storage_subtype' info ty.typ ty'.typ
+  && ((not ty.mut) || storage_subtype' info ty'.typ ty.typ)
 
 let subtype ctx ty ty' =
   let ity = UnionFind.find ty in
@@ -1706,6 +1726,39 @@ let fundecl ctx typ sign =
   | None, None -> assert false (*ZZZ*)
 *)
 
+let check_type_definitions ctx =
+  (*ZZZ In-order check? *)
+  Tbl.iter ctx.types (fun _ (i, _) ->
+      let ty = Wasm.Types.get_subtype ctx.subtyping_info i in
+      match ty.supertype with
+      | None -> ()
+      | Some j -> (
+          let ty' = Wasm.Types.get_subtype ctx.subtyping_info j in
+          assert (not ty'.final);
+          match (ty.typ, ty'.typ) with
+          | ( Func { params; results },
+              Func { params = params'; results = results' } ) ->
+              assert (Array.length params = Array.length params');
+              assert (Array.length results = Array.length results');
+              Array.iter2
+                (fun p p' ->
+                  assert (Wasm.Types.val_subtype ctx.subtyping_info p' p))
+                params params';
+              Array.iter2
+                (fun r r' ->
+                  assert (Wasm.Types.val_subtype ctx.subtyping_info r r'))
+                results results'
+          | Struct fields, Struct fields' ->
+              assert (Array.length fields' <= Array.length fields);
+              for i = 0 to Array.length fields' - 1 do
+                assert (field_subtype ctx fields.(i) fields'.(i))
+              done
+          | Array field, Array field' -> assert (field_subtype ctx field field')
+          | Func _, (Struct _ | Array _)
+          | Struct _, (Func _ | Array _)
+          | Array _, (Func _ | Struct _) ->
+              assert false))
+
 let globals type_context ctx fields =
   List.iter
     (fun field ->
@@ -1825,6 +1878,7 @@ let f fields =
       return_types = [];
     }
   in
+  check_type_definitions ctx;
   List.iter
     (fun field ->
       match field with

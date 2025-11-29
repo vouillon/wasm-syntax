@@ -20,7 +20,7 @@ module Sequence = struct
     name : string;
     index_mapping : (Uint32.t, 'a) Hashtbl.t;
     label_mapping : (string, 'a) Hashtbl.t;
-    mutable last_index : Uint32.t;
+    mutable last_index : int;
   }
 
   let make name =
@@ -28,12 +28,12 @@ module Sequence = struct
       name;
       index_mapping = Hashtbl.create 16;
       label_mapping = Hashtbl.create 16;
-      last_index = Uint32.zero;
+      last_index = 0;
     }
 
   let register seq id v =
-    let idx = seq.last_index in
-    seq.last_index <- Uint32.succ seq.last_index;
+    let idx = Uint32.of_int seq.last_index in
+    seq.last_index <- seq.last_index + 1;
     Hashtbl.add seq.index_mapping idx v;
     Option.iter (fun id -> (*ZZZ*) Hashtbl.add seq.label_mapping id v) id
 
@@ -49,11 +49,16 @@ module Sequence = struct
         with Not_found ->
           Format.eprintf "Unbound %s $%s@." seq.name id;
           exit 1)
+
+  let iter seq f =
+    for i = 0 to seq.last_index - 1 do
+      f i
+    done
 end
 
 type type_context = {
   types : Types.t;
-  mutable last_index : Uint32.t;
+  mutable last_index : int;
   index_mapping : (Uint32.t, int * (string * int) list) Hashtbl.t;
   label_mapping : (string, int * (string * int) list) Hashtbl.t;
 }
@@ -361,6 +366,11 @@ let storage_subtype info ty ty' =
   | Packed _, Value _
   | Value _, Packed _ ->
       false
+
+let field_subtype info (ty : fieldtype) (ty' : fieldtype) =
+  ty.mut = ty'.mut
+  && storage_subtype info ty.typ ty'.typ
+  && ((not ty.mut) || storage_subtype info ty'.typ ty.typ)
 
 let diff_ref_type t1 t2 =
   { nullable = t1.nullable && not t2.nullable; typ = t1.typ }
@@ -1066,7 +1076,7 @@ let add_type ctx ty =
     (fun i (label, _) ->
       (*ZZZ Check unique names*)
       Hashtbl.replace ctx.index_mapping
-        (Uint32.add ctx.last_index (Uint32.of_int i))
+        (Uint32.of_int (ctx.last_index + i))
         (lnot i, []);
       Option.iter
         (fun label -> Hashtbl.replace ctx.label_mapping label (lnot i, []))
@@ -1086,13 +1096,13 @@ let add_type ctx ty =
         | _ -> []
       in
       Hashtbl.replace ctx.index_mapping
-        (Uint32.add ctx.last_index (Uint32.of_int i))
+        (Uint32.of_int (ctx.last_index + i))
         (i' + i, fields);
       Option.iter
         (fun label -> Hashtbl.replace ctx.label_mapping label (i' + i, fields))
         label)
     ty;
-  ctx.last_index <- Uint32.add ctx.last_index (Uint32.of_int (Array.length ty))
+  ctx.last_index <- ctx.last_index + Array.length ty
 
 let register_exports ctx lst =
   List.iter
@@ -1149,6 +1159,41 @@ let build_initial_env ctx fields =
           Sequence.register ctx.tags id ty
       | _ -> ())
     fields
+
+let check_type_definitions ctx =
+  for i = 0 to ctx.types.last_index - 1 do
+    let i, _ =
+      get_type_info ctx.types (Ast.no_loc (Ast.Text.Num (Uint32.of_int i)))
+    in
+    let ty = Types.get_subtype ctx.subtyping_info i in
+    match ty.supertype with
+    | None -> ()
+    | Some j -> (
+        let ty' = Types.get_subtype ctx.subtyping_info j in
+        assert (not ty'.final);
+        match (ty.typ, ty'.typ) with
+        | ( Func { params; results },
+            Func { params = params'; results = results' } ) ->
+            assert (Array.length params = Array.length params');
+            assert (Array.length results = Array.length results');
+            Array.iter2
+              (fun p p' -> assert (Types.val_subtype ctx.subtyping_info p' p))
+              params params';
+            Array.iter2
+              (fun r r' -> assert (Types.val_subtype ctx.subtyping_info r r'))
+              results results'
+        | Struct fields, Struct fields' ->
+            assert (Array.length fields' <= Array.length fields);
+            for i = 0 to Array.length fields' - 1 do
+              assert (field_subtype ctx.subtyping_info fields.(i) fields'.(i))
+            done
+        | Array field, Array field' ->
+            assert (field_subtype ctx.subtyping_info field field')
+        | Func _, (Struct _ | Array _)
+        | Struct _, (Func _ | Array _)
+        | Array _, (Func _ | Struct _) ->
+            assert false)
+  done
 
 let tables_and_memories ctx fields =
   List.iter
@@ -1297,7 +1342,7 @@ let f (_, fields) =
   let type_context =
     {
       types = Types.create ();
-      last_index = Uint32.zero;
+      last_index = 0;
       index_mapping = Hashtbl.create 16;
       label_mapping = Hashtbl.create 16;
     }
@@ -1323,6 +1368,7 @@ let f (_, fields) =
       refs = Hashtbl.create 16;
     }
   in
+  check_type_definitions ctx;
   build_initial_env ctx fields;
   let ctx =
     { ctx with subtyping_info = Types.subtyping_info type_context.types }

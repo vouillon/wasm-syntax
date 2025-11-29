@@ -311,7 +311,7 @@ let runtest filename path =
                 let m' = FancyParser.parse_from_string ~filename text in
                 let ok = in_child_process (fun () -> Typing.f m') in
                 if not ok then
-                  if true then prerr_endline "(after parsing)"
+                  if false then prerr_endline "(after parsing)"
                   else (
                     Format.eprintf "@[%a@]@." Output.module_ m';
                     prerr_endline "===";

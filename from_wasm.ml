@@ -63,8 +63,8 @@ module Sequence = struct
   type t = {
     index_mapping : (Uint32.t, string) Hashtbl.t;
     label_mapping : (string, string) Hashtbl.t;
-    mutable last_index : Uint32.t;
-    mutable current_index : Uint32.t;
+    mutable last_index : int;
+    mutable current_index : int;
     namespace : Namespace.t;
     default : string;
   }
@@ -73,8 +73,8 @@ module Sequence = struct
     {
       index_mapping = Hashtbl.create 16;
       label_mapping = Hashtbl.create 16;
-      last_index = Uint32.zero;
-      current_index = Uint32.zero;
+      last_index = 0;
+      current_index = 0;
       namespace;
       default;
     }
@@ -88,8 +88,8 @@ module Sequence = struct
       in
       Namespace.add seq.namespace name
     in
-    let idx = seq.last_index in
-    seq.last_index <- Uint32.succ seq.last_index;
+    let idx = Uint32.of_int seq.last_index in
+    seq.last_index <- seq.last_index + 1;
     Hashtbl.add seq.index_mapping idx name;
     Option.iter (fun id -> Hashtbl.add seq.label_mapping id name) id;
     name
@@ -107,8 +107,8 @@ module Sequence = struct
 
   let get_current seq =
     let i = seq.current_index in
-    seq.current_index <- Uint32.succ i;
-    Ast.no_loc (Hashtbl.find seq.index_mapping i)
+    seq.current_index <- i + 1;
+    Ast.no_loc (Hashtbl.find seq.index_mapping (Uint32.of_int i))
 
   let consume_currents seq = seq.current_index <- seq.last_index
 end
@@ -808,6 +808,7 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       Stack.push 1 (with_loc (Int n)) (*ZZZ Negative ints / floats *)
   | Const (F32 f) | Const (F64 f) ->
       let f = if is_integer f then f ^ "." else f in
+      (*ZZZ ???*)
       Stack.push 1 (with_loc (Float f))
   | RefI31 ->
       let* e = Stack.pop in
@@ -990,6 +991,8 @@ let import (module_, name) =
            Ast.no_loc (Ast.String (None, name));
          ]) )
 
+let single_expression l = match l with [ e ] -> e | _ -> assert false
+
 let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
   match f with
   | Types t -> Some (Type (rectype ctx t))
@@ -1070,7 +1073,7 @@ let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
              name = Sequence.get_current ctx.globals;
              mut = typ'.mut;
              typ = Some typ'.typ;
-             def = sequence (Stack.run (instructions ctx init));
+             def = single_expression (Stack.run (instructions ctx init));
              attributes = exports e;
            })
   | Tag { typ; exports = e; _ } ->
