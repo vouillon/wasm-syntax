@@ -868,11 +868,22 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   | RefIsNull ->
       let* e = Stack.pop in
       Stack.push 1 (with_loc (UnOp (Not, e)))
-  | Select _ ->
+  | Select None ->
       let* cond = Stack.pop in
       let* e2 = Stack.pop in
       let* e1 = Stack.pop in
       Stack.push 1 (with_loc (Select (cond, e1, e2)))
+  | Select (Some ty) ->
+      let* cond = Stack.pop in
+      let* e2 = Stack.pop in
+      let* e1 = Stack.pop in
+      let ty = match ty with [ ty ] -> valtype ctx ty | _ -> assert false in
+      Stack.push 1
+        (with_loc
+           (Select
+              ( cond,
+                { e1 with desc = Cast (e1, Valtype ty) },
+                { e1 with desc = Cast (e2, Valtype ty) } )))
   | Throw t ->
       let input, _ = tag_arity ctx t in
       let* args = Stack.grab input in

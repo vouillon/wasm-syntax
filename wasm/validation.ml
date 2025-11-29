@@ -3,10 +3,7 @@ ZZZ
 - tag validation
 - resolve all type uses
 - uninitialized locals
-- validation of subtype relation declaration
-- array/struct.new_default
 - name parameters in function types
-- ref.func declarations (can be relaxed)
 *)
 
 (* Check that all occurences of instructions ref.func uses a function
@@ -63,6 +60,7 @@ type type_context = {
   label_mapping : (string, int * (string * int) list) Hashtbl.t;
 }
 
+(*ZZZ unbound?*)
 let get_type_info ctx (idx : Ast.Text.idx) =
   match idx.desc with
   | Num x -> Hashtbl.find ctx.index_mapping x
@@ -1213,6 +1211,41 @@ let limits { mi; ma } max =
 let max_memory_size = Uint64.of_int 65536
 let max_table_size = Uint64.of_string "0xffff_ffff"
 
+let rec register_typeuses ctx l =
+  List.iter (fun i -> register_typeuses' ctx i) l
+
+and register_typeuses' ctx (i : _ Ast.Text.instr) =
+  match i.desc with
+  | Block { typ; _ }
+  | Loop { typ; _ }
+  | If { typ; _ }
+  | TryTable { typ; _ }
+  | Try { typ; _ } -> (
+      match typ with
+      | Some (Typeuse use) -> ignore (typeuse' ctx use)
+      | Some (Valtype _) | None -> ())
+  | CallIndirect (_, use) | ReturnCallIndirect (_, use) ->
+      ignore (typeuse' ctx use)
+  | Folded (i, l) ->
+      register_typeuses' ctx i;
+      register_typeuses ctx l
+  | Unreachable | Nop | Throw _ | ThrowRef | Br _ | Br_if _ | Br_table _
+  | Br_on_null _ | Br_on_non_null _ | Br_on_cast _ | Br_on_cast_fail _ | Return
+  | Call _ | CallRef _ | ReturnCall _ | ReturnCallRef _ | Drop | Select _
+  | LocalGet _ | LocalSet _ | LocalTee _ | GlobalGet _ | GlobalSet _ | Load _
+  | LoadS _ | Store _ | StoreS _ | MemorySize _ | MemoryGrow _ | MemoryFill _
+  | MemoryCopy _ | MemoryInit _ | DataDrop _ | TableGet _ | TableSet _
+  | TableSize _ | TableGrow _ | TableFill _ | TableCopy _ | TableInit _
+  | ElemDrop _ | RefNull _ | RefFunc _ | RefIsNull | RefAsNonNull | RefEq
+  | RefTest _ | RefCast _ | StructNew _ | StructNewDefault _ | StructGet _
+  | StructSet _ | ArrayNew _ | ArrayNewDefault _ | ArrayNewFixed _
+  | ArrayNewData _ | ArrayNewElem _ | ArrayGet _ | ArraySet _ | ArrayLen
+  | ArrayFill _ | ArrayCopy _ | ArrayInitData _ | ArrayInitElem _ | RefI31
+  | I31Get _ | Const _ | UnOp _ | BinOp _ | I32WrapI64 | I64ExtendI32 _
+  | F32DemoteF64 | F64PromoteF32 | ExternConvertAny | AnyConvertExtern | Pop _
+  | TupleMake _ | TupleExtract _ ->
+      ()
+
 let build_initial_env ctx fields =
   List.iter
     (fun (field : _ Ast.Text.modulefield) ->
@@ -1238,8 +1271,9 @@ let build_initial_env ctx fields =
               | Struct _ | Array _ -> assert false (*ZZZ*));
 *)
               Sequence.register ctx.tags id ty)
-      | Func { id; typ; _ } ->
-          Sequence.register ctx.functions id (typeuse ctx.types typ)
+      | Func { id; typ; instrs; _ } ->
+          Sequence.register ctx.functions id (typeuse ctx.types typ);
+          register_typeuses ctx.types instrs
       | Tag { id; typ; exports } ->
           let ty = typeuse ctx.types typ in
           (*

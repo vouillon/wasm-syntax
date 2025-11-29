@@ -1691,6 +1691,10 @@ let rec instruction ctx i =
             when typ1 = typ2 ->
               (*ZZZ fragile *)
               push i.info ty1
+          | Valtype { typ = typ1; _ }, Valtype { typ = typ2; _ } ->
+              Format.eprintf "AAAA %a %a@." Output.valtype typ1 Output.valtype
+                typ2;
+              assert false
           | _ -> (*ZZZ*) assert false))
   | _ ->
       Format.eprintf "%a@." Output.instr i;
