@@ -1,5 +1,6 @@
 (*
 TODO:
+- fix typeuse validation (add a type if not already present)
 - enforce expressions
 - return a typed tree
 - check that underscores are properly placed
@@ -23,6 +24,7 @@ Syntax changes:
 - names in result type (symmetry with params)
 - no need to have func type for tags (declaration tag : ty)
 - we may not need Sequence (change branch expressions instead)
+- what should the syntax of throw tag be (parentheses around parameters?)
 
 Syntax ideas:
 - dispatch foo ['a 'b ... else 'c] { 'a { } 'b { } ... }
