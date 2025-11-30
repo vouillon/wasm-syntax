@@ -10,6 +10,9 @@ ZZZ
    index that occurs in the module outside functions *)
 let validate_refs = ref true
 
+let print_instr f i =
+  Printer.run f (fun p -> Output.instr p i)
+
 open Ast.Binary.Types
 
 module Sequence = struct
@@ -417,7 +420,7 @@ let field_has_default (ty : fieldtype) =
       | Tuple _ -> assert false)
 
 let rec instruction ctx (i : _ Ast.Text.instr) =
-  if false then Format.eprintf "%a@." Output.instr i;
+  if false then Format.eprintf "%a@." print_instr i;
   match i.desc with
   | Block { label; typ; block = b } ->
       let params, results = blocktype ctx.modul.types typ in
@@ -1088,7 +1091,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
     | TupleExtract of Int32.t * Int32.t
 *)
   | _ ->
-      Format.eprintf "%a@." Output.instr i;
+      Format.eprintf "%a@." print_instr i;
       raise Exit
 
 and instructions ctx l =

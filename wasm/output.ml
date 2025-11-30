@@ -10,52 +10,53 @@ type sexp =
 
 and structure = Delimiter of sexp | Contents of sexp list
 
-let rec format_sexp first f s =
+let rec format_sexp first p s =
   match s with
-  | Atom s -> Format.pp_print_string f s
-  | Atom' { len; s } -> Format.pp_print_as f len s
+  | Atom s -> Printer.string p s
+  | Atom' { len; s } -> Printer.string_as p len s
   | List l ->
-      let first = ref true in
-      Format.fprintf f "(@[<hv1>%a@])"
-        (Format.pp_print_list
-           ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-           (fun f v ->
-             format_sexp !first f v;
-             first := false))
-        l
+      Printer.string p "(";
+      Printer.hvbox p ~indent:1 (fun () ->
+          List.iteri
+            (fun i v ->
+              if i > 0 then Printer.space p ();
+              format_sexp (i = 0) p v)
+            l);
+      Printer.string p ")"
   | Block l ->
-      let first = ref first in
-      (if !first then Format.fprintf f "@[<1>%a@]"
-       else Format.fprintf f "@[%a@]")
-        (Format.pp_print_list
-           ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-           (fun f v ->
-             format_sexp !first f v;
-             first := false))
-        l
+      let indent = if first then 1 else 0 in
+      Printer.box p ~indent (fun () ->
+          List.iteri
+            (fun i v ->
+              if i > 0 then Printer.space p ();
+              format_sexp (first && i = 0) p v)
+            l)
   | VerticalBlock l ->
-      Format.fprintf f "@[<v>%a@]"
-        (Format.pp_print_list
-           ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-           (format_sexp false))
-        l
+      Printer.vbox p (fun () ->
+          List.iteri
+            (fun i v ->
+              if i > 0 then Printer.space p ();
+              format_sexp false p v)
+            l)
   | StructuredBlock l ->
-      Format.fprintf f "@[<hv>";
-      List.iteri
-        (fun i s ->
-          match s with
-          | Delimiter d ->
-              if i > 0 then Format.fprintf f "@ ";
-              Format.fprintf f "%a" (format_sexp false) d
-          | Contents l ->
-              if l <> [] then
-                Format.fprintf f "@;<1 2>@[<hv>%a@]"
-                  (Format.pp_print_list
-                     ~pp_sep:(fun f () -> Format.fprintf f "@ ")
-                     (format_sexp false))
-                  l)
-        l;
-      Format.fprintf f "@]"
+      Printer.hvbox p (fun () ->
+          List.iteri
+            (fun i s ->
+              match s with
+              | Delimiter d ->
+                  if i > 0 then Printer.space p ();
+                  format_sexp false p d
+              | Contents [] -> ()
+              | Contents l ->
+                  Printer.indent p 2 (fun () ->
+                      Printer.space p ();
+                      Printer.hvbox p (fun () ->
+                          List.iteri
+                            (fun i v ->
+                              if i > 0 then Printer.space p ();
+                              format_sexp false p v)
+                            l)))
+            l)
 
 let option f x = match x with None -> [] | Some x -> f x
 let id x = Atom (Printf.sprintf "$%s" x)
@@ -729,8 +730,8 @@ let modulefield f =
         | Some lst -> Atom "func" :: List.map index lst
         | None -> reftype typ :: List.map (fun e -> expr "item" e) init))
 
-let module_ f (id, fields) =
-  Format.fprintf f "%a" (format_sexp false)
+let module_ p (id, fields) =
+  format_sexp false p
     (List [ Atom "module"; Block (opt_id id @ List.map modulefield fields) ])
 
-let instr f i = Format.fprintf f "%a" (format_sexp false) (instr i)
+let instr p i = format_sexp false p (instr i)

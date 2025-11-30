@@ -7,9 +7,12 @@ module P =
     (Wasm.Fast_parser)
     (Wasm.Lexer)
 
+let print_module f m =
+  Wasm.Printer.run f (fun p -> Wasm.Output.module_ p m)
+
 let convert ~filename =
   let ast = P.parse ~filename in
-  Format.printf "/////////// %s //////////@.@.%a" filename Wasm.Output.module_
+  Format.printf "/////////// %s //////////@.@.%a@." filename print_module
     (Wasm.Folding.fold (Wasm.Folding.unfold ast))
 
 let _ =
