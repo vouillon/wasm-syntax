@@ -20,6 +20,20 @@ TODO:
 - option to tighten casts to any/extern / eliminate redundant casts
   and type annotations
 
+Comments
+- process the flow of tokens
+  => keep track of the line of the previous token
+  => comment/newline ==>
+     register in a side table the blank lines and comments,
+     and do not propagate
+- emission:
+  before: grab all the comment/newline before the current location /
+          output comments
+  after: grab all the comment/newline after the current location and
+     before the next sibling (and in the parent); split a last newline;
+     push back the comments after last newline;
+     output comments
+
 Syntax changes:
 - names in result type (symmetry with params)
 - no need to have func type for tags (declaration tag : ty)

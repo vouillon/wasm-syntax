@@ -176,12 +176,16 @@ let rec token lexbuf =
   | ident -> IDENT (Sedlexing.Utf8.lexeme lexbuf)
   | '"' -> STRING (string lexbuf)
   | eof -> EOF
-  | _ ->
+  | Compl 'x' ->
       raise
         (Wasm.Parsing.Syntax_error
            ( Sedlexing.lexing_positions lexbuf,
              Printf.sprintf "Unexpected character '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))
+  | _ ->
+      raise
+        (Wasm.Parsing.Syntax_error
+           (Sedlexing.lexing_positions lexbuf, Printf.sprintf "Syntax error.\n"))
 
 let is_valid_identifier s =
   let buf = Sedlexing.Utf8.from_string s in
