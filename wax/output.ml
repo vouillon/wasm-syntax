@@ -13,6 +13,18 @@ let list ?(sep = space) f pp l =
           f pp x)
         xs
 
+let list_commasep f pp l =
+  list
+    ~sep:(fun pp () ->
+      string pp ",";
+      space pp ())
+    f pp l
+
+let print_paren_list f pp l =
+  string pp "(";
+  box pp (fun () -> list_commasep f pp l);
+  string pp ")"
+
 let heaptype pp (t : heaptype) =
   string pp
     (match t with
@@ -47,15 +59,7 @@ let rec valtype pp t =
 and tuple always_paren pp l =
   match l with
   | [ t ] when not always_paren -> valtype pp t
-  | _ ->
-      string pp "(";
-      box pp (fun () ->
-          list
-            ~sep:(fun pp () ->
-              string pp ",";
-              space pp ())
-            valtype pp l);
-      string pp ")"
+  | _ -> print_paren_list valtype pp l
 
 let functype pp { params; results } =
   box pp ~indent:2 (fun () ->
@@ -102,10 +106,7 @@ let comptype pp (t : comptype) =
       (* The opening brace is printed in [subtype] *)
       indent pp 2 (fun () ->
           space pp ();
-          list
-            ~sep:(fun pp () ->
-              string pp ",";
-              space pp ())
+          list_commasep
             (fun pp (nm, t) ->
               box pp ~indent:2 (fun () ->
                   string pp nm.desc;
@@ -271,6 +272,13 @@ let casttype pp ty =
   | Signedtype { typ; signage; strict } ->
       string pp (Ast.format_signed_type typ signage strict)
 
+let print_optional_type_prefix pp opt =
+  Option.iter
+    (fun t ->
+      string pp t.desc;
+      string pp "|")
+    opt
+
 let branch_instr instr prec pp name label i =
   parentheses prec Branch pp @@ fun () ->
   box pp ~indent:2 (fun () ->
@@ -306,24 +314,13 @@ let call_instr instr prec pp ?prefix i l =
         prefix;
       instr Call pp i;
       cut pp ();
-      string pp "(";
-      box pp (fun () ->
-          list
-            ~sep:(fun pp () ->
-              string pp ",";
-              space pp ())
-            (instr Instruction) pp l);
-      string pp ")")
+      print_paren_list (instr Instruction) pp l)
 
 let struct_instr pp nm f =
   hvbox pp (fun () ->
       box pp (fun () ->
           string pp "{";
-          Option.iter
-            (fun nm ->
-              string pp nm.desc;
-              string pp "|")
-            nm);
+          print_optional_type_prefix pp nm);
       f ();
       space pp ();
       string pp "}")
@@ -332,11 +329,7 @@ let array_instr pp nm f =
   hvbox pp ~indent:2 (fun () ->
       box pp (fun () ->
           string pp "[";
-          Option.iter
-            (fun t ->
-              string pp t.desc;
-              string pp "|")
-            nm);
+          print_optional_type_prefix pp nm);
       space pp ();
       f ();
       string pp "]")
@@ -437,16 +430,13 @@ let rec instr prec pp (i : _ instr) =
       struct_instr pp nm (fun () ->
           indent pp 2 (fun () ->
               space pp ();
-              (list
-                 ~sep:(fun pp () ->
-                   string pp ",";
-                   space pp ())
-                 (fun pp (nm, i) ->
-                   box pp ~indent:2 (fun () ->
-                       string pp nm.desc;
-                       string pp ":";
-                       space pp ();
-                       instr Instruction pp i)))
+              list_commasep
+                (fun pp (nm, i) ->
+                  box pp ~indent:2 (fun () ->
+                      string pp nm.desc;
+                      string pp ":";
+                      space pp ();
+                      instr Instruction pp i))
                 pp l))
   | StructDefault nm ->
       struct_instr pp nm (fun () ->
@@ -480,12 +470,7 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           instr Instruction pp n)
   | ArrayFixed (nm, l) ->
-      array_instr pp nm (fun () ->
-          list
-            ~sep:(fun pp () ->
-              string pp ",";
-              space pp ())
-            (instr Instruction) pp l)
+      array_instr pp nm (fun () -> list_commasep (instr Instruction) pp l)
   | ArrayGet (i1, i2) ->
       box pp ~indent:2 (fun () ->
           instr Call pp i1;
@@ -536,15 +521,7 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           (match l with
           | [ p ] -> single pp p
-          | l ->
-              string pp "(";
-              box pp (fun () ->
-                  list
-                    ~sep:(fun pp () ->
-                      string pp ",";
-                      space pp ())
-                    single pp l);
-              string pp ")");
+          | l -> print_paren_list single pp l);
           Option.iter
             (fun i ->
               space pp ();
@@ -604,29 +581,14 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           string pp tag.desc;
           space pp ();
-          string pp "(";
-          box pp (fun () ->
-              list
-                ~sep:(fun pp () ->
-                  string pp ",";
-                  space pp ())
-                (instr Instruction) pp l);
-          string pp ")")
+          print_paren_list (instr Instruction) pp l)
   | ThrowRef i ->
       parentheses prec Branch pp @@ fun () ->
       box pp ~indent:2 (fun () ->
           string pp "throw";
           space pp ();
           instr Branch pp i)
-  | Sequence l ->
-      string pp "(";
-      box pp (fun () ->
-          list
-            ~sep:(fun pp () ->
-              string pp ",";
-              space pp ())
-            (instr Instruction) pp l);
-      string pp ")"
+  | Sequence l -> print_paren_list (instr Instruction) pp l
   | Select (i1, i2, i3) ->
       parentheses prec Select pp @@ fun () ->
       box pp ~indent:2 (fun () ->
@@ -703,20 +665,14 @@ let fundecl ~tag pp (name, typ, sign) =
   Option.iter
     (fun { named_params; results } ->
       cut pp ();
-      string pp "(";
-      box pp (fun () ->
-          list
-            ~sep:(fun pp () ->
-              string pp ",";
-              space pp ())
-            (fun pp (id, t) ->
-              box pp ~indent:2 (fun () ->
-                  simple_pat pp id;
-                  string pp ":";
-                  space pp ();
-                  valtype pp t))
-            pp named_params);
-      string pp ")";
+      print_paren_list
+        (fun pp (id, t) ->
+          box pp ~indent:2 (fun () ->
+              simple_pat pp id;
+              string pp ":";
+              space pp ();
+              valtype pp t))
+        pp named_params;
       if results <> [] then (
         space pp ();
         string pp "->";
@@ -724,19 +680,18 @@ let fundecl ~tag pp (name, typ, sign) =
         tuple false pp results))
     sign
 
-let attributes pp attributes =
-  List.iter
-    (fun (name, i) ->
-      box pp ~indent:2 (fun () ->
-          string pp "#[";
-          string pp name;
-          space pp ();
-          string pp "=";
-          space pp ();
-          instr Instruction pp i;
-          string pp "]";
-          space pp ()))
-    attributes
+let print_attribute pp (name, i) =
+  box pp ~indent:2 (fun () ->
+      string pp "#[";
+      string pp name;
+      space pp ();
+      string pp "=";
+      space pp ();
+      instr Instruction pp i;
+      string pp "]";
+      space pp ())
+
+let attributes pp attributes = List.iter (print_attribute pp) attributes
 
 let modulefield pp field =
   match field with
