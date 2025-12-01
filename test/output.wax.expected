@@ -654,10 +654,9 @@ fn caml_ba_get_at_offset(ba: &bigarray, i: i32) -> &eq {
                   return ta_get_i32(data, i) as &i31
                 } /* 'int64 */
                 i = i << 1;
-                become
-                  caml_copy_int64
-                    (ta_get_i32(data, i) as i64_u |
-                       ta_get_i32(data, i + 1) as i64_u << 32)
+                become caml_copy_int64
+                  (ta_get_i32(data, i) as i64_u |
+                     ta_get_i32(data, i + 1) as i64_u << 32)
               } /* 'int32 */
               become caml_copy_int32(ta_get_i32(data, i))
             } /* 'uint16 */

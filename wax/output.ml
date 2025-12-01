@@ -271,6 +271,76 @@ let casttype pp ty =
   | Signedtype { typ; signage; strict } ->
       string pp (Ast.format_signed_type typ signage strict)
 
+let branch_instr instr prec pp name label i =
+  parentheses prec Branch pp @@ fun () ->
+  box pp ~indent:2 (fun () ->
+      string pp name;
+      space pp ();
+      string pp "'";
+      string pp label;
+      Option.iter
+        (fun i ->
+          space pp ();
+          instr Branch pp i)
+        i)
+
+let branch_ref_instr instr prec pp name label ty i =
+  parentheses prec Branch pp @@ fun () ->
+  box pp ~indent:2 (fun () ->
+      string pp name;
+      space pp ();
+      string pp "'";
+      string pp label;
+      space pp ();
+      reftype pp ty;
+      space pp ();
+      instr Branch pp i)
+
+let call_instr instr prec pp ?prefix i l =
+  parentheses prec Call pp @@ fun () ->
+  box pp ~indent:2 (fun () ->
+      Option.iter
+        (fun s ->
+          string pp s;
+          space pp ())
+        prefix;
+      instr Call pp i;
+      cut pp ();
+      string pp "(";
+      box pp (fun () ->
+          list
+            ~sep:(fun pp () ->
+              string pp ",";
+              space pp ())
+            (instr Instruction) pp l);
+      string pp ")")
+
+let struct_instr pp nm f =
+  hvbox pp (fun () ->
+      box pp (fun () ->
+          string pp "{";
+          Option.iter
+            (fun nm ->
+              string pp nm.desc;
+              string pp "|")
+            nm);
+      f ();
+      space pp ();
+      string pp "}")
+
+let array_instr pp nm f =
+  hvbox pp ~indent:2 (fun () ->
+      box pp (fun () ->
+          string pp "[";
+          Option.iter
+            (fun t ->
+              string pp t.desc;
+              string pp "|")
+            nm);
+      space pp ();
+      f ();
+      string pp "]")
+
 let rec instr prec pp (i : _ instr) =
   match i.desc with
   | Block (label, bt, l) ->
@@ -328,35 +398,8 @@ let rec instr prec pp (i : _ instr) =
           string pp ":=";
           space pp ();
           instr Assignement pp i)
-  | Call (i, l) ->
-      parentheses prec Call pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
-          instr Call pp i;
-          cut pp ();
-          string pp "(";
-          box pp (fun () ->
-              list
-                ~sep:(fun pp () ->
-                  string pp ",";
-                  space pp ())
-                (instr Instruction) pp l);
-          string pp ")")
-  | TailCall (i, l) ->
-      parentheses prec Call pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
-          string pp "become";
-          space pp ();
-          box pp ~indent:2 (fun () ->
-              instr Call pp i;
-              cut pp ();
-              string pp "(";
-              box pp (fun () ->
-                  list
-                    ~sep:(fun pp () ->
-                      string pp ",";
-                      space pp ())
-                    (instr Instruction) pp l);
-              string pp ")"))
+  | Call (i, l) -> call_instr instr prec pp i l
+  | TailCall (i, l) -> call_instr instr prec pp ~prefix:"become" i l
   | String (t, s) ->
       Option.iter
         (fun t ->
@@ -391,43 +434,25 @@ let rec instr prec pp (i : _ instr) =
               space pp ();
               reftype pp t))
   | Struct (nm, l) ->
-      hvbox pp (fun () ->
-          box pp (fun () ->
-              string pp "{";
-              Option.iter
-                (fun nm ->
-                  string pp nm.desc;
-                  string pp "|")
-                nm);
+      struct_instr pp nm (fun () ->
           indent pp 2 (fun () ->
               space pp ();
-              list
-                ~sep:(fun pp () ->
-                  string pp ",";
-                  space pp ())
-                (fun pp (nm, i) ->
-                  box pp ~indent:2 (fun () ->
-                      string pp nm.desc;
-                      string pp ":";
-                      space pp ();
-                      instr Instruction pp i))
-                pp l);
-          space pp ();
-          string pp "}")
+              (list
+                 ~sep:(fun pp () ->
+                   string pp ",";
+                   space pp ())
+                 (fun pp (nm, i) ->
+                   box pp ~indent:2 (fun () ->
+                       string pp nm.desc;
+                       string pp ":";
+                       space pp ();
+                       instr Instruction pp i)))
+                pp l))
   | StructDefault nm ->
-      hvbox pp (fun () ->
-          box pp (fun () ->
-              string pp "{";
-              Option.iter
-                (fun nm ->
-                  string pp nm.desc;
-                  string pp "|")
-                nm);
+      struct_instr pp nm (fun () ->
           indent pp 2 (fun () ->
               space pp ();
-              string pp "..");
-          space pp ();
-          string pp "}")
+              string pp ".."))
   | StructGet (i, s) ->
       parentheses prec FieldAccess pp @@ fun () ->
       instr FieldAccess pp i;
@@ -444,50 +469,23 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           instr Assignement pp i')
   | Array (nm, i, n) ->
-      hvbox pp ~indent:2 (fun () ->
-          box pp (fun () ->
-              string pp "[";
-              Option.iter
-                (fun t ->
-                  string pp t.desc;
-                  string pp "|")
-                nm);
-          space pp ();
+      array_instr pp nm (fun () ->
           instr Instruction pp i;
           string pp ";";
           space pp ();
-          instr Instruction pp n;
-          string pp "]")
+          instr Instruction pp n)
   | ArrayDefault (nm, n) ->
-      hvbox pp ~indent:2 (fun () ->
-          box pp (fun () ->
-              string pp "[";
-              Option.iter
-                (fun t ->
-                  string pp t.desc;
-                  string pp "|")
-                nm);
-          space pp ();
+      array_instr pp nm (fun () ->
           string pp "..;";
           space pp ();
-          instr Instruction pp n;
-          string pp "]")
+          instr Instruction pp n)
   | ArrayFixed (nm, l) ->
-      hvbox pp ~indent:2 (fun () ->
-          box pp (fun () ->
-              string pp "[";
-              Option.iter
-                (fun t ->
-                  string pp t.desc;
-                  string pp "|")
-                nm);
-          space pp ();
+      array_instr pp nm (fun () ->
           list
             ~sep:(fun pp () ->
               string pp ",";
               space pp ())
-            (instr Instruction) pp l;
-          string pp "]")
+            (instr Instruction) pp l)
   | ArrayGet (i1, i2) ->
       box pp ~indent:2 (fun () ->
           instr Call pp i1;
@@ -554,67 +552,16 @@ let rec instr prec pp (i : _ instr) =
               space pp ();
               instr Assignement pp i)
             i)
-  | Br (label, i) ->
-      parentheses prec Branch pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
-          string pp "br";
-          space pp ();
-          string pp "'";
-          string pp label;
-          Option.iter
-            (fun i ->
-              space pp ();
-              instr Branch pp i)
-            i)
-  | Br_if (label, i) ->
-      parentheses prec Branch pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
-          string pp "br_if";
-          space pp ();
-          string pp "'";
-          string pp label;
-          space pp ();
-          instr Branch pp i)
+  | Br (label, i) -> branch_instr instr prec pp "br" label i
+  | Br_if (label, i) -> branch_instr instr prec pp "br_if" label (Some i)
   | Br_on_null (label, i) ->
-      parentheses prec Branch pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
-          string pp "br_on_null";
-          space pp ();
-          string pp "'";
-          string pp label;
-          space pp ();
-          instr Branch pp i)
+      branch_instr instr prec pp "br_on_null" label (Some i)
   | Br_on_non_null (label, i) ->
-      parentheses prec Branch pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
-          string pp "br_on_non_null";
-          space pp ();
-          string pp "'";
-          string pp label;
-          space pp ();
-          instr Branch pp i)
+      branch_instr instr prec pp "br_on_non_null" label (Some i)
   | Br_on_cast (label, ty, i) ->
-      parentheses prec Branch pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
-          string pp "br_on_cast";
-          space pp ();
-          string pp "'";
-          string pp label;
-          space pp ();
-          reftype pp ty;
-          space pp ();
-          instr Branch pp i)
+      branch_ref_instr instr prec pp "br_on_cast" label ty i
   | Br_on_cast_fail (label, ty, i) ->
-      parentheses prec Branch pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
-          string pp "br_on_cast_fail";
-          space pp ();
-          string pp "'";
-          string pp label;
-          space pp ();
-          reftype pp ty;
-          space pp ();
-          instr Branch pp i)
+      branch_ref_instr instr prec pp "br_on_cast_fail" label ty i
   | Br_table (labels, i) ->
       let labels = List.rev labels in
       parentheses prec Branch pp @@ fun () ->
