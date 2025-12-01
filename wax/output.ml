@@ -271,12 +271,14 @@ let casttype pp ty =
   | Signedtype { typ; signage; strict } ->
       string pp (Ast.format_signed_type typ signage strict)
 
-let print_optional_type_prefix pp opt =
-  Option.iter
-    (fun t ->
-      string pp t.desc;
-      string pp "|")
-    opt
+let print_container_header pp delimiter opt =
+  box pp (fun () ->
+      string pp delimiter;
+      Option.iter
+        (fun t ->
+          string pp t.desc;
+          string pp "|")
+        opt)
 
 let branch_instr instr prec pp name label i =
   parentheses prec Branch pp @@ fun () ->
@@ -317,18 +319,16 @@ let call_instr instr prec pp ?prefix i l =
 
 let struct_instr pp nm f =
   hvbox pp (fun () ->
-      box pp (fun () ->
-          string pp "{";
-          print_optional_type_prefix pp nm);
-      f ();
+      print_container_header pp "{" nm;
+      indent pp 2 (fun () ->
+          space pp ();
+          f ());
       space pp ();
       string pp "}")
 
 let array_instr pp nm f =
   hvbox pp ~indent:2 (fun () ->
-      box pp (fun () ->
-          string pp "[";
-          print_optional_type_prefix pp nm);
+      print_container_header pp "[" nm;
       space pp ();
       f ();
       string pp "]")
@@ -427,21 +427,15 @@ let rec instr prec pp (i : _ instr) =
               reftype pp t))
   | Struct (nm, l) ->
       struct_instr pp nm (fun () ->
-          indent pp 2 (fun () ->
-              space pp ();
-              list_commasep
-                (fun pp (nm, i) ->
-                  box pp ~indent:2 (fun () ->
-                      string pp nm.desc;
-                      string pp ":";
-                      space pp ();
-                      instr Instruction pp i))
-                pp l))
-  | StructDefault nm ->
-      struct_instr pp nm (fun () ->
-          indent pp 2 (fun () ->
-              space pp ();
-              string pp ".."))
+          list_commasep
+            (fun pp (nm, i) ->
+              box pp ~indent:2 (fun () ->
+                  string pp nm.desc;
+                  string pp ":";
+                  space pp ();
+                  instr Instruction pp i))
+            pp l)
+  | StructDefault nm -> struct_instr pp nm (fun () -> string pp "..")
   | StructGet (i, s) ->
       parentheses prec FieldAccess pp @@ fun () ->
       instr FieldAccess pp i;
