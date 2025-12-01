@@ -63,7 +63,6 @@ module Output = struct
   let instr f i = Utils.Printer.run f (fun pp -> Output.instr pp i)
 end
 
-
 exception Type_error of location * string
 
 module Namespace = struct
