@@ -691,14 +691,18 @@ let print_attribute pp (name, i) =
       string pp "]";
       space pp ())
 
-let attributes pp attributes = List.iter (print_attribute pp) attributes
+let print_attributes pp attributes = List.iter (print_attribute pp) attributes
+
+let print_attr_prefix pp attributes_list content_fn =
+  hvbox pp (fun () ->
+      print_attributes pp attributes_list;
+      content_fn ())
 
 let modulefield pp field =
   match field with
   | Type t -> rectype pp t
   | Func { name; typ; sign; body = label, body; attributes = a } ->
-      hvbox pp (fun () ->
-          attributes pp a;
+      print_attr_prefix pp a (fun () ->
           hvbox pp (fun () ->
               box pp (fun () ->
                   fundecl ~tag:false pp (name, typ, sign);
@@ -708,8 +712,7 @@ let modulefield pp field =
               block_contents pp body;
               string pp "}"))
   | Global { name; mut; typ; def; attributes = a } ->
-      hvbox pp (fun () ->
-          attributes pp a;
+      print_attr_prefix pp a (fun () ->
           box pp ~indent:2 (fun () ->
               string pp (if mut then "let" else "const");
               space pp ();
@@ -726,16 +729,13 @@ let modulefield pp field =
               instr Instruction pp def;
               string pp ";"))
   | Fundecl { name; typ; sign; attributes = a } ->
-      hvbox pp (fun () ->
-          attributes pp a;
+      print_attr_prefix pp a (fun () ->
           box pp (fun () -> fundecl ~tag:false pp (name, typ, sign)))
   | Tag { name; typ; sign; attributes = a } ->
-      hvbox pp (fun () ->
-          attributes pp a;
+      print_attr_prefix pp a (fun () ->
           box pp (fun () -> fundecl ~tag:true pp (name, typ, sign)))
   | GlobalDecl { name; mut; typ; attributes = a } ->
-      hvbox pp (fun () ->
-          attributes pp a;
+      print_attr_prefix pp a (fun () ->
           box pp ~indent:2 (fun () ->
               string pp (if mut then "let" else "const");
               space pp ();
