@@ -653,6 +653,10 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       | None, None -> push_poly None
       | Some ty1, Some ty2 ->
           (*ZZZ*)
+          if not (number_or_vec ty1) then
+            Format.eprintf "%a@." print_valtype ty1;
+          if not (number_or_vec ty2) then
+            Format.eprintf "%a@." print_valtype ty2;
           assert (number_or_vec ty1);
           assert (number_or_vec ty2);
           assert (ty1 = ty2);
@@ -1080,6 +1084,10 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = instructions ctx l in
       instruction ctx i
   | TupleMake _ -> return ()
+  | Pop ty ->
+      let ty = valtype ctx.modul.types ty in
+      let* () = pop ctx ty in
+      push ty
   (*
     (* Binaryen extensions *)
     | Pop of X.valtype

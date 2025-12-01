@@ -9,13 +9,12 @@ module P =
 
 let convert ~filename =
   let ast = P.parse ~filename in
-  (*
+  Wasm.Validation.validate_refs := false;
   Wasm.Validation.f ast;
-*)
   let ast' = Conversion.From_wasm.module_ ast in
   Wax.Typing.f ast';
   let print_wax f m = Utils.Printer.run f (fun p -> Wax.Output.module_ p m) in
-  Format.printf "/////////// %s //////////@.@.%a" filename print_wax ast'
+  Format.printf "/////////// %s //////////@.@.%a@." filename print_wax ast'
 
 let _ =
   let p = "/home/jerome/wasm_of_ocaml/runtime/wasm" in

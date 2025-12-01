@@ -98,7 +98,9 @@ let resolve_format file_opt format_opt ~default =
       match detect_format file with Some fmt -> fmt | None -> default)
   | None, None -> default
 
-let convert input_file output_file input_format_opt output_format_opt validate =
+let convert input_file output_file input_format_opt output_format_opt validate
+    strict_validate =
+  Wasm.Validation.validate_refs := strict_validate;
   let std file = Option.bind file (fun f -> if f = "-" then None else Some f) in
   let input_file = std input_file in
   let output_file = std output_file in
@@ -178,14 +180,23 @@ let validate_flag =
   in
   Arg.(value & flag & info [ "v"; "validate" ] ~doc)
 
+(* Define the --strict-validate option *)
+let strict_validate_flag =
+  let doc =
+    "Perform strict reference validation (for Wasm Text). This overrides the \
+     default relaxed reference validation behavior."
+  in
+  Arg.(value & flag & info [ "s"; "strict-validate" ] ~doc)
+
 (* Combine into command *)
 let convert_term =
   let+ input = input_file
   and+ output = output_file
   and+ in_fmt = input_format
   and+ out_fmt = output_format
-  and+ validate = validate_flag in
-  convert input output in_fmt out_fmt validate
+  and+ validate = validate_flag
+  and+ strict_validate = strict_validate_flag in
+  convert input output in_fmt out_fmt validate strict_validate
 
 let convert_cmd =
   let doc = "Convert between WebAssembly formats (.wat, .wasm, .wax)" in
