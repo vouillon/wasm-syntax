@@ -61,6 +61,25 @@ and tuple always_paren pp l =
   | [ t ] when not always_paren -> valtype pp t
   | _ -> print_paren_list valtype pp l
 
+let simple_pat pp p = string pp (match p with Some x -> x.desc | None -> "_")
+
+let print_key_value pp key val_printer value =
+  box pp ~indent:2 (fun () ->
+      string pp key;
+      string pp ":";
+      space pp ();
+      val_printer pp value)
+
+let print_typed_pat pp (pat, opt_typ) =
+  box pp ~indent:2 (fun () ->
+      simple_pat pp pat;
+      Option.iter
+        (fun t ->
+          string pp ":";
+          space pp ();
+          valtype pp t)
+        opt_typ)
+
 let functype pp { params; results } =
   box pp ~indent:2 (fun () ->
       string pp "fn";
@@ -106,12 +125,7 @@ let comptype pp (t : comptype) =
       indent pp 2 (fun () ->
           space pp ();
           list_commasep
-            (fun pp (nm, t) ->
-              box pp ~indent:2 (fun () ->
-                  string pp nm.desc;
-                  string pp ":";
-                  space pp ();
-                  fieldtype pp t))
+            (fun pp (nm, t) -> print_key_value pp nm.desc fieldtype t)
             pp (Array.to_list l));
       space pp ();
       string pp "}"
@@ -262,7 +276,6 @@ let label_comment pp (l, label) =
         string pp " */")
       label
 
-let simple_pat pp p = string pp (match p with Some x -> x.desc | None -> "_")
 let need_blocktype bt = bt.params <> [||] || bt.results <> [||]
 
 let casttype pp ty =
@@ -427,12 +440,7 @@ let rec instr prec pp (i : _ instr) =
   | Struct (nm, l) ->
       struct_instr pp nm (fun () ->
           list_commasep
-            (fun pp (nm, i) ->
-              box pp ~indent:2 (fun () ->
-                  string pp nm.desc;
-                  string pp ":";
-                  space pp ();
-                  instr Instruction pp i))
+            (fun pp (nm, i) -> print_key_value pp nm.desc (instr Instruction) i)
             pp l)
   | StructDefault nm -> struct_instr pp nm (fun () -> string pp "..")
   | StructGet (i, s) ->
@@ -498,22 +506,12 @@ let rec instr prec pp (i : _ instr) =
       instr UnaryOp pp i
   | Let (l, i) ->
       parentheses prec Let pp @@ fun () ->
-      let single pp (x, t) =
-        box pp ~indent:2 (fun () ->
-            simple_pat pp x;
-            Option.iter
-              (fun t ->
-                string pp ":";
-                space pp ();
-                valtype pp t)
-              t)
-      in
       box pp ~indent:2 (fun () ->
           string pp "let";
           space pp ();
           (match l with
-          | [ p ] -> single pp p
-          | l -> print_paren_list single pp l);
+          | [ p ] -> print_typed_pat pp p
+          | l -> print_paren_list print_typed_pat pp l);
           Option.iter
             (fun i ->
               space pp ();
@@ -650,12 +648,7 @@ let fundecl ~tag pp (name, typ, sign) =
     (fun { named_params; results } ->
       cut pp ();
       print_paren_list
-        (fun pp (id, t) ->
-          box pp ~indent:2 (fun () ->
-              simple_pat pp id;
-              string pp ":";
-              space pp ();
-              valtype pp t))
+        (fun pp (id, t) -> print_typed_pat pp (id, Some t))
         pp named_params;
       if results <> [] then (
         space pp ();
