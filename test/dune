@@ -1,24 +1,19 @@
-(executable (name convert)
- (libraries cmdliner wasm wax conversion)
- (preprocess
-  (pps sedlex.ppx)))
-
 (rule
  (target output.wax)
  (action
-  (run ./convert.exe -o output.wax %{dep:bigarray.wat})))
+  (run wax -o output.wax %{dep:bigarray.wat})))
 
 (rule
  (alias runtest)
  (action
-  (diff expected.wax output.wax)))
+  (diff output.wax.expected output.wax)))
 
 (rule
  (target output.wat)
  (action
-  (run ./convert.exe -o output.wat %{dep:bigarray.wat})))
+  (run wax -o output.wat %{dep:bigarray.wat})))
 
 (rule
  (alias runtest)
  (action
-  (diff expected.wat output.wat)))
+  (diff output.wat.expected output.wat)))

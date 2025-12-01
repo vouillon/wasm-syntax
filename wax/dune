@@ -1,5 +1,6 @@
 (library
  (name wax)
+ (public_name wax.wax_wax)
  (preprocess
   (pps sedlex.ppx))
  (libraries wasm sedlex menhirLib uuseg.string))

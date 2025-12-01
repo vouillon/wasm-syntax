@@ -1,5 +1,8 @@
+(executable
+ (name main)
+ (public_name wax)
+ (libraries wasm wax conversion cmdliner))
+
 (executables
- (names main test_wasm convert pretty_print run_wasm_testsuite)
- (libraries wasm wax conversion menhirLib re unix)
- (preprocess
-  (pps sedlex.ppx)))
+ (names test_wasm convert pretty_print run_wasm_testsuite)
+ (libraries wasm wax conversion menhirLib re unix cmdliner))

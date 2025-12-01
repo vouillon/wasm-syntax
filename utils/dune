@@ -1,2 +1,3 @@
 (library
- (name utils))
+ (name utils)
+ (public_name wax.utils))

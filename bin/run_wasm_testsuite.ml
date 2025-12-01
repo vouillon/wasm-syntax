@@ -163,7 +163,7 @@ module WaxParser =
     (Wax.Fast_parser)
     (Wax.Lexer)
 
-let print_module f m = Wasm.Printer.run f (fun p -> Wasm.Output.module_ p m)
+let print_module f m = Utils.Printer.run f (fun p -> Wasm.Output.module_ p m)
 
 let check_wellformed (_, lst) =
   let types = Hashtbl.create 16 in
