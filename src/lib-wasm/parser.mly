@@ -181,9 +181,6 @@ ZZZ
 %token OUTPUT
 
 %{
- (* To avoid references to module Wasm in the generated mli file *)
-module Wasm = struct end
-
 module Uint32 = Utils.Uint32
 module Uint64 = Utils.Uint64
 open Ast.Text
