@@ -29,42 +29,42 @@ let with_open_out file f =
   | Some file -> Out_channel.with_open_bin file f
   | None -> f stdout
 
-let wat_to_wat ~input_file ~output_file =
+let wat_to_wat ~input_file ~output_file ~validate =
   let text = with_open_in input_file In_channel.input_all in
   let ast =
     Wat_parser.parse_from_string
       ~filename:(Option.value ~default:"-" input_file)
       text
   in
-  Wasm.Validation.f ast;
+  if validate then Wasm.Validation.f ast;
   let print_wat f m = Utils.Printer.run f (fun p -> Wasm.Output.module_ p m) in
   with_open_out output_file (fun oc ->
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wat ast)
 
-let wat_to_wax ~input_file ~output_file =
+let wat_to_wax ~input_file ~output_file ~validate =
   let text = with_open_in input_file In_channel.input_all in
   let ast =
     Wat_parser.parse_from_string
       ~filename:(Option.value ~default:"-" input_file)
       text
   in
-  Wasm.Validation.f ast;
+  if validate then Wasm.Validation.f ast;
   let ast = Conversion.From_wasm.module_ ast in
-  Wax.Typing.f ast;
+  if validate then Wax.Typing.f ast;
   let print_wax f m = Utils.Printer.run f (fun p -> Wax.Output.module_ p m) in
   with_open_out output_file (fun oc ->
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wax ast)
 
-let wax_to_wax ~input_file ~output_file =
+let wax_to_wax ~input_file ~output_file ~validate =
   let text = with_open_in input_file In_channel.input_all in
   let ast =
     Wax_parser.parse_from_string
       ~filename:(Option.value ~default:"-" input_file)
       text
   in
-  Wax.Typing.f ast;
+  if validate then Wax.Typing.f ast;
   let print_wax f m = Utils.Printer.run f (fun p -> Wax.Output.module_ p m) in
   with_open_out output_file (fun oc ->
       let fmt = Format.formatter_of_out_channel oc in
@@ -98,7 +98,7 @@ let resolve_format file_opt format_opt ~default =
       match detect_format file with Some fmt -> fmt | None -> default)
   | None, None -> default
 
-let convert input_file output_file input_format_opt output_format_opt =
+let convert input_file output_file input_format_opt output_format_opt validate =
   let std file = Option.bind file (fun f -> if f = "-" then None else Some f) in
   let input_file = std input_file in
   let output_file = std output_file in
@@ -107,16 +107,18 @@ let convert input_file output_file input_format_opt output_format_opt =
     resolve_format output_file output_format_opt ~default:Wasm
   in
   match (input_format, output_format) with
-  | Wat, Wat -> wat_to_wat ~input_file ~output_file
-  | Wat, Wax -> wat_to_wax ~input_file ~output_file
-  | Wax, Wax -> wax_to_wax ~input_file ~output_file
+  | Wat, Wat -> wat_to_wat ~input_file ~output_file ~validate
+  | Wat, Wax -> wat_to_wax ~input_file ~output_file ~validate
+  | Wax, Wax -> wax_to_wax ~input_file ~output_file ~validate
   | _ ->
-      Printf.eprintf "Error: Conversion from '%s' (%s) to '%s' (%s) not supported yet. Run 'wax --help' for supported formats and their descriptions.\n"
+      Printf.eprintf
+        "Error: Conversion from '%s' (%s) to '%s' (%s) not supported yet. Run \
+         'wax --help' for supported formats and their descriptions.\n"
         (string_of_format input_format)
         (format_description input_format)
         (string_of_format output_format)
         (format_description output_format);
-      exit 1
+      exit 12323
 
 (* Define the input file argument (optional for stdin) *)
 let input_file =
@@ -164,13 +166,22 @@ let output_format =
     & opt (some format_conv) None
     & info [ "f"; "format"; "output-format" ] ~docv:"FORMAT" ~doc)
 
+(* Define the --validate option *)
+let validate_flag =
+  let doc =
+    "Perform validation (type checking for Wax, well-formedness for Wasm \
+     Text). Validation is disabled by default."
+  in
+  Arg.(value & flag & info [ "v"; "validate" ] ~doc)
+
 (* Combine into command *)
 let convert_term =
   let+ input = input_file
   and+ output = output_file
   and+ in_fmt = input_format
-  and+ out_fmt = output_format in
-  convert input output in_fmt out_fmt
+  and+ out_fmt = output_format
+  and+ validate = validate_flag in
+  convert input output in_fmt out_fmt validate
 
 let convert_cmd =
   let doc = "Convert between WebAssembly formats (.wat, .wasm, .wax)" in
@@ -181,6 +192,10 @@ let convert_cmd =
         "Convert between different WebAssembly formats: .wat (text), .wasm \
          (binary), and .wax.";
       `P "Supports reading from stdin and writing to stdout.";
+      `P "Currently supported conversions:";
+      `P "- Wat to Wat (formatting / round-trip)";
+      `P "- Wat to Wax (decompilation / desugaring)";
+      `P "- Wax to Wax (formatting / checking)";
       `P "Default conversion: wax -> wasm";
       `S Manpage.s_examples;
       `P "Convert file with auto-detected formats:";

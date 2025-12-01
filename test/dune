@@ -1,7 +1,7 @@
 (rule
  (target output.wax)
  (action
-  (run wax -o output.wax %{dep:bigarray.wat})))
+  (run wax --validate -o output.wax %{dep:bigarray.wat})))
 
 (rule
  (alias runtest)
@@ -11,7 +11,7 @@
 (rule
  (target output.wat)
  (action
-  (run wax -o output.wat %{dep:bigarray.wat})))
+  (run wax --validate -o output.wat %{dep:bigarray.wat})))
 
 (rule
  (alias runtest)
