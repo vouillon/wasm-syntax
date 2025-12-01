@@ -10,8 +10,10 @@ ZZZ
    index that occurs in the module outside functions *)
 let validate_refs = ref true
 
-let print_instr f i =
-  Printer.run f (fun p -> Output.instr p i)
+module Uint32 = Utils.Uint32
+module Uint64 = Utils.Uint64
+
+let print_instr f i = Utils.Printer.run f (fun p -> Output.instr p i)
 
 open Ast.Binary.Types
 

@@ -27,7 +27,7 @@ let wat_to_wat ~input_file ~output_file =
       ~filename:(Option.value ~default:"-" input_file)
       text
   in
-  let print_wat f m = Wasm.Printer.run f (fun p -> Wasm.Output.module_ p m) in
+  let print_wat f m = Utils.Printer.run f (fun p -> Wasm.Output.module_ p m) in
   with_open_out output_file (fun oc ->
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wat ast)

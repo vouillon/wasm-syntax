@@ -1,3 +1,6 @@
+module Printer = Utils.Printer
+module Uint32 = Utils.Uint32
+module Uint64 = Utils.Uint64
 open Ast.Text
 
 type sexp =

@@ -1,3 +1,4 @@
+module Uint32 = Utils.Uint32
 open Ast.Text
 
 let map_instrs func (name, fields) =

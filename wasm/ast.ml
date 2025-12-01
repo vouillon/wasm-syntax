@@ -1,8 +1,17 @@
-type location = { loc_start : Lexing.position; loc_end : Lexing.position }
-type ('desc, 'info) annotated = { desc : 'desc; info : 'info }
+type ('desc, 'info) annotated = ('desc, 'info) Utils.Ast.annotated = {
+  desc : 'desc;
+  info : 'info;
+}
 
-let no_loc desc =
-  { desc; info = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos } }
+type location = Utils.Ast.location = {
+  loc_start : Lexing.position;
+  loc_end : Lexing.position;
+}
+
+let no_loc = Utils.Ast.no_loc
+
+module Uint32 = Utils.Uint32
+module Uint64 = Utils.Uint64
 
 (* Types *)
 

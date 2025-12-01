@@ -1,6 +1,6 @@
 open Wax
 module Src = Wasm.Ast.Text
-module Uint32 = Wasm.Uint32
+module Uint32 = Utils.Uint32
 module StringMap = Map.Make (String)
 
 module Namespace = struct

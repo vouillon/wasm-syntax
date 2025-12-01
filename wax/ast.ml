@@ -1,11 +1,11 @@
-type ('desc, 'info) annotated = ('desc, 'info) Wasm.Ast.annotated = {
+type ('desc, 'info) annotated = ('desc, 'info) Utils.Ast.annotated = {
   desc : 'desc;
   info : 'info;
 }
 
-type location = Wasm.Ast.location
+type location = Utils.Ast.location
 
-let no_loc = Wasm.Ast.no_loc
+let no_loc = Utils.Ast.no_loc
 
 type idx = (string, location) annotated
 

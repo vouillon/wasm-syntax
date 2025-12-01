@@ -2,6 +2,6 @@
  (name wasm)
  (preprocess
   (pps sedlex.ppx))
- (libraries sedlex menhirLib uuseg.string))
+ (libraries utils sedlex menhirLib uuseg.string))
 
 (include dune.menhir)
