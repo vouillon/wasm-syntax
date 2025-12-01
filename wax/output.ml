@@ -271,15 +271,6 @@ let casttype pp ty =
   | Signedtype { typ; signage; strict } ->
       string pp (Ast.format_signed_type typ signage strict)
 
-let print_container_header pp delimiter opt =
-  box pp (fun () ->
-      string pp delimiter;
-      Option.iter
-        (fun t ->
-          string pp t.desc;
-          string pp "|")
-        opt)
-
 let branch_instr instr prec pp name label i =
   parentheses prec Branch pp @@ fun () ->
   box pp ~indent:2 (fun () ->
@@ -317,21 +308,29 @@ let call_instr instr prec pp ?prefix i l =
       cut pp ();
       print_paren_list (instr Instruction) pp l)
 
+let print_container pp ~opening ~closing ?(indent = 0) opt_type f =
+  hvbox pp ~indent (fun () ->
+      box pp (fun () ->
+          string pp opening;
+          Option.iter
+            (fun t ->
+              string pp t.desc;
+              string pp "|")
+            opt_type);
+      f ();
+      string pp closing)
+
 let struct_instr pp nm f =
-  hvbox pp (fun () ->
-      print_container_header pp "{" nm;
+  print_container pp ~opening:"{" ~closing:"}" ~indent:0 nm (fun () ->
       indent pp 2 (fun () ->
           space pp ();
           f ());
-      space pp ();
-      string pp "}")
+      space pp ())
 
 let array_instr pp nm f =
-  hvbox pp ~indent:2 (fun () ->
-      print_container_header pp "[" nm;
+  print_container pp ~opening:"[" ~closing:"]" ~indent:2 nm (fun () ->
       space pp ();
-      f ();
-      string pp "]")
+      f ())
 
 let rec instr prec pp (i : _ instr) =
   match i.desc with
