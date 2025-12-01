@@ -51,11 +51,6 @@ module Sequence = struct
         with Not_found ->
           Format.eprintf "Unbound %s $%s@." seq.name id;
           exit 1)
-
-  let iter seq f =
-    for i = 0 to seq.last_index - 1 do
-      f i
-    done
 end
 
 type type_context = {
@@ -243,9 +238,6 @@ let ( let* ) e f st =
   let st, v = e st in
   f v st
 
-let resolve_index tbl (idx : Ast.Text.idx) =
-  match idx.desc with Num i -> i | Id id -> (*ZZZ*) Hashtbl.find tbl id
-
 let get_local ctx ?(initialize = false) i =
   ignore initialize;
   (*ZZZ Check in bound + initialized*)
@@ -324,6 +316,12 @@ let rec output_stack f st =
            print_valtype)
         ty output_stack st
 
+let print_stack st =
+  Format.eprintf "Stack:%a@." output_stack st;
+  (st, ())
+
+let _ = print_stack
+
 let with_empty_stack f =
   let st, () = f Empty in
   match st with
@@ -331,10 +329,6 @@ let with_empty_stack f =
       Format.eprintf "Stack:%a@." output_stack st;
       assert false
   | Empty | Unreachable -> ()
-
-let print_stack st =
-  Format.eprintf "Stack:%a@." output_stack st;
-  (st, ())
 
 let branch_target ctx (idx : Ast.Text.idx) =
   match idx.desc with

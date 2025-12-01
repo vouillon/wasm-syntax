@@ -1,5 +1,9 @@
-exception Syntax_error of (Lexing.position * Lexing.position) * string
+(** Generic parsing utilities. *)
 
+exception Syntax_error of (Lexing.position * Lexing.position) * string
+(** Exception raised when a syntax error occurs, with location range and message. *)
+
+(** Functor to create a parser from a Menhir incremental API. *)
 module Make_parser (Output : sig
   type t
 end) (Parser : sig
@@ -19,5 +23,8 @@ end) (_ : sig
   val token : Sedlexing.lexbuf -> Parser.token
 end) : sig
   val parse : filename:string -> Output.t
+  (** Parse a file from a filename (reads from stdin if filename is empty or "-"). *)
+
   val parse_from_string : filename:string -> string -> Output.t
+  (** Parse from a string. *)
 end

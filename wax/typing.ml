@@ -154,7 +154,6 @@ let storagetype ctx ty : Internal.storagetype =
 
 let muttype f ctx { mut; typ } = { mut; typ = f ctx typ }
 let fieldtype ctx ty = muttype storagetype ctx ty
-let globaltype ctx ty = muttype valtype ctx ty
 
 let comptype ctx (ty : comptype) : Internal.comptype =
   match ty with
@@ -200,7 +199,7 @@ type module_context = {
   functions : (int * string) Tbl.t;
   globals : (*mutable:*) (bool * inferred_valtype) Tbl.t;
   tags : functype Tbl.t;
-  memories : limits Tbl.t;
+  (*  memories : limits Tbl.t;*)
   mutable locals : inferred_valtype StringMap.t;
   control_types : (string option * inferred_valtype list) list;
   return_types : inferred_valtype list;
@@ -471,6 +470,11 @@ let rec output_stack f st =
            output_inferred_type)
         ty output_stack st
 
+let print_stack st =
+  Format.eprintf "Stack:%a@." output_stack st;
+  (st, ())
+
+let _ = print_stack
 let unreachable _ = (Unreachable, ())
 let return v st = (st, v)
 
@@ -513,10 +517,6 @@ let rec push_results results =
   | (loc, ty) :: rem ->
       let* () = push loc ty in
       push_results rem
-
-let print_stack st =
-  Format.eprintf "@[<2>Stack: %a@]@." output_stack st;
-  (st, ())
 
 let rec repeat n f =
   if n = 0 then return ()
@@ -1900,8 +1900,8 @@ let f fields =
       types = type_context.types;
       functions = Tbl.make namespace "function";
       globals = Tbl.make namespace "global";
+      (*      memories = Tbl.make (Namespace.make ()) "memories";*)
       tags = Tbl.make (Namespace.make ()) "tag";
-      memories = Tbl.make (Namespace.make ()) "memories";
       locals = StringMap.empty;
       control_types = [];
       return_types = [];

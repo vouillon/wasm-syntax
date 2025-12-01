@@ -1,3 +1,5 @@
+(** Wax Abstract Syntax Tree. *)
+
 type ('desc, 'info) annotated = ('desc, 'info) Utils.Ast.annotated = {
   desc : 'desc;
   info : 'info;
@@ -5,11 +7,11 @@ type ('desc, 'info) annotated = ('desc, 'info) Utils.Ast.annotated = {
 
 type location = Utils.Ast.location
 
-let no_loc = Utils.Ast.no_loc
+val no_loc : 'desc -> ('desc, location) annotated
 
 type idx = (string, location) annotated
 
-include Wasm.Ast.Make_types (struct
+include module type of Wasm.Ast.Make_types (struct
   type nonrec idx = idx
   type 'a annotated_array = (idx * 'a) array
 end)
@@ -45,15 +47,9 @@ type casttype =
       strict : bool;
     }
 
-let format_signed_type typ signage strict =
-  Printf.sprintf "%s_%s%s"
-    (match typ with
-    | `I32 -> "i32"
-    | `I64 -> "i64"
-    | `F32 -> "f32"
-    | `F64 -> "f64")
-    (match signage with Signed -> "s" | Unsigned -> "u")
-    (if strict then "_strict" else "")
+val format_signed_type :
+  [ `F32 | `F64 | `I32 | `I64 ] -> signage -> bool -> string
+(** Helper to format signed types (e.g., "i32_s_strict"). *)
 
 type 'info instr_desc =
   | Block of label option * functype * 'info instr list
