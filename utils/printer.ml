@@ -91,6 +91,10 @@ let blank_line ctx () =
   ctx.pending_newlines <- 2;
   ctx.pending_space <- false
 
+let cut ctx () =
+  flush ctx;
+  Format.pp_print_cut ctx.fmt ()
+
 let generic_box pp_open_box ctx skip_space indent f =
   flush ~skip_space ctx;
   pp_open_box ctx.fmt indent;

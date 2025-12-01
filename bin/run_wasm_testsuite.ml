@@ -293,6 +293,7 @@ let runtest filename path =
     |> List.map snd
   in
   (* Translation to new syntax *)
+  let print_wax f m = Utils.Printer.run f (fun p -> Wax.Output.module_ p m) in
   List.iter
     (fun m ->
       match Conversion.From_wasm.module_ m with
@@ -301,8 +302,8 @@ let runtest filename path =
           Format.eprintf "@[%a@]@." print_module m
       | m ->
           let ok = in_child_process (fun () -> Wax.Typing.f m) in
-          if not ok then Format.eprintf "@[%a@]@." Wax.Output.module_ m;
-          let text = Format.asprintf "%a@." Wax.Output.module_ m in
+          if not ok then Format.eprintf "@[%a@]@." print_wax m;
+          let text = Format.asprintf "%a@." print_wax m in
           let ok =
             in_child_process (fun () ->
                 let m' = WaxParser.parse_from_string ~filename text in
@@ -310,9 +311,9 @@ let runtest filename path =
                 if not ok then
                   if true then prerr_endline "(after parsing)"
                   else (
-                    Format.eprintf "@[%a@]@." Wax.Output.module_ m';
+                    Format.eprintf "@[%a@]@." print_wax m';
                     prerr_endline "===";
-                    Format.eprintf "@[%a@]@." Wax.Output.module_ m))
+                    Format.eprintf "@[%a@]@." print_wax m))
           in
           if not ok then
             if true then prerr_endline "(parsing)" else print_flushed text)

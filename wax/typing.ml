@@ -56,6 +56,14 @@ Explicit types?
 
 open Ast
 
+module Output = struct
+  include Output
+
+  let valtype f t = Utils.Printer.run f (fun pp -> Output.valtype pp t)
+  let instr f i = Utils.Printer.run f (fun pp -> Output.instr pp i)
+end
+
+
 exception Type_error of location * string
 
 module Namespace = struct

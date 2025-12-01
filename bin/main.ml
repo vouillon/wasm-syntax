@@ -52,7 +52,7 @@ let wat_to_wax ~input_file ~output_file =
   Wasm.Validation.f ast;
   let ast = Conversion.From_wasm.module_ ast in
   Wax.Typing.f ast;
-  let print_wax f m = Wax.Output.module_ f m in
+  let print_wax f m = Utils.Printer.run f (fun p -> Wax.Output.module_ p m) in
   with_open_out output_file (fun oc ->
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wax ast)
@@ -65,7 +65,7 @@ let wax_to_wax ~input_file ~output_file =
       text
   in
   Wax.Typing.f ast;
-  let print_wax f m = Wax.Output.module_ f m in
+  let print_wax f m = Utils.Printer.run f (fun p -> Wax.Output.module_ p m) in
   with_open_out output_file (fun oc ->
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wax ast)

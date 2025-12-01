@@ -639,13 +639,15 @@ fn caml_ba_get_at_offset(ba: &bigarray, i: i32) -> &eq {
                         }
                         i = i << 1;
                         return
-                          [float_array| ta_get_f64(data, i),
-                           ta_get_f64(data, i + 1)]
+                          [float_array|
+                            ta_get_f64(data, i),
+                            ta_get_f64(data, i + 1)]
                       } /* 'complex32 */
                       i = i << 1;
                       return
-                        [float_array| ta_get_f32(data, i),
-                         ta_get_f32(data, i + 1)]
+                        [float_array|
+                          ta_get_f32(data, i),
+                          ta_get_f32(data, i + 1)]
                     } /* 'nativeint */
                     become caml_copy_nativeint(ta_get_i32(data, i))
                   } /* 'int */
@@ -1521,4 +1523,3 @@ fn string_set(s: &?extern, i: i32, v: i32) {
 fn string_get(s: &?extern, i: i32) -> i32 {
   (s as &?any as &?string)[i] as i32_u
 }
-

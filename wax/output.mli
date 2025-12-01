@@ -1,3 +1,3 @@
-val instr : Format.formatter -> _ Ast.instr -> unit
-val valtype : Format.formatter -> Ast.valtype -> unit
-val module_ : Format.formatter -> _ Ast.modulefield list -> unit
+val instr : Utils.Printer.t -> _ Ast.instr -> unit
+val valtype : Utils.Printer.t -> Ast.valtype -> unit
+val module_ : Utils.Printer.t -> _ Ast.modulefield list -> unit
