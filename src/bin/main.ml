@@ -106,19 +106,23 @@ let convert input_file output_file input_format_opt output_format_opt validate =
   let output_format =
     resolve_format output_file output_format_opt ~default:Wasm
   in
-  match (input_format, output_format) with
-  | Wat, Wat -> wat_to_wat ~input_file ~output_file ~validate
-  | Wat, Wax -> wat_to_wax ~input_file ~output_file ~validate
-  | Wax, Wax -> wax_to_wax ~input_file ~output_file ~validate
-  | _ ->
-      Printf.eprintf
-        "Error: Conversion from '%s' (%s) to '%s' (%s) not supported yet. Run \
-         'wax --help' for supported formats and their descriptions.\n"
-        (string_of_format input_format)
-        (format_description input_format)
-        (string_of_format output_format)
-        (format_description output_format);
-      exit 12323
+  let convert =
+    match (input_format, output_format) with
+    | Wat, Wat -> wat_to_wat
+    | Wat, Wax -> wat_to_wax
+    | Wax, Wax -> wax_to_wax
+    | _ ->
+        fun ~input_file:_ ~output_file:_ ~validate:_ ->
+          Printf.eprintf
+            "Error: Conversion from '%s' (%s) to '%s' (%s) not supported yet. \
+             Run 'wax --help' for supported formats and their descriptions.\n"
+            (string_of_format input_format)
+            (format_description input_format)
+            (string_of_format output_format)
+            (format_description output_format);
+          exit 123
+  in
+  convert ~input_file ~output_file ~validate
 
 (* Define the input file argument (optional for stdin) *)
 let input_file =
