@@ -1,3 +1,4 @@
 (library
  (name conversion)
+ (public_name wax.conversion)
  (libraries wasm wax re))

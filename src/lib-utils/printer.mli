@@ -38,12 +38,6 @@ val space : t -> unit -> unit
 (** Queues a space to be printed, if no newlines are pending and a non-blank
     string has been emitted. *)
 
-val newline : t -> unit -> unit
-(** Queues a hard break (newline) to be printed. *)
-
-val blank_line : t -> unit -> unit
-(** Queues a blank line (two newlines) to be printed. *)
-
 val cut : t -> unit -> unit
 (** Prints a cut (break with 0 width) to the formatter. *)
 
