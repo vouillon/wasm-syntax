@@ -74,6 +74,11 @@ type format = Wat | Wasm | Wax
 
 let string_of_format = function Wat -> "wat" | Wasm -> "wasm" | Wax -> "wax"
 
+let format_description = function
+  | Wat -> "Wasm text format"
+  | Wasm -> "Wasm binary format"
+  | Wax -> "Wax language"
+
 let format_of_string = function
   | "wat" -> Ok Wat
   | "wasm" -> Ok Wasm
@@ -106,7 +111,11 @@ let convert input_file output_file input_format_opt output_format_opt =
   | Wat, Wax -> wat_to_wax ~input_file ~output_file
   | Wax, Wax -> wax_to_wax ~input_file ~output_file
   | _ ->
-      Printf.eprintf "Error: Convertion not supported yet\n";
+      Printf.eprintf "Error: Conversion from '%s' (%s) to '%s' (%s) not supported yet. Run 'wax --help' for supported formats and their descriptions.\n"
+        (string_of_format input_format)
+        (format_description input_format)
+        (string_of_format output_format)
+        (format_description output_format);
       exit 1
 
 (* Define the input file argument (optional for stdin) *)
@@ -125,8 +134,9 @@ let output_file =
 (* Define the --input-format option *)
 let input_format =
   let doc =
-    "Input format: wat, wasm, or wax. If not specified, auto-detected from \
-     filename or defaults to wax."
+    "Input format: wat (Wasm text format), wasm (Wasm binary format), or wax \
+     (Wax language). If not specified, auto-detected from filename or defaults \
+     to wax."
   in
   let format_conv =
     Arg.conv
@@ -141,7 +151,8 @@ let input_format =
 (* Define the --output-format option *)
 let output_format =
   let doc =
-    "Output format: wat, wasm, or wax. If not specified, defaults to wasm."
+    "Output format: wat (Wasm text format), wasm (Wasm binary format), or wax \
+     (Wax language). If not specified, defaults to wasm."
   in
   let format_conv =
     Arg.conv
