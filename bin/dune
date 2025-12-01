@@ -1,7 +1,5 @@
 (executables
  (names main test_wasm convert pretty_print run_wasm_testsuite)
- (libraries wasm menhirLib re unix)
+ (libraries wasm wax conversion menhirLib re unix)
  (preprocess
   (pps sedlex.ppx)))
-
-(include wasm/dune.menhir)

@@ -1,3 +1,4 @@
+open Wax
 module Src = Wasm.Ast.Text
 module Uint32 = Wasm.Uint32
 module StringMap = Map.Make (String)

@@ -12,9 +12,10 @@ let convert ~filename =
   (*
   Wasm.Validation.f ast;
 *)
-  let ast' = From_wasm.module_ ast in
-  Typing.f ast';
-  Format.printf "/////////// %s //////////@.@.%a" filename Output.module_ ast'
+  let ast' = Conversion.From_wasm.module_ ast in
+  Wax.Typing.f ast';
+  Format.printf "/////////// %s //////////@.@.%a" filename Wax.Output.module_
+    ast'
 
 let _ =
   let p = "/home/jerome/wasm_of_ocaml/runtime/wasm" in

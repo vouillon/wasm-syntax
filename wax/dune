@@ -1,0 +1,7 @@
+(library
+ (name wax)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries wasm sedlex menhirLib uuseg.string))
+
+(include ../wasm/dune.menhir)

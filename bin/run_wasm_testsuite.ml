@@ -117,7 +117,8 @@ let iter_files dirs skip suffix f =
 
 type script =
   ([ `Valid | `Invalid of string | `Malformed of string ]
-  * [ `Parsed of string option * Ast.location Wasm.Ast.Text.modulefield list
+  * [ `Parsed of
+      string option * Wasm.Ast.location Wasm.Ast.Text.modulefield list
     | `Text of string ])
   list
 
@@ -138,7 +139,7 @@ end
 module ModuleParser =
   Wasm.Parsing.Make_parser
     (struct
-      type t = string option * Ast.location Wasm.Ast.Text.modulefield list
+      type t = string option * Wasm.Ast.location Wasm.Ast.Text.modulefield list
     end)
     (Wasm.Parser)
     (Wasm.Fast_parser)
@@ -153,17 +154,16 @@ module ScriptParser =
     (Fast_script_parser)
     (Wasm.Lexer)
 
-module FancyParser =
+module WaxParser =
   Wasm.Parsing.Make_parser
     (struct
-      type t = Ast.location Ast.modulefield list
+      type t = Wax.Ast.location Wax.Ast.modulefield list
     end)
-    (Parser)
-    (Fast_parser)
-    (Lexer)
+    (Wax.Parser)
+    (Wax.Fast_parser)
+    (Wax.Lexer)
 
-let print_module f m =
-  Wasm.Printer.run f (fun p -> Wasm.Output.module_ p m)
+let print_module f m = Wasm.Printer.run f (fun p -> Wasm.Output.module_ p m)
 
 let check_wellformed (_, lst) =
   let types = Hashtbl.create 16 in
@@ -295,24 +295,24 @@ let runtest filename path =
   (* Translation to new syntax *)
   List.iter
     (fun m ->
-      match From_wasm.module_ m with
+      match Conversion.From_wasm.module_ m with
       | exception e ->
           prerr_endline (Printexc.to_string e);
           Format.eprintf "@[%a@]@." print_module m
       | m ->
-          let ok = in_child_process (fun () -> Typing.f m) in
-          if not ok then Format.eprintf "@[%a@]@." Output.module_ m;
-          let text = Format.asprintf "%a@." Output.module_ m in
+          let ok = in_child_process (fun () -> Wax.Typing.f m) in
+          if not ok then Format.eprintf "@[%a@]@." Wax.Output.module_ m;
+          let text = Format.asprintf "%a@." Wax.Output.module_ m in
           let ok =
             in_child_process (fun () ->
-                let m' = FancyParser.parse_from_string ~filename text in
-                let ok = in_child_process (fun () -> Typing.f m') in
+                let m' = WaxParser.parse_from_string ~filename text in
+                let ok = in_child_process (fun () -> Wax.Typing.f m') in
                 if not ok then
                   if true then prerr_endline "(after parsing)"
                   else (
-                    Format.eprintf "@[%a@]@." Output.module_ m';
+                    Format.eprintf "@[%a@]@." Wax.Output.module_ m';
                     prerr_endline "===";
-                    Format.eprintf "@[%a@]@." Output.module_ m))
+                    Format.eprintf "@[%a@]@." Wax.Output.module_ m))
           in
           if not ok then
             if true then prerr_endline "(parsing)" else print_flushed text)
