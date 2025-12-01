@@ -37,12 +37,20 @@ module Comments = struct
   let contents t = List.rev t.entries
 end
 
+type break_strength = No_break | Cut | Space | Newline | Blank_line
+
+let strength = function
+  | No_break -> 0
+  | Cut -> 1
+  | Space -> 2
+  | Newline -> 3
+  | Blank_line -> 4
+
 type t = {
   fmt : Format.formatter;
   mutable trivia : entry list;
   mutable started : bool;
-  mutable pending_newlines : int; (* Number of newlines queued for output *)
-  mutable pending_space : bool; (* A space is queued for output *)
+  mutable pending_break : break_strength;
   mutable has_emitted : bool;
       (* Any output has been generated on the current line *)
   mutable indent : int; (* Current indentation level (for breaks) *)
@@ -58,15 +66,15 @@ let indent ctx indent f =
   ctx.indent <- prev_indent
 
 let flush ?(skip_space = false) ctx =
-  if ctx.pending_newlines > 0 then (
-    if ctx.started && ctx.pending_newlines >= 2 then
-      Format.pp_print_as ctx.fmt 0 "\n";
-    Format.pp_print_break ctx.fmt 1000 ctx.indent;
-    ctx.pending_newlines <- 0;
-    ctx.pending_space <- false)
-  else if ctx.pending_space then (
-    if not skip_space then Format.pp_print_break ctx.fmt 1 ctx.indent;
-    ctx.pending_space <- false)
+  (match ctx.pending_break with
+  | No_break -> ()
+  | Cut -> if not skip_space then Format.pp_print_cut ctx.fmt ()
+  | Space -> if not skip_space then Format.pp_print_break ctx.fmt 1 ctx.indent
+  | Newline -> Format.pp_print_break ctx.fmt 1000 ctx.indent
+  | Blank_line ->
+      if ctx.started then Format.pp_print_as ctx.fmt 0 "\n";
+      Format.pp_print_break ctx.fmt 1000 ctx.indent);
+  ctx.pending_break <- No_break
 
 let string ctx s =
   flush ctx;
@@ -80,20 +88,13 @@ let string_as ctx len s =
   ctx.has_emitted <- true;
   Format.pp_print_as ctx.fmt len s
 
-let space ctx () =
-  if ctx.pending_newlines == 0 && ctx.has_emitted then ctx.pending_space <- true
+let register_break ctx s =
+  if strength s > strength ctx.pending_break then ctx.pending_break <- s
 
-let newline ctx () =
-  ctx.pending_newlines <- max ctx.pending_newlines 1;
-  ctx.pending_space <- false
-
-let blank_line ctx () =
-  ctx.pending_newlines <- 2;
-  ctx.pending_space <- false
-
-let cut ctx () =
-  flush ctx;
-  Format.pp_print_cut ctx.fmt ()
+let space ctx () = if ctx.has_emitted then register_break ctx Space
+let newline ctx () = register_break ctx Newline
+let blank_line ctx () = register_break ctx Blank_line
+let cut ctx () = register_break ctx Cut
 
 let generic_box pp_open_box ctx skip_space indent f =
   flush ~skip_space ctx;
@@ -160,8 +161,7 @@ let run ?(comments = Comments.create ()) fmt f =
       fmt;
       trivia = Comments.contents comments;
       started = false;
-      pending_space = false;
-      pending_newlines = 0;
+      pending_break = No_break;
       has_emitted = false;
       indent = 0;
       indent_stack = [];
