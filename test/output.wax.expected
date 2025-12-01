@@ -154,9 +154,9 @@ fn bigarray_hash(x: &eq) -> i32 {
                   br_table
                     [ 'float32 'float64 'int8 'uint8 'int16 'uint16 'int32
                       'int64 'int32 'int32 'float32 'float64 else 'uint8 ]
-                    b.ba_kind as i32_u
+                    b.ba_kind as i32_u;
                 }
-                if len >u 32 { len = 32 }
+                if len >u 32 { len = 32; }
                 'loop_2: loop {
                   if i <u len {
                     h =
@@ -165,70 +165,70 @@ fn bigarray_hash(x: &eq) -> i32 {
                          ta_get_i32(data, i) as i64_u |
                            ta_get_i32(data, i + 1) as i64_u << 32);
                     i = i + 2;
-                    br 'loop_2
+                    br 'loop_2;
                   }
                 } /* 'loop_2 */
-                return h
+                return h;
               } /* 'int32 */
-              if len >u 64 { len = 64 }
+              if len >u 64 { len = 64; }
               'loop_2: loop {
                 if i <u len {
                   h = caml_hash_mix_int(h, ta_get_i32(data, i));
                   i = i + 1;
-                  br 'loop_2
+                  br 'loop_2;
                 }
               } /* 'loop_2 */
-              return h
+              return h;
             } /* 'uint16 */
-            if len >u 128 { len = 128 }
+            if len >u 128 { len = 128; }
             'loop_2: loop {
               if i + 2 <=u len {
                 h =
                   caml_hash_mix_int
                     (h, ta_get_ui16(data, i) | ta_get_ui16(data, i + 1) << 16);
                 i = i + 2;
-                br 'loop_2
+                br 'loop_2;
               }
             } /* 'loop_2 */
-            if len & 1 { h = caml_hash_mix_int(h, ta_get_ui16(data, i)) }
-            return h
+            if len & 1 { h = caml_hash_mix_int(h, ta_get_ui16(data, i)); }
+            return h;
           } /* 'int16 */
-          if len >u 128 { len = 128 }
+          if len >u 128 { len = 128; }
           'loop_2: loop {
             if i + 2 <=u len {
               h =
                 caml_hash_mix_int
                   (h, ta_get_i16(data, i) | ta_get_i16(data, i + 1) << 16);
               i = i + 2;
-              br 'loop_2
+              br 'loop_2;
             }
           } /* 'loop_2 */
-          if len & 1 { h = caml_hash_mix_int(h, ta_get_i16(data, i)) }
-          return h
+          if len & 1 { h = caml_hash_mix_int(h, ta_get_i16(data, i)); }
+          return h;
         } /* 'uint8 */
-        if len >u 256 { len = 256 }
+        if len >u 256 { len = 256; }
         'loop_2: loop {
           if i + 4 <=u len {
             h = caml_hash_mix_int(h, ta_get32_ui8(data, i));
             i = i + 4;
-            br 'loop_2
+            br 'loop_2;
           }
         } /* 'loop_2 */
         w = 0;
         'l_2: {
           'l_3: {
             'l_4: {
-              'l_5: { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] (len & 3) }
-              w = ta_get_ui8(data, i + 2) << 16
+              'l_5: { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] (len & 3); }
+              w = ta_get_ui8(data, i + 2) << 16;
             }
-            w = w | ta_get_ui8(data, i + 1) << 8
+            w = w | ta_get_ui8(data, i + 1) << 8;
           } /* 'l_3 */
           w = w | ta_get_ui8(data, i);
-          h = caml_hash_mix_int(h, w)
+          h = caml_hash_mix_int(h, w);
         } /* 'l_2 */
-        return h
+        return h;
       } /* 'int8 */
-      if len >u 256 { len = 256 }
+      if len >u 256 { len = 256; }
       'loop_2: loop {
         if i + 4 <=u len {
           h =
@@ -237,42 +237,42 @@ fn bigarray_hash(x: &eq) -> i32 {
                ta_get_i8(data, i) | ta_get_i8(data, i + 1) << 8 |
                  (ta_get_i8(data, i + 2) << 16 | ta_get_i8(data, i + 3) << 24));
           i = i + 4;
-          br 'loop_2
+          br 'loop_2;
         }
       } /* 'loop_2 */
       w = 0;
       'l_2: {
         'l_3: {
           'l_4: {
-            'l_5: { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] (len & 3) }
-            w = ta_get_i8(data, i + 2) << 16
+            'l_5: { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] (len & 3); }
+            w = ta_get_i8(data, i + 2) << 16;
           }
-          w = w | ta_get_i8(data, i + 1) << 8
+          w = w | ta_get_i8(data, i + 1) << 8;
         } /* 'l_3 */
         w = w | ta_get_i8(data, i);
-        h = caml_hash_mix_int(h, w)
+        h = caml_hash_mix_int(h, w);
       } /* 'l_2 */
-      return h
+      return h;
     } /* 'float32 */
-    if len >u 64 { len = 64 }
+    if len >u 64 { len = 64; }
     'loop_2: loop {
       if i <u len {
         h = caml_hash_mix_float(h, ta_get_f32(data, i) as f32);
         i = i + 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
-    return h
+    return h;
   } /* 'float64 */
-  if len >u 32 { len = 32 }
+  if len >u 32 { len = 32; }
   'loop_2: loop {
     if i <u len {
       h = caml_hash_mix_double(h, ta_get_f64(data, i));
       i = i + 1;
-      br 'loop_2
+      br 'loop_2;
     }
   } /* 'loop_2 */
-  return h
+  return h;
 }
 fn bigarray_serialize(s: &eq, v: &eq) -> (i32, i32) {
   let b: &bigarray;
@@ -290,13 +290,13 @@ fn bigarray_serialize(s: &eq, v: &eq) -> (i32, i32) {
     if i <u num_dims {
       len = dim[i];
       if len <u 0xffff {
-        caml_serialize_int_2(s, len)
+        caml_serialize_int_2(s, len);
       } else {
         caml_serialize_int_2(s, 0xffff);
-        caml_serialize_int_8(s, len as i64_u)
+        caml_serialize_int_8(s, len as i64_u);
       }
       i = i + 1;
-      br 'loop_2
+      br 'loop_2;
     }
   } /* 'loop_2 */
   'done: {
@@ -316,7 +316,7 @@ fn bigarray_serialize(s: &eq, v: &eq) -> (i32, i32) {
                         [ 'float32 'float64 'int8 'uint8 'int16 'uint16
                           'int32 'int64 'int 'int 'float32 'float64
                           else 'uint8 ]
-                        b.ba_kind as i32_u
+                        b.ba_kind as i32_u;
                     }
                     'loop_2: loop {
                       if i <u len {
@@ -325,79 +325,79 @@ fn bigarray_serialize(s: &eq, v: &eq) -> (i32, i32) {
                            ta_get_i32(data, i) as i64_u |
                              ta_get_i32(data, i + 1) as i64_u << 32);
                         i = i + 2;
-                        br 'loop_2
+                        br 'loop_2;
                       }
                     } /* 'loop_2 */
-                    br 'done
+                    br 'done;
                   } /* 'int */
-                  caml_serialize_int_1(s, 0)
+                  caml_serialize_int_1(s, 0);
                 } /* 'int32 */
                 'loop_2: loop {
                   if i <u len {
                     caml_serialize_int_4(s, ta_get_i32(data, i));
                     i = i + 1;
-                    br 'loop_2
+                    br 'loop_2;
                   }
                 } /* 'loop_2 */
-                br 'done
+                br 'done;
               } /* 'uint16 */
               'loop_2: loop {
                 if i <u len {
                   caml_serialize_int_2(s, ta_get_ui16(data, i));
                   i = i + 1;
-                  br 'loop_2
+                  br 'loop_2;
                 }
               } /* 'loop_2 */
-              br 'done
+              br 'done;
             } /* 'int16 */
             'loop_2: loop {
               if i <u len {
                 caml_serialize_int_2(s, ta_get_i16(data, i));
                 i = i + 1;
-                br 'loop_2
+                br 'loop_2;
               }
             } /* 'loop_2 */
-            br 'done
+            br 'done;
           } /* 'uint8 */
           'loop_2: loop {
             if i <u len {
               caml_serialize_int_1(s, ta_get_ui8(data, i));
               i = i + 1;
-              br 'loop_2
+              br 'loop_2;
             }
           } /* 'loop_2 */
-          br 'done
+          br 'done;
         } /* 'int8 */
         'loop_2: loop {
           if i <u len {
             caml_serialize_int_1(s, ta_get_i8(data, i));
             i = i + 1;
-            br 'loop_2
+            br 'loop_2;
           }
         } /* 'loop_2 */
-        br 'done
+        br 'done;
       } /* 'float32 */
       'loop_2: loop {
         if i <u len {
           caml_serialize_int_4
             (s, (ta_get_f32(data, i) as f32 as f32).to_bits);
           i = i + 1;
-          br 'loop_2
+          br 'loop_2;
         }
       } /* 'loop_2 */
-      br 'done
+      br 'done;
     } /* 'float64 */
     'loop_2: loop {
       if i <u len {
         caml_serialize_int_8(s, (ta_get_f64(data, i) as f64).to_bits);
         i = i + 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
   } /* 'done */
   (4 + num_dims) * 4;
   (4 + num_dims) * 8;
-  unreachable
+  unreachable;
 }
 fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
   let b: &bigarray;
@@ -416,10 +416,10 @@ fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
   'loop_2: loop {
     if i <u num_dims {
       len = caml_deserialize_uint_2(s);
-      if len == 0xffff { len = caml_deserialize_int_8(s) as i32 }
+      if len == 0xffff { len = caml_deserialize_int_8(s) as i32; }
       dim[i] = len;
       i = i + 1;
-      br 'loop_2
+      br 'loop_2;
     }
   } /* 'loop_2 */
   b =
@@ -448,7 +448,7 @@ fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
                         [ 'float32 'float64 'int8 'uint8 'int16 'uint16
                           'int32 'int64 'int 'int 'float32 'float64
                           else 'uint8 ]
-                        b.ba_kind as i32_u
+                        b.ba_kind as i32_u;
                     }
                     'loop_2: loop {
                       if i <u len {
@@ -456,81 +456,81 @@ fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
                         ta_set_i32(data, i, l as i32);
                         ta_set_i32(data, i + 1, (l >>u 32) as i32);
                         i = i + 2;
-                        br 'loop_2
+                        br 'loop_2;
                       }
                     } /* 'loop_2 */
-                    br 'done
+                    br 'done;
                   } /* 'int */
                   if caml_deserialize_uint_1(s) {
-                    caml_failwith(string#"foo")
+                    caml_failwith(string#"foo");
                   }
                 } /* 'int32 */
                 'loop_2: loop {
                   if i <u len {
                     ta_set_i32(data, i, caml_deserialize_int_4(s));
                     i = i + 1;
-                    br 'loop_2
+                    br 'loop_2;
                   }
                 } /* 'loop_2 */
-                br 'done
+                br 'done;
               } /* 'uint16 */
               'loop_2: loop {
                 if i <u len {
                   ta_set_ui16(data, i, caml_deserialize_uint_2(s) as &i31);
                   i = i + 1;
-                  br 'loop_2
+                  br 'loop_2;
                 }
               } /* 'loop_2 */
-              br 'done
+              br 'done;
             } /* 'int16 */
             'loop_2: loop {
               if i <u len {
                 ta_set_i16(data, i, caml_deserialize_sint_2(s) as &i31);
                 i = i + 1;
-                br 'loop_2
+                br 'loop_2;
               }
             } /* 'loop_2 */
-            br 'done
+            br 'done;
           } /* 'uint8 */
           'loop_2: loop {
             if i <u len {
               ta_set_ui8(data, i, caml_deserialize_uint_1(s) as &i31);
               i = i + 1;
-              br 'loop_2
+              br 'loop_2;
             }
           } /* 'loop_2 */
-          br 'done
+          br 'done;
         } /* 'int8 */
         'loop_2: loop {
           if i <u len {
             ta_set_i8(data, i, caml_deserialize_sint_1(s) as &i31);
             i = i + 1;
-            br 'loop_2
+            br 'loop_2;
           }
         } /* 'loop_2 */
-        br 'done
+        br 'done;
       } /* 'float32 */
       'loop_2: loop {
         if i <u len {
           ta_set_f32
             (data, i, (caml_deserialize_int_4(s) as i32).from_bits as f64);
           i = i + 1;
-          br 'loop_2
+          br 'loop_2;
         }
       } /* 'loop_2 */
-      br 'done
+      br 'done;
     } /* 'float64 */
     'loop_2: loop {
       if i <u len {
         ta_set_f64(data, i, (caml_deserialize_int_8(s) as i64).from_bits);
         i = i + 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
   } /* 'done */
   b;
   (4 + num_dims) * 4;
-  unreachable
+  unreachable;
 }
 fn caml_ba_get_size(dim: &int_array) -> i32 {
   let i: i32;
@@ -542,22 +542,22 @@ fn caml_ba_get_size(dim: &int_array) -> i32 {
   'loop_2: loop {
     if i <u n {
       sz = sz * dim[i] as i64_s;
-      if sz != sz as i32 as i64_s { caml_raise_out_of_memory() }
+      if sz != sz as i32 as i64_s { caml_raise_out_of_memory(); }
       i = i + 1;
-      br 'loop_2
+      br 'loop_2;
     }
   } /* 'loop_2 */
-  sz as i32
+  sz as i32;
 }
 fn caml_ba_size_per_element(kind: i32) -> i32 {
-  (kind == 7) | ((kind == 10) | (kind == 11))?2:1
+  (kind == 7) | ((kind == 10) | (kind == 11))?2:1;
 }
 #[export = "caml_ba_create_buffer"]
 fn caml_ba_create_buffer(kind: i32, sz: i32) -> &extern {
   let l: i64;
   l = sz as i64_s * caml_ba_size_per_element(kind) as i64_s;
-  if l != l as i32 as i64_s { caml_raise_out_of_memory() }
-  become ta_create(kind, l as i32)
+  if l != l as i32 as i64_s { caml_raise_out_of_memory(); }
+  become ta_create(kind, l as i32);
 }
 const CAML_BA_MAX_NUM_DIMS: i32 = 16;
 #[export = "caml_ba_create"]
@@ -571,16 +571,18 @@ fn caml_ba_create(vkind: &eq, layout: &eq, d: &eq) -> &eq {
   kind = vkind as &i31 as i32_s;
   vdim = d as &block;
   num_dims = vdim.length - 1;
-  if num_dims >u CAML_BA_MAX_NUM_DIMS { caml_invalid_argument(string#"foo") }
+  if num_dims >u CAML_BA_MAX_NUM_DIMS {
+    caml_invalid_argument(string#"foo");
+  }
   dim = [int_array| 0; num_dims];
   i = 0;
   'loop_2: loop {
     if i <u num_dims {
       n = vdim[i + 1] as &i31 as i32_s;
-      if n <s 0 { caml_invalid_argument(string#"foo") }
+      if n <s 0 { caml_invalid_argument(string#"foo"); }
       dim[i] = n;
       i = i + 1;
-      br 'loop_2
+      br 'loop_2;
     }
   } /* 'loop_2 */
   {bigarray|
@@ -590,7 +592,7 @@ fn caml_ba_create(vkind: &eq, layout: &eq, d: &eq) -> &eq {
     ba_num_dims: num_dims,
     ba_kind: kind,
     ba_layout: layout as &i31 as i32_s
-  }
+  };
 }
 #[export = "caml_ba_from_typed_array"]
 fn caml_ba_from_typed_array(x: &eq) -> &eq {
@@ -599,10 +601,10 @@ fn caml_ba_from_typed_array(x: &eq) -> &eq {
   let len: i32;
   data = ta_normalize((unwrap(x) as &?extern)!);
   kind = ta_kind(data);
-  if kind <s 0 { caml_invalid_argument(string#"foo") }
-  if kind == 13 { kind = 3 }
+  if kind <s 0 { caml_invalid_argument(string#"foo"); }
+  if kind == 13 { kind = 3; }
   len = ta_length(data);
-  if len <s 0 { caml_invalid_argument(string#"foo") }
+  if len <s 0 { caml_invalid_argument(string#"foo"); }
   {bigarray|
     f: bigarray_ops,
     ba_data: data,
@@ -610,11 +612,11 @@ fn caml_ba_from_typed_array(x: &eq) -> &eq {
     ba_num_dims: 1,
     ba_kind: kind,
     ba_layout: 0
-  }
+  };
 }
 #[export = "caml_ba_to_typed_array"]
 fn caml_ba_to_typed_array(x: &eq) -> &eq {
-  wrap((x as &bigarray).ba_data as &?any)
+  wrap((x as &bigarray).ba_data as &?any);
 }
 fn caml_ba_get_at_offset(ba: &bigarray, i: i32) -> &eq {
   let data: &extern;
@@ -635,42 +637,42 @@ fn caml_ba_get_at_offset(ba: &bigarray, i: i32) -> &eq {
                             [ 'float32 'float64 'int8 'uint8 'int16 'uint16
                               'int32 'int64 'int 'nativeint 'complex32
                               'complex64 else 'uint8 ]
-                            ba.ba_kind as i32_u
+                            ba.ba_kind as i32_u;
                         }
                         i = i << 1;
                         return
                           [float_array|
                             ta_get_f64(data, i),
-                            ta_get_f64(data, i + 1)]
+                            ta_get_f64(data, i + 1)];
                       } /* 'complex32 */
                       i = i << 1;
                       return
                         [float_array|
                           ta_get_f32(data, i),
-                          ta_get_f32(data, i + 1)]
+                          ta_get_f32(data, i + 1)];
                     } /* 'nativeint */
-                    become caml_copy_nativeint(ta_get_i32(data, i))
+                    become caml_copy_nativeint(ta_get_i32(data, i));
                   } /* 'int */
-                  return ta_get_i32(data, i) as &i31
+                  return ta_get_i32(data, i) as &i31;
                 } /* 'int64 */
                 i = i << 1;
                 become caml_copy_int64
                   (ta_get_i32(data, i) as i64_u |
-                     ta_get_i32(data, i + 1) as i64_u << 32)
+                     ta_get_i32(data, i + 1) as i64_u << 32);
               } /* 'int32 */
-              become caml_copy_int32(ta_get_i32(data, i))
+              become caml_copy_int32(ta_get_i32(data, i));
             } /* 'uint16 */
-            return ta_get_ui16(data, i) as &i31
+            return ta_get_ui16(data, i) as &i31;
           } /* 'int16 */
-          return ta_get_i16(data, i) as &i31
+          return ta_get_i16(data, i) as &i31;
         } /* 'uint8 */
-        return ta_get_ui8(data, i) as &i31
+        return ta_get_ui8(data, i) as &i31;
       } /* 'int8 */
-      return ta_get_i8(data, i) as &i31
+      return ta_get_i8(data, i) as &i31;
     } /* 'float64 */
-    return {float| f: ta_get_f64(data, i) }
+    return {float| f: ta_get_f64(data, i) };
   } /* 'float32 */
-  return {float| f: ta_get_f32(data, i) }
+  return {float| f: ta_get_f32(data, i) };
 }
 fn caml_ba_set_at_offset(ba: &bigarray, i: i32, v: &eq) {
   let data: &extern;
@@ -693,52 +695,52 @@ fn caml_ba_set_at_offset(ba: &bigarray, i: i32, v: &eq) {
                             [ 'float32 'float64 'int8 'uint8 'int16 'uint16
                               'int32 'int64 'int 'nativeint 'complex32
                               'complex64 else 'uint8 ]
-                            ba.ba_kind as i32_u
+                            ba.ba_kind as i32_u;
                         }
                         i = i << 1;
                         b = v as &float_array;
                         ta_set_f64(data, i, b[0]);
                         ta_set_f64(data, i + 1, b[1]);
-                        return
+                        return;
                       } /* 'complex32 */
                       i = i << 1;
                       b = v as &float_array;
                       ta_set_f32(data, i, b[0]);
                       ta_set_f32(data, i + 1, b[1]);
-                      return
+                      return;
                     } /* 'nativeint */
                     ta_set_i32(data, i, Int32_val(v));
-                    return
+                    return;
                   } /* 'int */
                   ta_set_i32(data, i, v as &i31 as i32_s);
-                  return
+                  return;
                 } /* 'int64 */
                 i = i << 1;
                 l = Int64_val(v);
                 ta_set_i32(data, i, l as i32);
                 ta_set_i32(data, i + 1, (l >>u 32) as i32);
-                return
+                return;
               } /* 'int32 */
               ta_set_i32(data, i, Int32_val(v));
-              return
+              return;
             } /* 'uint16 */
             ta_set_ui16(data, i, v as &i31);
-            return
+            return;
           } /* 'int16 */
           ta_set_i16(data, i, v as &i31);
-          return
+          return;
         } /* 'uint8 */
         ta_set_ui8(data, i, v as &i31);
-        return
+        return;
       } /* 'int8 */
       ta_set_i8(data, i, v as &i31);
-      return
+      return;
     } /* 'float64 */
     ta_set_f64(data, i, (v as &float).f);
-    return
+    return;
   } /* 'float32 */
   ta_set_f32(data, i, (v as &float).f);
-  return
+  return;
 }
 #[export = "caml_ba_dim"]
 fn caml_ba_dim(x: &eq, x_2: &eq) -> &eq {
@@ -746,20 +748,20 @@ fn caml_ba_dim(x: &eq, x_2: &eq) -> &eq {
   let i: i32;
   dim = (x as &bigarray).ba_dim;
   i = x_2 as &i31 as i32_s;
-  if i >=u dim.length { caml_invalid_argument(string#"foo") }
-  dim[i] as &i31
+  if i >=u dim.length { caml_invalid_argument(string#"foo"); }
+  dim[i] as &i31;
 }
 #[export = "caml_ba_dim_1"]
-fn caml_ba_dim_1(x: &eq) -> &eq { become caml_ba_dim(x, 0 as &i31) }
+fn caml_ba_dim_1(x: &eq) -> &eq { become caml_ba_dim(x, 0 as &i31); }
 #[export = "caml_ba_get_1"]
 fn caml_ba_get_1(x: &eq, x_2: &eq) -> &eq {
   let ba: &bigarray;
   let i: i32;
   ba = x as &bigarray;
   i = x_2 as &i31 as i32_u;
-  if ba.ba_layout as i32_u { i = i - 1 }
-  if i >=u ba.ba_dim[0] { caml_bound_error() }
-  become caml_ba_get_at_offset(ba, i)
+  if ba.ba_layout as i32_u { i = i - 1; }
+  if i >=u ba.ba_dim[0] { caml_bound_error(); }
+  become caml_ba_get_at_offset(ba, i);
 }
 #[export = "caml_ba_set_1"]
 fn caml_ba_set_1(x: &eq, x_2: &eq, v: &eq) -> &eq {
@@ -767,10 +769,10 @@ fn caml_ba_set_1(x: &eq, x_2: &eq, v: &eq) -> &eq {
   let i: i32;
   ba = x as &bigarray;
   i = x_2 as &i31 as i32_u;
-  if ba.ba_layout as i32_u { i = i - 1 }
-  if i >=u ba.ba_dim[0] { caml_bound_error() }
+  if ba.ba_layout as i32_u { i = i - 1; }
+  if i >=u ba.ba_dim[0] { caml_bound_error(); }
   caml_ba_set_at_offset(ba, i, v);
-  0 as &i31
+  0 as &i31;
 }
 #[export = "caml_ba_get_2"]
 fn caml_ba_get_2(vba: &eq, vi: &eq, vj: &eq) -> &eq {
@@ -786,10 +788,10 @@ fn caml_ba_get_2(vba: &eq, vi: &eq, vj: &eq) -> &eq {
   if ba.ba_layout as i32_u {
     i = i - 1;
     j = j - 1;
-    offset = j * dim[0] + i
-  } else { offset = i * dim[1] + j }
-  if (i >=u dim[0]) | (j >=u dim[1]) { caml_bound_error() }
-  become caml_ba_get_at_offset(ba, offset)
+    offset = j * dim[0] + i;
+  } else { offset = i * dim[1] + j; }
+  if (i >=u dim[0]) | (j >=u dim[1]) { caml_bound_error(); }
+  become caml_ba_get_at_offset(ba, offset);
 }
 #[export = "caml_ba_set_2"]
 fn caml_ba_set_2(vba: &eq, vi: &eq, vj: &eq, v: &eq) -> &eq {
@@ -805,14 +807,14 @@ fn caml_ba_set_2(vba: &eq, vi: &eq, vj: &eq, v: &eq) -> &eq {
   if ba.ba_layout as i32_u {
     i = i - 1;
     j = j - 1;
-    offset = j * dim[0] + i
-  } else { offset = i * dim[1] + j }
-  if (i >=u dim[0]) | (j >=u dim[1]) { caml_bound_error() }
+    offset = j * dim[0] + i;
+  } else { offset = i * dim[1] + j; }
+  if (i >=u dim[0]) | (j >=u dim[1]) { caml_bound_error(); }
   caml_ba_set_at_offset(ba, offset, v);
-  0 as &i31
+  0 as &i31;
 }
 #[export = "caml_ba_dim_2"]
-fn caml_ba_dim_2(x: &eq) -> &eq { become caml_ba_dim(x, 1 as &i31) }
+fn caml_ba_dim_2(x: &eq) -> &eq { become caml_ba_dim(x, 1 as &i31); }
 #[export = "caml_ba_get_3"]
 fn caml_ba_get_3(vba: &eq, vi: &eq, vj: &eq, vk: &eq) -> &eq {
   let ba: &bigarray;
@@ -830,12 +832,12 @@ fn caml_ba_get_3(vba: &eq, vi: &eq, vj: &eq, vk: &eq) -> &eq {
     i = i - 1;
     j = j - 1;
     k = k - 1;
-    offset = (k * dim[1] + j) * dim[0] + i
-  } else { offset = (i * dim[1] + j) * dim[2] + k }
+    offset = (k * dim[1] + j) * dim[0] + i;
+  } else { offset = (i * dim[1] + j) * dim[2] + k; }
   if (i >=u dim[0]) | ((j >=u dim[1]) | (k >=u dim[2])) {
-    caml_bound_error()
+    caml_bound_error();
   }
-  become caml_ba_get_at_offset(ba, offset)
+  become caml_ba_get_at_offset(ba, offset);
 }
 #[export = "caml_ba_set_3"]
 fn caml_ba_set_3(vba: &eq, vi: &eq, vj: &eq, vk: &eq, v: &eq) -> &eq {
@@ -854,16 +856,16 @@ fn caml_ba_set_3(vba: &eq, vi: &eq, vj: &eq, vk: &eq, v: &eq) -> &eq {
     i = i - 1;
     j = j - 1;
     k = k - 1;
-    offset = (k * dim[1] + j) * dim[0] + i
-  } else { offset = (i * dim[1] + j) * dim[2] + k }
+    offset = (k * dim[1] + j) * dim[0] + i;
+  } else { offset = (i * dim[1] + j) * dim[2] + k; }
   if (i >=u dim[0]) | ((j >=u dim[1]) | (k >=u dim[2])) {
-    caml_bound_error()
+    caml_bound_error();
   }
   caml_ba_set_at_offset(ba, offset, v);
-  0 as &i31
+  0 as &i31;
 }
 #[export = "caml_ba_dim_3"]
-fn caml_ba_dim_3(x: &eq) -> &eq { become caml_ba_dim(x, 2 as &i31) }
+fn caml_ba_dim_3(x: &eq) -> &eq { become caml_ba_dim(x, 2 as &i31); }
 fn caml_ba_offset(b: &bigarray, index: &int_array) -> i32 {
   let dim: &int_array;
   let num_dims: i32;
@@ -878,10 +880,10 @@ fn caml_ba_offset(b: &bigarray, index: &int_array) -> i32 {
       if i >=s 0 {
         idx = index[i] - 1;
         l = dim[i];
-        if idx >=u l { caml_bound_error() }
+        if idx >=u l { caml_bound_error(); }
         offset = offset * l + idx;
         i = i - 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
   } else {
@@ -890,14 +892,14 @@ fn caml_ba_offset(b: &bigarray, index: &int_array) -> i32 {
       if i <s num_dims {
         idx = index[i];
         l = dim[i];
-        if idx >=u l { caml_bound_error() }
+        if idx >=u l { caml_bound_error(); }
         offset = offset * l + idx;
         i = i + 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
   }
-  offset
+  offset;
 }
 fn caml_ba_offset'(b: &bigarray, index: &block) -> i32 {
   let dim: &int_array;
@@ -913,10 +915,10 @@ fn caml_ba_offset'(b: &bigarray, index: &block) -> i32 {
       if i >=s 0 {
         idx = index[i + 1] as &i31 as i32_s - 1;
         l = dim[i];
-        if idx >=u l { caml_bound_error() }
+        if idx >=u l { caml_bound_error(); }
         offset = offset * l + idx;
         i = i - 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
   } else {
@@ -925,27 +927,27 @@ fn caml_ba_offset'(b: &bigarray, index: &block) -> i32 {
       if i <s num_dims {
         idx = index[i + 1] as &i31 as i32_s;
         l = dim[i];
-        if idx >=u l { caml_bound_error() }
+        if idx >=u l { caml_bound_error(); }
         offset = offset * l + idx;
         i = i + 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
   }
-  offset
+  offset;
 }
 #[export = "caml_ba_get_generic"]
 fn caml_ba_get_generic(vba: &eq, index: &eq) -> &eq {
   let ba: &bigarray;
   ba = vba as &bigarray;
-  become caml_ba_get_at_offset(ba, caml_ba_offset'(ba, index as &block))
+  become caml_ba_get_at_offset(ba, caml_ba_offset'(ba, index as &block));
 }
 #[export = "caml_ba_set_generic"]
 fn caml_ba_set_generic(vba: &eq, index: &eq, v: &eq) -> &eq {
   let ba: &bigarray;
   ba = vba as &bigarray;
   caml_ba_set_at_offset(ba, caml_ba_offset'(ba, index as &block), v);
-  0 as &i31
+  0 as &i31;
 }
 #[export = "caml_ba_slice"]
 fn caml_ba_slice(vb: &eq, vind: &eq) -> &eq {
@@ -966,7 +968,7 @@ fn caml_ba_slice(vb: &eq, vind: &eq) -> &eq {
   num_inds = ind.length - 1;
   num_dims = b.ba_num_dims as i32_u;
   if num_inds >u b.ba_num_dims as i32_u {
-    caml_invalid_argument(string#"foo")
+    caml_invalid_argument(string#"foo");
   }
   sub_dim = [int_array| 0; num_dims - num_inds];
   if b.ba_layout as i32_u {
@@ -975,22 +977,22 @@ fn caml_ba_slice(vb: &eq, vind: &eq) -> &eq {
       if i <u num_inds {
         index[num_dims + i - num_inds] = ind[i + 1] as &i31 as i32_u;
         i = i + 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
     offset = caml_ba_offset(b, index);
-    sub_dim.copy(0, b.ba_dim, 0, num_dims - num_inds)
+    sub_dim.copy(0, b.ba_dim, 0, num_dims - num_inds);
   } else {
     index = [int_array| 0; num_dims];
     'loop_2: loop {
       if i <u num_inds {
         index[i] = ind[i + 1] as &i31 as i32_u;
         i = i + 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
     offset = caml_ba_offset(b, index);
-    sub_dim.copy(0, b.ba_dim, num_inds, num_dims - num_inds)
+    sub_dim.copy(0, b.ba_dim, num_inds, num_dims - num_inds);
   }
   mul = caml_ba_size_per_element(b.ba_kind as i32_u);
   size = caml_ba_get_size(sub_dim);
@@ -1002,7 +1004,7 @@ fn caml_ba_slice(vb: &eq, vind: &eq) -> &eq {
     ba_num_dims: sub_dim.length,
     ba_kind: b.ba_kind as i32_u,
     ba_layout: b.ba_layout as i32_u
-  }
+  };
 }
 #[export = "caml_ba_sub"]
 fn caml_ba_sub(vba: &eq, vofs: &eq, vlen: &eq) -> &eq {
@@ -1027,17 +1029,17 @@ fn caml_ba_sub(vba: &eq, vofs: &eq, vlen: &eq) -> &eq {
     ofs = ofs - 1;
     i = 0;
     'loop_2: loop {
-      if i <u changed_dim { mul = mul * dim[i]; i = i + 1; br 'loop_2 }
+      if i <u changed_dim { mul = mul * dim[i]; i = i + 1; br 'loop_2; }
     } /* 'loop_2 */
   } else {
     changed_dim = 0;
     i = 1;
     'loop_2: loop {
-      if i <u num_dims { mul = mul * dim[i]; i = i + 1; br 'loop_2 }
+      if i <u num_dims { mul = mul * dim[i]; i = i + 1; br 'loop_2; }
     } /* 'loop_2 */
   }
   if (ofs <s 0) | (len <s 0) | (ofs + len >s dim[changed_dim]) {
-    caml_invalid_argument(string#"foo")
+    caml_invalid_argument(string#"foo");
   }
   new_dim = [int_array| 0; num_dims];
   new_dim.copy(0, dim, 0, num_dims);
@@ -1051,7 +1053,7 @@ fn caml_ba_sub(vba: &eq, vofs: &eq, vlen: &eq) -> &eq {
     ba_num_dims: num_dims,
     ba_kind: ba.ba_kind as i32_u,
     ba_layout: ba.ba_layout as i32_u
-  }
+  };
 }
 #[export = "caml_ba_fill"]
 fn caml_ba_fill(vba: &eq, v: &eq) -> &eq {
@@ -1076,7 +1078,7 @@ fn caml_ba_fill(vba: &eq, v: &eq) -> &eq {
               br_table
                 [ 'float 'float 'int 'int 'int 'int 'int32 'int64 'int 'int32
                   'complex32 'complex64 else 'int ]
-                ba.ba_kind as i32_u
+                ba.ba_kind as i32_u;
             }
             len = ta_length(data);
             b = v as &float_array;
@@ -1087,10 +1089,10 @@ fn caml_ba_fill(vba: &eq, v: &eq) -> &eq {
                 ta_set_f64(data, i, f1);
                 ta_set_f64(data, i + 1, f2);
                 i = i + 2;
-                br 'loop_2
+                br 'loop_2;
               }
             } /* 'loop_2 */
-            return 0 as &i31
+            return 0 as &i31;
           } /* 'complex32 */
           len = ta_length(data);
           b = v as &float_array;
@@ -1101,10 +1103,10 @@ fn caml_ba_fill(vba: &eq, v: &eq) -> &eq {
               ta_set_f32(data, i, f1);
               ta_set_f32(data, i + 1, f2);
               i = i + 2;
-              br 'loop_2
+              br 'loop_2;
             }
           } /* 'loop_2 */
-          return 0 as &i31
+          return 0 as &i31;
         } /* 'int64 */
         len = ta_length(data);
         l = Int64_val(v);
@@ -1115,19 +1117,19 @@ fn caml_ba_fill(vba: &eq, v: &eq) -> &eq {
             ta_set_i32(data, i, i1);
             ta_set_i32(data, i + 1, i2);
             i = i + 2;
-            br 'loop_2
+            br 'loop_2;
           }
         } /* 'loop_2 */
-        return 0 as &i31
+        return 0 as &i31;
       } /* 'int32 */
       ta_fill_int(data, Int32_val(v));
-      return 0 as &i31
+      return 0 as &i31;
     } /* 'int */
     ta_fill_int(data, v as &i31 as i32_s);
-    return 0 as &i31
+    return 0 as &i31;
   } /* 'float */
   ta_fill_float(data, (v as &float).f);
-  return 0 as &i31
+  return 0 as &i31;
 }
 #[export = "caml_ba_blit"]
 fn caml_ba_blit(vsrc: &eq, vdst: &eq) -> &eq {
@@ -1140,18 +1142,18 @@ fn caml_ba_blit(vsrc: &eq, vdst: &eq) -> &eq {
   src = vsrc as &bigarray;
   dst = vdst as &bigarray;
   len = dst.ba_num_dims as i32_u;
-  if len != src.ba_num_dims as i32_u { caml_invalid_argument(string#"foo") }
+  if len != src.ba_num_dims as i32_u { caml_invalid_argument(string#"foo"); }
   sdim = src.ba_dim;
   ddim = dst.ba_dim;
   'loop_2: loop {
     if i <s len {
-      if sdim[i] != ddim[i] { caml_invalid_argument(string#"foo") }
+      if sdim[i] != ddim[i] { caml_invalid_argument(string#"foo"); }
       i = i + 1;
-      br 'loop_2
+      br 'loop_2;
     }
   } /* 'loop_2 */
   ta_blit(src.ba_data, dst.ba_data);
-  0 as &i31
+  0 as &i31;
 }
 #[export = "caml_ba_reshape"]
 fn caml_ba_reshape(vb: &eq, vd: &eq) -> &eq {
@@ -1165,22 +1167,24 @@ fn caml_ba_reshape(vb: &eq, vd: &eq) -> &eq {
   vdim = vd as &block;
   num_dims = vdim.length - 1;
   b = vb as &bigarray;
-  if num_dims >u CAML_BA_MAX_NUM_DIMS { caml_invalid_argument(string#"foo") }
+  if num_dims >u CAML_BA_MAX_NUM_DIMS {
+    caml_invalid_argument(string#"foo");
+  }
   num_elts = 1;
   dim = [int_array| 0; num_dims];
   'loop_2: loop {
     if i <u num_dims {
       d = vdim[i + 1] as &i31 as i32_s;
-      if d <s 0 { caml_invalid_argument(string#"foo") }
+      if d <s 0 { caml_invalid_argument(string#"foo"); }
       dim[i] = d;
       num_elts = num_elts * d as i64_s;
-      if num_elts != num_elts as i32 as i64_s { caml_raise_out_of_memory() }
+      if num_elts != num_elts as i32 as i64_s { caml_raise_out_of_memory(); }
       i = i + 1;
-      br 'loop_2
+      br 'loop_2;
     }
   } /* 'loop_2 */
   if num_elts as i32 != caml_ba_get_size(b.ba_dim) {
-    caml_invalid_argument(string#"foo")
+    caml_invalid_argument(string#"foo");
   }
   {bigarray|
     f: bigarray_ops,
@@ -1189,7 +1193,7 @@ fn caml_ba_reshape(vb: &eq, vd: &eq) -> &eq {
     ba_num_dims: num_dims,
     ba_kind: b.ba_kind as i32_u,
     ba_layout: b.ba_layout as i32_u
-  }
+  };
 }
 #[export = "caml_ba_change_layout"]
 fn caml_ba_change_layout(vb: &eq, vlayout: &eq) -> &eq {
@@ -1209,7 +1213,7 @@ fn caml_ba_change_layout(vb: &eq, vlayout: &eq) -> &eq {
       if i <u num_dims {
         new_dim[i] = dim[num_dims - i - 1];
         i = i + 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
     {bigarray|
@@ -1219,18 +1223,18 @@ fn caml_ba_change_layout(vb: &eq, vlayout: &eq) -> &eq {
       ba_num_dims: num_dims,
       ba_kind: b.ba_kind as i32_u,
       ba_layout: layout
-    }
-  } else { vb }
+    };
+  } else { vb; }
 }
 #[export = "caml_ba_num_dims"]
 fn caml_ba_num_dims(x: &eq) -> &eq {
-  (x as &bigarray).ba_num_dims as i32_u as &i31
+  (x as &bigarray).ba_num_dims as i32_u as &i31;
 }
 #[export = "caml_ba_kind"]
-fn caml_ba_kind(x: &eq) -> &eq { (x as &bigarray).ba_kind as i32_u as &i31 }
+fn caml_ba_kind(x: &eq) -> &eq { (x as &bigarray).ba_kind as i32_u as &i31; }
 #[export = "caml_ba_layout"]
 fn caml_ba_layout(x: &eq) -> &eq {
-  (x as &bigarray).ba_layout as i32_u as &i31
+  (x as &bigarray).ba_layout as i32_u as &i31;
 }
 fn caml_ba_compare(v1: &eq, v2: &eq, total: i32) -> i32 {
   let b1: &bigarray;
@@ -1246,22 +1250,22 @@ fn caml_ba_compare(v1: &eq, v2: &eq, total: i32) -> i32 {
   b1 = v1 as &bigarray;
   b2 = v2 as &bigarray;
   if b2.ba_layout as i32_u != b1.ba_layout as i32_u {
-    return (b2.ba_layout as i32_u - b1.ba_layout as i32_u)
+    return (b2.ba_layout as i32_u - b1.ba_layout as i32_u);
   }
   if b2.ba_kind as i32_u != b1.ba_kind as i32_u {
-    return (b2.ba_kind as i32_u - b1.ba_kind as i32_u)
+    return (b2.ba_kind as i32_u - b1.ba_kind as i32_u);
   }
   if b2.ba_num_dims as i32_u != b1.ba_num_dims as i32_u {
-    return (b2.ba_num_dims as i32_u - b1.ba_num_dims as i32_u)
+    return (b2.ba_num_dims as i32_u - b1.ba_num_dims as i32_u);
   }
   len = b2.ba_num_dims as i32_u;
   'loop_2: loop {
     if i <u len {
       i1 = b1.ba_dim[i];
       i2 = b2.ba_dim[i];
-      if i1 != i2 { return (i1 <u i2?-1:1) }
+      if i1 != i2 { return (i1 <u i2?-1:1); }
       i = i + 1;
-      br 'loop_2
+      br 'loop_2;
     }
   } /* 'loop_2 */
   d1 = b1.ba_data;
@@ -1279,117 +1283,117 @@ fn caml_ba_compare(v1: &eq, v2: &eq, total: i32) -> i32 {
                   br_table
                     [ 'float32 'float64 'int8 'uint8 'int16 'uint16 'int32
                       'int64 'int32 'int32 'float32 'float64 else 'uint8 ]
-                    b1.ba_kind as i32_u
+                    b1.ba_kind as i32_u;
                 }
                 'loop_2: loop {
                   if i <u len {
                     i1 = ta_get_i32(d1, i + 1);
                     i2 = ta_get_i32(d2, i + 1);
-                    if i1 <s i2 { return -1 }
-                    if i1 >s i2 { return 1 }
+                    if i1 <s i2 { return -1; }
+                    if i1 >s i2 { return 1; }
                     i1 = ta_get_i32(d1, i);
                     i2 = ta_get_i32(d2, i);
-                    if i1 <u i2 { return -1 }
-                    if i1 >u i2 { return 1 }
+                    if i1 <u i2 { return -1; }
+                    if i1 >u i2 { return 1; }
                     i = i + 2;
-                    br 'loop_2
+                    br 'loop_2;
                   }
                 } /* 'loop_2 */
-                return 0
+                return 0;
               } /* 'int32 */
               'loop_2: loop {
                 if i <u len {
                   i1 = ta_get_i32(d1, i);
                   i2 = ta_get_i32(d2, i);
-                  if i1 <s i2 { return -1 }
-                  if i1 >s i2 { return 1 }
+                  if i1 <s i2 { return -1; }
+                  if i1 >s i2 { return 1; }
                   i = i + 1;
-                  br 'loop_2
+                  br 'loop_2;
                 }
               } /* 'loop_2 */
-              return 0
+              return 0;
             } /* 'uint16 */
             'loop_2: loop {
               if i <u len {
                 i1 = ta_get_ui16(d1, i);
                 i2 = ta_get_ui16(d2, i);
-                if i1 <s i2 { return -1 }
-                if i1 >s i2 { return 1 }
+                if i1 <s i2 { return -1; }
+                if i1 >s i2 { return 1; }
                 i = i + 1;
-                br 'loop_2
+                br 'loop_2;
               }
             } /* 'loop_2 */
-            return 0
+            return 0;
           } /* 'int16 */
           'loop_2: loop {
             if i <u len {
               i1 = ta_get_i16(d1, i);
               i2 = ta_get_i16(d2, i);
-              if i1 <s i2 { return -1 }
-              if i1 >s i2 { return 1 }
+              if i1 <s i2 { return -1; }
+              if i1 >s i2 { return 1; }
               i = i + 1;
-              br 'loop_2
+              br 'loop_2;
             }
           } /* 'loop_2 */
-          return 0
+          return 0;
         } /* 'uint8 */
         'loop_2: loop {
           if i <u len {
             i1 = ta_get_ui8(d1, i);
             i2 = ta_get_ui8(d2, i);
-            if i1 <s i2 { return -1 }
-            if i1 >s i2 { return 1 }
+            if i1 <s i2 { return -1; }
+            if i1 >s i2 { return 1; }
             i = i + 1;
-            br 'loop_2
+            br 'loop_2;
           }
         } /* 'loop_2 */
-        return 0
+        return 0;
       } /* 'int8 */
       'loop_2: loop {
         if i <u len {
           i1 = ta_get_i8(d1, i);
           i2 = ta_get_i8(d2, i);
-          if i1 <s i2 { return -1 }
-          if i1 >s i2 { return 1 }
+          if i1 <s i2 { return -1; }
+          if i1 >s i2 { return 1; }
           i = i + 1;
-          br 'loop_2
+          br 'loop_2;
         }
       } /* 'loop_2 */
-      return 0
+      return 0;
     } /* 'float64 */
     'loop_2: loop {
       if i <u len {
         f1 = ta_get_f64(d1, i);
         f2 = ta_get_f64(d2, i);
-        if f1 < f2 { return -1 }
-        if f1 > f2 { return 1 }
+        if f1 < f2 { return -1; }
+        if f1 > f2 { return 1; }
         if f1 != f2 {
-          if !total { return unordered }
-          if f1 == f1 { return 1 }
-          if f2 == f2 { return -1 }
+          if !total { return unordered; }
+          if f1 == f1 { return 1; }
+          if f2 == f2 { return -1; }
         }
         i = i + 1;
-        br 'loop_2
+        br 'loop_2;
       }
     } /* 'loop_2 */
-    return 0
+    return 0;
   } /* 'float32 */
   'loop_2: loop {
     if i <u len {
       f1 = ta_get_f32(d1, i);
       f2 = ta_get_f32(d2, i);
-      if f1 < f2 { return -1 }
-      if f1 > f2 { return 1 }
+      if f1 < f2 { return -1; }
+      if f1 > f2 { return 1; }
       if f1 != f2 {
-        if !total { return unordered }
-        if f1 == f1 { return 1 }
-        if f2 == f2 { return -1 }
+        if !total { return unordered; }
+        if f1 == f1 { return 1; }
+        if f2 == f2 { return -1; }
       }
       i = i + 1;
-      br 'loop_2
+      br 'loop_2;
     }
   } /* 'loop_2 */
-  return 0
+  return 0;
 }
 #[export = "caml_ba_uint8_get16"]
 fn caml_ba_uint8_get16(vba: &eq, i: &eq) -> &eq {
@@ -1399,9 +1403,9 @@ fn caml_ba_uint8_get16(vba: &eq, i: &eq) -> &eq {
   ba = vba as &bigarray;
   data = ba.ba_data;
   p = i as &i31 as i32_s;
-  if p <s 0 { caml_bound_error() }
-  if p + 1 >=u ba.ba_dim[0] { caml_bound_error() }
-  ta_get16_ui8(data, p) as &i31
+  if p <s 0 { caml_bound_error(); }
+  if p + 1 >=u ba.ba_dim[0] { caml_bound_error(); }
+  ta_get16_ui8(data, p) as &i31;
 }
 #[export = "caml_ba_uint8_get32"]
 fn caml_ba_uint8_get32(vba: &eq, i: &eq) -> i32 {
@@ -1411,9 +1415,9 @@ fn caml_ba_uint8_get32(vba: &eq, i: &eq) -> i32 {
   ba = vba as &bigarray;
   data = ba.ba_data;
   p = i as &i31 as i32_s;
-  if p <s 0 { caml_bound_error() }
-  if p + 3 >=u ba.ba_dim[0] { caml_bound_error() }
-  become ta_get32_ui8(data, p)
+  if p <s 0 { caml_bound_error(); }
+  if p + 3 >=u ba.ba_dim[0] { caml_bound_error(); }
+  become ta_get32_ui8(data, p);
 }
 #[export = "caml_ba_uint8_get64"]
 fn caml_ba_uint8_get64(vba: &eq, i: &eq) -> i64 {
@@ -1423,9 +1427,9 @@ fn caml_ba_uint8_get64(vba: &eq, i: &eq) -> i64 {
   ba = vba as &bigarray;
   data = ba.ba_data;
   p = i as &i31 as i32_s;
-  if p <s 0 { caml_bound_error() }
-  if p + 7 >=u ba.ba_dim[0] { caml_bound_error() }
-  ta_get32_ui8(data, p) as i64_u | ta_get32_ui8(data, p + 4) as i64_u << 32
+  if p <s 0 { caml_bound_error(); }
+  if p + 7 >=u ba.ba_dim[0] { caml_bound_error(); }
+  ta_get32_ui8(data, p) as i64_u | ta_get32_ui8(data, p + 4) as i64_u << 32;
 }
 #[export = "caml_ba_uint8_set16"]
 fn caml_ba_uint8_set16(vba: &eq, i: &eq, v: &eq) -> &eq {
@@ -1437,10 +1441,10 @@ fn caml_ba_uint8_set16(vba: &eq, i: &eq, v: &eq) -> &eq {
   data = ba.ba_data;
   p = i as &i31 as i32_s;
   d = v as &i31;
-  if p <s 0 { caml_bound_error() }
-  if p + 1 >=u ba.ba_dim[0] { caml_bound_error() }
+  if p <s 0 { caml_bound_error(); }
+  if p + 1 >=u ba.ba_dim[0] { caml_bound_error(); }
   ta_set16_ui8(data, p, d);
-  0 as &i31
+  0 as &i31;
 }
 #[export = "caml_ba_uint8_set32"]
 fn caml_ba_uint8_set32(vba: &eq, i: &eq, d: i32) -> &eq {
@@ -1450,10 +1454,10 @@ fn caml_ba_uint8_set32(vba: &eq, i: &eq, d: i32) -> &eq {
   ba = vba as &bigarray;
   data = ba.ba_data;
   p = i as &i31 as i32_s;
-  if p <s 0 { caml_bound_error() }
-  if p + 3 >=u ba.ba_dim[0] { caml_bound_error() }
+  if p <s 0 { caml_bound_error(); }
+  if p + 3 >=u ba.ba_dim[0] { caml_bound_error(); }
   ta_set32_ui8(data, p, d);
-  0 as &i31
+  0 as &i31;
 }
 #[export = "caml_ba_uint8_set64"]
 fn caml_ba_uint8_set64(vba: &eq, i: &eq, d: i64) -> &eq {
@@ -1463,11 +1467,11 @@ fn caml_ba_uint8_set64(vba: &eq, i: &eq, d: i64) -> &eq {
   ba = vba as &bigarray;
   data = ba.ba_data;
   p = i as &i31 as i32_s;
-  if p <s 0 { caml_bound_error() }
-  if p + 7 >=u ba.ba_dim[0] { caml_bound_error() }
+  if p <s 0 { caml_bound_error(); }
+  if p + 7 >=u ba.ba_dim[0] { caml_bound_error(); }
   ta_set32_ui8(data, p, d as i32);
   ta_set32_ui8(data, p + 4, (d >>u 32) as i32);
-  0 as &i31
+  0 as &i31;
 }
 #[export = "caml_string_of_array"]
 fn caml_string_of_array(x: &eq) -> &eq {
@@ -1478,7 +1482,7 @@ fn caml_string_of_array(x: &eq) -> &eq {
   len = ta_length(a);
   s = [string| 0; len];
   ta_blit_to_string(a, 0, s, 0, len);
-  s
+  s;
 }
 #[export = "caml_uint8_array_of_string"]
 fn caml_uint8_array_of_string(x: &eq) -> &eq {
@@ -1489,18 +1493,18 @@ fn caml_uint8_array_of_string(x: &eq) -> &eq {
   len = s.length;
   ta = ta_create(3, len);
   ta_blit_from_string(s, 0, ta, 0, len);
-  wrap(ta as &?any)
+  wrap(ta as &?any);
 }
 #[export = "caml_ba_get_kind"]
-fn caml_ba_get_kind(x: &eq) -> i32 { (x as &bigarray).ba_kind as i32_u }
+fn caml_ba_get_kind(x: &eq) -> i32 { (x as &bigarray).ba_kind as i32_u; }
 #[export = "caml_ba_get_layout"]
-fn caml_ba_get_layout(x: &eq) -> i32 { (x as &bigarray).ba_layout as i32_u }
+fn caml_ba_get_layout(x: &eq) -> i32 { (x as &bigarray).ba_layout as i32_u; }
 #[export = "caml_ba_get_data"]
-fn caml_ba_get_data(x: &eq) -> &extern { (x as &bigarray).ba_data }
+fn caml_ba_get_data(x: &eq) -> &extern { (x as &bigarray).ba_data; }
 #[export = "caml_ba_set_data"]
-fn caml_ba_set_data(x: &eq, x_2: &extern) { (x as &bigarray).ba_data = x_2 }
+fn caml_ba_set_data(x: &eq, x_2: &extern) { (x as &bigarray).ba_data = x_2; }
 #[export = "caml_ba_get_dim"]
-fn caml_ba_get_dim(x: &eq) -> &int_array { (x as &bigarray).ba_dim }
+fn caml_ba_get_dim(x: &eq) -> &int_array { (x as &bigarray).ba_dim; }
 #[export = "caml_ba_alloc"]
 fn caml_ba_alloc
 (kind: i32, layout: i32, num_dims: i32, data: &extern, dim: &int_array) ->
@@ -1512,13 +1516,13 @@ fn caml_ba_alloc
     ba_num_dims: num_dims,
     ba_kind: kind,
     ba_layout: layout
-  }
+  };
 }
 #[export = "string_set"]
 fn string_set(s: &?extern, i: i32, v: i32) {
-  (s as &?any as &?string)[i] = v
+  (s as &?any as &?string)[i] = v;
 }
 #[export = "string_get"]
 fn string_get(s: &?extern, i: i32) -> i32 {
-  (s as &?any as &?string)[i] as i32_u
+  (s as &?any as &?string)[i] as i32_u;
 }

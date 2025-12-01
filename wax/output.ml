@@ -64,9 +64,8 @@ and tuple always_paren pp l =
 let functype pp { params; results } =
   box pp ~indent:2 (fun () ->
       string pp "fn";
-      if results = [||] then tuple true pp (Array.to_list params)
-      else (
-        tuple true pp (Array.to_list params);
+      tuple true pp (Array.to_list params);
+      if results <> [||] then (
         space pp ();
         string pp "->";
         space pp ();
@@ -75,14 +74,14 @@ let functype pp { params; results } =
 let blocktype pp { params; results } =
   match (params, results) with
   | [||], [| ty |] -> valtype pp ty
-  | _, [||] -> box pp ~indent:2 (fun () -> tuple true pp (Array.to_list params))
   | _ ->
       box pp ~indent:2 (fun () ->
           tuple true pp (Array.to_list params);
-          space pp ();
-          string pp "->";
-          space pp ();
-          tuple false pp (Array.to_list results))
+          if results <> [||] then (
+            space pp ();
+            string pp "->";
+            space pp ();
+            tuple false pp (Array.to_list results)))
 
 let packedtype pp t = string pp (match t with I8 -> "i8" | I16 -> "i16")
 
@@ -633,23 +632,15 @@ and deliminated_instr pp (i : _ instr) =
           instr Instruction pp i;
           string pp ";")
 
-and block_instrs pp (l : _ instr list) =
-  match l with
-  | [] -> ()
-  | [ i ] -> instr Instruction pp i
-  | i :: rem ->
-      deliminated_instr pp i;
-      space pp ();
-      block_instrs pp rem
-
 and block_contents pp (l : _ instr list) =
-  match l with
-  | [] -> ()
-  | _ ->
-      indent pp 2 (fun () ->
-          space pp ();
-          block_instrs pp l);
-      space pp ()
+  if l <> [] then (
+    indent pp 2 (fun () ->
+        List.iter
+          (fun i ->
+            space pp ();
+            deliminated_instr pp i)
+          l);
+    space pp ())
 
 let fundecl ~tag pp (name, typ, sign) =
   string pp (if tag then "tag" else "fn");
