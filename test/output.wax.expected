@@ -397,7 +397,6 @@ fn bigarray_serialize(s: &eq, v: &eq) -> (i32, i32) {
   } /* 'done */
   (4 + num_dims) * 4;
   (4 + num_dims) * 8;
-  unreachable;
 }
 fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
   let b: &bigarray;
@@ -530,7 +529,6 @@ fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
   } /* 'done */
   b;
   (4 + num_dims) * 4;
-  unreachable;
 }
 fn caml_ba_get_size(dim: &int_array) -> i32 {
   let i: i32;
