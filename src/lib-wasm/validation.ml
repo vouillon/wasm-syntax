@@ -1512,3 +1512,72 @@ let f (_, fields) =
   functions ctx fields;
   exports ctx fields;
   start ctx fields
+
+let check_syntax (_, lst) =
+  let types = Hashtbl.create 16 in
+  let functions = Hashtbl.create 16 in
+  let memories = Hashtbl.create 16 in
+  let tables = Hashtbl.create 16 in
+  let globals = Hashtbl.create 16 in
+  let tags = Hashtbl.create 16 in
+  let elems = Hashtbl.create 16 in
+  let datas = Hashtbl.create 16 in
+  let check_unbound tbl id =
+    Option.iter
+      (fun id ->
+        assert (not (Hashtbl.mem tbl id));
+        Hashtbl.add tbl id ())
+      id
+  in
+  List.iter
+    (fun (field : _ Ast.Text.modulefield) ->
+      match field with
+      | Types lst ->
+          Array.iter
+            (fun (id, subtype) ->
+              check_unbound types id;
+              match subtype.Ast.Text.typ with
+              | Func _ | Array _ -> ()
+              | Struct lst ->
+                  let fields = Hashtbl.create 16 in
+                  Array.iter (fun (id, _) -> check_unbound fields id) lst)
+            lst
+      | Import { id; desc; _ } ->
+          check_unbound
+            (match desc with
+            | Func _ -> functions
+            | Memory _ -> memories
+            | Table _ -> tables
+            | Global _ -> globals
+            | Tag _ -> tags)
+            id
+      | Func { id; _ } -> check_unbound functions id
+      | Memory { id; _ } -> check_unbound memories id
+      | Table { id; _ } -> check_unbound tables id
+      | Tag { id; _ } -> check_unbound tags id
+      | Global { id; _ } -> check_unbound globals id
+      | Export _ | Start _ -> ()
+      | Elem { id; _ } -> check_unbound elems id
+      | Data { id; _ } -> check_unbound datas id)
+    lst;
+  ignore
+    (List.fold_left
+       (fun can_import (field : _ Ast.Text.modulefield) ->
+         match field with
+         | Types _ -> can_import
+         | Import _ ->
+             assert can_import;
+             (*ZZZ*)
+             can_import
+         | Func _ | Memory _ | Table _ | Tag _ | Global _ -> false
+         | Export _ -> can_import
+         | Start _ -> can_import
+         | Elem _ -> can_import
+         | Data _ -> can_import)
+       true lst);
+  assert (
+    List.length
+      (List.filter
+         (fun field -> match field with Ast.Text.Start _ -> true | _ -> false)
+         lst)
+    <= 1)

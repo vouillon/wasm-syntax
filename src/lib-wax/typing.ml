@@ -1,17 +1,15 @@
 (*
 TODO:
-- fix typeuse validation (add a type if not already present)
 - enforce expressions
 - return a typed tree
+- we need to decide on an order to visit subexpression in structs
+- fix typeuse validation (add a type if not already present)
 - check that underscores are properly placed
 - check for floating types? when an instruction may trap (Div)?
 - error messages
 - locations on the heap when push several values?
 - more methods rather than global functions (no ambiguity)?
   rotl(..), rotr(..), min(..), max(..), copysign(..)
-- tests:
-  - short pieces of syntax, read / write / error
-  - write the translated files, parse/validate them, translate/validate them back
 - move lets at more appropriate places
 - remove redundant type annotations/casts
 - take into account that locals can shadow globals to get better local names
@@ -45,13 +43,14 @@ Syntax ideas:
 - br 'a (e1, ..., en) if cond   / if cond br 'a (e1, ..., en)
 
 Misc:
-- blocks in an expression context return one value; otherwise, no value by default
+- blocks in an expression context return one value;
+  otherwise, no value by default
 
 Explicit types?
    fn(..)->(..)
 ==> for function types
 ==> for call_indirect
-(We don't have a cast to a typeuse in WAT)
+(But we don't have a cast to a typeuse in WAT)
 *)
 
 open Ast

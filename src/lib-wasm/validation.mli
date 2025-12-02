@@ -7,3 +7,6 @@ val validate_refs : bool ref
 val f : Ast.location Ast.Text.module_ -> unit
 (** [f modul] validates the given Wasm Text module. Raises exceptions on
     validation errors. *)
+
+val check_syntax : _ * _ Ast.Text.modulefield list -> unit
+(** Additional syntactic checks *)
