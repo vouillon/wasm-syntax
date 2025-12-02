@@ -804,7 +804,7 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   | Return ->
       let* args = Stack.grab ctx.return_arity in
       Stack.push_poly (with_loc (Return (sequence_opt args)))
-  | TupleMake _ -> Stack.push_poly (with_loc Unreachable (*ZZZ*))
+  | TupleMake _ -> return ()
   | Const (I32 n) | Const (I64 n) ->
       Stack.push 1 (with_loc (Int n)) (*ZZZ Negative ints / floats *)
   | Const (F32 f) | Const (F64 f) ->

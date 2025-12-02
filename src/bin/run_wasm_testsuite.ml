@@ -163,7 +163,8 @@ module WaxParser =
     (Wax.Fast_parser)
     (Wax.Lexer)
 
-let print_module f m = Utils.Printer.run f (fun p -> Wasm.Output.module_ p m)
+let print_module ~color f m =
+  Utils.Printer.run f (fun p -> Wasm.Output.module_ p ~color m)
 
 let check_wellformed (_, lst) =
   let types = Hashtbl.create 16 in
@@ -236,7 +237,9 @@ let check_wellformed (_, lst) =
     <= 1)
 
 let runtest filename path =
-  if true then Format.eprintf "==== %s ====@." path;
+  if true then
+    Format.eprintf "%s==== %s ====%s@." Utils.Colors.Ansi.grey path
+      Utils.Colors.Ansi.reset;
   let lst = ScriptParser.parse ~filename in
   (* Parsing *)
   let lst =
@@ -254,7 +257,9 @@ let runtest filename path =
                   Wasm.Validation.f ast;
                   check_wellformed ast;
                   if false then
-                    Format.printf "@[<2>Result:@ %a@]@." print_module ast)
+                    Format.printf "@[<2>Result:@ %a@]@."
+                      (print_module ~color:Always)
+                      ast)
             in
             if ok then
               Format.eprintf "Parsing should have failed (%s): %s@." reason txt;
@@ -265,7 +270,7 @@ let runtest filename path =
   let lst' =
     List.map
       (fun (status, m) ->
-        let text = Format.asprintf "%a@." print_module m in
+        let text = Format.asprintf "%a@." (print_module ~color:Never) m in
         if false then print_flushed text;
         (status, ModuleParser.parse_from_string ~filename text))
       lst
@@ -283,27 +288,33 @@ let runtest filename path =
               in_child_process ~quiet:true (fun () ->
                   Wasm.Validation.f m;
                   if false then
-                    Format.printf "@[<2>Result:@ %a@]@." print_module m)
+                    Format.printf "@[<2>Result:@ %a@]@."
+                      (print_module ~color:Always)
+                      m)
             in
             if ok then
               Format.eprintf "@[<2>Validation should have failed (%s):@ %a@]@."
-                reason print_module m;
+                reason
+                (print_module ~color:Always)
+                m;
             false)
       (lst @ lst')
     |> List.map snd
   in
   (* Translation to new syntax *)
-  let print_wax f m = Utils.Printer.run f (fun p -> Wax.Output.module_ p m) in
+  let print_wax ~color f m =
+    Utils.Printer.run f (fun p -> Wax.Output.module_ ~color p m)
+  in
   List.iter
     (fun m ->
       match Conversion.From_wasm.module_ m with
       | exception e ->
           prerr_endline (Printexc.to_string e);
-          Format.eprintf "@[%a@]@." print_module m
+          Format.eprintf "@[%a@]@." (print_module ~color:Always) m
       | m ->
           let ok = in_child_process (fun () -> Wax.Typing.f m) in
-          if not ok then Format.eprintf "@[%a@]@." print_wax m;
-          let text = Format.asprintf "%a@." print_wax m in
+          if not ok then Format.eprintf "@[%a@]@." (print_wax ~color:Always) m;
+          let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
           let ok =
             in_child_process (fun () ->
                 let m' = WaxParser.parse_from_string ~filename text in
@@ -311,9 +322,9 @@ let runtest filename path =
                 if not ok then
                   if true then prerr_endline "(after parsing)"
                   else (
-                    Format.eprintf "@[%a@]@." print_wax m';
+                    Format.eprintf "@[%a@]@." (print_wax ~color:Always) m';
                     prerr_endline "===";
-                    Format.eprintf "@[%a@]@." print_wax m))
+                    Format.eprintf "@[%a@]@." (print_wax ~color:Always) m))
           in
           if not ok then
             if true then prerr_endline "(parsing)" else print_flushed text)

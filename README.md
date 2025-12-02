@@ -10,7 +10,7 @@ Wax is a compiler toolchain for a Rust-like syntax targeting WebAssembly.
 
 ## CLI Interface
 
-**Usage:** `wax -- [options] [INPUT]`
+**Usage:** `wax [OPTION]… [INPUT]
 
 ### Positional Arguments
 
@@ -18,16 +18,19 @@ Wax is a compiler toolchain for a Rust-like syntax targeting WebAssembly.
 
 ### Options
 
-*   `-f`, `--format`: Output format (Default: Auto/`wasm`). Values: `wat`, `wasm`, `wax`.
+*   `-f`, `--format`, `--output-format`: Output format (Default: Auto/`wasm`). Values: `wat`, `wasm`, `wax`.
 *   `-i`, `--input-format`: Input format (Default: Auto/`wax`). Values: `wat`, `wasm`, `wax`.
 *   `-o`, `--output`: Output file (Default: `stdout`).
+*   `-v`, `--validate`: Perform validation (type checking for Wax, well-formedness for Wasm Text). Validation is disabled by default.
+*   `-s`, `--strict-validate`: Perform strict reference validation (for Wasm Text). This overrides the default relaxed reference validation behavior.
+*   `--color`: Color output: 'always', 'never', or 'auto' (default). 'auto' colors only if output is a TTY.
 
 ## Current Supported Pipelines
 
 The CLI currently supports the following conversion flows:
 
-1.  `wat` -> `wat` (Formatting / Round-trip)
-2.  `wat` -> `wax` (Decompilation / Desugaring)
-3.  `wax` -> `wax` (Formatting / Checking)
+1.  `wat` → `wat` (Formatting)
+2.  `wat` → `wax` (Decompilation)
+3.  `wax` → `wax` (Formatting)
 
 **Note:** `wasm` (binary) input/output is not yet implemented.

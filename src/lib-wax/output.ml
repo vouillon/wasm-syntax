@@ -1,5 +1,65 @@
-open Utils.Printer
+(*ZZZZ
+Should use string_as for identifiers and comments
+*)
+
+open Utils.Colors
 open Ast
+
+let get_theme use_color =
+  if use_color then
+    {
+      keyword = Ansi.bold ^ Ansi.magenta;
+      operator = Ansi.bold ^ Ansi.white;
+      annotation = Ansi.blue;
+      attribute = Ansi.magenta;
+      type_ = Ansi.cyan;
+      identifier = Ansi.yellow;
+      constant = Ansi.bold ^ Ansi.blue;
+      string = Ansi.green;
+      comment = Ansi.grey;
+      punctuation = Ansi.white;
+      instruction = "";
+      reset = Ansi.reset;
+    }
+  else no_color
+
+type ctx = {
+  printer : Utils.Printer.t;
+  theme : theme;
+  mutable style_override : style option;
+}
+
+let print_styled pp style ?(len = None) text =
+  let style = Option.value ~default:style pp.style_override in
+  let seq = escape_sequence pp.theme style in
+  if seq <> "" then Utils.Printer.string_as pp.printer 0 seq;
+  (match len with
+  | None -> Utils.Printer.string pp.printer text
+  | Some len -> Utils.Printer.string_as pp.printer len text);
+  if seq <> "" then Utils.Printer.string_as pp.printer 0 pp.theme.reset
+
+let box pp ?indent f = Utils.Printer.box pp.printer ?indent f
+let hvbox pp ?indent f = Utils.Printer.hvbox pp.printer ?indent f
+let indent pp i f = Utils.Printer.indent pp.printer i f
+let space pp () = Utils.Printer.space pp.printer ()
+let cut pp () = Utils.Printer.cut pp.printer ()
+let punctuation pp s = print_styled pp Punctuation s
+let operator pp s = print_styled pp Operator s
+let identifier pp s = print_styled pp Identifier s
+let constant pp s = print_styled pp Constant s
+let keyword pp s = print_styled pp Keyword s
+let type_ pp s = print_styled pp Type s
+let comment pp s = print_styled pp Comment s
+let string pp ?len s = print_styled pp String ?len s
+let attribute pp s = print_styled pp Attribute s
+
+let with_style ctx style f =
+  match ctx.style_override with
+  | Some _ -> f ()
+  | None ->
+      ctx.style_override <- Some style;
+      f ();
+      ctx.style_override <- None
 
 let list ?(sep = space) f pp l =
   match l with
@@ -16,17 +76,17 @@ let list ?(sep = space) f pp l =
 let list_commasep f pp l =
   list
     ~sep:(fun pp () ->
-      string pp ",";
+      punctuation pp ",";
       space pp ())
     f pp l
 
 let print_paren_list f pp l =
-  string pp "(";
+  punctuation pp "(";
   box pp (fun () -> list_commasep f pp l);
-  string pp ")"
+  punctuation pp ")"
 
 let heaptype pp (t : heaptype) =
-  string pp
+  type_ pp
     (match t with
     | Func -> "func"
     | NoFunc -> "nofunc"
@@ -43,16 +103,16 @@ let heaptype pp (t : heaptype) =
     | Type s -> s.desc)
 
 let reftype pp { nullable; typ } =
-  string pp (if nullable then "&?" else "&");
+  punctuation pp (if nullable then "&?" else "&");
   heaptype pp typ
 
 let rec valtype pp t =
   match t with
-  | I32 -> string pp "i32"
-  | I64 -> string pp "i64"
-  | F32 -> string pp "f32"
-  | F64 -> string pp "f64"
-  | V128 -> string pp "v128"
+  | I32 -> type_ pp "i32"
+  | I64 -> type_ pp "i64"
+  | F32 -> type_ pp "f32"
+  | F64 -> type_ pp "f64"
+  | V128 -> type_ pp "v128"
   | Ref t -> reftype pp t
   | Tuple l -> tuple false pp l
 
@@ -61,12 +121,13 @@ and tuple always_paren pp l =
   | [ t ] when not always_paren -> valtype pp t
   | _ -> print_paren_list valtype pp l
 
-let simple_pat pp p = string pp (match p with Some x -> x.desc | None -> "_")
+let simple_pat pp p =
+  match p with Some x -> identifier pp x.desc | None -> operator pp "_"
 
 let print_key_value pp key val_printer value =
   box pp ~indent:2 (fun () ->
-      string pp key;
-      string pp ":";
+      identifier pp key;
+      punctuation pp ":";
       space pp ();
       val_printer pp value)
 
@@ -75,18 +136,18 @@ let print_typed_pat pp (pat, opt_typ) =
       simple_pat pp pat;
       Option.iter
         (fun t ->
-          string pp ":";
+          punctuation pp ":";
           space pp ();
           valtype pp t)
         opt_typ)
 
 let functype pp { params; results } =
   box pp ~indent:2 (fun () ->
-      string pp "fn";
+      keyword pp "fn";
       tuple true pp (Array.to_list params);
       if results <> [||] then (
         space pp ();
-        string pp "->";
+        punctuation pp "->";
         space pp ();
         tuple false pp (Array.to_list results)))
 
@@ -98,11 +159,11 @@ let blocktype pp { params; results } =
           tuple true pp (Array.to_list params);
           if results <> [||] then (
             space pp ();
-            string pp "->";
+            operator pp "->";
             space pp ();
             tuple false pp (Array.to_list results)))
 
-let packedtype pp t = string pp (match t with I8 -> "i8" | I16 -> "i16")
+let packedtype pp t = type_ pp (match t with I8 -> "i8" | I16 -> "i16")
 
 let storagetype pp t =
   match t with Value t -> valtype pp t | Packed t -> packedtype pp t
@@ -110,7 +171,7 @@ let storagetype pp t =
 let muttype t pp { mut; typ } =
   if mut then
     box pp ~indent:2 (fun () ->
-        string pp "mut";
+        keyword pp "mut";
         space pp ();
         t pp typ)
   else t pp typ
@@ -128,33 +189,33 @@ let comptype pp (t : comptype) =
             (fun pp (nm, t) -> print_key_value pp nm.desc fieldtype t)
             pp (Array.to_list l));
       space pp ();
-      string pp "}"
+      punctuation pp "}"
   | Array t ->
-      string pp "[";
+      punctuation pp "[";
       box pp (fun () -> fieldtype pp t);
-      string pp "]"
+      punctuation pp "]"
 
 let subtype pp (nm, { typ; supertype; final }) =
   hvbox pp (fun () ->
       let is_struct = match typ with Struct _ -> true | _ -> false in
       box pp (fun () ->
-          string pp "type";
+          keyword pp "type";
           space pp ();
-          string pp nm.desc;
+          identifier pp nm.desc;
           (match supertype with
           | Some supertype ->
-              string pp ":";
+              punctuation pp ":";
               space pp ();
-              string pp supertype.desc
+              identifier pp supertype.desc
           | None -> ());
           space pp ();
-          string pp "=";
+          punctuation pp "=";
           if not final then (
             space pp ();
-            string pp "open");
+            keyword pp "open");
           if is_struct then (
             space pp ();
-            string pp "{"));
+            punctuation pp "{"));
       space pp ();
       comptype pp typ)
 
@@ -163,12 +224,15 @@ let rectype pp t =
   | [ t ] -> subtype pp t
   | l ->
       hvbox pp (fun () ->
-          string pp "rec {";
+          box pp (fun () ->
+              keyword pp "rec";
+              space pp ();
+              punctuation pp "{");
           indent pp 2 (fun () ->
               space pp ();
               list ~sep:space subtype pp l);
           space pp ();
-          string pp "}")
+          punctuation pp "}")
 
 let binop op =
   match op with
@@ -224,10 +288,10 @@ type prec =
 
 let parentheses expected actual pp g =
   if expected > actual then (
-    string pp "(";
+    punctuation pp "(";
     box pp (fun () ->
         g ();
-        string pp ")"))
+        punctuation pp ")"))
   else g ()
 
 let prec_op op =
@@ -260,9 +324,9 @@ let long_block l =
 let block_label pp label =
   Option.iter
     (fun label ->
-      string pp "'";
-      string pp label;
-      string pp ":";
+      identifier pp "'";
+      identifier pp label;
+      punctuation pp ":";
       space pp ())
     label
 
@@ -271,9 +335,9 @@ let label_comment pp (l, label) =
     Option.iter
       (fun label ->
         space pp ();
-        string pp "/* '";
-        string pp label;
-        string pp " */")
+        comment pp "/* '";
+        comment pp label;
+        comment pp " */")
       label
 
 let need_blocktype bt = bt.params <> [||] || bt.results <> [||]
@@ -282,15 +346,15 @@ let casttype pp ty =
   match ty with
   | Valtype ty -> valtype pp ty
   | Signedtype { typ; signage; strict } ->
-      string pp (Ast.format_signed_type typ signage strict)
+      type_ pp (Ast.format_signed_type typ signage strict)
 
 let branch_instr instr prec pp name label i =
   parentheses prec Branch pp @@ fun () ->
   box pp ~indent:2 (fun () ->
-      string pp name;
+      keyword pp name;
       space pp ();
-      string pp "'";
-      string pp label;
+      identifier pp "'";
+      identifier pp label;
       Option.iter
         (fun i ->
           space pp ();
@@ -300,10 +364,10 @@ let branch_instr instr prec pp name label i =
 let branch_ref_instr instr prec pp name label ty i =
   parentheses prec Branch pp @@ fun () ->
   box pp ~indent:2 (fun () ->
-      string pp name;
+      keyword pp name;
       space pp ();
-      string pp "'";
-      string pp label;
+      identifier pp "'";
+      identifier pp label;
       space pp ();
       reftype pp ty;
       space pp ();
@@ -314,7 +378,7 @@ let call_instr instr prec pp ?prefix i l =
   box pp ~indent:2 (fun () ->
       Option.iter
         (fun s ->
-          string pp s;
+          keyword pp s;
           space pp ())
         prefix;
       instr Call pp i;
@@ -324,14 +388,14 @@ let call_instr instr prec pp ?prefix i l =
 let print_container pp ~opening ~closing ?(indent = 0) opt_type f =
   hvbox pp ~indent (fun () ->
       box pp (fun () ->
-          string pp opening;
+          punctuation pp opening;
           Option.iter
             (fun t ->
-              string pp t.desc;
-              string pp "|")
+              identifier pp t.desc;
+              punctuation pp "|")
             opt_type);
       f ();
-      string pp closing)
+      punctuation pp closing)
 
 let struct_instr pp nm f =
   print_container pp ~opening:"{" ~closing:"}" ~indent:0 nm (fun () ->
@@ -357,49 +421,49 @@ let rec instr prec pp (i : _ instr) =
       hvbox pp (fun () ->
           box pp (fun () ->
               block_label pp label;
-              string pp "if";
+              keyword pp "if";
               indent pp 2 (fun () ->
-                  string pp " ";
+                  space pp ();
                   instr Instruction pp i;
                   if need_blocktype bt then (
                     space pp ();
                     box pp ~indent:2 (fun () ->
-                        string pp "=>";
+                        punctuation pp "=>";
                         space pp ();
                         blocktype pp bt)));
               space pp ();
-              string pp "{");
+              punctuation pp "{");
           block_contents pp l1;
           match l2 with
           | Some l2 ->
               hvbox pp (fun () ->
                   box pp (fun () ->
-                      string pp "}";
+                      punctuation pp "}";
                       space pp ();
-                      string pp "else";
+                      keyword pp "else";
                       space pp ();
-                      string pp "{");
+                      punctuation pp "{");
                   block_contents pp l2;
-                  string pp "}")
-          | None -> string pp "}")
-  | Unreachable -> string pp "unreachable"
-  | Nop -> string pp "_"
-  | Pop -> string pp "_"
-  | Get x -> string pp x.desc
+                  punctuation pp "}")
+          | None -> punctuation pp "}")
+  | Unreachable -> keyword pp "unreachable"
+  | Nop -> operator pp "_"
+  | Pop -> operator pp "_"
+  | Get x -> identifier pp x.desc
   | Set (x, i) ->
       parentheses prec Assignement pp @@ fun () ->
       box pp ~indent:2 (fun () ->
           simple_pat pp x;
           space pp ();
-          string pp "=";
+          operator pp "=";
           space pp ();
           instr Assignement pp i)
   | Tee (x, i) ->
       parentheses prec Assignement pp @@ fun () ->
       box pp ~indent:2 (fun () ->
-          string pp x.desc;
+          identifier pp x.desc;
           space pp ();
-          string pp ":=";
+          operator pp ":=";
           space pp ();
           instr Assignement pp i)
   | Call (i, l) -> call_instr instr prec pp i l
@@ -407,34 +471,34 @@ let rec instr prec pp (i : _ instr) =
   | String (t, s) ->
       Option.iter
         (fun t ->
-          string pp t.desc;
-          string pp "#")
+          type_ pp t.desc;
+          operator pp "#")
         t;
       let len, s = Wasm.Output.escape_string s in
       string pp "\"";
-      string_as pp len s;
+      string pp ~len:(Some len) s;
       string pp "\""
-  | Int s | Float s -> string pp s
+  | Int s | Float s -> constant pp s
   | Cast (i, t) ->
       parentheses prec Cast pp @@ fun () ->
       box pp ~indent:2 (fun () ->
           instr Cast pp i;
           space pp ();
           box pp (fun () ->
-              string pp "as";
+              keyword pp "as";
               space pp ();
               casttype pp t))
   | NonNull i ->
       parentheses prec UnaryOp pp @@ fun () ->
       instr UnaryOp pp i;
-      string pp "!"
+      operator pp "!"
   | Test (i, t) ->
       parentheses prec Cast pp @@ fun () ->
       box pp ~indent:2 (fun () ->
           instr Cast pp i;
           space pp ();
           box pp (fun () ->
-              string pp "is";
+              keyword pp "is";
               space pp ();
               reftype pp t))
   | Struct (nm, l) ->
@@ -442,31 +506,31 @@ let rec instr prec pp (i : _ instr) =
           list_commasep
             (fun pp (nm, i) -> print_key_value pp nm.desc (instr Instruction) i)
             pp l)
-  | StructDefault nm -> struct_instr pp nm (fun () -> string pp "..")
+  | StructDefault nm -> struct_instr pp nm (fun () -> punctuation pp "..")
   | StructGet (i, s) ->
       parentheses prec FieldAccess pp @@ fun () ->
       instr FieldAccess pp i;
-      string pp ".";
-      string pp s.desc
+      operator pp ".";
+      identifier pp s.desc
   | StructSet (i, s, i') ->
       parentheses prec FieldAccess pp @@ fun () ->
       box pp ~indent:2 (fun () ->
           instr FieldAccess pp i;
-          string pp ".";
-          string pp s.desc;
+          operator pp ".";
+          identifier pp s.desc;
           space pp ();
-          string pp "=";
+          operator pp "=";
           space pp ();
           instr Assignement pp i')
   | Array (nm, i, n) ->
       array_instr pp nm (fun () ->
           instr Instruction pp i;
-          string pp ";";
+          punctuation pp ";";
           space pp ();
           instr Instruction pp n)
   | ArrayDefault (nm, n) ->
       array_instr pp nm (fun () ->
-          string pp "..;";
+          punctuation pp "..;";
           space pp ();
           instr Instruction pp n)
   | ArrayFixed (nm, l) ->
@@ -476,19 +540,19 @@ let rec instr prec pp (i : _ instr) =
           instr Call pp i1;
           cut pp ();
           box pp (fun () ->
-              string pp "[";
+              operator pp "[";
               instr Instruction pp i2;
-              string pp "]"))
+              operator pp "]"))
   | ArraySet (i1, i2, i3) ->
       box pp ~indent:2 (fun () ->
           instr Call pp i1;
           cut pp ();
           box pp (fun () ->
-              string pp "[";
+              operator pp "[";
               instr Instruction pp i2;
-              string pp "]");
+              operator pp "]");
           space pp ();
-          string pp "=";
+          operator pp "=";
           space pp ();
           instr Assignement pp i3)
   | BinOp (op, i, i') ->
@@ -497,17 +561,17 @@ let rec instr prec pp (i : _ instr) =
       box pp ~indent:2 (fun () ->
           instr left pp i;
           space pp ();
-          string pp (binop op);
+          operator pp (binop op);
           space pp ();
           instr right pp i')
   | UnOp (op, i) ->
       parentheses prec UnaryOp pp @@ fun () ->
-      string pp (unop op);
+      operator pp (unop op);
       instr UnaryOp pp i
   | Let (l, i) ->
       parentheses prec Let pp @@ fun () ->
       box pp ~indent:2 (fun () ->
-          string pp "let";
+          keyword pp "let";
           space pp ();
           (match l with
           | [ p ] -> print_typed_pat pp p
@@ -515,7 +579,7 @@ let rec instr prec pp (i : _ instr) =
           Option.iter
             (fun i ->
               space pp ();
-              string pp "=";
+              keyword pp "=";
               space pp ();
               instr Assignement pp i)
             i)
@@ -533,32 +597,32 @@ let rec instr prec pp (i : _ instr) =
       let labels = List.rev labels in
       parentheses prec Branch pp @@ fun () ->
       box pp ~indent:2 (fun () ->
-          string pp "br_table";
+          keyword pp "br_table";
           space pp ();
           box pp ~indent:2 (fun () ->
-              string pp "[";
+              punctuation pp "[";
               list
                 ~sep:(fun _ () -> ())
                 (fun pp label ->
                   space pp ();
-                  string pp "'";
-                  string pp label)
+                  identifier pp "'";
+                  identifier pp label)
                 pp
                 (List.rev (List.tl labels));
               space pp ();
               box pp (fun () ->
-                  string pp "else";
+                  keyword pp "else";
                   space pp ();
-                  string pp "'";
-                  string pp (List.hd labels));
+                  identifier pp "'";
+                  identifier pp (List.hd labels));
               space pp ();
-              string pp "]");
+              punctuation pp "]");
           space pp ();
           instr Branch pp i)
   | Return i ->
       parentheses prec Branch pp @@ fun () ->
       box pp ~indent:2 (fun () ->
-          string pp "return";
+          keyword pp "return";
           Option.iter
             (fun i ->
               space pp ();
@@ -567,15 +631,15 @@ let rec instr prec pp (i : _ instr) =
   | Throw (tag, l) ->
       parentheses prec Branch pp @@ fun () ->
       box pp ~indent:2 (fun () ->
-          string pp "throw";
+          keyword pp "throw";
           space pp ();
-          string pp tag.desc;
+          identifier pp tag.desc;
           space pp ();
           print_paren_list (instr Instruction) pp l)
   | ThrowRef i ->
       parentheses prec Branch pp @@ fun () ->
       box pp ~indent:2 (fun () ->
-          string pp "throw";
+          keyword pp "throw";
           space pp ();
           instr Branch pp i)
   | Sequence l -> print_paren_list (instr Instruction) pp l
@@ -584,12 +648,12 @@ let rec instr prec pp (i : _ instr) =
       box pp ~indent:2 (fun () ->
           instr Select pp i1;
           cut pp ();
-          string pp "?";
+          operator pp "?";
           instr Select pp i2;
           cut pp ();
-          string pp ":";
+          operator pp ":";
           instr Select pp i3)
-  | Null -> string pp "null"
+  | Null -> keyword pp "null"
 
 and block pp label kind bt (l : _ instr list) =
   hvbox pp (fun () ->
@@ -597,16 +661,16 @@ and block pp label kind bt (l : _ instr list) =
           block_label pp label;
           Option.iter
             (fun kind ->
-              string pp kind;
+              keyword pp kind;
               space pp ())
             kind;
           if need_blocktype bt then (
             blocktype pp bt;
             space pp ());
-          string pp "{");
+          punctuation pp "{");
       block_contents pp l;
       box pp (fun () ->
-          string pp "}";
+          punctuation pp "}";
           label_comment pp (l, label)))
 
 and deliminated_instr pp (i : _ instr) =
@@ -621,7 +685,7 @@ and deliminated_instr pp (i : _ instr) =
   | Select _ ->
       box pp (fun () ->
           instr Instruction pp i;
-          string pp ";")
+          punctuation pp ";")
 
 and block_contents pp (l : _ instr list) =
   if l <> [] then (
@@ -634,14 +698,14 @@ and block_contents pp (l : _ instr list) =
     space pp ())
 
 let fundecl ~tag pp (name, typ, sign) =
-  string pp (if tag then "tag" else "fn");
+  keyword pp (if tag then "tag" else "fn");
   space pp ();
-  string pp name.desc;
+  identifier pp name.desc;
   Option.iter
     (fun typ ->
-      string pp ":";
+      punctuation pp ":";
       space pp ();
-      string pp typ.desc;
+      identifier pp typ.desc;
       space pp ())
     typ;
   Option.iter
@@ -652,20 +716,20 @@ let fundecl ~tag pp (name, typ, sign) =
         pp named_params;
       if results <> [] then (
         space pp ();
-        string pp "->";
+        operator pp "->";
         space pp ();
         tuple false pp results))
     sign
 
 let print_attribute pp (name, i) =
   box pp ~indent:2 (fun () ->
-      string pp "#[";
-      string pp name;
+      attribute pp "#[";
+      attribute pp name;
       space pp ();
-      string pp "=";
+      attribute pp "=";
       space pp ();
-      instr Instruction pp i;
-      string pp "]";
+      with_style pp Attribute (fun () -> instr Instruction pp i);
+      attribute pp "]";
       space pp ())
 
 let print_attributes pp attributes = List.iter (print_attribute pp) attributes
@@ -685,26 +749,26 @@ let modulefield pp field =
                   fundecl ~tag:false pp (name, typ, sign);
                   space pp ();
                   block_label pp label;
-                  string pp "{");
+                  punctuation pp "{");
               block_contents pp body;
-              string pp "}"))
+              punctuation pp "}"))
   | Global { name; mut; typ; def; attributes = a } ->
       print_attr_prefix pp a (fun () ->
           box pp ~indent:2 (fun () ->
-              string pp (if mut then "let" else "const");
+              keyword pp (if mut then "let" else "const");
               space pp ();
-              string pp name.desc;
+              identifier pp name.desc;
               Option.iter
                 (fun t ->
-                  string pp ":";
+                  punctuation pp ":";
                   space pp ();
                   valtype pp t)
                 typ;
               space pp ();
-              string pp "=";
+              punctuation pp "=";
               space pp ();
               instr Instruction pp def;
-              string pp ";"))
+              punctuation pp ";"))
   | Fundecl { name; typ; sign; attributes = a } ->
       print_attr_prefix pp a (fun () ->
           box pp (fun () -> fundecl ~tag:false pp (name, typ, sign)))
@@ -714,12 +778,27 @@ let modulefield pp field =
   | GlobalDecl { name; mut; typ; attributes = a } ->
       print_attr_prefix pp a (fun () ->
           box pp ~indent:2 (fun () ->
-              string pp (if mut then "let" else "const");
+              keyword pp (if mut then "let" else "const");
               space pp ();
-              string pp name.desc;
-              string pp ":";
+              identifier pp name.desc;
+              punctuation pp ":";
               space pp ();
               valtype pp typ))
 
-let module_ pp l = hvbox pp (fun () -> list ~sep:space modulefield pp l)
-let instr i = instr Instruction i
+let module_ ?(color = Auto) ?out_channel printer l =
+  let use_color = should_use_color ~color ~out_channel in
+  let theme = get_theme use_color in
+  let pp = { printer; theme; style_override = None } in
+  hvbox pp (fun () -> list ~sep:space modulefield pp l)
+
+let instr printer i =
+  let use_color = should_use_color ~color:Auto ~out_channel:(Some stderr) in
+  let theme = get_theme use_color in
+  let pp = { printer; theme; style_override = None } in
+  instr Instruction pp i
+
+let valtype printer i =
+  let use_color = should_use_color ~color:Auto ~out_channel:(Some stderr) in
+  let theme = get_theme use_color in
+  let pp = { printer; theme; style_override = None } in
+  valtype pp i

@@ -5,5 +5,11 @@ val escape_string : string -> int * string
     escaped version of [s] suitable for WAT string literals, and [len] is its
     display length. *)
 
-val module_ : Utils.Printer.t -> _ Ast.Text.module_ -> unit
-val instr : Utils.Printer.t -> _ Ast.Text.instr -> unit
+val module_ :
+  ?color:Utils.Colors.flag ->
+  ?out_channel:out_channel ->
+  Utils.Printer.t ->
+  Ast.location Ast.Text.module_ ->
+  unit
+
+val instr : Utils.Printer.t -> Ast.location Ast.Text.instr -> unit

@@ -29,7 +29,7 @@ let with_open_out file f =
   | Some file -> Out_channel.with_open_bin file f
   | None -> f stdout
 
-let wat_to_wat ~input_file ~output_file ~validate =
+let wat_to_wat ~input_file ~output_file ~validate ~color =
   let text = with_open_in input_file In_channel.input_all in
   let ast =
     Wat_parser.parse_from_string
@@ -37,12 +37,15 @@ let wat_to_wat ~input_file ~output_file ~validate =
       text
   in
   if validate then Wasm.Validation.f ast;
-  let print_wat f m = Utils.Printer.run f (fun p -> Wasm.Output.module_ p m) in
   with_open_out output_file (fun oc ->
+      let print_wat f m =
+        Utils.Printer.run f (fun p ->
+            Wasm.Output.module_ ~color ~out_channel:oc p m)
+      in
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wat ast)
 
-let wat_to_wax ~input_file ~output_file ~validate =
+let wat_to_wax ~input_file ~output_file ~validate ~color =
   let text = with_open_in input_file In_channel.input_all in
   let ast =
     Wat_parser.parse_from_string
@@ -52,12 +55,15 @@ let wat_to_wax ~input_file ~output_file ~validate =
   if validate then Wasm.Validation.f ast;
   let ast = Conversion.From_wasm.module_ ast in
   if validate then Wax.Typing.f ast;
-  let print_wax f m = Utils.Printer.run f (fun p -> Wax.Output.module_ p m) in
   with_open_out output_file (fun oc ->
+      let print_wax f m =
+        Utils.Printer.run f (fun p ->
+            Wax.Output.module_ p ~color ~out_channel:oc m)
+      in
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wax ast)
 
-let wax_to_wax ~input_file ~output_file ~validate =
+let wax_to_wax ~input_file ~output_file ~validate ~color =
   let text = with_open_in input_file In_channel.input_all in
   let ast =
     Wax_parser.parse_from_string
@@ -65,8 +71,11 @@ let wax_to_wax ~input_file ~output_file ~validate =
       text
   in
   if validate then Wax.Typing.f ast;
-  let print_wax f m = Utils.Printer.run f (fun p -> Wax.Output.module_ p m) in
   with_open_out output_file (fun oc ->
+      let print_wax f m =
+        Utils.Printer.run f (fun p ->
+            Wax.Output.module_ p ~color ~out_channel:oc m)
+      in
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wax ast)
 
@@ -85,6 +94,16 @@ let format_of_string = function
   | "wax" -> Ok Wax
   | s -> Error (`Msg (Printf.sprintf "Unknown format: %s" s))
 
+let string_of_color (c : Utils.Colors.flag) =
+  match c with Never -> "never" | Always -> "always" | Auto -> "auto"
+
+let color_of_string s : (Utils.Colors.flag, _) result =
+  match s with
+  | "never" -> Ok Never
+  | "always" -> Ok Always
+  | "auto" -> Ok Auto
+  | s -> Error (`Msg (Printf.sprintf "Unknown color setting: %s" s))
+
 let detect_format filename =
   if Filename.check_suffix filename ".wat" then Some Wat
   else if Filename.check_suffix filename ".wasm" then Some Wasm
@@ -99,7 +118,7 @@ let resolve_format file_opt format_opt ~default =
   | None, None -> default
 
 let convert input_file output_file input_format_opt output_format_opt validate
-    strict_validate =
+    strict_validate color =
   Wasm.Validation.validate_refs := strict_validate;
   let std file = Option.bind file (fun f -> if f = "-" then None else Some f) in
   let input_file = std input_file in
@@ -114,7 +133,7 @@ let convert input_file output_file input_format_opt output_format_opt validate
     | Wat, Wax -> wat_to_wax
     | Wax, Wax -> wax_to_wax
     | _ ->
-        fun ~input_file:_ ~output_file:_ ~validate:_ ->
+        fun ~input_file:_ ~output_file:_ ~validate:_ ~color:_ ->
           Printf.eprintf
             "Error: Conversion from '%s' (%s) to '%s' (%s) not supported yet. \
              Run 'wax --help' for supported formats and their descriptions.\n"
@@ -124,7 +143,7 @@ let convert input_file output_file input_format_opt output_format_opt validate
             (format_description output_format);
           exit 123
   in
-  convert ~input_file ~output_file ~validate
+  convert ~input_file ~output_file ~validate ~color
 
 (* Define the input file argument (optional for stdin) *)
 let input_file =
@@ -188,6 +207,18 @@ let strict_validate_flag =
   in
   Arg.(value & flag & info [ "s"; "strict-validate" ] ~doc)
 
+(* Define the --color option *)
+let color_option =
+  let doc =
+    "Color output: 'always', 'never', or 'auto' (default). 'auto' colors only \
+     if output is a TTY."
+  in
+  let color_conv =
+    Arg.conv
+      (color_of_string, fun ppf c -> Format.fprintf ppf "%s" (string_of_color c))
+  in
+  Arg.(value & opt color_conv Auto & info [ "color" ] ~docv:"WHEN" ~doc)
+
 (* Combine into command *)
 let convert_term =
   let+ input = input_file
@@ -195,8 +226,9 @@ let convert_term =
   and+ in_fmt = input_format
   and+ out_fmt = output_format
   and+ validate = validate_flag
-  and+ strict_validate = strict_validate_flag in
-  convert input output in_fmt out_fmt validate strict_validate
+  and+ strict_validate = strict_validate_flag
+  and+ color = color_option in
+  convert input output in_fmt out_fmt validate strict_validate color
 
 let convert_cmd =
   let doc = "Convert between WebAssembly formats (.wat, .wasm, .wax)" in
@@ -224,7 +256,7 @@ let convert_cmd =
       `S Manpage.s_options;
     ]
   in
-  let info = Cmd.info "converter" ~version:"1.0" ~doc ~man in
+  let info = Cmd.info "wax" ~doc ~man in
   Cmd.v info convert_term
 
 let () = exit (Cmd.eval convert_cmd)

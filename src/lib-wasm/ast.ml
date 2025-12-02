@@ -68,8 +68,6 @@ struct
   type tabletype = { limits : limits; reftype : reftype }
 end
 
-
-
 (* Instructions *)
 
 type signage = Signed | Unsigned
@@ -281,8 +279,6 @@ struct
 
   type 'info expr = 'info instr list
 end
-
-
 
 (* Modules *)
 

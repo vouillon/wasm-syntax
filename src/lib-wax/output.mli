@@ -2,4 +2,10 @@
 
 val instr : Utils.Printer.t -> _ Ast.instr -> unit
 val valtype : Utils.Printer.t -> Ast.valtype -> unit
-val module_ : Utils.Printer.t -> _ Ast.modulefield list -> unit
+
+val module_ :
+  ?color:Utils.Colors.flag ->
+  ?out_channel:out_channel ->
+  Utils.Printer.t ->
+  'a Ast.modulefield list ->
+  unit

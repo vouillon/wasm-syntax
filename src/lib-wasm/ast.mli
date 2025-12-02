@@ -69,8 +69,6 @@ end) : sig
   type tabletype = { limits : limits; reftype : reftype }
 end
 
-
-
 (* Instructions *)
 
 type signage = Signed | Unsigned
@@ -282,8 +280,6 @@ end) : sig
   type 'info expr = 'info instr list
 end
 
-
-
 (* Modules *)
 
 module Text : sig
@@ -305,11 +301,12 @@ module Text : sig
 
   include module type of Make_instructions (struct
     include X
-    (* include Types *) (* Can't include module type directly if not named, but Instructions expects fields *)
+    (* include Types *)
+    (* Can't include module type directly if not named, but Instructions expects fields *)
+
     type heaptype = Make_types(X).heaptype
     type reftype = Make_types(X).reftype
     type valtype = Make_types(X).valtype
-
     type nonrec typeuse = typeuse_no_bindings
     type int32_t = string
     type int64_t = string
@@ -397,10 +394,10 @@ module Binary : sig
 
   include module type of Make_instructions (struct
     include X
+
     type heaptype = Make_types(X).heaptype
     type reftype = Make_types(X).reftype
     type valtype = Make_types(X).valtype
-
     type nonrec typeuse = typeuse
     type int32_t = Int32.t
     type int64_t = Int32.t

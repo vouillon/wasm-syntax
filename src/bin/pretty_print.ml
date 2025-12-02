@@ -7,7 +7,8 @@ module P =
     (Wasm.Fast_parser)
     (Wasm.Lexer)
 
-let print_module f m = Utils.Printer.run f (fun p -> Wasm.Output.module_ p m)
+let print_module f m =
+  Utils.Printer.run f (fun p -> Wasm.Output.module_ ~out_channel:stdout p m)
 
 let convert ~filename =
   let ast = P.parse ~filename in

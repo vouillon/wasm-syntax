@@ -13,7 +13,9 @@ let convert ~filename =
   Wasm.Validation.f ast;
   let ast' = Conversion.From_wasm.module_ ast in
   Wax.Typing.f ast';
-  let print_wax f m = Utils.Printer.run f (fun p -> Wax.Output.module_ p m) in
+  let print_wax f m =
+    Utils.Printer.run f (fun p -> Wax.Output.module_ ~out_channel:stdout p m)
+  in
   Format.printf "/////////// %s //////////@.@.%a@." filename print_wax ast'
 
 let _ =
