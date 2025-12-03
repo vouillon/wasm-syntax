@@ -56,6 +56,8 @@ Explicit types?
 
 open Ast
 
+type typed_module_annotation = Ast.storagetype list * Ast.location
+
 module Output = struct
   include Output
 
@@ -1914,21 +1916,26 @@ let f fields =
     }
   in
   let fields = globals type_context ctx fields in
-  let _ = functions ctx fields in
-  ()
-(*
-  Ast_utils.map_instr
-    (fun (ty, loc) ->
-       match UnionFind.find ty with
-       | Any -> 
-       | Null
-  | Number
-  | Int8
-  | Int16
-  | Int
-  | Float
-  | Valtype of inferred_valtype
-*)
+  let fields = functions ctx fields in
+  List.map
+    (fun f ->
+      Ast_utils.map_modulefield
+        (fun (types, loc) ->
+          ( List.map
+              (fun ty ->
+                match UnionFind.find ty with
+                | Any -> Value I32
+                | Null -> Value (Ref { nullable = true; typ = Any })
+                | Number -> Value I32
+                | Int8 -> Packed I8
+                | Int16 -> Packed I16
+                | Int -> Value I32
+                | Float -> Value F64
+                | Valtype { typ; _ } -> Value typ)
+              types,
+            loc ))
+        f)
+    fields
 
 (*
 - Arity inference?

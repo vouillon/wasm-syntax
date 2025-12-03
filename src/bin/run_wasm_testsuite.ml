@@ -239,13 +239,15 @@ let runtest filename path =
           prerr_endline (Printexc.to_string e);
           Format.eprintf "@[%a@]@." (print_module ~color:Always) m
       | m ->
-          let ok = in_child_process (fun () -> Wax.Typing.f m) in
+          let ok = in_child_process (fun () -> ignore (Wax.Typing.f m)) in
           if not ok then Format.eprintf "@[%a@]@." (print_wax ~color:Always) m;
           let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
           let ok =
             in_child_process (fun () ->
                 let m' = WaxParser.parse_from_string ~filename text in
-                let ok = in_child_process (fun () -> Wax.Typing.f m') in
+                let ok =
+                  in_child_process (fun () -> ignore (Wax.Typing.f m'))
+                in
                 if not ok then
                   if true then prerr_endline "(after parsing)"
                   else (

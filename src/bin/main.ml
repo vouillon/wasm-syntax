@@ -53,15 +53,15 @@ let wat_to_wax ~input_file ~output_file ~validate ~color =
       text
   in
   if validate then Wasm.Validation.f ast;
-  let ast = Conversion.From_wasm.module_ ast in
-  if validate then Wax.Typing.f ast;
+  let wax_ast = Conversion.From_wasm.module_ ast in
+  if validate then ignore (Wax.Typing.f wax_ast);
   with_open_out output_file (fun oc ->
       let print_wax f m =
         Utils.Printer.run f (fun p ->
             Wax.Output.module_ p ~color ~out_channel:oc m)
       in
       let fmt = Format.formatter_of_out_channel oc in
-      Format.fprintf fmt "%a@." print_wax ast)
+      Format.fprintf fmt "%a@." print_wax wax_ast)
 
 let wax_to_wax ~input_file ~output_file ~validate ~color =
   let text = with_open_in input_file In_channel.input_all in
@@ -70,7 +70,7 @@ let wax_to_wax ~input_file ~output_file ~validate ~color =
       ~filename:(Option.value ~default:"-" input_file)
       text
   in
-  if validate then Wax.Typing.f ast;
+  if validate then ignore (Wax.Typing.f ast);
   with_open_out output_file (fun oc ->
       let print_wax f m =
         Utils.Printer.run f (fun p ->

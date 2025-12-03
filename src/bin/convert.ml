@@ -12,7 +12,7 @@ let convert ~filename =
   Wasm.Validation.validate_refs := false;
   Wasm.Validation.f ast;
   let ast' = Conversion.From_wasm.module_ ast in
-  Wax.Typing.f ast';
+  ignore (Wax.Typing.f ast');
   let print_wax f m =
     Utils.Printer.run f (fun p -> Wax.Output.module_ ~out_channel:stdout p m)
   in
