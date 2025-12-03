@@ -1,9 +1,11 @@
 (*ZZZZ
-Should use string_as for identifiers and comments
+Should use string_as for comments
 *)
 
 open Utils.Colors
 open Ast
+
+let indent_level = 4
 
 let get_theme use_color =
   if use_color then
@@ -45,7 +47,10 @@ let space pp () = Utils.Printer.space pp.printer ()
 let cut pp () = Utils.Printer.cut pp.printer ()
 let punctuation pp s = print_styled pp Punctuation s
 let operator pp s = print_styled pp Operator s
-let identifier pp s = print_styled pp Identifier s
+
+let identifier pp s =
+  print_styled pp Identifier ~len:(Some (Wasm.Output.utf8_length s)) s
+
 let constant pp s = print_styled pp Constant s
 let keyword pp s = print_styled pp Keyword s
 let type_ pp s = print_styled pp Type s
@@ -125,14 +130,14 @@ let simple_pat pp p =
   match p with Some x -> identifier pp x.desc | None -> operator pp "_"
 
 let print_key_value pp key val_printer value =
-  box pp ~indent:2 (fun () ->
+  box pp ~indent:indent_level (fun () ->
       identifier pp key;
       punctuation pp ":";
       space pp ();
       val_printer pp value)
 
 let print_typed_pat pp (pat, opt_typ) =
-  box pp ~indent:2 (fun () ->
+  box pp ~indent:indent_level (fun () ->
       simple_pat pp pat;
       Option.iter
         (fun t ->
@@ -142,7 +147,7 @@ let print_typed_pat pp (pat, opt_typ) =
         opt_typ)
 
 let functype pp { params; results } =
-  box pp ~indent:2 (fun () ->
+  box pp ~indent:indent_level (fun () ->
       keyword pp "fn";
       tuple true pp (Array.to_list params);
       if results <> [||] then (
@@ -155,7 +160,7 @@ let blocktype pp { params; results } =
   match (params, results) with
   | [||], [| ty |] -> valtype pp ty
   | _ ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           tuple true pp (Array.to_list params);
           if results <> [||] then (
             space pp ();
@@ -170,7 +175,7 @@ let storagetype pp t =
 
 let muttype t pp { mut; typ } =
   if mut then
-    box pp ~indent:2 (fun () ->
+    box pp ~indent:indent_level (fun () ->
         keyword pp "mut";
         space pp ();
         t pp typ)
@@ -183,7 +188,7 @@ let comptype pp (t : comptype) =
   | Func t -> functype pp t
   | Struct l ->
       (* The opening brace is printed in [subtype] *)
-      indent pp 2 (fun () ->
+      indent pp indent_level (fun () ->
           space pp ();
           list_commasep
             (fun pp (nm, t) -> print_key_value pp nm.desc fieldtype t)
@@ -228,7 +233,7 @@ let rectype pp t =
               keyword pp "rec";
               space pp ();
               punctuation pp "{");
-          indent pp 2 (fun () ->
+          indent pp indent_level (fun () ->
               space pp ();
               list ~sep:space subtype pp l);
           space pp ();
@@ -350,7 +355,7 @@ let casttype pp ty =
 
 let branch_instr instr prec pp name label i =
   parentheses prec Branch pp @@ fun () ->
-  box pp ~indent:2 (fun () ->
+  box pp ~indent:indent_level (fun () ->
       keyword pp name;
       space pp ();
       identifier pp "'";
@@ -363,7 +368,7 @@ let branch_instr instr prec pp name label i =
 
 let branch_ref_instr instr prec pp name label ty i =
   parentheses prec Branch pp @@ fun () ->
-  box pp ~indent:2 (fun () ->
+  box pp ~indent:indent_level (fun () ->
       keyword pp name;
       space pp ();
       identifier pp "'";
@@ -375,7 +380,7 @@ let branch_ref_instr instr prec pp name label ty i =
 
 let call_instr instr prec pp ?prefix i l =
   parentheses prec Call pp @@ fun () ->
-  box pp ~indent:2 (fun () ->
+  box pp ~indent:indent_level (fun () ->
       Option.iter
         (fun s ->
           keyword pp s;
@@ -399,13 +404,14 @@ let print_container pp ~opening ~closing ?(indent = 0) opt_type f =
 
 let struct_instr pp nm f =
   print_container pp ~opening:"{" ~closing:"}" ~indent:0 nm (fun () ->
-      indent pp 2 (fun () ->
+      indent pp indent_level (fun () ->
           space pp ();
           f ());
       space pp ())
 
 let array_instr pp nm f =
-  print_container pp ~opening:"[" ~closing:"]" ~indent:2 nm (fun () ->
+  print_container pp ~opening:"[" ~closing:"]" ~indent:indent_level nm
+    (fun () ->
       space pp ();
       f ())
 
@@ -422,12 +428,12 @@ let rec instr prec pp (i : _ instr) =
           box pp (fun () ->
               block_label pp label;
               keyword pp "if";
-              indent pp 2 (fun () ->
+              indent pp indent_level (fun () ->
                   space pp ();
                   instr Instruction pp i;
                   if need_blocktype bt then (
                     space pp ();
-                    box pp ~indent:2 (fun () ->
+                    box pp ~indent:indent_level (fun () ->
                         punctuation pp "=>";
                         space pp ();
                         blocktype pp bt)));
@@ -452,7 +458,7 @@ let rec instr prec pp (i : _ instr) =
   | Get x -> identifier pp x.desc
   | Set (x, i) ->
       parentheses prec Assignement pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           simple_pat pp x;
           space pp ();
           operator pp "=";
@@ -460,7 +466,7 @@ let rec instr prec pp (i : _ instr) =
           instr Assignement pp i)
   | Tee (x, i) ->
       parentheses prec Assignement pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           identifier pp x.desc;
           space pp ();
           operator pp ":=";
@@ -481,7 +487,7 @@ let rec instr prec pp (i : _ instr) =
   | Int s | Float s -> constant pp s
   | Cast (i, t) ->
       parentheses prec Cast pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           instr Cast pp i;
           space pp ();
           box pp (fun () ->
@@ -494,7 +500,7 @@ let rec instr prec pp (i : _ instr) =
       operator pp "!"
   | Test (i, t) ->
       parentheses prec Cast pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           instr Cast pp i;
           space pp ();
           box pp (fun () ->
@@ -514,7 +520,7 @@ let rec instr prec pp (i : _ instr) =
       identifier pp s.desc
   | StructSet (i, s, i') ->
       parentheses prec FieldAccess pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           instr FieldAccess pp i;
           operator pp ".";
           identifier pp s.desc;
@@ -536,7 +542,7 @@ let rec instr prec pp (i : _ instr) =
   | ArrayFixed (nm, l) ->
       array_instr pp nm (fun () -> list_commasep (instr Instruction) pp l)
   | ArrayGet (i1, i2) ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           instr Call pp i1;
           cut pp ();
           box pp (fun () ->
@@ -544,7 +550,7 @@ let rec instr prec pp (i : _ instr) =
               instr Instruction pp i2;
               operator pp "]"))
   | ArraySet (i1, i2, i3) ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           instr Call pp i1;
           cut pp ();
           box pp (fun () ->
@@ -558,7 +564,7 @@ let rec instr prec pp (i : _ instr) =
   | BinOp (op, i, i') ->
       let out, left, right = prec_op op in
       parentheses prec out pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           instr left pp i;
           space pp ();
           operator pp (binop op);
@@ -570,7 +576,7 @@ let rec instr prec pp (i : _ instr) =
       instr UnaryOp pp i
   | Let (l, i) ->
       parentheses prec Let pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           keyword pp "let";
           space pp ();
           (match l with
@@ -596,10 +602,10 @@ let rec instr prec pp (i : _ instr) =
   | Br_table (labels, i) ->
       let labels = List.rev labels in
       parentheses prec Branch pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           keyword pp "br_table";
           space pp ();
-          box pp ~indent:2 (fun () ->
+          box pp ~indent:indent_level (fun () ->
               punctuation pp "[";
               list
                 ~sep:(fun _ () -> ())
@@ -621,7 +627,7 @@ let rec instr prec pp (i : _ instr) =
           instr Branch pp i)
   | Return i ->
       parentheses prec Branch pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           keyword pp "return";
           Option.iter
             (fun i ->
@@ -630,7 +636,7 @@ let rec instr prec pp (i : _ instr) =
             i)
   | Throw (tag, l) ->
       parentheses prec Branch pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           keyword pp "throw";
           space pp ();
           identifier pp tag.desc;
@@ -638,14 +644,14 @@ let rec instr prec pp (i : _ instr) =
           print_paren_list (instr Instruction) pp l)
   | ThrowRef i ->
       parentheses prec Branch pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           keyword pp "throw";
           space pp ();
           instr Branch pp i)
   | Sequence l -> print_paren_list (instr Instruction) pp l
   | Select (i1, i2, i3) ->
       parentheses prec Select pp @@ fun () ->
-      box pp ~indent:2 (fun () ->
+      box pp ~indent:indent_level (fun () ->
           instr Select pp i1;
           cut pp ();
           operator pp "?";
@@ -689,7 +695,7 @@ and deliminated_instr pp (i : _ instr) =
 
 and block_contents pp (l : _ instr list) =
   if l <> [] then (
-    indent pp 2 (fun () ->
+    indent pp indent_level (fun () ->
         List.iter
           (fun i ->
             space pp ();
@@ -722,7 +728,7 @@ let fundecl ~tag pp (name, typ, sign) =
     sign
 
 let print_attribute pp (name, i) =
-  box pp ~indent:2 (fun () ->
+  box pp ~indent:indent_level (fun () ->
       attribute pp "#[";
       attribute pp name;
       space pp ();
@@ -754,7 +760,7 @@ let modulefield pp field =
               punctuation pp "}"))
   | Global { name; mut; typ; def; attributes = a } ->
       print_attr_prefix pp a (fun () ->
-          box pp ~indent:2 (fun () ->
+          box pp ~indent:indent_level (fun () ->
               keyword pp (if mut then "let" else "const");
               space pp ();
               identifier pp name.desc;
@@ -777,7 +783,7 @@ let modulefield pp field =
           box pp (fun () -> fundecl ~tag:true pp (name, typ, sign)))
   | GlobalDecl { name; mut; typ; attributes = a } ->
       print_attr_prefix pp a (fun () ->
-          box pp ~indent:2 (fun () ->
+          box pp ~indent:indent_level (fun () ->
               keyword pp (if mut then "let" else "const");
               space pp ();
               identifier pp name.desc;

@@ -17,6 +17,7 @@ TODO:
 - check constant expressions
 - option to tighten casts to any/extern / eliminate redundant casts
   and type annotations
+- framework for dealing with errors (that can handle several errors)
 
 Comments
 - process the flow of tokens

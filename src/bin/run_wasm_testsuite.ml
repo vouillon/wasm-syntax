@@ -1,10 +1,7 @@
 (*
-- perform parsing and validation tests
-- output the tests and read them back to test the text output
-  ==> we need to isolate the tests from what is parsed
 - fix remaining issues
 - try to convert non-validating code to test more failure cases
-- conversion to rust-like format and typing
+- round-trip through wasx syntax
 - Somehow checks that round-tripping yield the identity
   (on unfolded code without identifiers?)
 *)

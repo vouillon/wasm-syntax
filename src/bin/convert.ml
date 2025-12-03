@@ -16,7 +16,8 @@ let convert ~filename =
   let print_wax f m =
     Utils.Printer.run f (fun p -> Wax.Output.module_ ~out_channel:stdout p m)
   in
-  Format.printf "/////////// %s //////////@.@.%a@." filename print_wax ast'
+  Format.eprintf "%s==== %s ====%s@.@.%a@.@." Utils.Colors.Ansi.grey filename
+    Utils.Colors.Ansi.reset print_wax ast'
 
 let _ =
   let p = "/home/jerome/wasm_of_ocaml/runtime/wasm" in
