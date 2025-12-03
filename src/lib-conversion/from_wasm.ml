@@ -559,7 +559,7 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       let* () = Stack.consume inputs in
       Stack.push outputs (with_loc (Block (label (), blocktype ctx typ, body)))
   | Loop { label; typ; block } ->
-      let label, ctx = push_label ctx ~loop:false label typ in
+      let label, ctx = push_label ctx ~loop:true label typ in
       let body = Stack.run (instructions ctx block) in
       let inputs, outputs = blocktype_arity ctx typ in
       let* () = Stack.consume inputs in
