@@ -398,52 +398,44 @@ module Binary = struct
     type float_t = float
   end)
 
-  type importdesc =
-    | Func of typeuse
-    | Memory of limits
-    | Global of globaltype
-    | Tag of typeuse
-
   type exportable = Func | Memory | Tag | Global
   type 'info datamode = Passive | Active of idx * 'info expr
   type 'info elemmode = Passive | Active of idx * 'info expr | Declare
+  type import = { module_ : string; name : string; desc : exportable }
+  type 'info table = { typ : limits; expr : 'info expr option }
 
-  type 'info modulefield =
-    | Types of rectype
-    | Import of {
-        module_ : string;
-        name : string;
-        id : id option;
-        desc : importdesc;
-        exports : string list;
-      }
-    | Func of {
-        id : id option;
-        typ : typeuse;
-        locals : (id option * valtype) list;
-        instrs : 'info instr list;
-        exports : string list;
-      }
-    | Memory of {
-        id : id option;
-        limits : limits;
-        init : string option;
-        exports : string list;
-      }
-    | Tag of { id : id option; typ : typeuse; exports : string list }
-    | Global of {
-        id : id option;
-        typ : globaltype;
-        init : 'info expr;
-        exports : string list;
-      }
-    | Export of { name : string; kind : exportable; index : idx }
-    | Start of idx
-    | Elem of {
-        id : id option;
-        typ : reftype;
-        init : 'info expr list;
-        mode : 'info elemmode;
-      }
-    | Data of { id : id option; init : string; mode : 'info datamode }
+  type 'info memory = {
+    id : id option;
+    limits : limits;
+    init : string option;
+    exports : string list;
+  }
+
+  type tag = { typ : typeuse; exports : string list }
+  type 'info global = { typ : globaltype; init : 'info expr }
+  type export = { name : string; kind : exportable; index : idx }
+
+  type 'info elem = {
+    typ : reftype;
+    init : 'info expr list;
+    mode : 'info elemmode;
+  }
+
+  type 'info code = { locals : valtype list; instrs : 'info instr list }
+  type 'info data = { init : string; mode : 'info datamode }
+
+  type 'info module_ = {
+    types : rectype list;
+    imports : import list;
+    functions : idx list;
+    tables : 'info table list;
+    memories : limits list;
+    tags : idx list;
+    globals : 'info global list;
+    exports : export list;
+    start : idx;
+    elem : 'info elem list;
+    code : 'info code list;
+    data : 'info data list;
+  }
 end
