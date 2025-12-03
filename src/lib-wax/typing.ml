@@ -182,6 +182,7 @@ let add_type ctx ty =
 type inferred_valtype = { typ : valtype; internal : Internal.valtype }
 
 type inferred_type =
+  | Any
   | Null
   | Number
   | Int8
@@ -330,6 +331,8 @@ let subtype ctx ty ty' =
   | (Int8 | Int16), _
   | _, (Int8 | Int16) ->
       false
+  | Any, _ -> true
+  | _, Any -> assert false
 
 let cast ctx ty ty' =
   (*ZZZ Cast between Any and Extern *)
@@ -396,6 +399,7 @@ let cast ctx ty ty' =
   | Valtype { internal = Tuple _; _ }, _
   | (Int8 | Int16), _ ->
       false
+  | Any, _ -> true
 
 let signed_cast ctx ty ty' =
   let ity = UnionFind.find ty in
@@ -443,14 +447,16 @@ let signed_cast ctx ty ty' =
           } ),
       _ ) ->
       false
+  | Any, _ -> true (*ZZZ ?*)
 
 type stack =
   | Unreachable
   | Empty
-  | Cons of location * inferred_type UnionFind.t option * stack
+  | Cons of location * inferred_type UnionFind.t * stack
 
 let output_inferred_type f ty =
   match UnionFind.find ty with
+  | Any -> Format.fprintf f "any"
   | Null -> Format.fprintf f "null"
   | Number -> Format.fprintf f "number"
   | Int -> Format.fprintf f "int"
@@ -464,18 +470,18 @@ let rec output_stack f st =
   | Empty -> ()
   | Unreachable -> Format.fprintf f "@ unreachable"
   | Cons (_, ty, st) ->
-      Format.fprintf f "@ %a%a"
-        (Format.pp_print_option
-           ~none:(fun f _ -> Format.fprintf f "bot")
-           output_inferred_type)
-        ty output_stack st
+      Format.fprintf f "@ %a%a" output_inferred_type ty output_stack st
 
 let print_stack st =
   Format.eprintf "Stack:%a@." output_stack st;
   (st, ())
 
 let _ = print_stack
-let unreachable _ = (Unreachable, ())
+
+let unreachable e st =
+  let _, v = e st in
+  (Unreachable, v)
+
 let return v st = (st, v)
 
 let ( let* ) e f st =
@@ -484,15 +490,14 @@ let ( let* ) e f st =
 
 let pop_any st =
   match st with
-  | Unreachable -> (Unreachable, None)
+  | Unreachable -> (Unreachable, UnionFind.make Any)
   | Cons (_, ty, r) -> (r, ty)
-  | Empty -> assert false
+  | Empty -> assert false (*ZZZ*)
 
 let pop ctx ty st =
   match st with
   | Unreachable -> (Unreachable, ())
-  | Cons (_, None, r) -> (r, ())
-  | Cons (_, Some ty', r) ->
+  | Cons (_, ty', r) ->
       let ok = subtype ctx ty' ty in
       if not ok then
         Format.eprintf "%a <: %a@." output_inferred_type ty'
@@ -502,7 +507,7 @@ let pop ctx ty st =
   | Empty -> assert false
 
 let push_poly loc ty st = (Cons (loc, ty, st), ())
-let push loc ty st = push_poly loc (Some ty) st
+let push loc ty st = push_poly loc ty st
 
 let rec pop_args ctx args =
   match args with
@@ -585,6 +590,27 @@ let field_has_default (ty : fieldtype) =
       | Ref { nullable; _ } -> nullable
       | Tuple _ -> assert false)
 
+let return_statement (i : 'a instr)
+    (desc : ('a * inferred_type UnionFind.t list) instr_desc) ty =
+  return { desc; info = (ty, i.info) }
+
+let return_expression i desc ty = return_statement i desc [ ty ]
+
+let expression_type i =
+  match i.info with [ ty ], _ -> ty | _ -> assert false (*ZZZ*)
+
+let check_subtype ctx ty' ty =
+  let ok = subtype ctx ty' ty in
+  if not ok then
+    Format.eprintf "%a <: %a@." output_inferred_type ty' output_inferred_type ty;
+  assert ok
+
+let check_subtypes ctx types' types =
+  assert (List.length types' = List.length types);
+  List.iter2 (fun ty' ty -> check_subtype ctx ty' ty) types' types
+
+let check_type ctx i ty = check_subtype ctx (expression_type i) ty
+
 let rec instruction ctx i =
   (*
   let* () = print_stack in
@@ -592,6 +618,7 @@ let rec instruction ctx i =
   if false then Format.eprintf "%a@." Output.instr i;
   match i.desc with
   | Block (label, bt, instrs) ->
+      (*ZZZ Blocks take argument from the stack *)
       let { params; results } = bt in
       let params =
         Array.to_list
@@ -608,14 +635,10 @@ let rec instruction ctx i =
              results)
       in
       let* () = pop_args ctx params in
-      block ctx i.info label params results results instrs;
-      push_results
-        (List.map
-           (fun typ ->
-             ( i.info,
-               (*ZZZ*)
-               UnionFind.make (Valtype typ) ))
-           results)
+      let instrs' = block ctx i.info label params results results instrs in
+      return_statement i
+        (Block (label, bt, instrs'))
+        (List.map (fun typ -> UnionFind.make (Valtype typ)) results)
   | Loop (label, bt, instrs) ->
       let { params; results } = bt in
       let params0 =
@@ -632,16 +655,12 @@ let rec instruction ctx i =
              results)
       in
       let* () = pop_args ctx params in
-      block ctx i.info label params results params0 instrs;
-      push_results
-        (List.map
-           (fun typ ->
-             ( i.info,
-               (*ZZZ*)
-               UnionFind.make (Valtype typ) ))
-           results)
+      let instrs' = block ctx i.info label params results params0 instrs in
+      return_statement i
+        (Loop (label, bt, instrs'))
+        (List.map (fun typ -> UnionFind.make (Valtype typ)) results)
   | If (label, bt, i', if_block, else_block) ->
-      let* () = instruction ctx i' in
+      let* i' = instruction ctx i' in
       let { params; results } = bt in
       let params =
         Array.to_list
@@ -661,118 +680,115 @@ let rec instruction ctx i =
         pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
       in
       let* () = pop_args ctx params in
-      block ctx i.info label params results results if_block;
-      (match else_block with
-      | None -> ()
-      | Some else_block ->
-          block ctx i.info label params results results else_block);
-      push_results
-        (List.map
-           (fun typ ->
-             ( i.info,
-               (*ZZZ*)
-               UnionFind.make (Valtype typ) ))
-           results)
-  | Unreachable -> unreachable
-  | Nop -> return ()
-  | Pop -> return ()
-  | Null -> push i.info (UnionFind.make Null)
-  | Get idx -> (
-      match StringMap.find_opt idx.desc ctx.locals with
-      | Some ty -> push i.info (UnionFind.make (Valtype ty))
-      | None -> (
-          match Tbl.find_opt ctx.globals idx with
-          | Some (_, ty) -> push i.info (UnionFind.make (Valtype ty))
-          | None -> (
-              match Tbl.find_opt ctx.functions idx with
-              | Some (ty, ty') ->
-                  push i.info
-                    (UnionFind.make
-                       (Valtype
-                          {
-                            typ =
-                              Ref
-                                {
-                                  nullable = false;
-                                  typ = Type (Ast.no_loc ty');
-                                };
-                            internal = Ref { nullable = false; typ = Type ty };
-                          }))
-              | None ->
-                  Format.eprintf "%a@." Output.instr i;
-                  assert false)))
-  | Set (None, i') ->
-      let* () = instruction ctx i' in
-      let* _ = pop_any in
-      return ()
-  | Set (Some idx, i') -> (
-      let* () = instruction ctx i' in
-      match StringMap.find_opt idx.desc ctx.locals with
-      | Some ty -> pop ctx (UnionFind.make (Valtype ty))
-      | None -> (
-          match Tbl.find_opt ctx.globals idx with
-          | Some (mut, ty) ->
-              assert mut;
-              (*ZZZ*)
-              pop ctx (UnionFind.make (Valtype ty))
-          | None -> (
-              match Tbl.find_opt ctx.functions idx with
-              | Some _ -> assert false (*ZZZ*)
-              | None -> assert false)))
-  | Tee (idx, i') -> (
-      let* () = instruction ctx i' in
-      (*ZZZ local *)
-      match StringMap.find_opt idx.desc ctx.locals with
-      | Some ty ->
-          let typ = UnionFind.make (Valtype ty) in
-          let* () = pop ctx typ in
-          push i.info typ
-      | None -> (
-          match Tbl.find_opt ctx.globals idx with
-          | Some _ -> assert false
-          (*ZZZ*)
-          | None -> (
-              match Tbl.find_opt ctx.functions idx with
-              | Some _ -> assert false (*ZZZ*)
-              | None -> assert false)))
-  | Call ({ desc = StructGet (a, { desc = "fill"; _ }); _ }, [ i; v; n ]) -> (
-      let* () = instruction ctx a in
-      let* () = instruction ctx i in
-      let* () = instruction ctx v in
-      let* () = instruction ctx n in
-      let* () =
-        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+      let if_block' = block ctx i.info label params results results if_block in
+      let else_block' =
+        Option.map
+          (fun b -> block ctx i.info label params results results b)
+          else_block
       in
-      let* ty' = pop_any in
-      let* () =
-        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
-      in
+      return_statement i
+        (If (label, bt, i', if_block', else_block'))
+        (List.map (fun typ -> UnionFind.make (Valtype typ)) results)
+  | Unreachable ->
+      (* ZZZ Only at top_level *)
+      return_statement i Unreachable [] |> unreachable
+  | Nop ->
+      (* ZZZ Only at top_level *)
+      return_statement i Nop []
+  | Pop ->
       let* ty = pop_any in
-      match ty with
-      | None -> return ()
-      | Some ty -> (
-          match UnionFind.find ty with
-          | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
-              match Tbl.find ctx.types ty with
-              | _, Array typ -> (
-                  assert typ.mut;
-                  let typ = unpack_type typ in
-                  match ty' with
-                  | None -> return ()
-                  | Some ty' ->
-                      let ty =
-                        UnionFind.make
-                          (Valtype
-                             { typ; internal = valtype ctx.type_context typ })
-                      in
-                      let ok = subtype ctx ty' ty in
-                      if not ok then
-                        Format.eprintf "%a <: %a@." output_inferred_type ty'
-                          output_inferred_type ty;
-                      assert ok;
-                      return ())
-              | _ -> assert false)
-          | _ -> assert false (*ZZZ*)))
+      return_expression i Pop ty
+  | Null -> return_expression i Null (UnionFind.make Null)
+  | Get idx as desc ->
+      let ty =
+        match StringMap.find_opt idx.desc ctx.locals with
+        | Some ty -> ty
+        | None -> (
+            match Tbl.find_opt ctx.globals idx with
+            | Some (_, ty) -> ty
+            | None -> (
+                match Tbl.find_opt ctx.functions idx with
+                | Some (ty, ty') ->
+                    {
+                      typ =
+                        Ref { nullable = false; typ = Type (Ast.no_loc ty') };
+                      internal = Ref { nullable = false; typ = Type ty };
+                    }
+                | None ->
+                    Format.eprintf "%a@." Output.instr i;
+                    assert false))
+      in
+      return_expression i desc (UnionFind.make (Valtype ty))
+  | Set (None, i') ->
+      let* i' = instruction ctx i' in
+      return_statement i (Set (None, i')) []
+  | Set (Some idx, i') ->
+      let ty =
+        match StringMap.find_opt idx.desc ctx.locals with
+        | Some ty -> ty
+        | None -> (
+            match Tbl.find_opt ctx.globals idx with
+            | Some (mut, ty) ->
+                assert mut;
+                (*ZZZ*)
+                ty
+            | None -> (
+                match Tbl.find_opt ctx.functions idx with
+                | Some _ -> assert false (*ZZZ*)
+                | None -> assert false))
+      in
+      let* i' = instruction ctx i' in
+      check_type ctx i' (UnionFind.make (Valtype ty));
+      return_statement i (Set (Some idx, i')) []
+  | Tee (idx, i') ->
+      let* i' = instruction ctx i' in
+      (*ZZZ local *)
+      let ty =
+        match StringMap.find_opt idx.desc ctx.locals with
+        | Some ty -> UnionFind.make (Valtype ty)
+        | None -> (
+            match Tbl.find_opt ctx.globals idx with
+            | Some _ -> assert false
+            (*ZZZ*)
+            | None -> (
+                match Tbl.find_opt ctx.functions idx with
+                | Some _ -> assert false (*ZZZ*)
+                | None -> assert false))
+      in
+      check_type ctx i' ty;
+      return_statement i (Tee (idx, i')) []
+  | Call
+      ( ({ desc = StructGet (a, ({ desc = "fill"; _ } as meth)); _ } as func),
+        [ j; v; n ] ) ->
+      let* a' = instruction ctx a in
+      let* j' = instruction ctx j in
+      let* v' = instruction ctx v in
+      let* n' = instruction ctx n in
+      check_type ctx n' (UnionFind.make (Valtype { typ = I32; internal = I32 }));
+      check_type ctx j' (UnionFind.make (Valtype { typ = I32; internal = I32 }));
+      (match UnionFind.find (expression_type a') with
+      | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
+          match Tbl.find ctx.types ty with
+          | _, Array typ ->
+              assert typ.mut;
+              let typ = unpack_type typ in
+              let ty' = expression_type v' in
+              let ty =
+                UnionFind.make
+                  (Valtype { typ; internal = valtype ctx.type_context typ })
+              in
+              let ok = subtype ctx ty' ty in
+              if not ok then
+                Format.eprintf "%a <: %a@." output_inferred_type ty'
+                  output_inferred_type ty;
+              assert ok
+          | _ -> assert false)
+      | _ -> assert false (*ZZZ*));
+      return_statement i
+        (Call
+           ( { desc = StructGet (a', meth); info = ([], func.info) },
+             [ j'; v'; n' ] ))
+        []
   | Call ({ desc = StructGet (a1, { desc = "copy"; _ }); _ }, [ i1; a2; i2; n ])
     -> (
       let* () = instruction ctx a1 in
@@ -823,95 +839,73 @@ let rec instruction ctx i =
       | Some typ1, Some typ2 -> check_float_bin_op i typ1 typ2
       | _ -> assert false (*ZZZ*))
   | Call (i', l) -> (
-      let* () = instructions ctx l in
-      let* () = instruction ctx i' in
-      let* ty = pop_any in
-      match ty with
-      | None -> assert false (*ZZZ*)
-      | Some ty -> (
-          match UnionFind.find ty with
-          | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
-              match Tbl.find ctx.types ty with
-              | _, Func typ ->
-                  let* () =
-                    pop_args ctx
-                      (Array.to_list
-                         (Array.map
-                            (fun typ ->
-                              UnionFind.make
-                                (Valtype
-                                   {
-                                     typ;
-                                     internal = valtype ctx.type_context typ;
-                                   }))
-                            typ.params))
-                  in
-                  push_results
-                    (Array.to_list
-                       (Array.map
-                          (fun typ ->
-                            ( i.info,
-                              (*ZZZ*)
-                              UnionFind.make
-                                (Valtype
-                                   {
-                                     typ;
-                                     internal = valtype ctx.type_context typ;
-                                   }) ))
-                          typ.results))
-              | _ -> assert false)
-          | _ -> assert false (*ZZZ*)))
+      let* l' = instructions ctx l in
+      let* i' = instruction ctx i' in
+      match UnionFind.find (expression_type i') with
+      | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
+          match Tbl.find ctx.types ty with
+          | _, Func typ ->
+              let types =
+                Array.to_list
+                  (Array.map
+                     (fun typ ->
+                       UnionFind.make
+                         (Valtype
+                            { typ; internal = valtype ctx.type_context typ }))
+                     typ.params)
+              in
+              assert (List.length types = List.length l');
+              List.iter2 (fun i ty -> check_type ctx i ty) l' types;
+              return_statement i
+                (Call (i', l'))
+                (Array.to_list
+                   (Array.map
+                      (fun typ ->
+                        UnionFind.make
+                          (Valtype
+                             { typ; internal = valtype ctx.type_context typ }))
+                      typ.results))
+          | _ -> assert false)
+      | _ -> assert false (*ZZZ*))
   | TailCall (i', l) -> (
-      let* () = instructions ctx l in
-      let* () = instruction ctx i' in
-      let* ty = pop_any in
-      match ty with
-      | None -> assert false (*ZZZ*)
-      | Some ty -> (
-          match UnionFind.find ty with
-          | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
-              match Tbl.find ctx.types ty with
-              | _, Func typ ->
-                  let* () =
-                    pop_args ctx
-                      (Array.to_list
-                         (Array.map
-                            (fun typ ->
-                              UnionFind.make
-                                (Valtype
-                                   {
-                                     typ;
-                                     internal = valtype ctx.type_context typ;
-                                   }))
-                            typ.params))
-                  in
-                  with_empty_stack
-                    (let* () =
-                       push_results
-                         (Array.to_list
-                            (Array.map
-                               (fun typ ->
-                                 ( i.info,
-                                   (*ZZZ*)
-                                   UnionFind.make
-                                     (Valtype
-                                        {
-                                          typ;
-                                          internal =
-                                            valtype ctx.type_context typ;
-                                        }) ))
-                               typ.results))
-                     in
-                     pop_args ctx
-                       (List.map
-                          (fun typ -> UnionFind.make (Valtype typ))
-                          ctx.return_types));
-                  unreachable
-              | _ -> assert false)
-          | _ ->
-              Format.eprintf "%a@." Output.instr i;
-              assert false (*ZZZ*)))
-  | String (ty, _) -> (
+      let* l' = instructions ctx l in
+      let* i' = instruction ctx i' in
+      match UnionFind.find (expression_type i') with
+      | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
+          match Tbl.find ctx.types ty with
+          | _, Func typ ->
+              let types =
+                Array.to_list
+                  (Array.map
+                     (fun typ ->
+                       UnionFind.make
+                         (Valtype
+                            { typ; internal = valtype ctx.type_context typ }))
+                     typ.params)
+              in
+              assert (List.length types = List.length l');
+              List.iter2 (fun i ty -> check_type ctx i ty) l' types;
+              let types' =
+                Array.to_list
+                  (Array.map
+                     (fun typ ->
+                       UnionFind.make
+                         (Valtype
+                            { typ; internal = valtype ctx.type_context typ }))
+                     typ.results)
+              in
+              let types =
+                List.map
+                  (fun typ -> UnionFind.make (Valtype typ))
+                  ctx.return_types
+              in
+              check_subtypes ctx types' types;
+              return_statement i (TailCall (i', l')) [] |> unreachable
+          | _ -> assert false)
+      | _ ->
+          Format.eprintf "%a@." Output.instr i;
+          assert false (*ZZZ*))
+  | String (ty, _) as desc -> (
       match ty with
       | None -> assert false (*ZZZ*)
       | Some ty ->
@@ -919,109 +913,108 @@ let rec instruction ctx i =
           | Func _ | Struct _ -> assert false (*ZZZ*)
           | Array _ -> ());
           let typ = Ref { nullable = false; typ = Type ty } in
-          push i.info
+          return_expression i desc
             (UnionFind.make
                (Valtype { typ; internal = valtype ctx.type_context typ })))
-  | Int _ -> push i.info (UnionFind.make Number)
-  | Float _ -> push i.info (UnionFind.make Float)
-  | Cast (i, typ) -> (
-      let* () = instruction ctx i in
-      let* ty' = pop_any in
-      match ty' with
-      | None -> (
-          match typ with
-          | Valtype typ ->
-              let ty = valtype ctx.type_context typ in
-              push i.info (UnionFind.make (Valtype { typ; internal = ty }))
-          | Signedtype { typ; _ } ->
-              let typ, (ty : Internal.valtype) =
-                match typ with
-                | `I32 -> (I32, I32)
-                | `I64 -> (I64, I64)
-                | `F32 -> (F32, F32)
-                | `F64 -> (F64, F64)
-              in
-              push i.info (UnionFind.make (Valtype { typ; internal = ty })))
-      | Some ty' -> (
-          match typ with
-          | Valtype typ ->
-              let ty = valtype ctx.type_context typ in
-              let ok = cast ctx ty' typ in
-              if not ok then (
-                Format.eprintf "%a@." Output.instr i;
-                Format.eprintf "cast %a => %a@." output_inferred_type ty'
-                  Output.valtype typ);
-              assert ok;
-              push i.info (UnionFind.make (Valtype { typ; internal = ty }))
-          | Signedtype { typ; _ } ->
-              let ok = signed_cast ctx ty' typ in
-              if not ok then (
-                Format.eprintf "%a@." Output.instr i;
-                Format.eprintf "signed cast %a => %s@." output_inferred_type ty'
-                  (match typ with
-                  | `I32 -> "i32"
-                  | `I64 -> "i64"
-                  | `F32 -> "f32"
-                  | `F64 -> "f64"));
-              assert ok;
-              let typ, (ty : Internal.valtype) =
-                match typ with
-                | `I32 -> (I32, I32)
-                | `I64 -> (I64, I64)
-                | `F32 -> (F32, F32)
-                | `F64 -> (F64, F64)
-              in
-              push i.info (UnionFind.make (Valtype { typ; internal = ty }))))
-  | Test (i, ty) ->
-      let* () = instruction ctx i in
-      let typ = Ref { nullable = true; typ = top_heap_type ctx ty.typ } in
-      let* () =
-        pop ctx
-          (UnionFind.make
-             (Valtype { typ; internal = valtype ctx.type_context typ }))
+  | Int _ as desc -> return_expression i desc (UnionFind.make Number)
+  | Float _ as desc -> return_expression i desc (UnionFind.make Float)
+  | Cast (i', typ) ->
+      let* i' = instruction ctx i' in
+      let ty =
+        let ty' = expression_type i' in
+        match UnionFind.find ty' with
+        | Any -> (
+            match typ with
+            | Valtype typ ->
+                let ty = valtype ctx.type_context typ in
+                UnionFind.make (Valtype { typ; internal = ty })
+            | Signedtype { typ; _ } ->
+                let typ, (ty : Internal.valtype) =
+                  match typ with
+                  | `I32 -> (I32, I32)
+                  | `I64 -> (I64, I64)
+                  | `F32 -> (F32, F32)
+                  | `F64 -> (F64, F64)
+                in
+                UnionFind.make (Valtype { typ; internal = ty }))
+        | _ -> (
+            match typ with
+            | Valtype typ ->
+                let ty = valtype ctx.type_context typ in
+                let ok = cast ctx ty' typ in
+                if not ok then (
+                  Format.eprintf "%a@." Output.instr i;
+                  Format.eprintf "cast %a => %a@." output_inferred_type ty'
+                    Output.valtype typ);
+                assert ok;
+                UnionFind.make (Valtype { typ; internal = ty })
+            | Signedtype { typ; _ } ->
+                let ok = signed_cast ctx ty' typ in
+                if not ok then (
+                  Format.eprintf "%a@." Output.instr i;
+                  Format.eprintf "signed cast %a => %s@." output_inferred_type
+                    ty'
+                    (match typ with
+                    | `I32 -> "i32"
+                    | `I64 -> "i64"
+                    | `F32 -> "f32"
+                    | `F64 -> "f64"));
+                assert ok;
+                let typ, (ty : Internal.valtype) =
+                  match typ with
+                  | `I32 -> (I32, I32)
+                  | `I64 -> (I64, I64)
+                  | `F32 -> (F32, F32)
+                  | `F64 -> (F64, F64)
+                in
+                UnionFind.make (Valtype { typ; internal = ty }))
       in
-      push i.info (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+      return_expression i (Cast (i', typ)) ty
+  | Test (i, ty) ->
+      let* i' = instruction ctx i in
+      let typ = Ref { nullable = true; typ = top_heap_type ctx ty.typ } in
+      check_type ctx i'
+        (UnionFind.make
+           (Valtype { typ; internal = valtype ctx.type_context typ }));
+      return_expression i
+        (Test (i', ty))
+        (UnionFind.make (Valtype { typ = I32; internal = I32 }))
   | Struct (ty, fields) -> (
       match ty with
       | None -> assert false (*ZZZ*)
-      | Some ty ->
-          let* () =
-            match snd (Tbl.find ctx.types ty) with
-            | Struct fields' ->
-                assert (List.length fields = Array.length fields');
-                (*ZZZ*)
-                let* () =
-                  Array.fold_left
-                    (fun prev (name, _) ->
-                      match
-                        List.find_opt
-                          (fun (idx, _) -> name.desc = idx.desc)
-                          fields
-                      with
-                      | None -> assert false (*ZZZ*)
-                      | Some (_, i') ->
-                          let* () = prev in
-                          instruction ctx i')
-                    (return ()) fields'
-                in
-                pop_args ctx
-                  (Array.to_list
-                     (Array.map
-                        (fun (_, (f : fieldtype)) ->
-                          let typ =
-                            match f.typ with Value v -> v | Packed _ -> I32
-                          in
-                          UnionFind.make
-                            (Valtype
-                               { typ; internal = valtype ctx.type_context typ }))
-                        fields'))
+      | Some typ ->
+          let field_types =
+            match snd (Tbl.find ctx.types typ) with
+            | Struct l -> l
             | _ -> (*ZZZ *) assert false
           in
-          let typ = Ref { nullable = false; typ = Type ty } in
-          push i.info
+          (* ZZZ We should check the evaluation order*)
+          assert (List.length fields = Array.length field_types);
+          (*ZZZ*)
+          let* fields' =
+            Array.fold_left
+              (fun prev (name, (f : fieldtype)) ->
+                match
+                  List.find_opt (fun (idx, _) -> name.desc = idx.desc) fields
+                with
+                | None -> assert false (*ZZZ*)
+                | Some (name, i') ->
+                    let* l = prev in
+                    let* i' = instruction ctx i' in
+                    let typ = unpack_type f in
+                    check_type ctx i'
+                      (UnionFind.make
+                         (Valtype
+                            { typ; internal = valtype ctx.type_context typ }));
+                    return ((name, i') :: l))
+              (return []) field_types
+          in
+          let typ = Ref { nullable = false; typ = Type typ } in
+          return_expression i
+            (Struct (ty, fields'))
             (UnionFind.make
                (Valtype { typ; internal = valtype ctx.type_context typ })))
-  | StructDefault ty -> (
+  | StructDefault ty as desc -> (
       match ty with
       | None -> assert false (*ZZZ*)
       | Some ty ->
@@ -1031,109 +1024,85 @@ let rec instruction ctx i =
               assert (Array.for_all (fun (_, ty) -> field_has_default ty) fields)
           | _ -> (*ZZZ *) assert false);
           let typ = Ref { nullable = false; typ = Type ty } in
-          push i.info
+          return_expression i desc
             (UnionFind.make
                (Valtype { typ; internal = valtype ctx.type_context typ })))
-  | StructGet (i', field) -> (
-      let* () = instruction ctx i' in
-      let* ty = pop_any in
-      match ty with
-      | None ->
-          Format.eprintf "%a@." Output.instr i;
-          assert false (*ZZZ*)
-      | Some ty -> (
-          match (UnionFind.find ty, field.desc) with
-          | Valtype { typ = Ref { typ = Type ty; _ }; _ }, _ -> (
-              match Tbl.find ctx.types ty with
-              | _, Struct typ -> (
-                  match
-                    Array.find_map
-                      (fun (nm, typ) ->
-                        if nm.desc = field.desc then Some typ else None)
-                      typ
-                  with
-                  | None -> assert false
-                  | Some typ -> push i.info (UnionFind.make (fieldtype ctx typ))
-                  )
-              | _, Array _ when field.desc = "length" ->
-                  push i.info
-                    (UnionFind.make (Valtype { typ = I32; internal = I32 }))
-              | _ -> assert false)
-          | (Null | Valtype { typ = Ref { typ = Array; _ }; _ }), "length" ->
-              push i.info
-                (UnionFind.make (Valtype { typ = I32; internal = I32 }))
-          | Valtype { typ = I32; _ }, "from_bits" ->
-              push i.info
-                (UnionFind.make (Valtype { typ = F32; internal = F32 }))
-          | Valtype { typ = I64; _ }, "from_bits" ->
-              push i.info
-                (UnionFind.make (Valtype { typ = F64; internal = F64 }))
-          | Valtype { typ = F32; _ }, "to_bits" ->
-              push i.info
-                (UnionFind.make (Valtype { typ = I32; internal = I32 }))
-          | Valtype { typ = F64; _ }, "to_bits" ->
-              push i.info
-                (UnionFind.make (Valtype { typ = I64; internal = I64 }))
-          | ( ((Number | Int | Valtype { typ = I32 | I64; _ }) as ty'),
-              ("clz" | "ctz" | "popcnt") ) ->
-              if ty' = Number then UnionFind.set ty Int;
-              push i.info ty
-          | ( ((Number | Float | Valtype { typ = F32 | F64; _ }) as ty'),
-              ("abs" | "ceil" | "floor" | "trunc" | "nearest" | "sqrt") ) ->
-              if ty' = Number then UnionFind.set ty Float;
-              push i.info ty
-          | _ ->
-              Format.eprintf "??? %a %s@." output_inferred_type ty field.desc;
-              assert false (*ZZZ*)))
-  | StructSet (i, field, i') -> (
-      let* () = instruction ctx i in
-      let* () = instruction ctx i' in
-      let* ty' = pop_any in
-      let* ty = pop_any in
-      match ty with
-      | None -> assert false (*ZZZ*)
-      | Some ty -> (
-          match UnionFind.find ty with
-          | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
-              match Tbl.find ctx.types ty with
-              | _, Struct typ -> (
-                  match
-                    Array.find_map
-                      (fun (nm, typ) ->
-                        if nm.desc = field.desc then Some typ else None)
-                      typ
-                  with
-                  | None ->
-                      Format.eprintf "struct.set %s/%s@." ty.desc field.desc;
-                      assert false
-                  | Some typ -> (
-                      assert typ.mut;
-                      let typ = unpack_type typ in
-                      let ty =
-                        UnionFind.make
-                          (Valtype
-                             { typ; internal = valtype ctx.type_context typ })
-                      in
-                      match ty' with
-                      | None -> assert false (*ZZZ*)
-                      | Some ty' ->
-                          let ok = subtype ctx ty' ty in
-                          if not ok then
-                            Format.eprintf "%a <: %a@." output_inferred_type ty'
-                              output_inferred_type ty;
-                          assert ok;
-                          return ()))
-              | _ -> assert false (*ZZZ*))
-          | _ -> assert false (*ZZZ*)))
+  | StructGet (i', field) ->
+      let* i' = instruction ctx i' in
+      let ty =
+        let ty = expression_type i' in
+        match (UnionFind.find ty, field.desc) with
+        | Valtype { typ = Ref { typ = Type ty; _ }; _ }, _ -> (
+            match Tbl.find ctx.types ty with
+            | _, Struct typ -> (
+                match
+                  Array.find_map
+                    (fun (nm, typ) ->
+                      if nm.desc = field.desc then Some typ else None)
+                    typ
+                with
+                | None -> assert false
+                | Some typ -> UnionFind.make (fieldtype ctx typ))
+            | _, Array _ when field.desc = "length" ->
+                UnionFind.make (Valtype { typ = I32; internal = I32 })
+            | _ -> assert false)
+        | (Null | Valtype { typ = Ref { typ = Array; _ }; _ }), "length" ->
+            UnionFind.make (Valtype { typ = I32; internal = I32 })
+        | Valtype { typ = I32; _ }, "from_bits" ->
+            UnionFind.make (Valtype { typ = F32; internal = F32 })
+        | Valtype { typ = I64; _ }, "from_bits" ->
+            UnionFind.make (Valtype { typ = F64; internal = F64 })
+        | Valtype { typ = F32; _ }, "to_bits" ->
+            UnionFind.make (Valtype { typ = I32; internal = I32 })
+        | Valtype { typ = F64; _ }, "to_bits" ->
+            UnionFind.make (Valtype { typ = I64; internal = I64 })
+        | ( ((Number | Int | Valtype { typ = I32 | I64; _ }) as ty'),
+            ("clz" | "ctz" | "popcnt") ) ->
+            if ty' = Number then UnionFind.set ty Int;
+            ty
+        | ( ((Number | Float | Valtype { typ = F32 | F64; _ }) as ty'),
+            ("abs" | "ceil" | "floor" | "trunc" | "nearest" | "sqrt") ) ->
+            if ty' = Number then UnionFind.set ty Float;
+            ty
+        | _ ->
+            Format.eprintf "??? %a %s@." output_inferred_type ty field.desc;
+            assert false (*ZZZ*)
+      in
+      return_expression i (StructGet (i', field)) ty
+  | StructSet (i1, field, i2) -> (
+      let* i1' = instruction ctx i1 in
+      let* i2' = instruction ctx i2 in
+      let ty1 = expression_type i1' in
+      match UnionFind.find ty1 with
+      | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
+          match Tbl.find ctx.types ty with
+          | _, Struct typ -> (
+              match
+                Array.find_map
+                  (fun (nm, typ) ->
+                    if nm.desc = field.desc then Some typ else None)
+                  typ
+              with
+              | None ->
+                  Format.eprintf "struct.set %s/%s@." ty.desc field.desc;
+                  assert false
+              | Some typ ->
+                  assert typ.mut;
+                  let typ = unpack_type typ in
+                  let ty =
+                    UnionFind.make
+                      (Valtype { typ; internal = valtype ctx.type_context typ })
+                  in
+                  check_type ctx i2' ty;
+                  return_statement i (StructSet (i1', field, i2')) [])))
   | Array (ty, i1, i2) -> (
+      let* i1' = instruction ctx i1 in
+      let* i2' = instruction ctx i2 in
+      check_type ctx i2'
+        (UnionFind.make (Valtype { typ = I32; internal = I32 }));
       match ty with
       | None -> assert false (*ZZZ*)
       | Some ty ->
-          let* () = instruction ctx i1 in
-          let* () = instruction ctx i2 in
-          let* () =
-            pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
-          in
           let* () =
             match snd (Tbl.find ctx.types ty) with
             | Array field' ->
@@ -1144,64 +1113,63 @@ let rec instruction ctx i =
             | _ -> (*ZZZ *) assert false
           in
           let typ = Ref { nullable = false; typ = Type ty } in
-          push i.info
+          return_expression i
+            (Array (Some ty, i1', i2'))
             (UnionFind.make
                (Valtype { typ; internal = valtype ctx.type_context typ })))
   | ArrayDefault (ty, i) -> (
+      let* i' = instruction ctx i in
       match ty with
       | None -> assert false (*ZZZ*)
       | Some ty ->
-          let* () = instruction ctx i in
-          let* () =
-            pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
-          in
+          check_type ctx i'
+            (UnionFind.make (Valtype { typ = I32; internal = I32 }));
           (match snd (Tbl.find ctx.types ty) with
           | Array field -> assert (field_has_default field)
           | _ -> (*ZZZ *) assert false);
           let typ = Ref { nullable = false; typ = Type ty } in
-          push i.info
+          return_expression i
+            (ArrayDefault (Some ty, i'))
             (UnionFind.make
                (Valtype { typ; internal = valtype ctx.type_context typ })))
   | ArrayFixed (ty, instrs) -> (
       match ty with
       | None -> assert false (*ZZZ*)
       | Some ty ->
-          let* () =
+          let* instrs' =
             match snd (Tbl.find ctx.types ty) with
             | Array field' ->
-                let* () =
-                  List.fold_left
-                    (fun prev i' ->
-                      let* () = prev in
-                      instruction ctx i')
-                    (return ()) instrs
-                in
                 let typ = unpack_type field' in
                 let typ = { typ; internal = valtype ctx.type_context typ } in
-                repeat (List.length instrs)
-                  (pop ctx (UnionFind.make (Valtype typ)))
+                let typ = UnionFind.make (Valtype typ) in
+                List.fold_left
+                  (fun prev i' ->
+                    let* l = prev in
+                    let* i' = instruction ctx i' in
+                    check_type ctx i' typ;
+                    return (i' :: l))
+                  (return []) instrs
             | _ -> (*ZZZ *) assert false
           in
           let typ = Ref { nullable = false; typ = Type ty } in
-          push i.info
+          return_expression i
+            (ArrayFixed (Some ty, instrs'))
             (UnionFind.make
                (Valtype { typ; internal = valtype ctx.type_context typ })))
   | ArrayGet (i1, i2) -> (
-      let* () = instruction ctx i1 in
-      let* () = instruction ctx i2 in
-      let* () =
-        pop ctx (UnionFind.make (Valtype { typ = I32; internal = I32 }))
-      in
-      let* ty = pop_any in
-      match ty with
-      | None -> assert false (*ZZZ*)
-      | Some ty -> (
-          match UnionFind.find ty with
-          | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
-              match Tbl.find ctx.types ty with
-              | _, Array typ -> push i.info (UnionFind.make (fieldtype ctx typ))
-              | _ -> assert false)
-          | _ -> assert false (*ZZZ*)))
+      let* i1' = instruction ctx i1 in
+      let* i2' = instruction ctx i2 in
+      check_type ctx i2'
+        (UnionFind.make (Valtype { typ = I32; internal = I32 }));
+      match UnionFind.find (expression_type i1') with
+      | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
+          match Tbl.find ctx.types ty with
+          | _, Array typ ->
+              return_expression i
+                (ArrayGet (i1', i2'))
+                (UnionFind.make (fieldtype ctx typ))
+          | _ -> assert false)
+      | _ -> assert false (*ZZZ*))
   | ArraySet (i1, i2, i3) -> (
       let* () = instruction ctx i1 in
       let* () = instruction ctx i2 in
