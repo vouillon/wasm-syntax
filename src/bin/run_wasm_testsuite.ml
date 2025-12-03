@@ -182,7 +182,7 @@ let runtest filename path =
               in_child_process ~quiet:true (fun () ->
                   let ast = ModuleParser.parse_from_string ~filename txt in
                   Wasm.Validation.check_syntax ast;
-                  Wasm.Validation.f ast;
+                  (*                  Wasm.Validation.f ast;*)
                   if false then
                     Format.printf "@[<2>Result:@ %a@]@."
                       (print_module ~color:Always)

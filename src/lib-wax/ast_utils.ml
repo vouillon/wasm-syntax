@@ -1,0 +1,62 @@
+open Ast
+
+let rec map_instr f instr =
+  let desc =
+    match instr.desc with
+    | Block (label, ft, instrs) ->
+        Block (label, ft, List.map (map_instr f) instrs)
+    | Loop (label, ft, instrs) -> Loop (label, ft, List.map (map_instr f) instrs)
+    | If (label, ft, cond, then_, else_) ->
+        If
+          ( label,
+            ft,
+            map_instr f cond,
+            List.map (map_instr f) then_,
+            Option.map (List.map (map_instr f)) else_ )
+    | ( Unreachable | Nop | Pop | Null | Get _ | String _ | Int _ | Float _
+      | StructDefault _ ) as x ->
+        x
+    | Set (idx, v) -> Set (idx, map_instr f v)
+    | Tee (idx, v) -> Tee (idx, map_instr f v)
+    | Call (target, args) ->
+        Call (map_instr f target, List.map (map_instr f) args)
+    | TailCall (target, args) ->
+        TailCall (map_instr f target, List.map (map_instr f) args)
+    | Cast (v, t) -> Cast (map_instr f v, t)
+    | Test (v, t) -> Test (map_instr f v, t)
+    | NonNull v -> NonNull (map_instr f v)
+    | Struct (idx, fields) ->
+        Struct (idx, List.map (fun (i, v) -> (i, map_instr f v)) fields)
+    | StructGet (v, idx) -> StructGet (map_instr f v, idx)
+    | StructSet (v, idx, w) -> StructSet (map_instr f v, idx, map_instr f w)
+    | Array (idx, len, init) -> Array (idx, map_instr f len, map_instr f init)
+    | ArrayDefault (idx, len) -> ArrayDefault (idx, map_instr f len)
+    | ArrayFixed (idx, elems) -> ArrayFixed (idx, List.map (map_instr f) elems)
+    | ArrayGet (arr, idx) -> ArrayGet (map_instr f arr, map_instr f idx)
+    | ArraySet (arr, idx, val_) ->
+        ArraySet (map_instr f arr, map_instr f idx, map_instr f val_)
+    | BinOp (op, l, r) -> BinOp (op, map_instr f l, map_instr f r)
+    | UnOp (op, v) -> UnOp (op, map_instr f v)
+    | Let (bindings, body) -> Let (bindings, Option.map (map_instr f) body)
+    | Br (label, v) -> Br (label, Option.map (map_instr f) v)
+    | Br_if (label, v) -> Br_if (label, map_instr f v)
+    | Br_table (labels, v) -> Br_table (labels, map_instr f v)
+    | Br_on_null (label, v) -> Br_on_null (label, map_instr f v)
+    | Br_on_non_null (label, v) -> Br_on_non_null (label, map_instr f v)
+    | Br_on_cast (label, t, v) -> Br_on_cast (label, t, map_instr f v)
+    | Br_on_cast_fail (label, t, v) -> Br_on_cast_fail (label, t, map_instr f v)
+    | Throw (idx, args) -> Throw (idx, List.map (map_instr f) args)
+    | ThrowRef v -> ThrowRef (map_instr f v)
+    | Return v -> Return (Option.map (map_instr f) v)
+    | Sequence instrs -> Sequence (List.map (map_instr f) instrs)
+    | Select (cond, t, e) ->
+        Select (map_instr f cond, map_instr f t, map_instr f e)
+  in
+  { desc; info = f instr.info }
+
+let map_modulefield f field =
+  match field with
+  | (Type _ | Fundecl _ | GlobalDecl _ | Tag _) as f -> f
+  | Func ({ body = s, instrs; _ } as func) ->
+      Func { func with body = (s, List.map (map_instr f) instrs) }
+  | Global g -> Global { g with def = map_instr f g.def }

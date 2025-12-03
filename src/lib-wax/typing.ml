@@ -1751,28 +1751,29 @@ let check_type_definitions ctx =
           | Array _, (Func _ | Struct _) ->
               assert false))
 
+type ('before, 'after) phased = Before of 'before | After of 'after
+
 let globals type_context ctx fields =
-  List.iter
+  List.map
     (fun field ->
       match field with
-      | Global { name; mut; typ = Some typ; def; _ } ->
+      | Global ({ name; mut; typ = Some typ; def; _ } as g) ->
           (*ZZZ check constant instructions *)
           (*ZZZ handle typ= None *)
-          with_empty_stack
-            (let* def' = instruction ctx def in
-             let internal = valtype type_context typ in
-             let typ = { typ; internal } in
-             Tbl.add ctx.globals name (mut, typ);
-             check_type ctx def' (UnionFind.make (Valtype typ));
-             return ())
-      | _ -> ())
+          let def' = with_empty_stack (instruction ctx def) in
+          let internal = valtype type_context typ in
+          let typ = { typ; internal } in
+          Tbl.add ctx.globals name (mut, typ);
+          check_type ctx def' (UnionFind.make (Valtype typ));
+          After (Global { g with def = def' })
+      | f -> Before f)
     fields
 
 let functions ctx fields =
-  List.iter
+  List.map
     (fun field ->
       match field with
-      | Func { name; sign; body; _ } ->
+      | Before (Func { name; sign; body = label, body; typ; attributes }) ->
           let func_typ =
             match
               let func_typ = Tbl.find ctx.functions name in
@@ -1802,19 +1803,28 @@ let functions ctx fields =
                 named_params
           | _ -> ());
           if false then Format.eprintf "=== %s@." name.desc;
-          with_empty_stack
-            (let ctx =
-               {
-                 ctx with
-                 locals = !locals;
-                 control_types = [ (fst body, return_types) ];
-                 return_types;
-               }
-             in
-             let* _ = block_contents ctx (snd body) in
-             pop_args ctx
-               (List.map (fun typ -> UnionFind.make (Valtype typ)) return_types))
-      | _ -> ())
+          let ctx =
+            {
+              ctx with
+              locals = !locals;
+              control_types = [ (label, return_types) ];
+              return_types;
+            }
+          in
+          let body =
+            with_empty_stack
+              (let* body = block_contents ctx body in
+               let* () =
+                 pop_args ctx
+                   (List.map
+                      (fun typ -> UnionFind.make (Valtype typ))
+                      return_types)
+               in
+               return body)
+          in
+          Func { name; sign; body = (label, body); typ; attributes }
+      | Before (Global _) -> assert false
+      | After f | Before ((Type _ | Fundecl _ | GlobalDecl _ | Tag _) as f) -> f)
     fields
 
 let funsig _ctx sign =
@@ -1903,54 +1913,21 @@ let f fields =
       subtyping_info = Wasm.Types.subtyping_info type_context.internal_types;
     }
   in
-  globals type_context ctx fields;
-  if true then functions ctx fields;
+  let fields = globals type_context ctx fields in
+  let _ = functions ctx fields in
   ()
-
 (*
-let rec infer env (stack : _ list) i : _ option =
-  match i with
-  | Unreachable -> None
-  (*
-  | Block (_label, _instrs) ->
-  | Loop (label, instrs) ->
-  | If of string option * instr list * instr list * instr list option
-  | Get of idx
-  | Set of idx * instr list
-  | Call of idx * instr list list
-  | RefFunc of idx
-  | StructGet of instr list * string
-  | StructSet of instr list * string * instr list
-  | BinOp of binop * instr list * instr list
-  | Local of string * valtype option * instr list option
-*)
-  | Struct (name, _fields) ->
-      Some [ `Type (Ref { nullable = false; typ = Type name }) ]
-  | String _ -> Some [ `String ]
-  | Int _ -> Some [ `Int ]
-  | Cast (l, t) ->
-      check_list env [] l [ `Typ t ];
-      Some [ `Typ t ]
-  | Nop -> Some stack
-  | BinOp (_op, l1, l2) ->
-      let _stack' = infer_list env [] l1 in
-      let _stack'' = infer_list env [] l2 in
-      assert false
-  | _ -> assert false
-
-and infer_list env stack l =
-  match l with
-  | [] -> Some []
-  | i :: r -> (
-      let stack' = infer env stack i in
-      match stack' with None -> None | Some stack' -> infer_list env stack' r)
-
-and check_list env stack l =
-  match l with
-  | i :: _r ->
-      let _st = infer env stack i in
-      assert false
-  | [] -> assert false
+  Ast_utils.map_instr
+    (fun (ty, loc) ->
+       match UnionFind.find ty with
+       | Any -> 
+       | Null
+  | Number
+  | Int8
+  | Int16
+  | Int
+  | Float
+  | Valtype of inferred_valtype
 *)
 
 (*
