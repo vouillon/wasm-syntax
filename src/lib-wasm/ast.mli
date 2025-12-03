@@ -400,14 +400,21 @@ module Binary : sig
     type valtype = Make_types(X).valtype
     type nonrec typeuse = typeuse
     type int32_t = Int32.t
-    type int64_t = Int32.t
+    type int64_t = Int64.t
     type float_t = float
   end)
 
-  type exportable = Func | Memory | Tag | Global
+  type exportable = Func | Memory | Table | Tag | Global
   type 'info datamode = Passive | Active of idx * 'info expr
   type 'info elemmode = Passive | Active of idx * 'info expr | Declare
-  type import = { module_ : string; name : string; desc : exportable }
+  type importdesc =
+    | Func of typeuse
+    | Memory of limits
+    | Table of tabletype
+    | Global of globaltype
+    | Tag of typeuse
+
+  type import = { module_ : string; name : string; desc : importdesc }
   type 'info table = { typ : limits; expr : 'info expr option }
 
   type 'info memory = {
@@ -430,6 +437,20 @@ module Binary : sig
   type 'info code = { locals : valtype list; instrs : 'info instr list }
   type 'info data = { init : string; mode : 'info datamode }
 
+  module IntMap : Map.S with type key = idx
+
+  type name_map = string IntMap.t
+  type indirect_name_map = string IntMap.t IntMap.t
+
+  type names = {
+    module_ : string;
+    functions : name_map;
+    locals : indirect_name_map;
+    types : name_map;
+    fields : indirect_name_map;
+    tags : name_map;
+  }
+
   type 'info module_ = {
     types : rectype list;
     imports : import list;
@@ -439,9 +460,10 @@ module Binary : sig
     tags : idx list;
     globals : 'info global list;
     exports : export list;
-    start : idx;
+    start : idx option;
     elem : 'info elem list;
     code : 'info code list;
     data : 'info data list;
+    names : names;
   }
 end
