@@ -178,6 +178,10 @@ module Encoder = struct
     match i.desc with
     | Unreachable -> byte b 0x00
     | Nop -> byte b 0x01
+    | Throw i ->
+        byte b 0x08;
+        uint b i
+    | ThrowRef -> byte b 0x0A
     | Block { typ; block; _ } ->
         byte b 0x02;
         (match typ with Some t -> blocktype b t | None -> byte b 0x40);
@@ -196,6 +200,45 @@ module Encoder = struct
           byte b 0x05;
           List.iter (instr ~source_map_t b) else_block);
         byte b 0x0B
+    | TryTable { typ; block; catches; _ } ->
+        byte b 0x1F;
+        (match typ with Some t -> blocktype b t | None -> byte b 0x40);
+        List.iter
+          (fun c ->
+            match c with
+            | Catch (tag, label) ->
+                byte b 0x00;
+                uint b tag;
+                uint b label
+            | CatchRef (tag, label) ->
+                byte b 0x01;
+                uint b tag;
+                uint b label
+            | CatchAll label ->
+                byte b 0x02;
+                uint b label
+            | CatchAllRef label ->
+                byte b 0x03;
+                uint b label)
+          catches;
+        List.iter (instr ~source_map_t b) block;
+        byte b 0x0B
+    | Try { typ; block; catches; catch_all; _ } ->
+        byte b 0x06;
+        (match typ with Some t -> blocktype b t | None -> byte b 0x40);
+        List.iter (instr ~source_map_t b) block;
+        List.iter
+          (fun (tag, block) ->
+            byte b 0x07;
+            uint b tag;
+            List.iter (instr ~source_map_t b) block)
+          catches;
+        (match catch_all with
+        | Some block ->
+            byte b 0x19;
+            List.iter (instr ~source_map_t b) block
+        | None -> ());
+        byte b 0x0B
     | Br i ->
         byte b 0x0C;
         uint b i
@@ -206,12 +249,45 @@ module Encoder = struct
         byte b 0x0E;
         vec uint b ls;
         uint b d
+    | Br_on_null i ->
+        byte b 0xD5;
+        uint b i
+    | Br_on_non_null i ->
+        byte b 0xD6;
+        uint b i
+    | Br_on_cast (i, r1, r2) ->
+        byte b 0xFB;
+        byte b 0x18;
+        byte b ((if r1.nullable then 1 else 0) + if r2.nullable then 2 else 0);
+        uint b i;
+        heaptype b r1.typ;
+        heaptype b r2.typ
+    | Br_on_cast_fail (i, r1, r2) ->
+        byte b 0xFB;
+        byte b 0x19;
+        byte b ((if r1.nullable then 1 else 0) + if r2.nullable then 2 else 0);
+        uint b i;
+        heaptype b r1.typ;
+        heaptype b r2.typ
     | Return -> byte b 0x0F
     | Call i ->
         byte b 0x10;
         uint b i
     | CallIndirect (table, type_idx) ->
         byte b 0x11;
+        uint b type_idx;
+        uint b table
+    | CallRef i ->
+        byte b 0x14;
+        uint b i
+    | ReturnCall i ->
+        byte b 0x12;
+        uint b i
+    | ReturnCallRef i ->
+        byte b 0x15;
+        uint b i
+    | ReturnCallIndirect (table, type_idx) ->
+        byte b 0x13;
         uint b type_idx;
         uint b table
     | Drop -> byte b 0x1A
@@ -233,6 +309,38 @@ module Encoder = struct
         uint b i
     | GlobalSet i ->
         byte b 0x24;
+        uint b i
+    | TableGet i ->
+        byte b 0x25;
+        uint b i
+    | TableSet i ->
+        byte b 0x26;
+        uint b i
+    | TableSize i ->
+        byte b 0xFC;
+        byte b 0x10;
+        uint b i
+    | TableGrow i ->
+        byte b 0xFC;
+        byte b 0x0F;
+        uint b i
+    | TableFill i ->
+        byte b 0xFC;
+        byte b 0x11;
+        uint b i
+    | TableCopy (i1, i2) ->
+        byte b 0xFC;
+        byte b 0x0E;
+        uint b i1;
+        uint b i2
+    | TableInit (i1, i2) ->
+        byte b 0xFC;
+        byte b 0x0C;
+        uint b i1;
+        uint b i2
+    | ElemDrop i ->
+        byte b 0x0D;
+        byte b 0x14;
         uint b i
     | Load (_mem_idx, m, op) ->
         (match op with
@@ -277,6 +385,24 @@ module Encoder = struct
     | MemoryGrow i ->
         byte b 0x40;
         byte b (if i = 0 then 0x00 else i)
+    | MemoryFill i ->
+        byte b 0xFC;
+        byte b 0x0B;
+        uint b i
+    | MemoryCopy (i1, i2) ->
+        byte b 0xFC;
+        byte b 0x0A;
+        uint b i1;
+        uint b i2
+    | MemoryInit (i1, i2) ->
+        byte b 0xFC;
+        byte b 0x08;
+        uint b i1;
+        uint b i2
+    | DataDrop i ->
+        byte b 0xFC;
+        byte b 0x09;
+        uint b i
     | Const (I32 i) ->
         byte b 0x41;
         sint32 b i
@@ -318,6 +444,7 @@ module Encoder = struct
         | I64 (ExtendS `_8) -> byte b 0xC2
         | I64 (ExtendS `_16) -> byte b 0xC3
         | I64 (ExtendS `_32) -> byte b 0xC4
+        | I32 (ExtendS `_32) -> failwith "Invalid ExtendS combination"
         | I32 (Trunc (`F32, Signed)) -> byte b 0xA8
         | I32 (Trunc (`F32, Unsigned)) -> byte b 0xA9
         | I32 (Trunc (`F64, Signed)) -> byte b 0xAA
@@ -361,8 +488,7 @@ module Encoder = struct
         | I32 Reinterpret -> byte b 0xBC
         | I64 Reinterpret -> byte b 0xBD
         | F32 Reinterpret -> byte b 0xBE
-        | F64 Reinterpret -> byte b 0xBF
-        | _ -> failwith "Unimplemented UnOp")
+        | F64 Reinterpret -> byte b 0xBF)
     | BinOp op -> (
         match op with
         | I32 Add -> byte b 0x6A
@@ -557,7 +683,11 @@ module Encoder = struct
     | I31Get Unsigned ->
         byte b 0xFB;
         byte b 0x1E
-    | _ -> failwith "Instruction not implemented in Wasm binary output"
+    | Pop _ | TupleMake _ -> ()
+    | TupleExtract _ -> failwith "unsupported binaryen extension"
+    | Folded (i, is) ->
+        List.iter (instr ~source_map_t b) is;
+        instr ~source_map_t b i
 
   let expr ~source_map_t b e =
     List.iter (instr ~source_map_t b) e;
@@ -671,29 +801,22 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
            | Active (table, offset) ->
                Encoder.byte b 0x06;
                Encoder.uint b table;
-               List.iter (Encoder.instr ~source_map_t b) offset;
-               Encoder.byte b 0x0B;
+               Encoder.expr ~source_map_t b offset;
                Encoder.reftype b e.typ;
                Encoder.vec
-                 (fun b ex ->
-                   List.iter (Encoder.instr ~source_map_t b) ex;
-                   Encoder.byte b 0x0B)
+                 (fun b ex -> Encoder.expr ~source_map_t b ex)
                  b e.init
            | Passive ->
                Encoder.byte b 0x05;
                Encoder.reftype b e.typ;
                Encoder.vec
-                 (fun b ex ->
-                   List.iter (Encoder.instr ~source_map_t b) ex;
-                   Encoder.byte b 0x0B)
+                 (fun b ex -> Encoder.expr ~source_map_t b ex)
                  b e.init
            | Declare ->
                Encoder.byte b 0x07;
                Encoder.reftype b e.typ;
                Encoder.vec
-                 (fun b ex ->
-                   List.iter (Encoder.instr ~source_map_t b) ex;
-                   Encoder.byte b 0x0B)
+                 (fun b ex -> Encoder.expr ~source_map_t b ex)
                  b e.init))
       m.elem;
 
@@ -706,13 +829,23 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
     output_section out_channel 10
       (Encoder.vec (fun b (c : Ast.location code) ->
            let b_code = Buffer.create 128 in
+           let coalesce_locals l =
+             let rec loop acc n t l =
+               match l with
+               | [] -> List.rev ((n, t) :: acc)
+               | t' :: r ->
+                   if t = t' then loop acc (n + 1) t r
+                   else loop ((n, t) :: acc) 1 t' r
+             in
+             match l with [] -> [] | t :: rem -> loop [] 1 t rem
+           in
+           let locals = coalesce_locals c.locals in
            Encoder.vec
-             (fun b t ->
-               Encoder.uint b 1;
+             (fun b (n, t) ->
+               Encoder.uint b n;
                Encoder.valtype b t)
-             b_code c.locals;
-           List.iter (Encoder.instr ~source_map_t b_code) c.instrs;
-           Encoder.byte b_code 0x0B;
+             b_code locals;
+           (Encoder.expr ~source_map_t b_code) c.instrs;
            Encoder.uint b (Buffer.length b_code);
            Buffer.add_buffer b b_code))
       m.code;
@@ -728,14 +861,12 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
            | Active (mem, offset) ->
                if mem = 0 then (
                  Encoder.byte b 0x00;
-                 List.iter (Encoder.instr ~source_map_t b) offset;
-                 Encoder.byte b 0x0B;
+                 Encoder.expr ~source_map_t b offset;
                  Encoder.name b d.init)
                else (
                  Encoder.byte b 0x02;
                  Encoder.uint b mem;
-                 List.iter (Encoder.instr ~source_map_t b) offset;
-                 Encoder.byte b 0x0B;
+                 (Encoder.expr ~source_map_t b) offset;
                  Encoder.name b d.init)))
       m.data;
 
