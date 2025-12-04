@@ -17,25 +17,26 @@ module Encoder = struct
       byte b (128 + (i land 127));
       sint b (i asr 7))
 
-  let sint32 b i =
-    let rec aux i =
-      if Int32.compare i (-64l) >= 0 && Int32.compare i 64l < 0 then
-        byte b (Int32.to_int i land 0x7f)
-      else (
-        byte b (128 + (Int32.to_int i land 127));
-        aux (Int32.shift_right i 7))
-    in
-    aux i
+  let rec sint32 b i =
+    if i >= -64l && i < 64l then byte b (Int32.to_int i land 0x7f)
+    else (
+      byte b (128 + (Int32.to_int i land 127));
+      sint32 b (Int32.shift_right i 7))
 
-  let sint64 b i =
-    let rec aux i =
-      if Int64.compare i (-64L) >= 0 && Int64.compare i 64L < 0 then
-        byte b (Int64.to_int i land 0x7f)
+  let uint64 b i =
+    let rec uint64 b i =
+      if i >= 0L && i < 128L then byte b (Int64.to_int i)
       else (
         byte b (128 + (Int64.to_int i land 127));
-        aux (Int64.shift_right i 7))
+        uint64 b (Int64.shift_right i 7))
     in
-    aux i
+    uint64 b (Uint64.to_int64 i)
+
+  let rec sint64 b i =
+    if i >= -64L && i < 64L then byte b (Int64.to_int i land 0x7f)
+    else (
+      byte b (128 + (Int64.to_int i land 127));
+      sint64 b (Int64.shift_right i 7))
 
   let f32 b f =
     let i = Int32.bits_of_float f in
@@ -63,8 +64,16 @@ module Encoder = struct
     uint b (List.length l);
     List.iter (f b) l
 
+  let vec' f b l =
+    uint b (Array.length l);
+    Array.iter (f b) l
+
   let heaptype b (t : heaptype) =
     match t with
+    | NoExn -> byte b 0x74
+    | NoFunc -> byte b 0x73
+    | NoExtern -> byte b 0x72
+    | None_ -> byte b 0x71
     | Func -> byte b 0x70
     | Extern -> byte b 0x6F
     | Any -> byte b 0x6E
@@ -72,15 +81,11 @@ module Encoder = struct
     | I31 -> byte b 0x6C
     | Struct -> byte b 0x6B
     | Array -> byte b 0x6A
-    | None_ -> byte b 0x71
-    | NoFunc -> byte b 0x73
-    | NoExtern -> byte b 0x72
     | Exn -> byte b 0x69
-    | NoExn -> byte b 0x74
     | Type idx -> sint b idx
 
   let reftype b (t : reftype) =
-    if t.nullable then byte b 0x63 else byte b 0x64;
+    byte b (if t.nullable then 0x63 else 0x64);
     heaptype b t.typ
 
   let valtype b (t : valtype) =
@@ -109,11 +114,11 @@ module Encoder = struct
     match l.ma with
     | None ->
         byte b 0x00;
-        uint b (Utils.Uint64.to_int l.mi)
+        uint64 b l.mi
     | Some m ->
         byte b 0x01;
-        uint b (Utils.Uint64.to_int l.mi);
-        uint b (Utils.Uint64.to_int m)
+        uint64 b l.mi;
+        uint64 b m
 
   let globaltype b (t : globaltype) =
     valtype b t.typ;
@@ -125,15 +130,15 @@ module Encoder = struct
 
   let functype b (t : functype) =
     byte b 0x60;
-    vec valtype b (Array.to_list t.params);
-    vec valtype b (Array.to_list t.results)
+    vec' valtype b t.params;
+    vec' valtype b t.results
 
   let comptype b (t : comptype) =
     match t with
     | Func f -> functype b f
     | Struct fields ->
         byte b 0x5F;
-        vec fieldtype b (Array.to_list fields)
+        vec' fieldtype b fields
     | Array field ->
         byte b 0x5E;
         fieldtype b field
@@ -145,6 +150,13 @@ module Encoder = struct
       vec uint b (match t.supertype with Some i -> [ i ] | None -> []);
       comptype b t.typ)
 
+  let rectype b (t : rectype) =
+    match t with
+    | [| t |] -> subtype b t
+    | _ ->
+        byte b 0x4E;
+        vec' subtype b t
+
   let memarg b (m : memarg) =
     uint b (Utils.Uint64.to_int m.align);
     uint b (Utils.Uint64.to_int m.offset)
@@ -153,14 +165,15 @@ module Encoder = struct
     match t with Valtype v -> valtype b v | Typeuse i -> sint b i
 
   let rec instr ~source_map_t b (i : Ast.location instr) =
-    let generated_offset = Buffer.length b in
-    if
-      i.info.Utils.Ast.loc_start.Lexing.pos_fname <> ""
-      && i.info.Utils.Ast.loc_start.Lexing.pos_lnum <> -1
-      && i.info.Utils.Ast.loc_start.Lexing.pos_cnum <> -1
-    then
-      Source_map.add_mapping source_map_t ~generated_offset
-        ~original_location:i.info;
+    (*ZZZ push absence of mapping *)
+    (if
+       i.info.Utils.Ast.loc_start.Lexing.pos_fname <> ""
+       && i.info.Utils.Ast.loc_start.Lexing.pos_lnum <> -1
+       && i.info.Utils.Ast.loc_start.Lexing.pos_cnum <> -1
+     then
+       let generated_offset = Buffer.length b in
+       Source_map.add_mapping source_map_t ~generated_offset
+         ~original_location:i.info);
 
     match i.desc with
     | Unreachable -> byte b 0x00
@@ -545,6 +558,10 @@ module Encoder = struct
         byte b 0xFB;
         byte b 0x1E
     | _ -> failwith "Instruction not implemented in Wasm binary output"
+
+  let expr ~source_map_t b e =
+    List.iter (instr ~source_map_t b) e;
+    byte b 0x0B
 end
 
 let output_section ch id encoder data =
@@ -570,9 +587,7 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
 
   (* 1. Type Section *)
   if m.types <> [] then
-    output_section out_channel 1
-      (Encoder.vec (fun b t -> Encoder.vec Encoder.subtype b (Array.to_list t)))
-      m.types;
+    output_section out_channel 1 (Encoder.vec Encoder.rectype) m.types;
 
   (* 2. Import Section *)
   if m.imports <> [] then
@@ -626,8 +641,7 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
     output_section out_channel 6
       (Encoder.vec (fun b (g : Ast.location global) ->
            Encoder.globaltype b g.typ;
-           List.iter (Encoder.instr ~source_map_t b) g.init;
-           Encoder.byte b 0x0B))
+           Encoder.expr ~source_map_t b g.init))
       m.globals;
 
   (* 8. Export Section *)

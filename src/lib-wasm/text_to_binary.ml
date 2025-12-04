@@ -182,6 +182,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
           (List.map (resolve_label ctx.labels) ls, resolve_label ctx.labels d)
     | Return -> Return
     | Call i -> Call (resolve_idx ctx.funcs i)
+    | ReturnCall i -> ReturnCall (resolve_idx ctx.funcs i)
     | CallIndirect (table, (idx_opt, type_opt)) ->
         let type_idx =
           match idx_opt with
@@ -192,6 +193,16 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
               | None -> assert false)
         in
         CallIndirect (resolve_idx ctx.tables table, type_idx)
+    | ReturnCallIndirect (table, (idx_opt, type_opt)) ->
+        let type_idx =
+          match idx_opt with
+          | Some i -> resolve_idx ctx.types i
+          | None -> (
+              match type_opt with
+              | Some ft -> resolve_type (func_type ctx ft)
+              | None -> assert false)
+        in
+        ReturnCallIndirect (resolve_idx ctx.tables table, type_idx)
     | Drop -> Drop
     | Select None -> Select None
     | Select (Some l) -> Select (Some (List.map (valtype ctx) l))
@@ -206,6 +217,22 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | StoreS (o, m, sz, bt) -> StoreS (resolve_idx ctx.memories o, m, sz, bt)
     | MemorySize i -> MemorySize (resolve_idx ctx.memories i)
     | MemoryGrow i -> MemoryGrow (resolve_idx ctx.memories i)
+    | MemoryFill i -> MemoryFill (resolve_idx ctx.memories i)
+    | MemoryCopy (i1, i2) ->
+        MemoryCopy (resolve_idx ctx.memories i1, resolve_idx ctx.memories i2)
+    | MemoryInit (i1, i2) ->
+        MemoryInit (resolve_idx ctx.memories i1, resolve_idx ctx.datas i2)
+    | DataDrop i -> DataDrop (resolve_idx ctx.datas i)
+    | TableGet i -> TableGet (resolve_idx ctx.tables i)
+    | TableSet i -> TableSet (resolve_idx ctx.tables i)
+    | TableSize i -> TableSize (resolve_idx ctx.tables i)
+    | TableGrow i -> TableGrow (resolve_idx ctx.tables i)
+    | TableFill i -> TableFill (resolve_idx ctx.tables i)
+    | TableCopy (i1, i2) ->
+        TableCopy (resolve_idx ctx.tables i1, resolve_idx ctx.tables i2)
+    | TableInit (i1, i2) ->
+        TableInit (resolve_idx ctx.tables i1, resolve_idx ctx.elems i2)
+    | ElemDrop i -> ElemDrop (resolve_idx ctx.elems i)
     | Const (I32 x) -> Const (I32 (Int32.of_string x))
     | Const (I64 x) -> Const (I64 (Int64.of_string x))
     | Const (F32 x) -> Const (F32 (float_of_string x))
@@ -238,7 +265,57 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
                 catches;
             catch_all = Option.map (List.map (recurse ctx')) catch_all;
           }
-    | _ -> Nop (* Placeholder for unimplemented *)
+    | Throw i -> Throw (resolve_idx ctx.tags i)
+    | ThrowRef -> ThrowRef
+    | Br_on_null i -> Br_on_null (resolve_label ctx.labels i)
+    | Br_on_non_null i -> Br_on_non_null (resolve_label ctx.labels i)
+    | Br_on_cast (i, r1, r2) ->
+        Br_on_cast (resolve_label ctx.labels i, reftype ctx r1, reftype ctx r2)
+    | Br_on_cast_fail (i, r1, r2) ->
+        Br_on_cast_fail
+          (resolve_label ctx.labels i, reftype ctx r1, reftype ctx r2)
+    | CallRef i -> CallRef (resolve_idx ctx.funcs i)
+    | ReturnCallRef i -> ReturnCallRef (resolve_idx ctx.funcs i)
+    | RefAsNonNull -> RefAsNonNull
+    | RefEq -> RefEq
+    | RefTest r -> RefTest (reftype ctx r)
+    | RefCast r -> RefCast (reftype ctx r)
+    | StructNew i -> StructNew (resolve_idx ctx.types i)
+    | StructNewDefault i -> StructNewDefault (resolve_idx ctx.types i)
+    | StructGet (s, i1, i2) ->
+        StructGet
+          (s, resolve_idx ctx.types i1, resolve_field_idx ctx.fields i2 i2)
+    | StructSet (i1, i2) ->
+        StructSet (resolve_idx ctx.types i1, resolve_field_idx ctx.fields i1 i2)
+    | ArrayNew i -> ArrayNew (resolve_idx ctx.types i)
+    | ArrayNewDefault i -> ArrayNewDefault (resolve_idx ctx.types i)
+    | ArrayNewFixed (i, u) -> ArrayNewFixed (resolve_idx ctx.types i, u)
+    | ArrayNewData (i1, i2) ->
+        ArrayNewData (resolve_idx ctx.types i1, resolve_idx ctx.datas i2)
+    | ArrayNewElem (i1, i2) ->
+        ArrayNewElem (resolve_idx ctx.types i1, resolve_idx ctx.elems i2)
+    | ArrayGet (s, i) -> ArrayGet (s, resolve_idx ctx.types i)
+    | ArraySet i -> ArraySet (resolve_idx ctx.types i)
+    | ArrayLen -> ArrayLen
+    | ArrayFill i -> ArrayFill (resolve_idx ctx.types i)
+    | ArrayCopy (i1, i2) ->
+        ArrayCopy (resolve_idx ctx.types i1, resolve_idx ctx.types i2)
+    | ArrayInitData (i1, i2) ->
+        ArrayInitData (resolve_idx ctx.types i1, resolve_idx ctx.datas i2)
+    | ArrayInitElem (i1, i2) ->
+        ArrayInitElem (resolve_idx ctx.types i1, resolve_idx ctx.elems i2)
+    | RefI31 -> RefI31
+    | I31Get s -> I31Get s
+    | I32WrapI64 -> I32WrapI64
+    | I64ExtendI32 s -> I64ExtendI32 s
+    | F32DemoteF64 -> F32DemoteF64
+    | F64PromoteF32 -> F64PromoteF32
+    | ExternConvertAny -> ExternConvertAny
+    | AnyConvertExtern -> AnyConvertExtern
+    | Pop i -> Pop (valtype ctx i)
+    | TupleMake u -> TupleMake u
+    | TupleExtract (u1, u2) -> TupleExtract (u1, u2)
+    | Folded (i, is) -> Folded (recurse ctx i, List.map (recurse ctx) is)
   in
   { desc; info = i.info }
 

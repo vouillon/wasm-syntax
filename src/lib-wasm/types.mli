@@ -19,7 +19,11 @@ val get_subtype : subtyping_info -> int -> Ast.Binary.subtype
 val get_all_rectypes : t -> Ast.Binary.rectype list
 (** Returns all recursive type definitions from the context. *)
 
-val heap_subtype : subtyping_info -> Ast.Binary.heaptype -> Ast.Binary.heaptype -> bool
-val ref_subtype : subtyping_info -> Ast.Binary.reftype -> Ast.Binary.reftype -> bool
+val heap_subtype :
+  subtyping_info -> Ast.Binary.heaptype -> Ast.Binary.heaptype -> bool
+
+val ref_subtype :
+  subtyping_info -> Ast.Binary.reftype -> Ast.Binary.reftype -> bool
+
 val val_subtype :
   subtyping_info -> Ast.Binary.valtype -> Ast.Binary.valtype -> bool
