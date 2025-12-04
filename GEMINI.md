@@ -40,11 +40,13 @@ The following commands define the standard developer workflow.
 | `-o` | `--output` | Output file (Default: `stdout`) | File path |
 
 ### Current Supported Pipelines
-The CLI supports the following flows **only**. Do not attempt binary generation yet.
+The CLI supports the following flows:
 1.  `wat` -> `wat` (Formatting / Round-trip)
 2.  `wat` -> `wax` (Decompilation / Desugaring)
-3.  `wax` -> `wax` (Formatting / Checking)
-* *Note: `wasm` (binary) input/output is not yet implemented.*
+3.  `wat` -> `wasm` (Compilation to binary)
+4.  `wax` -> `wat` (Compilation / Sugar removal)
+5.  `wax` -> `wax` (Formatting / Checking)
+6.  `wax` -> `wasm` (Compilation to binary)
 
 ## Project Structure
 * `src/bin/` - CLI entry point and test drivers.

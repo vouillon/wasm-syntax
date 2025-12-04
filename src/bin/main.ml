@@ -104,6 +104,39 @@ let wax_to_wax ~input_file ~output_file ~validate ~color =
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wax ast)
 
+let wax_to_wasm ~input_file ~output_file ~validate ~color =
+  let text = with_open_in input_file In_channel.input_all in
+  let ast =
+    Wax_parser.parse_from_string
+      ~filename:(Option.value ~default:"-" input_file)
+      text
+  in
+  let ast = Wax.Typing.f ast in
+  let name, fields = Conversion.To_wasm.module_ ast in
+  let name =
+    match name with
+    | Some { desc = Id id; _ } -> Some id
+    | Some { desc = Num _; _ } -> None
+    | None -> None
+  in
+  let wasm_ast_text = (name, fields) in
+  if validate then Wasm.Validation.f wasm_ast_text;
+  let wasm_ast_binary = Wasm.Text_to_binary.module_ wasm_ast_text in
+  with_open_out output_file (fun oc ->
+      Wasm.Wasm_output.module_ ~color ~out_channel:oc wasm_ast_binary)
+
+let wat_to_wasm ~input_file ~output_file ~validate ~color =
+  let text = with_open_in input_file In_channel.input_all in
+  let ast =
+    Wat_parser.parse_from_string
+      ~filename:(Option.value ~default:"-" input_file)
+      text
+  in
+  if validate then Wasm.Validation.f ast;
+  let wasm_ast_binary = Wasm.Text_to_binary.module_ ast in
+  with_open_out output_file (fun oc ->
+      Wasm.Wasm_output.module_ ~color ~out_channel:oc wasm_ast_binary)
+
 type format = Wat | Wasm | Wax
 
 let string_of_format = function Wat -> "wat" | Wasm -> "wasm" | Wax -> "wax"
@@ -156,8 +189,10 @@ let convert input_file output_file input_format_opt output_format_opt validate
     match (input_format, output_format) with
     | Wat, Wat -> wat_to_wat
     | Wat, Wax -> wat_to_wax
+    | Wat, Wasm -> wat_to_wasm
     | Wax, Wat -> wax_to_wat
     | Wax, Wax -> wax_to_wax
+    | Wax, Wasm -> wax_to_wasm
     | _ ->
         fun ~input_file:_ ~output_file:_ ~validate:_ ~color:_ ->
           Printf.eprintf
@@ -268,18 +303,20 @@ let convert_cmd =
       `P "Currently supported conversions:";
       `P "- Wat to Wat (formatting / round-trip)";
       `P "- Wat to Wax (decompilation / desugaring)";
+      `P "- Wat to Wasm (binary output)";
       `P "- Wax to Wat (compilation / sugar removal)";
       `P "- Wax to Wax (formatting / checking)";
+      `P "- Wax to Wasm (compilation to binary)";
       `P "Default conversion: wax -> wasm";
       `S Manpage.s_examples;
       `P "Convert file with auto-detected formats:";
-      `Pre "  $(tname) input.wasm -o output.wat";
+      `Pre "  $(tname) input.wat -o output.wasm";
       `P "Read from stdin, write to stdout:";
-      `Pre "  cat input.wasm | $(tname) -i wasm -f wat > output.wat";
+      `Pre "  cat input.wat | $(tname) -i wat -f wasm > output.wasm";
       `P "Read from stdin, write to file:";
-      `Pre "  cat input.wat | $(tname) -i wat -o output.wasm";
+      `Pre "  cat input.wax | $(tname) -i wax -o output.wasm";
       `P "Explicit format specification:";
-      `Pre "  $(tname) input -i wasm -o output -f wat";
+      `Pre "  $(tname) input -i wat -o output -f wasm";
       `S Manpage.s_options;
     ]
   in
