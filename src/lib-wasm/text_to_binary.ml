@@ -22,6 +22,7 @@ type context = {
   tables : index_space;
   memories : index_space;
   types : index_space;
+  fields : int StringMap.t B.IntMap.t;
   tags : index_space;
   datas : index_space;
   elems : index_space;
@@ -38,6 +39,7 @@ let empty_context =
     tables = empty_space;
     memories = empty_space;
     types = empty_space;
+    fields = B.IntMap.empty;
     tags = empty_space;
     datas = empty_space;
     elems = empty_space;
@@ -144,8 +146,24 @@ let catch ctx (c : T.catch) : B.catch =
   | CatchAll label -> CatchAll (resolve_label ctx.labels label)
   | CatchAllRef label -> CatchAllRef (resolve_label ctx.labels label)
 
+let resolve_field_idx ctx type_idx (field_idx_text : T.idx) : B.idx =
+  match field_idx_text.desc with
+  | T.Num n -> Utils.Uint32.to_int n
+  | T.Id id -> (
+      match B.IntMap.find_opt type_idx ctx.fields with
+      | Some field_map -> (
+          match StringMap.find_opt id field_map with
+          | Some f_idx -> f_idx
+          | None ->
+              failwith
+                (Printf.sprintf
+                   "Unknown field identifier '%s' for type index %d" id type_idx)
+          )
+      | None ->
+          failwith
+            (Printf.sprintf "No field map found for type index %d" type_idx))
+
 let rec instr ~resolve_type ctx (i : 'info T.instr) =
-  let recurse = instr ~resolve_type in
   let desc : _ B.instr_desc =
     match i.desc with
     | Block { label; typ; block } ->
@@ -154,7 +172,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
           {
             label = ();
             typ = Option.map (block_type ~resolve_type ctx) typ;
-            block = List.map (recurse ctx') block;
+            block = List.map (instr ~resolve_type ctx') block;
           }
     | Loop { label; typ; block } ->
         let ctx' = { ctx with labels = label :: ctx.labels } in
@@ -162,7 +180,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
           {
             label = ();
             typ = Option.map (block_type ~resolve_type ctx) typ;
-            block = List.map (recurse ctx') block;
+            block = List.map (instr ~resolve_type ctx') block;
           }
     | If { label; typ; if_block; else_block } ->
         let ctx' = { ctx with labels = label :: ctx.labels } in
@@ -170,8 +188,8 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
           {
             label = ();
             typ = Option.map (block_type ~resolve_type ctx) typ;
-            if_block = List.map (recurse ctx') if_block;
-            else_block = List.map (recurse ctx') else_block;
+            if_block = List.map (instr ~resolve_type ctx') if_block;
+            else_block = List.map (instr ~resolve_type ctx') else_block;
           }
     | Unreachable -> Unreachable
     | Nop -> Nop
@@ -249,7 +267,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
             label = ();
             typ = Option.map (block_type ~resolve_type ctx) typ;
             catches = List.map (catch ctx) catches;
-            block = List.map (recurse ctx') block;
+            block = List.map (instr ~resolve_type ctx') block;
           }
     | Try { label; typ; block; catches; catch_all } ->
         let ctx' = { ctx with labels = label :: ctx.labels } in
@@ -257,13 +275,15 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
           {
             label = ();
             typ = Option.map (block_type ~resolve_type ctx) typ;
-            block = List.map (recurse ctx') block;
+            block = List.map (instr ~resolve_type ctx') block;
             catches =
               List.map
                 (fun (tag, b) ->
-                  (resolve_idx ctx.tags tag, List.map (recurse ctx') b))
+                  ( resolve_idx ctx.tags tag,
+                    List.map (instr ~resolve_type ctx') b ))
                 catches;
-            catch_all = Option.map (List.map (recurse ctx')) catch_all;
+            catch_all =
+              Option.map (List.map (instr ~resolve_type ctx')) catch_all;
           }
     | Throw i -> Throw (resolve_idx ctx.tags i)
     | ThrowRef -> ThrowRef
@@ -283,10 +303,11 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | StructNew i -> StructNew (resolve_idx ctx.types i)
     | StructNewDefault i -> StructNewDefault (resolve_idx ctx.types i)
     | StructGet (s, i1, i2) ->
-        StructGet
-          (s, resolve_idx ctx.types i1, resolve_field_idx ctx.fields i2 i2)
+        let type_idx = resolve_idx ctx.types i1 in
+        StructGet (s, type_idx, resolve_field_idx ctx type_idx i2)
     | StructSet (i1, i2) ->
-        StructSet (resolve_idx ctx.types i1, resolve_field_idx ctx.fields i1 i2)
+        let type_idx = resolve_idx ctx.types i1 in
+        StructSet (type_idx, resolve_field_idx ctx type_idx i2)
     | ArrayNew i -> ArrayNew (resolve_idx ctx.types i)
     | ArrayNewDefault i -> ArrayNewDefault (resolve_idx ctx.types i)
     | ArrayNewFixed (i, u) -> ArrayNewFixed (resolve_idx ctx.types i, u)
@@ -315,7 +336,8 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | Pop i -> Pop (valtype ctx i)
     | TupleMake u -> TupleMake u
     | TupleExtract (u1, u2) -> TupleExtract (u1, u2)
-    | Folded (i, is) -> Folded (recurse ctx i, List.map (recurse ctx) is)
+    | Folded (i, is) ->
+        Folded (instr ~resolve_type ctx i, List.map (instr ~resolve_type ctx) is)
   in
   { desc; info = i.info }
 
@@ -362,15 +384,19 @@ let collect_labels instrs ctr map =
   in
   go instrs ctr map
 
+let invert_map map =
+  StringMap.fold (fun k v acc -> B.IntMap.add v k acc) map B.IntMap.empty
+
 let module_ (m : 'info T.module_) : 'info B.module_ =
   let module_name, fields = m in
 
   (* Pass 1: Build Context *)
   let ctx = empty_context in
 
-  let scan_types ctx fields =
+  let func_types_by_idx = B.IntMap.empty in
+  let ctx, func_types_by_idx =
     List.fold_left
-      (fun ctx f ->
+      (fun (ctx, acc_func_types) f ->
         match f with
         | T.Types r ->
             let types_space, _ =
@@ -378,47 +404,59 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
                 (fun (space, _) (id, _) -> add_name space id)
                 (ctx.types, 0) r
             in
-            { ctx with types = types_space }
-        | _ -> ctx)
-      ctx fields
-  in
-  let ctx = scan_types ctx fields in
-
-  let scan_imports ctx fields =
-    List.fold_left
-      (fun ctx f ->
-        match f with
+            let current_type_idx = ctx.types.count in
+            let acc_func_types =
+              Array.fold_left
+                (fun (acc_map, idx_in_arr) (_, subtype) ->
+                  match subtype.T.typ with
+                  | T.Func func_t ->
+                      let b_func_t = func_type ctx func_t in
+                      ( B.IntMap.add
+                          (current_type_idx + idx_in_arr)
+                          (Array.length b_func_t.B.Types.params)
+                          acc_map,
+                        idx_in_arr + 1 )
+                  | _ -> (acc_map, idx_in_arr + 1))
+                (acc_func_types, 0) r
+              |> fst
+            in
+            ({ ctx with types = types_space }, acc_func_types)
         | T.Import { id; desc; _ } -> (
             match desc with
-            | T.Func _ -> { ctx with funcs = fst (add_name ctx.funcs id) }
-            | T.Table _ -> { ctx with tables = fst (add_name ctx.tables id) }
+            | T.Func _ ->
+                ( { ctx with funcs = fst (add_name ctx.funcs id) },
+                  acc_func_types )
+            | T.Table _ ->
+                ( { ctx with tables = fst (add_name ctx.tables id) },
+                  acc_func_types )
             | T.Memory _ ->
-                { ctx with memories = fst (add_name ctx.memories id) }
-            | T.Global _ -> { ctx with globals = fst (add_name ctx.globals id) }
-            | T.Tag _ -> { ctx with tags = fst (add_name ctx.tags id) })
-        | _ -> ctx)
-      ctx fields
-  in
-  let ctx = scan_imports ctx fields in
-
-  let scan_defs ctx fields =
-    List.fold_left
-      (fun ctx f ->
-        match f with
-        | T.Func { id; _ } -> { ctx with funcs = fst (add_name ctx.funcs id) }
+                ( { ctx with memories = fst (add_name ctx.memories id) },
+                  acc_func_types )
+            | T.Global _ ->
+                ( { ctx with globals = fst (add_name ctx.globals id) },
+                  acc_func_types )
+            | T.Tag _ ->
+                ({ ctx with tags = fst (add_name ctx.tags id) }, acc_func_types)
+            )
+        | T.Func { id; _ } ->
+            ({ ctx with funcs = fst (add_name ctx.funcs id) }, acc_func_types)
         | T.Table { id; _ } ->
-            { ctx with tables = fst (add_name ctx.tables id) }
+            ({ ctx with tables = fst (add_name ctx.tables id) }, acc_func_types)
         | T.Memory { id; _ } ->
-            { ctx with memories = fst (add_name ctx.memories id) }
+            ( { ctx with memories = fst (add_name ctx.memories id) },
+              acc_func_types )
         | T.Global { id; _ } ->
-            { ctx with globals = fst (add_name ctx.globals id) }
-        | T.Tag { id; _ } -> { ctx with tags = fst (add_name ctx.tags id) }
-        | T.Elem { id; _ } -> { ctx with elems = fst (add_name ctx.elems id) }
-        | T.Data { id; _ } -> { ctx with datas = fst (add_name ctx.datas id) }
-        | _ -> ctx)
-      ctx fields
+            ( { ctx with globals = fst (add_name ctx.globals id) },
+              acc_func_types )
+        | T.Tag { id; _ } ->
+            ({ ctx with tags = fst (add_name ctx.tags id) }, acc_func_types)
+        | T.Elem { id; _ } ->
+            ({ ctx with elems = fst (add_name ctx.elems id) }, acc_func_types)
+        | T.Data { id; _ } ->
+            ({ ctx with datas = fst (add_name ctx.datas id) }, acc_func_types)
+        | _ -> (ctx, acc_func_types))
+      (ctx, func_types_by_idx) fields
   in
-  let ctx = scan_defs ctx fields in
 
   (* Collect Struct Field Names *)
   let field_names =
@@ -435,12 +473,12 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
                       Array.fold_left
                         (fun (fmap, fidx) (fname, _) ->
                           match fname with
-                          | Some n -> (B.IntMap.add fidx n fmap, fidx + 1)
+                          | Some n -> (StringMap.add n fidx fmap, fidx + 1)
                           | None -> (fmap, fidx + 1))
-                        (B.IntMap.empty, 0) field_defs
+                        (StringMap.empty, 0) field_defs
                       |> fst
                     in
-                    if B.IntMap.is_empty field_map then (acc, i + 1)
+                    if StringMap.is_empty field_map then (acc, i + 1)
                     else (B.IntMap.add (type_idx + i) field_map acc, i + 1)
                 | _ -> (acc, i + 1))
               (acc, 0) r
@@ -450,6 +488,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     in
     scan_fields 0 fields B.IntMap.empty
   in
+  let ctx = { ctx with fields = field_names } in
 
   (* Type Memoization *)
   let type_map = Hashtbl.create 1024 in
@@ -562,20 +601,40 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let labels_names = ref B.IntMap.empty in
 
   let code =
-    let rec process_funcs fields func_idx acc =
+    let rec process_funcs func_types_by_idx fields func_idx acc =
       match fields with
       | [] -> List.rev acc
-      | T.Func { locals; instrs; _ } :: rest ->
-          (* Collect Local Names *)
-          let local_map =
+      | T.Func { typ; locals; instrs; _ } :: rest ->
+          (* Build local context *)
+          let locals_space =
+            let num_unnamed_params =
+              match typ with
+              | Some type_idx, None -> (
+                  let resolved_idx = resolve_idx ctx.types type_idx in
+                  match B.IntMap.find_opt resolved_idx func_types_by_idx with
+                  | Some num_params -> num_params
+                  | None ->
+                      failwith
+                        (Printf.sprintf "Function type with index %d not found"
+                           resolved_idx))
+              | _ -> 0
+            in
+            let all_variables_for_mapping =
+              match typ with
+              | _, Some (named_params, _) -> named_params @ locals
+              | _, None -> locals
+            in
             List.fold_left
-              (fun (map, idx) (id, _) ->
-                match id with
-                | Some n -> (B.IntMap.add idx n map, idx + 1)
-                | None -> (map, idx + 1))
-              (B.IntMap.empty, 0) locals
-            |> fst
+              (fun space (id, _) ->
+                let space, _ = add_name space id in
+                space)
+              { empty_space with count = num_unnamed_params }
+              all_variables_for_mapping
           in
+          let func_ctx = { ctx with locals = locals_space } in
+
+          (* Collect Local Names *)
+          let local_map = invert_map locals_space.map in
           if not (B.IntMap.is_empty local_map) then
             locals_names := B.IntMap.add func_idx local_map !locals_names;
 
@@ -584,15 +643,6 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
           if not (B.IntMap.is_empty label_map) then
             labels_names := B.IntMap.add func_idx label_map !labels_names;
 
-          (* Build local context *)
-          let locals_space, _ =
-            List.fold_left
-              (fun (space, idx) (id, _) ->
-                let space, _ = add_name space id in
-                (space, idx + 1))
-              (empty_space, 0) locals
-          in
-          let func_ctx = { ctx with locals = locals_space } in
           let b_locals = List.map (fun (_, v) -> valtype ctx v) locals in
           let converted_func =
             {
@@ -601,10 +651,11 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             }
           in
 
-          process_funcs rest (func_idx + 1) (converted_func :: acc)
-      | _ :: rest -> process_funcs rest func_idx acc
+          process_funcs func_types_by_idx rest (func_idx + 1)
+            (converted_func :: acc)
+      | _ :: rest -> process_funcs func_types_by_idx rest func_idx acc
     in
-    process_funcs fields func_import_count []
+    process_funcs func_types_by_idx fields func_import_count []
   in
 
   let tables =
@@ -728,10 +779,6 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
           [| { B.typ = B.Func ft; supertype = None; final = true } |]))
   in
 
-  let invert_map map =
-    StringMap.fold (fun k v acc -> B.IntMap.add v k acc) map B.IntMap.empty
-  in
-
   {
     B.types;
     imports;
@@ -751,7 +798,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
         functions = invert_map ctx.funcs.map;
         locals = !locals_names;
         types = invert_map ctx.types.map;
-        fields = field_names;
+        fields = B.IntMap.map invert_map field_names;
         tags = invert_map ctx.tags.map;
         globals = invert_map ctx.globals.map;
         tables = invert_map ctx.tables.map;
