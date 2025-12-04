@@ -73,6 +73,73 @@ end
 
 type signage = Signed | Unsigned
 
+type int_un_op =
+  | Clz
+  | Ctz
+  | Popcnt
+  | Eqz
+  | Trunc of [ `F32 | `F64 ] * signage
+  | TruncSat of [ `F32 | `F64 ] * signage
+  | Reinterpret
+  | ExtendS of [ `_8 | `_16 | `_32 ]
+
+type int_bin_op =
+  | Add
+  | Sub
+  | Mul
+  | Div of signage
+  | Rem of signage
+  | And
+  | Or
+  | Xor
+  | Shl
+  | Shr of signage
+  | Rotl
+  | Rotr
+  | Eq
+  | Ne
+  | Lt of signage
+  | Gt of signage
+  | Le of signage
+  | Ge of signage
+
+type float_un_op =
+  | Neg
+  | Abs
+  | Ceil
+  | Floor
+  | Trunc
+  | Nearest
+  | Sqrt
+  | Convert of [ `I32 | `I64 ] * signage
+  | Reinterpret
+
+type float_bin_op =
+  | Add
+  | Sub
+  | Mul
+  | Div
+  | Min
+  | Max
+  | CopySign
+  | Eq
+  | Ne
+  | Lt
+  | Gt
+  | Le
+  | Ge
+
+type ('i32, 'i64, 'f32, 'f64) op =
+  | I32 of 'i32
+  | I64 of 'i64
+  | F32 of 'f32
+  | F64 of 'f64
+
+type memarg = {
+  offset : Uint64.t;
+  align : Uint64.t (* The wasm test suite contains large align values *);
+}
+
 module Make_instructions (X : sig
   type idx
   type typeuse
@@ -84,7 +151,7 @@ module Make_instructions (X : sig
   type int64_t
   type float_t
 end) : sig
-  type ('i32, 'i64, 'f32, 'f64) op =
+  type nonrec ('i32, 'i64, 'f32, 'f64) op = ('i32, 'i64, 'f32, 'f64) op =
     | I32 of 'i32
     | I64 of 'i64
     | F32 of 'f32
@@ -92,7 +159,7 @@ end) : sig
 
   type nonrec signage = signage = Signed | Unsigned
 
-  type int_un_op =
+  type nonrec int_un_op = int_un_op =
     | Clz
     | Ctz
     | Popcnt
@@ -102,7 +169,7 @@ end) : sig
     | Reinterpret
     | ExtendS of [ `_8 | `_16 | `_32 ]
 
-  type int_bin_op =
+  type nonrec int_bin_op = int_bin_op =
     | Add
     | Sub
     | Mul
@@ -122,7 +189,7 @@ end) : sig
     | Le of signage
     | Ge of signage
 
-  type float_un_op =
+  type nonrec float_un_op = float_un_op =
     | Neg
     | Abs
     | Ceil
@@ -133,7 +200,7 @@ end) : sig
     | Convert of [ `I32 | `I64 ] * signage
     | Reinterpret
 
-  type float_bin_op =
+  type nonrec float_bin_op = float_bin_op =
     | Add
     | Sub
     | Mul
@@ -150,7 +217,7 @@ end) : sig
 
   type blocktype = Typeuse of X.typeuse | Valtype of X.valtype
 
-  type memarg = {
+  type nonrec memarg = memarg = {
     offset : Uint64.t;
     align : Uint64.t (* The wasm test suite contains large align values *);
   }
@@ -282,6 +349,8 @@ end
 
 (* Modules *)
 
+type exportable = Func | Memory | Table | Tag | Global
+
 module Text : sig
   type id = string
   type idx_desc = Num of Uint32.t | Id of id
@@ -320,7 +389,7 @@ module Text : sig
     | Global of globaltype
     | Tag of typeuse
 
-  type exportable = Func | Memory | Table | Tag | Global
+  type nonrec exportable = exportable = Func | Memory | Table | Tag | Global
   type 'info datamode = Passive | Active of idx * 'info expr
   type 'info elemmode = Passive | Active of idx * 'info expr | Declare
 
@@ -404,9 +473,10 @@ module Binary : sig
     type float_t = float
   end)
 
-  type exportable = Func | Memory | Table | Tag | Global
+  type nonrec exportable = exportable = Func | Memory | Table | Tag | Global
   type 'info datamode = Passive | Active of idx * 'info expr
   type 'info elemmode = Passive | Active of idx * 'info expr | Declare
+
   type importdesc =
     | Func of typeuse
     | Memory of limits
@@ -449,6 +519,11 @@ module Binary : sig
     types : name_map;
     fields : indirect_name_map;
     tags : name_map;
+    globals : name_map;
+    tables : name_map;
+    memories : name_map;
+    data : name_map;
+    elem : name_map;
   }
 
   type 'info module_ = {

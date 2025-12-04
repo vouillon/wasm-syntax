@@ -3,369 +3,326 @@ module B = Binary
 module T = Text
 
 let no_loc = Ast.no_loc
-let convert_idx i = no_loc (T.Num (Uint32.of_int i))
+let numeric_index i = no_loc (T.Num (Uint32.of_int i))
 
-let rec convert_heaptype (h : B.heaptype) : T.heaptype =
+let index ~map i =
+  match B.IntMap.find_opt i map with
+  | Some s -> no_loc (T.Id s)
+  | None -> numeric_index i
+
+let rec heaptype type_names (h : B.heaptype) : T.heaptype =
   match h with
-  | B.Func -> T.Func
-  | B.NoFunc -> T.NoFunc
-  | B.Exn -> T.Exn
-  | B.NoExn -> T.NoExn
-  | B.Extern -> T.Extern
-  | B.NoExtern -> T.NoExtern
-  | B.Any -> T.Any
-  | B.Eq -> T.Eq
-  | B.I31 -> T.I31
-  | B.Struct -> T.Struct
-  | B.Array -> T.Array
-  | B.None_ -> T.None_
-  | B.Type i -> T.Type (convert_idx i)
+  | Func -> Func
+  | NoFunc -> NoFunc
+  | Exn -> Exn
+  | NoExn -> NoExn
+  | Extern -> Extern
+  | NoExtern -> NoExtern
+  | Any -> Any
+  | Eq -> Eq
+  | I31 -> I31
+  | Struct -> Struct
+  | Array -> Array
+  | None_ -> None_
+  | Type i -> Type (index ~map:type_names i)
 
-and convert_reftype (r : B.reftype) : T.reftype =
-  { nullable = r.nullable; typ = convert_heaptype r.typ }
+and reftype type_names (r : B.reftype) : T.reftype =
+  { nullable = r.nullable; typ = heaptype type_names r.typ }
 
-let convert_valtype (v_orig : B.valtype) : T.valtype =
-  let rec convert_valtype_rec (v : B.valtype) : T.valtype =
-    match v with
-    | B.I32 -> T.I32
-    | B.I64 -> T.I64
-    | B.F32 -> T.F32
-    | B.F64 -> T.F64
-    | B.V128 -> T.V128
-    | B.Ref r -> T.Ref (convert_reftype r)
-    | B.Tuple l -> T.Tuple (List.map convert_valtype_rec l)
-  in
-  convert_valtype_rec v_orig
+let rec valtype type_names (v : B.valtype) : T.valtype =
+  match v with
+  | I32 -> I32
+  | I64 -> I64
+  | F32 -> F32
+  | F64 -> F64
+  | V128 -> V128
+  | Ref r -> Ref (reftype type_names r)
+  | Tuple l -> Tuple (List.map (valtype type_names) l)
 
-let convert_storagetype (s : B.storagetype) : T.storagetype =
-  match s with
-  | B.Value v -> T.Value (convert_valtype v)
-  | B.Packed p -> T.Packed p
+let storagetype type_names (s : B.storagetype) : T.storagetype =
+  match s with Value v -> Value (valtype type_names v) | Packed p -> Packed p
 
-let convert_muttype (f : 'a -> 'b) (m : 'a B.muttype) : 'b T.muttype =
-  { mut = m.mut; typ = f m.typ }
+let muttype f (m : 'a B.muttype) : 'b T.muttype = { mut = m.mut; typ = f m.typ }
+let fieldtype type_names f = muttype (storagetype type_names) f
 
-let convert_fieldtype (f : B.fieldtype) : T.fieldtype =
-  convert_muttype convert_storagetype f
-
-let convert_functype (f : B.functype) : T.functype =
+let functype type_names (f : B.functype) : T.functype =
   {
-    params = Array.map convert_valtype f.params;
-    results = Array.map convert_valtype f.results;
+    params = Array.map (valtype type_names) f.params;
+    results = Array.map (valtype type_names) f.results;
   }
 
-let convert_comptype (c : B.comptype) : T.comptype =
+let comptype type_names (c : B.comptype) : T.comptype =
   match c with
-  | B.Func ft -> T.Func (convert_functype ft)
-  | B.Struct fa ->
-      T.Struct (Array.map (fun f -> (None, convert_fieldtype f)) fa)
-      (* Binary has no field names *)
-  | B.Array ft -> T.Array (convert_fieldtype ft)
+  | Func ft -> Func (functype type_names ft)
+  | Struct fa -> Struct (Array.map (fun f -> (None, fieldtype type_names f)) fa)
+  | Array ft -> Array (fieldtype type_names ft)
 
-let convert_subtype (s : B.subtype) : T.subtype =
+let subtype type_names (s : B.subtype) : T.subtype =
   {
-    typ = convert_comptype s.typ;
-    supertype = Option.map convert_idx s.supertype;
+    typ = comptype type_names s.typ;
+    supertype = Option.map (index ~map:type_names) s.supertype;
     final = s.final;
   }
 
-let convert_rectype (r : B.rectype) : T.rectype =
-  Array.map (fun s -> (None, convert_subtype s)) r
+let rectype type_names r = Array.map (fun s -> (None, subtype type_names s)) r
+let globaltype type_names g = muttype (valtype type_names) g
 
-let convert_globaltype (g : B.globaltype) : T.globaltype =
-  convert_muttype convert_valtype g
+let tabletype type_names (t : B.tabletype) : T.tabletype =
+  { limits = t.limits; reftype = reftype type_names t.reftype }
 
-let convert_tabletype (t : B.tabletype) : T.tabletype =
-  { limits = t.limits; reftype = convert_reftype t.reftype }
-
-let convert_memarg (m : B.memarg) : T.memarg =
-  { offset = m.offset; align = m.align }
-
-let convert_blocktype (b : B.blocktype) : T.blocktype =
+let blocktype type_names (b : B.blocktype) : T.blocktype =
   match b with
-  | B.Typeuse i -> T.Typeuse (Some (convert_idx i), None)
-  | B.Valtype v -> T.Valtype (convert_valtype v)
+  | Typeuse i -> Typeuse (Some (index ~map:type_names i), None)
+  | Valtype v -> Valtype (valtype type_names v)
 
-let convert_int_un_op (op_b : B.int_un_op) : T.int_un_op =
-  match op_b with
-  | B.Clz -> T.Clz
-  | B.Ctz -> T.Ctz
-  | B.Popcnt -> T.Popcnt
-  | B.Eqz -> T.Eqz
-  | B.Trunc (f, s) -> T.Trunc (f, s)
-  | B.TruncSat (f, s) -> T.TruncSat (f, s)
-  | B.Reinterpret -> T.Reinterpret
-  | B.ExtendS s -> T.ExtendS s
+let catch (names : B.names) (c : B.catch) : T.catch =
+  match c with
+  | Catch (tag, label) -> Catch (index ~map:names.tags tag, numeric_index label)
+  | CatchRef (tag, label) ->
+      CatchRef (index ~map:names.tags tag, numeric_index label)
+  | CatchAll label -> CatchAll (numeric_index label)
+  | CatchAllRef label -> CatchAllRef (numeric_index label)
 
-let convert_float_un_op (op_b : B.float_un_op) : T.float_un_op =
-  match op_b with
-  | B.Neg -> T.Neg
-  | B.Abs -> T.Abs
-  | B.Ceil -> T.Ceil
-  | B.Floor -> T.Floor
-  | B.Trunc -> T.Trunc
-  | B.Nearest -> T.Nearest
-  | B.Sqrt -> T.Sqrt
-  | B.Convert (i, s) -> T.Convert (i, s)
-  | B.Reinterpret -> T.Reinterpret
+let field_index (names : B.names) s_idx f_idx =
+  match B.IntMap.find_opt s_idx names.fields with
+  | Some field_map -> index ~map:field_map f_idx
+  | None -> numeric_index f_idx
 
-let convert_int_bin_op (op_b : B.int_bin_op) : T.int_bin_op =
-  match op_b with
-  | B.Add -> T.Add
-  | B.Sub -> T.Sub
-  | B.Mul -> T.Mul
-  | B.Div s -> T.Div s
-  | B.Rem s -> T.Rem s
-  | B.And -> T.And
-  | B.Or -> T.Or
-  | B.Xor -> T.Xor
-  | B.Shl -> T.Shl
-  | B.Shr s -> T.Shr s
-  | B.Rotl -> T.Rotl
-  | B.Rotr -> T.Rotr
-  | B.Eq -> T.Eq
-  | B.Ne -> T.Ne
-  | B.Lt s -> T.Lt s
-  | B.Gt s -> T.Gt s
-  | B.Le s -> T.Le s
-  | B.Ge s -> T.Ge s
-
-let convert_float_bin_op (op_b : B.float_bin_op) : T.float_bin_op =
-  match op_b with
-  | B.Add -> T.Add
-  | B.Sub -> T.Sub
-  | B.Mul -> T.Mul
-  | B.Div -> T.Div
-  | B.Min -> T.Min
-  | B.Max -> T.Max
-  | B.CopySign -> T.CopySign
-  | B.Eq -> T.Eq
-  | B.Ne -> T.Ne
-  | B.Lt -> T.Lt
-  | B.Gt -> T.Gt
-  | B.Le -> T.Le
-  | B.Ge -> T.Ge
-
-let convert_un_op
-    (op_b : (B.int_un_op, B.int_un_op, B.float_un_op, B.float_un_op) B.op) :
-    (T.int_un_op, T.int_un_op, T.float_un_op, T.float_un_op) T.op =
-  match op_b with
-  | B.I32 x -> T.I32 (convert_int_un_op x)
-  | B.I64 x -> T.I64 (convert_int_un_op x)
-  | B.F32 x -> T.F32 (convert_float_un_op x)
-  | B.F64 x -> T.F64 (convert_float_un_op x)
-
-let convert_bin_op
-    (op_b : (B.int_bin_op, B.int_bin_op, B.float_bin_op, B.float_bin_op) B.op) :
-    (T.int_bin_op, T.int_bin_op, T.float_bin_op, T.float_bin_op) T.op =
-  match op_b with
-  | B.I32 x -> T.I32 (convert_int_bin_op x)
-  | B.I64 x -> T.I64 (convert_int_bin_op x)
-  | B.F32 x -> T.F32 (convert_float_bin_op x)
-  | B.F64 x -> T.F64 (convert_float_bin_op x)
-
-let convert_unit_op (op_b : (unit, unit, unit, unit) B.op) :
-    (unit, unit, unit, unit) T.op =
-  match op_b with
-  | B.I32 () -> T.I32 ()
-  | B.I64 () -> T.I64 ()
-  | B.F32 () -> T.F32 ()
-  | B.F64 () -> T.F64 ()
-
-let rec convert_instr (i : 'info B.instr) : 'info T.instr =
-  let desc =
+let rec instr (names : B.names) local_names (i : _ B.instr) =
+  let desc : _ T.instr_desc =
     match i.desc with
-    | B.Block { label = _; typ; block } ->
-        T.Block
+    | Block { label = _; typ; block } ->
+        Block
           {
             label = None;
-            typ = Option.map convert_blocktype typ;
-            block = List.map convert_instr block;
+            typ = Option.map (blocktype names.types) typ;
+            block = List.map (instr names local_names) block;
           }
-    | B.Loop { label = _; typ; block } ->
-        T.Loop
+    | Loop { label = _; typ; block } ->
+        Loop
           {
             label = None;
-            typ = Option.map convert_blocktype typ;
-            block = List.map convert_instr block;
+            typ = Option.map (blocktype names.types) typ;
+            block = List.map (instr names local_names) block;
           }
-    | B.If { label = _; typ; if_block; else_block } ->
-        T.If
+    | If { label = _; typ; if_block; else_block } ->
+        If
           {
             label = None;
-            typ = Option.map convert_blocktype typ;
-            if_block = List.map convert_instr if_block;
-            else_block = List.map convert_instr else_block;
+            typ = Option.map (blocktype names.types) typ;
+            if_block = List.map (instr names local_names) if_block;
+            else_block = List.map (instr names local_names) else_block;
           }
-    | B.TryTable _ -> T.Nop (* Unsupported in Text format *)
-    | B.Try _ -> T.Nop (* Unsupported in Text format *)
-    | B.Unreachable -> T.Unreachable
-    | B.Nop -> T.Nop
-    | B.Throw i -> T.Throw (convert_idx i)
-    | B.ThrowRef -> T.ThrowRef
-    | B.Br i -> T.Br (convert_idx i)
-    | B.Br_if i -> T.Br_if (convert_idx i)
-    | B.Br_table (l, d) -> T.Br_table (List.map convert_idx l, convert_idx d)
-    | B.Br_on_null i -> T.Br_on_null (convert_idx i)
-    | B.Br_on_non_null i -> T.Br_on_non_null (convert_idx i)
-    | B.Br_on_cast (l, r1, r2) ->
-        T.Br_on_cast (convert_idx l, convert_reftype r1, convert_reftype r2)
-    | B.Br_on_cast_fail (l, r1, r2) ->
-        T.Br_on_cast_fail (convert_idx l, convert_reftype r1, convert_reftype r2)
-    | B.Return -> T.Return
-    | B.Call i -> T.Call (convert_idx i)
-    | B.CallRef i -> T.CallRef (convert_idx i)
-    | B.CallIndirect (t, i) ->
-        T.CallIndirect (convert_idx i, (Some (convert_idx t), None))
-    | B.ReturnCall i -> T.ReturnCall (convert_idx i)
-    | B.ReturnCallRef i -> T.ReturnCallRef (convert_idx i)
-    | B.ReturnCallIndirect (t, i) ->
-        T.ReturnCallIndirect (convert_idx i, (Some (convert_idx t), None))
-    | B.Drop -> T.Drop
-    | B.Select None -> T.Select None
-    | B.Select (Some l) -> T.Select (Some (List.map convert_valtype l))
-    | B.LocalGet i -> T.LocalGet (convert_idx i)
-    | B.LocalSet i -> T.LocalSet (convert_idx i)
-    | B.LocalTee i -> T.LocalTee (convert_idx i)
-    | B.GlobalGet i -> T.GlobalGet (convert_idx i)
-    | B.GlobalSet i -> T.GlobalSet (convert_idx i)
-    | B.Load (o, m, op) ->
-        T.Load (convert_idx o, convert_memarg m, convert_unit_op op)
-    | B.LoadS (o, m, sz, bt, s) ->
-        T.LoadS (convert_idx o, convert_memarg m, sz, bt, s)
-    | B.Store (o, m, op) ->
-        T.Store (convert_idx o, convert_memarg m, convert_unit_op op)
-    | B.StoreS (o, m, sz, bt) ->
-        T.StoreS (convert_idx o, convert_memarg m, sz, bt)
-    | B.MemorySize i -> T.MemorySize (convert_idx i)
-    | B.MemoryGrow i -> T.MemoryGrow (convert_idx i)
-    | B.MemoryFill i -> T.MemoryFill (convert_idx i)
-    | B.MemoryCopy (i1, i2) -> T.MemoryCopy (convert_idx i1, convert_idx i2)
-    | B.MemoryInit (i1, i2) -> T.MemoryInit (convert_idx i1, convert_idx i2)
-    | B.DataDrop i -> T.DataDrop (convert_idx i)
-    | B.TableGet i -> T.TableGet (convert_idx i)
-    | B.TableSet i -> T.TableSet (convert_idx i)
-    | B.TableSize i -> T.TableSize (convert_idx i)
-    | B.TableGrow i -> T.TableGrow (convert_idx i)
-    | B.TableFill i -> T.TableFill (convert_idx i)
-    | B.TableCopy (i1, i2) -> T.TableCopy (convert_idx i1, convert_idx i2)
-    | B.TableInit (i1, i2) -> T.TableInit (convert_idx i1, convert_idx i2)
-    | B.ElemDrop i -> T.ElemDrop (convert_idx i)
-    | B.RefNull h -> T.RefNull (convert_heaptype h)
-    | B.RefFunc i -> T.RefFunc (convert_idx i)
-    | B.RefIsNull -> T.RefIsNull
-    | B.RefAsNonNull -> T.RefAsNonNull
-    | B.RefEq -> T.RefEq
-    | B.RefTest r -> T.RefTest (convert_reftype r)
-    | B.RefCast r -> T.RefCast (convert_reftype r)
-    | B.StructNew i -> T.StructNew (convert_idx i)
-    | B.StructNewDefault i -> T.StructNewDefault (convert_idx i)
-    | B.StructGet (s, s_idx, f_idx) ->
-        T.StructGet (s, convert_idx s_idx, convert_idx f_idx)
-    | B.StructSet (s_idx, f_idx) ->
-        T.StructSet (convert_idx s_idx, convert_idx f_idx)
-    | B.ArrayNew i -> T.ArrayNew (convert_idx i)
-    | B.ArrayNewDefault i -> T.ArrayNewDefault (convert_idx i)
-    | B.ArrayNewFixed (i, len) -> T.ArrayNewFixed (convert_idx i, len)
-    | B.ArrayNewData (i1, i2) -> T.ArrayNewData (convert_idx i1, convert_idx i2)
-    | B.ArrayNewElem (i1, i2) -> T.ArrayNewElem (convert_idx i1, convert_idx i2)
-    | B.ArrayGet (s, i) -> T.ArrayGet (s, convert_idx i)
-    | B.ArraySet i -> T.ArraySet (convert_idx i)
-    | B.ArrayLen -> T.ArrayLen
-    | B.ArrayFill i -> T.ArrayFill (convert_idx i)
-    | B.ArrayCopy (i1, i2) -> T.ArrayCopy (convert_idx i1, convert_idx i2)
-    | B.ArrayInitData (i1, i2) ->
-        T.ArrayInitData (convert_idx i1, convert_idx i2)
-    | B.ArrayInitElem (i1, i2) ->
-        T.ArrayInitElem (convert_idx i1, convert_idx i2)
-    | B.RefI31 -> T.RefI31
-    | B.I31Get s -> T.I31Get s
-    | B.Const (B.I32 x) -> T.Const (T.I32 (Int32.to_string x))
-    | B.Const (B.I64 x) -> T.Const (T.I64 (Int64.to_string x))
-    | B.Const (B.F32 x) -> T.Const (T.F32 (string_of_float x))
-    | B.Const (B.F64 x) -> T.Const (T.F64 (string_of_float x))
-    | B.UnOp op -> T.UnOp (convert_un_op op)
-    | B.BinOp op -> T.BinOp (convert_bin_op op)
-    | B.I32WrapI64 -> T.I32WrapI64
-    | B.I64ExtendI32 s -> T.I64ExtendI32 s
-    | B.F32DemoteF64 -> T.F32DemoteF64
-    | B.F64PromoteF32 -> T.F64PromoteF32
-    | B.ExternConvertAny -> T.ExternConvertAny
-    | B.AnyConvertExtern -> T.AnyConvertExtern
-    | B.Folded (i1, il) -> T.Folded (convert_instr i1, List.map convert_instr il)
-    | B.Pop v -> T.Pop (convert_valtype v)
-    | B.TupleMake i -> T.TupleMake i
-    | B.TupleExtract (i1, i2) -> T.TupleExtract (i1, i2)
+    | TryTable { label = _; typ; catches; block } ->
+        TryTable
+          {
+            label = None;
+            typ = Option.map (blocktype names.types) typ;
+            catches = List.map (catch names) catches;
+            block = List.map (instr names local_names) block;
+          }
+    | Try { label = _; typ; block; catches; catch_all } ->
+        Try
+          {
+            label = None;
+            typ = Option.map (blocktype names.types) typ;
+            block = List.map (instr names local_names) block;
+            catches =
+              List.map
+                (fun (tag, b) ->
+                  ( index ~map:names.tags tag,
+                    List.map (instr names local_names) b ))
+                catches;
+            catch_all =
+              Option.map (List.map (instr names local_names)) catch_all;
+          }
+    | Unreachable -> Unreachable
+    | Nop -> Nop
+    | Throw i -> Throw (index ~map:names.tags i)
+    | ThrowRef -> ThrowRef
+    | Br i -> Br (numeric_index i)
+    | Br_if i -> Br_if (numeric_index i)
+    | Br_table (l, d) -> Br_table (List.map numeric_index l, numeric_index d)
+    | Br_on_null i -> Br_on_null (numeric_index i)
+    | Br_on_non_null i -> Br_on_non_null (numeric_index i)
+    | Br_on_cast (l, r1, r2) ->
+        Br_on_cast
+          (numeric_index l, reftype names.types r1, reftype names.types r2)
+    | Br_on_cast_fail (l, r1, r2) ->
+        Br_on_cast_fail
+          (numeric_index l, reftype names.types r1, reftype names.types r2)
+    | Return -> Return
+    | Call i -> Call (index ~map:names.functions i)
+    | CallRef i -> CallRef (index ~map:names.types i)
+    | CallIndirect (t, i) ->
+        CallIndirect
+          (index ~map:names.tables i, (Some (index ~map:names.types t), None))
+    | ReturnCall i -> ReturnCall (index ~map:names.functions i)
+    | ReturnCallRef i -> ReturnCallRef (index ~map:names.types i)
+    | ReturnCallIndirect (t, i) ->
+        ReturnCallIndirect
+          (index ~map:names.tables i, (Some (index ~map:names.types t), None))
+    | Drop -> Drop
+    | Select None -> Select None
+    | Select (Some l) -> Select (Some (List.map (valtype names.types) l))
+    | LocalGet i -> LocalGet (index ~map:local_names i)
+    | LocalSet i -> LocalSet (index ~map:local_names i)
+    | LocalTee i -> LocalTee (index ~map:local_names i)
+    | GlobalGet i -> GlobalGet (index ~map:names.globals i)
+    | GlobalSet i -> GlobalSet (index ~map:names.globals i)
+    | Load (o, m, op) -> Load (index ~map:names.memories o, m, op)
+    | LoadS (o, m, sz, bt, s) ->
+        LoadS (index ~map:names.memories o, m, sz, bt, s)
+    | Store (o, m, op) -> Store (index ~map:names.memories o, m, op)
+    | StoreS (o, m, sz, bt) -> StoreS (index ~map:names.memories o, m, sz, bt)
+    | MemorySize i -> MemorySize (index ~map:names.memories i)
+    | MemoryGrow i -> MemoryGrow (index ~map:names.memories i)
+    | MemoryFill i -> MemoryFill (index ~map:names.memories i)
+    | MemoryCopy (i1, i2) ->
+        MemoryCopy (index ~map:names.memories i1, index ~map:names.memories i2)
+    | MemoryInit (i1, i2) ->
+        MemoryInit (index ~map:names.memories i1, index ~map:names.data i2)
+    | DataDrop i -> DataDrop (index ~map:names.data i)
+    | TableGet i -> TableGet (index ~map:names.tables i)
+    | TableSet i -> TableSet (index ~map:names.tables i)
+    | TableSize i -> TableSize (index ~map:names.tables i)
+    | TableGrow i -> TableGrow (index ~map:names.tables i)
+    | TableFill i -> TableFill (index ~map:names.tables i)
+    | TableCopy (i1, i2) ->
+        TableCopy (index ~map:names.tables i1, index ~map:names.tables i2)
+    | TableInit (i1, i2) ->
+        TableInit (index ~map:names.tables i1, index ~map:names.elem i2)
+    | ElemDrop i -> ElemDrop (index ~map:names.elem i)
+    | RefNull h -> RefNull (heaptype names.types h)
+    | RefFunc i -> RefFunc (index ~map:names.functions i)
+    | RefIsNull -> RefIsNull
+    | RefAsNonNull -> RefAsNonNull
+    | RefEq -> RefEq
+    | RefTest r -> RefTest (reftype names.types r)
+    | RefCast r -> RefCast (reftype names.types r)
+    | StructNew i -> StructNew (index ~map:names.types i)
+    | StructNewDefault i -> StructNewDefault (index ~map:names.types i)
+    | StructGet (s, s_idx, f_idx) ->
+        StructGet
+          (s, index ~map:names.types s_idx, field_index names s_idx f_idx)
+    | StructSet (s_idx, f_idx) ->
+        StructSet (index ~map:names.types s_idx, field_index names s_idx f_idx)
+    | ArrayNew i -> ArrayNew (index ~map:names.types i)
+    | ArrayNewDefault i -> ArrayNewDefault (index ~map:names.types i)
+    | ArrayNewFixed (i, len) -> ArrayNewFixed (index ~map:names.types i, len)
+    | ArrayNewData (i1, i2) ->
+        ArrayNewData (index ~map:names.types i1, index ~map:names.data i2)
+    | ArrayNewElem (i1, i2) ->
+        ArrayNewElem (index ~map:names.types i1, index ~map:names.elem i2)
+    | ArrayGet (s, i) -> ArrayGet (s, index ~map:names.types i)
+    | ArraySet i -> ArraySet (index ~map:names.types i)
+    | ArrayLen -> ArrayLen
+    | ArrayFill i -> ArrayFill (index ~map:names.types i)
+    | ArrayCopy (i1, i2) ->
+        ArrayCopy (index ~map:names.types i1, index ~map:names.types i2)
+    | ArrayInitData (i1, i2) ->
+        ArrayInitData (index ~map:names.types i1, index ~map:names.data i2)
+    | ArrayInitElem (i1, i2) ->
+        ArrayInitElem (index ~map:names.types i1, index ~map:names.elem i2)
+    | RefI31 -> RefI31
+    | I31Get s -> I31Get s
+    | Const (I32 x) -> Const (I32 (Int32.to_string x))
+    | Const (I64 x) -> Const (I64 (Int64.to_string x))
+    | Const (F32 x) -> Const (F32 (string_of_float x))
+    | Const (F64 x) -> Const (F64 (string_of_float x))
+    | UnOp op -> UnOp op
+    | BinOp op -> BinOp op
+    | I32WrapI64 -> I32WrapI64
+    | I64ExtendI32 s -> I64ExtendI32 s
+    | F32DemoteF64 -> F32DemoteF64
+    | F64PromoteF32 -> F64PromoteF32
+    | ExternConvertAny -> ExternConvertAny
+    | AnyConvertExtern -> AnyConvertExtern
+    | Folded (i1, il) ->
+        Folded
+          (instr names local_names i1, List.map (instr names local_names) il)
+    | Pop v -> Pop (valtype names.types v)
+    | TupleMake i -> TupleMake i
+    | TupleExtract (i1, i2) -> TupleExtract (i1, i2)
   in
   { desc; info = i.info }
 
-let convert_expr (e : 'info B.expr) : 'info T.expr =
-  List.map convert_instr e
+let expr names local_names e = List.map (instr names local_names) e
 
-let convert_elemmode (e : 'info B.elemmode) : 'info T.elemmode =
+let elemmode (names : B.names) local_names (e : _ B.elemmode) : _ T.elemmode =
   match e with
-  | B.Passive -> T.Passive
-  | B.Active (i, ex) -> T.Active (convert_idx i, convert_expr ex)
-  | B.Declare -> T.Declare
+  | Passive -> Passive
+  | Active (i, ex) ->
+      Active (index ~map:names.tables i, expr names local_names ex)
+  | Declare -> Declare
 
-let convert_datamode (d : 'info B.datamode) : 'info T.datamode =
+let datamode (names : B.names) local_names (d : _ B.datamode) : _ T.datamode =
   match d with
-  | B.Passive -> T.Passive
-  | B.Active (i, ex) -> T.Active (convert_idx i, convert_expr ex)
+  | Passive -> Passive
+  | Active (i, ex) ->
+      Active (index ~map:names.memories i, expr names local_names ex)
 
-let convert_exportable (e : B.exportable) : T.exportable =
-  match (e : B.exportable) with
-  | B.Func -> T.Func
-  | B.Table -> T.Table
-  | B.Memory -> T.Memory
-  | B.Global -> T.Global
-  | B.Tag -> T.Tag
+let id map idx = B.IntMap.find_opt idx map
 
-let module_ (m : 'info B.module_) : 'info T.module_ =
-  let types = List.map convert_rectype m.types in
-  let imports =
-    List.map
-      (fun (imp : B.import) : 'info T.modulefield ->
-        T.Import
-          {
-            module_ = imp.module_;
-            name = imp.name;
-            id = None;
-            desc =
-              (match imp.desc with
-              | B.Func i -> T.Func (Some (convert_idx i), None)
-              | B.Memory l -> T.Memory l
-              | B.Table t -> T.Table (convert_tabletype t)
-              | B.Global gt -> T.Global (convert_globaltype gt)
-              | B.Tag i -> T.Tag (Some (convert_idx i), None));
-            exports = [];
-            (* Binary imports usually don't have exports here *)
-          })
+let module_ (m : _ B.module_) : _ T.module_ =
+  let types = List.map (rectype m.names.types) m.types in
+  let (func_cnt, table_cnt, mem_cnt, global_cnt, tag_cnt), imports =
+    List.fold_left
+      (fun ((f_i, t_i, m_i, g_i, tg_i), acc) (imp : B.import) ->
+        let id, counts =
+          match imp.desc with
+          | Func _ -> (id m.names.functions f_i, (f_i + 1, t_i, m_i, g_i, tg_i))
+          | Table _ -> (id m.names.tables t_i, (f_i, t_i + 1, m_i, g_i, tg_i))
+          | Memory _ -> (id m.names.memories m_i, (f_i, t_i, m_i + 1, g_i, tg_i))
+          | Global _ -> (id m.names.globals g_i, (f_i, t_i, m_i, g_i + 1, tg_i))
+          | Tag _ -> (id m.names.tags tg_i, (f_i, t_i, m_i, g_i, tg_i + 1))
+        in
+        let item =
+          T.Import
+            {
+              module_ = imp.module_;
+              name = imp.name;
+              id;
+              desc =
+                (match imp.desc with
+                | Func i -> T.Func (Some (index ~map:m.names.types i), None)
+                | Memory l -> T.Memory l
+                | Table t -> T.Table (tabletype m.names.types t)
+                | Global gt -> T.Global (globaltype m.names.types gt)
+                | Tag i -> T.Tag (Some (index ~map:m.names.types i), None));
+              exports = [];
+            }
+        in
+        (counts, item :: acc))
+      ((0, 0, 0, 0, 0), [])
       m.imports
   in
-
+  let imports = List.rev imports in
   let funcs =
     List.mapi
-      (fun i (func_type_idx : B.idx) ->
+      (fun i func_type_idx ->
+        let global_idx = func_cnt + i in
         let code = List.nth m.code i in
-        (* Assuming parallel lists *)
+        let local_names =
+          match B.IntMap.find_opt global_idx m.names.locals with
+          | Some map -> map
+          | None -> B.IntMap.empty
+        in
         T.Func
           {
-            id = None;
-            (* Names are in m.names *)
-            typ = (Some (convert_idx func_type_idx), None);
-            (* Binary typeuse is idx *)
-            locals = List.map (fun v -> (None, convert_valtype v)) code.locals;
-            instrs = List.map convert_instr code.instrs;
+            id = id m.names.functions global_idx;
+            typ = (Some (index ~map:m.names.types func_type_idx), None);
+            locals =
+              List.map (fun v -> (None, valtype m.names.types v)) code.locals;
+            instrs = List.map (instr m.names local_names) code.instrs;
             exports = [];
-            (* Exports are handled separately *)
           })
       m.functions
   in
-
   let tables =
-    List.map
-      (fun (t : 'info B.table) : 'info T.modulefield ->
+    List.mapi
+      (fun i (t : _ B.table) : _ T.modulefield ->
+        let global_idx = table_cnt + i in
         let b_tabletype =
           {
             B.limits = t.typ;
@@ -374,88 +331,94 @@ let module_ (m : 'info B.module_) : 'info T.module_ =
         in
         T.Table
           {
-            id = None;
-            typ = convert_tabletype b_tabletype;
+            id = id m.names.tables global_idx;
+            typ = tabletype m.names.types b_tabletype;
             init = T.Init_default;
-            (* Binary init expr is in elem section *)
             exports = [];
           })
       m.tables
   in
-
   let memories =
-    List.map
-      (fun (l : B.limits) : 'info T.modulefield ->
+    List.mapi
+      (fun i (l : B.limits) : _ T.modulefield ->
+        let global_idx = mem_cnt + i in
         T.Memory
           {
-            id = None;
+            id = id m.names.memories global_idx;
             limits = l;
             init = None;
-            (* Binary init is in data section *)
             exports = [];
           })
       m.memories
   in
-
   let globals =
-    List.map
-      (fun (g : 'info B.global) : 'info T.modulefield ->
+    List.mapi
+      (fun i (g : _ B.global) : _ T.modulefield ->
+        let global_idx = global_cnt + i in
         T.Global
           {
-            id = None;
-            typ = convert_globaltype g.typ;
-            init = convert_expr g.init;
+            id = id m.names.globals global_idx;
+            typ = globaltype m.names.types g.typ;
+            init = expr m.names B.IntMap.empty g.init;
             exports = [];
           })
       m.globals
   in
-
   let exports =
     List.map
-      (fun (e : B.export) : 'info T.modulefield ->
+      (fun (e : B.export) : _ T.modulefield ->
         T.Export
           {
             name = e.name;
-            kind = convert_exportable e.kind;
-            index = convert_idx e.index;
+            kind = e.kind;
+            index =
+              (match e.kind with
+              | B.Func -> index ~map:m.names.functions e.index
+              | B.Tag -> index ~map:m.names.tags e.index
+              | B.Global -> index ~map:m.names.globals e.index
+              | B.Table -> index ~map:m.names.tables e.index
+              | B.Memory -> index ~map:m.names.memories e.index);
           })
       m.exports
   in
-
-  let start = Option.map (fun i -> T.Start (convert_idx i)) m.start in
-
+  let start =
+    Option.map (fun i -> T.Start (index ~map:m.names.functions i)) m.start
+  in
   let elems =
-    List.map
-      (fun (e : 'info B.elem) : 'info T.modulefield ->
+    List.mapi
+      (fun i (e : _ B.elem) : _ T.modulefield ->
         T.Elem
           {
-            id = None;
-            typ = convert_reftype e.typ;
-            init = List.map convert_expr e.init;
-            mode = convert_elemmode e.mode;
+            id = id m.names.elem i;
+            typ = reftype m.names.types e.typ;
+            init = List.map (expr m.names B.IntMap.empty) e.init;
+            mode = elemmode m.names B.IntMap.empty e.mode;
           })
       m.elem
   in
-
   let datas =
-    List.map
-      (fun (d : 'info B.data) : 'info T.modulefield ->
-        T.Data { id = None; init = d.init; mode = convert_datamode d.mode })
+    List.mapi
+      (fun i (d : _ B.data) : _ T.modulefield ->
+        T.Data
+          {
+            id = id m.names.data i;
+            init = d.init;
+            mode = datamode m.names B.IntMap.empty d.mode;
+          })
       m.data
   in
-
-    let tags =
-
-      List.map
-
-        (fun (type_idx : B.idx) : 'info T.modulefield ->
-
-          T.Tag { id = None; typ = (Some (convert_idx type_idx), None); exports = [] })
-
-        m.tags
-
-    in
-
+  let tags =
+    List.mapi
+      (fun i type_idx : _ T.modulefield ->
+        let global_idx = tag_cnt + i in
+        T.Tag
+          {
+            id = id m.names.tags global_idx;
+            typ = (Some (index ~map:m.names.types type_idx), None);
+            exports = [];
+          })
+      m.tags
+  in
   ( None,
     List.flatten
       [

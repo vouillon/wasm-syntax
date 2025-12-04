@@ -1,1 +1,1 @@
-val module_ : 'a Ast.Binary.module_ -> 'a Ast.Text.module_
+val module_ : 'info Ast.Binary.module_ -> 'info Ast.Text.module_
