@@ -296,8 +296,11 @@ let blocktype =
   | Valtype t -> [ list [ keyword "result"; valtype t ] ]
   | Typeuse t -> typeuse' t
 
-let limits { mi; ma; address_type = _ } =
-  u64 ~style:Constant mi :: option (fun i -> [ u64 ~style:Constant i ]) ma
+let address_type at = match at with `I32 -> [] | `I64 -> [ keyword "i64" ]
+
+let limits { mi; ma; address_type = at } =
+  address_type at
+  @ (u64 ~style:Constant mi :: option (fun i -> [ u64 ~style:Constant i ]) ma)
 
 let tabletype { limits = l; reftype = typ } = limits l @ [ reftype typ ]
 
@@ -866,7 +869,9 @@ let modulefield f =
         ::
         (match init with
         | None -> []
-        | Some init -> [ list [ keyword "data"; quoted_string init ] ]))
+        | Some init ->
+            address_type l.address_type
+            @ [ list [ keyword "data"; quoted_string init ] ]))
   | Table { id; typ; init; exports = e } ->
       list
         (block
@@ -875,7 +880,9 @@ let modulefield f =
               @
               match init with
               | Init_default | Init_expr _ -> tabletype typ
-              | Init_segment _ -> [ reftype typ.reftype ]))
+              | Init_segment _ ->
+                  address_type typ.limits.address_type @ [ reftype typ.reftype ]
+              ))
         ::
         (match init with
         | Init_default -> []

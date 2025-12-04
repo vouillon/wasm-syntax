@@ -385,13 +385,24 @@ let rec repeat n f =
     let* () = f in
     repeat (n - 1) f
 
-let max_offset = Uint64.of_string "0x1_0000_0000"
+let address_type_to_valtype = function `I32 -> I32 | `I64 -> I64
+
+(* Constants for max offsets *)
+
+let max_offset_i32_exclusive = Uint64.of_string "0x1_0000_0000" (* 2^32 *)
 let max_align = Uint64.of_int 8
 
-let check_memarg _ sz { Ast.Text.offset; align } =
-  (*ZZZ*)
-  assert (Uint64.compare offset max_offset < 0);
+let check_memarg limits sz { Ast.Text.offset; align } =
+  if limits.address_type = `I32 then
+    assert (Uint64.compare offset max_offset_i32_exclusive < 0);
+
+  (* For `I64` address types, any valid `Uint64.t` offset is considered valid,
+
+
+
+     so no explicit upper bound check is needed here beyond type representation. *)
   assert (Uint64.compare align max_align <= 8);
+
   assert (
     match (Uint64.to_int align, sz) with
     | 1, (`I8 | `I16 | `I32 | `I64) -> true
@@ -399,6 +410,7 @@ let check_memarg _ sz { Ast.Text.offset; align } =
     | 4, (`I32 | `I64) -> true
     | 8, `I64 -> true
     | _ -> false);
+
   assert (Uint64.compare align max_align <= 0)
 
 let memory_instruction_type_and_size ty =
@@ -605,7 +617,11 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct _ | Array _ -> assert false (*ZZZ*)
       | Func { params; results } ->
-          let* () = pop ctx I32 in
+          let* () =
+            pop ctx
+              (address_type_to_valtype
+                 (Sequence.get ctx.modul.tables idx).limits.address_type)
+          in
           let* () = pop_args ctx (Array.to_list params) in
           push_results (Array.to_list results))
   | ReturnCall idx -> (
@@ -638,7 +654,11 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct _ | Array _ -> assert false (*ZZZ*)
       | Func { params; results } ->
-          let* () = pop ctx I32 in
+          let* () =
+            pop ctx
+              (address_type_to_valtype
+                 (Sequence.get ctx.modul.tables idx).limits.address_type)
+          in
           let* () = pop_args ctx (Array.to_list params) in
           with_empty_stack
             (let* () = push_results (Array.to_list results) in
@@ -694,92 +714,113 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let limits = Sequence.get ctx.modul.memories idx in
       let ty, sz = memory_instruction_type_and_size ty in
       check_memarg limits sz memarg;
-      let* () = pop ctx I32 in
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
       push ty
   | LoadS (idx, memarg, ty, sz, _) ->
       let limits = Sequence.get ctx.modul.memories idx in
       let ty = match ty with `I32 -> I32 | `I64 -> I64 in
       check_memarg limits (sz :> [ `I8 | `I16 | `I32 | `I64 ]) memarg;
-      let* () = pop ctx I32 in
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
       push ty
   | Store (idx, memarg, ty) ->
       let limits = Sequence.get ctx.modul.memories idx in
       let ty, sz = memory_instruction_type_and_size ty in
       check_memarg limits sz memarg;
       let* () = pop ctx ty in
-      pop ctx I32
+      let* () = print_stack in
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
+      return ()
   | StoreS (idx, memarg, ty, sz) ->
       let limits = Sequence.get ctx.modul.memories idx in
       let ty = match ty with `I32 -> I32 | `I64 -> I64 in
       check_memarg limits (sz :> [ `I8 | `I16 | `I32 | `I64 ]) memarg;
       let* () = pop ctx ty in
-      pop ctx I32
+      pop ctx (address_type_to_valtype limits.address_type)
   | MemorySize idx ->
-      ignore (Sequence.get ctx.modul.memories idx);
-      push I32
+      let limits = Sequence.get ctx.modul.memories idx in
+      push (address_type_to_valtype limits.address_type)
   | MemoryGrow idx ->
-      ignore (Sequence.get ctx.modul.memories idx);
-      let* () = pop ctx I32 in
-      push I32
+      let limits = Sequence.get ctx.modul.memories idx in
+      let addr_ty = address_type_to_valtype limits.address_type in
+      let* () = pop ctx addr_ty in
+      push addr_ty
   | MemoryFill idx ->
-      ignore (Sequence.get ctx.modul.memories idx);
+      let limits = Sequence.get ctx.modul.memories idx in
+      let addr_ty = address_type_to_valtype limits.address_type in
+      let* () = pop ctx addr_ty in
       let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      pop ctx I32
+      pop ctx addr_ty
   | MemoryCopy (idx, idx') ->
-      ignore (Sequence.get ctx.modul.memories idx);
-      ignore (Sequence.get ctx.modul.memories idx');
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      pop ctx I32
+      let limits = Sequence.get ctx.modul.memories idx in
+      let limits' = Sequence.get ctx.modul.memories idx' in
+      assert (limits.address_type = limits'.address_type);
+      let addr_ty = address_type_to_valtype limits.address_type in
+      let* () = pop ctx addr_ty in
+      let* () = pop ctx addr_ty in
+      pop ctx addr_ty
   | MemoryInit (idx, idx') ->
-      ignore (Sequence.get ctx.modul.memories idx);
+      let limits = Sequence.get ctx.modul.memories idx in
       ignore (Sequence.get ctx.modul.data idx');
+      let addr_ty = address_type_to_valtype limits.address_type in
       let* () = pop ctx I32 in
       let* () = pop ctx I32 in
-      pop ctx I32
+      pop ctx addr_ty
   | DataDrop idx ->
       ignore (Sequence.get ctx.modul.data idx);
       return ()
   | TableGet idx ->
       let typ = Sequence.get ctx.modul.tables idx in
-      let* () = pop ctx I32 in
+      let addr_ty = address_type_to_valtype typ.limits.address_type in
+      let* () = pop ctx addr_ty in
       push (Ref typ.reftype)
   | TableSet idx ->
       let typ = Sequence.get ctx.modul.tables idx in
+      let addr_ty = address_type_to_valtype typ.limits.address_type in
       let* () = pop ctx (Ref typ.reftype) in
-      pop ctx I32
+      pop ctx addr_ty
   | TableSize idx ->
-      ignore (Sequence.get ctx.modul.tables idx);
-      push I32
+      let typ = Sequence.get ctx.modul.tables idx in
+      push (address_type_to_valtype typ.limits.address_type)
   | TableGrow idx ->
       let typ = Sequence.get ctx.modul.tables idx in
-      let* () = pop ctx I32 in
+      let addr_ty = address_type_to_valtype typ.limits.address_type in
+      let* () = pop ctx addr_ty in
       let* () = pop ctx (Ref typ.reftype) in
-      push I32
+      push addr_ty
   | TableFill idx ->
       let typ = Sequence.get ctx.modul.tables idx in
-      let* () = pop ctx I32 in
+      let addr_ty = address_type_to_valtype typ.limits.address_type in
+      let* () = pop ctx addr_ty in
       let* () = pop ctx (Ref typ.reftype) in
-      pop ctx I32
+      pop ctx addr_ty
   | TableCopy (idx, idx') ->
+      let* () = print_stack in
       let ty = Sequence.get ctx.modul.tables idx in
       let ty' = Sequence.get ctx.modul.tables idx' in
       assert (
         Types.val_subtype ctx.modul.subtyping_info (Ref ty'.reftype)
           (Ref ty.reftype));
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      pop ctx I32
+      let address_type =
+        match (ty.limits.address_type, ty'.limits.address_type) with
+        | `I32, _ | _, `I32 -> `I32
+        | `I64, `I64 -> `I64
+      in
+      let addr_ty = address_type_to_valtype ty.limits.address_type in
+      let addr_ty' = address_type_to_valtype ty'.limits.address_type in
+      let addr_ty'' = address_type_to_valtype address_type in
+      let* () = pop ctx addr_ty'' in
+      let* () = pop ctx addr_ty' in
+      pop ctx addr_ty
   | TableInit (idx, idx') ->
       let tabletype = Sequence.get ctx.modul.tables idx in
       let typ = Sequence.get ctx.modul.elem idx' in
       assert (
         Types.val_subtype ctx.modul.subtyping_info (Ref typ)
           (Ref tabletype.reftype));
+      let addr_ty = address_type_to_valtype tabletype.limits.address_type in
       let* () = pop ctx I32 in
       let* () = pop ctx I32 in
-      pop ctx I32
+      pop ctx addr_ty
   | ElemDrop idx ->
       ignore (Sequence.get ctx.modul.elem idx);
       return ()
@@ -1213,17 +1254,18 @@ let register_exports ctx lst =
 
 let limits { mi; ma; address_type } max_fn =
   let max = max_fn address_type in
-  assert (
-    match ma with
-    | None -> Uint64.compare mi max <= 0
-    | Some ma -> Uint64.compare mi ma <= 0 && Uint64.compare ma max <= 0)
+  match ma with
+  | None -> assert (Uint64.compare mi max <= 0)
+  | Some ma ->
+      assert (Uint64.compare mi ma <= 0);
+      assert (Uint64.compare ma max <= 0)
 
 let max_memory_size = function
   | `I32 -> Uint64.of_int 65536
   | `I64 -> Uint64.of_string "0x1_0000_0000_0000"
 
 let max_table_size = function
-  | `I32 -> Uint64.of_string "0xffff_ffff"
+  | `I32 -> Uint64.of_string "0x10000_0000"
   | `I64 -> Uint64.of_string "0xffff_ffff_ffff_ffff"
 
 let rec register_typeuses ctx l =
@@ -1380,8 +1422,10 @@ let segments ctx fields =
           (match mode with
           | Passive -> ()
           | Active (i, e) ->
-              ignore (Sequence.get ctx.memories i);
-              constant_expression ctx I32 (*or I64*) e);
+              let limits = Sequence.get ctx.memories i in
+              constant_expression ctx
+                (address_type_to_valtype limits.address_type)
+                e);
           Sequence.register ctx.data id ()
       | Table { typ; init; _ } -> (
           match init with
@@ -1399,7 +1443,9 @@ let segments ctx fields =
               assert (
                 Types.val_subtype ctx.subtyping_info (Ref typ)
                   (Ref tabletype.reftype));
-              constant_expression ctx I32 e);
+              constant_expression ctx
+                (address_type_to_valtype tabletype.limits.address_type)
+                e);
           List.iter (fun e -> constant_expression ctx (Ref typ) e) init;
           Sequence.register ctx.elem id typ
       | _ -> ())

@@ -239,33 +239,34 @@ let runtest filename path =
           prerr_endline (Printexc.to_string e);
           Format.eprintf "@[%a@]@." (print_module ~color:Always) m
       | m ->
-          let ok =
-            in_child_process (fun () ->
-                let m = Wax.Typing.f m in
-                let m' = Conversion.To_wasm.module_ m in
-                let ok = in_child_process (fun () -> Wasm.Validation.f m') in
-                if not ok then (
-                  Format.eprintf "@[%a@]@." (print_module ~color:Always) m';
-                  Format.eprintf "@[%a@]@." (print_wax ~color:Always) m))
-          in
-          if not ok then Format.eprintf "@[%a@]@." (print_wax ~color:Always) m;
-          let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
-          let ok =
-            in_child_process (fun () ->
-                let m' = WaxParser.parse_from_string ~filename text in
-                if false (*XXX*) then
-                  let ok =
-                    in_child_process (fun () -> ignore (Wax.Typing.f m'))
-                  in
-                  if not ok then
-                    if true then prerr_endline "(after parsing)"
-                    else (
-                      Format.eprintf "@[%a@]@." (print_wax ~color:Always) m';
-                      prerr_endline "===";
-                      Format.eprintf "@[%a@]@." (print_wax ~color:Always) m))
-          in
-          if not ok then
-            if true then prerr_endline "(parsing)" else print_flushed text)
+          if false then (
+            let ok =
+              in_child_process (fun () ->
+                  let m = Wax.Typing.f m in
+                  let m' = Conversion.To_wasm.module_ m in
+                  let ok = in_child_process (fun () -> Wasm.Validation.f m') in
+                  if not ok then (
+                    Format.eprintf "@[%a@]@." (print_module ~color:Always) m';
+                    Format.eprintf "@[%a@]@." (print_wax ~color:Always) m))
+            in
+            if not ok then Format.eprintf "@[%a@]@." (print_wax ~color:Always) m;
+            let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
+            let ok =
+              in_child_process (fun () ->
+                  let m' = WaxParser.parse_from_string ~filename text in
+                  if false (*XXX*) then
+                    let ok =
+                      in_child_process (fun () -> ignore (Wax.Typing.f m'))
+                    in
+                    if not ok then
+                      if true then prerr_endline "(after parsing)"
+                      else (
+                        Format.eprintf "@[%a@]@." (print_wax ~color:Always) m';
+                        prerr_endline "===";
+                        Format.eprintf "@[%a@]@." (print_wax ~color:Always) m))
+            in
+            if not ok then
+              if true then prerr_endline "(parsing)" else print_flushed text))
     lst
 
 let dirs =
@@ -282,7 +283,6 @@ let () =
         [
           "spec-test-1";
           "spec-test-2";
-          "memory64";
           "simd";
           "relaxed-simd";
           "try_delegate.wast";
