@@ -7,7 +7,7 @@ type index_space = { map : B.idx StringMap.t; count : int }
 
 let empty_space = { map = StringMap.empty; count = 0 }
 
-let add_name (space : index_space) (id : string option) : index_space * B.idx =
+let add_name space id =
   let idx = space.count in
   let map =
     match id with
@@ -45,7 +45,7 @@ let empty_context =
     locals = empty_space;
   }
 
-let resolve_idx (space : index_space) (idx : T.idx) : B.idx =
+let resolve_idx space (idx : T.idx) : B.idx =
   match idx.desc with
   | T.Num n -> Utils.Uint32.to_int n
   | T.Id id -> (
@@ -53,7 +53,7 @@ let resolve_idx (space : index_space) (idx : T.idx) : B.idx =
       | Some i -> i
       | None -> failwith ("Unknown identifier: " ^ id))
 
-let resolve_label (labels : string option list) (idx : T.idx) : B.idx =
+let resolve_label labels (idx : T.idx) : B.idx =
   match idx.desc with
   | T.Num n -> Utils.Uint32.to_int n
   | T.Id id ->
@@ -68,7 +68,7 @@ let resolve_label (labels : string option list) (idx : T.idx) : B.idx =
 
 (* Conversion functions *)
 
-let convert_heaptype ctx (h : T.heaptype) : B.heaptype =
+let heaptype ctx (h : T.heaptype) : B.heaptype =
   match h with
   | Func -> Func
   | NoFunc -> NoFunc
@@ -84,61 +84,58 @@ let convert_heaptype ctx (h : T.heaptype) : B.heaptype =
   | None_ -> None_
   | Type i -> Type (resolve_idx ctx.types i)
 
-let convert_reftype ctx (r : T.reftype) : B.reftype =
-  { nullable = r.nullable; typ = convert_heaptype ctx r.typ }
+let reftype ctx (r : T.reftype) : B.reftype =
+  { nullable = r.nullable; typ = heaptype ctx r.typ }
 
-let rec convert_valtype ctx (v : T.valtype) : B.valtype =
+let rec valtype ctx (v : T.valtype) : B.valtype =
   match v with
   | I32 -> I32
   | I64 -> I64
   | F32 -> F32
   | F64 -> F64
   | V128 -> V128
-  | Ref r -> Ref (convert_reftype ctx r)
-  | Tuple l -> Tuple (List.map (convert_valtype ctx) l)
+  | Ref r -> Ref (reftype ctx r)
+  | Tuple l -> Tuple (List.map (valtype ctx) l)
 
-let convert_storage_type ctx (s : T.storagetype) : B.storagetype =
-  match s with Value v -> Value (convert_valtype ctx v) | Packed p -> Packed p
+let storage_type ctx (s : T.storagetype) : B.storagetype =
+  match s with Value v -> Value (valtype ctx v) | Packed p -> Packed p
 
-let convert_mut_type convert_typ_f ctx m =
-  { mut = m.mut; typ = convert_typ_f ctx m.typ }
+let mut_type typ_f ctx m = { mut = m.mut; typ = typ_f ctx m.typ }
+let field_type ctx f = mut_type storage_type ctx f
 
-let convert_field_type ctx f = convert_mut_type convert_storage_type ctx f
-
-let convert_func_type ctx (f : T.functype) : B.functype =
+let func_type ctx (f : T.functype) : B.functype =
   {
-    params = Array.map (convert_valtype ctx) f.params;
-    results = Array.map (convert_valtype ctx) f.results;
+    params = Array.map (valtype ctx) f.params;
+    results = Array.map (valtype ctx) f.results;
   }
 
-let convert_comp_type ctx (c : T.comptype) : B.comptype =
+let comp_type ctx (c : T.comptype) : B.comptype =
   match c with
-  | Func f -> Func (convert_func_type ctx f)
-  | Struct f -> Struct (Array.map (fun (_, ft) -> convert_field_type ctx ft) f)
-  | Array f -> Array (convert_field_type ctx f)
+  | Func f -> Func (func_type ctx f)
+  | Struct f -> Struct (Array.map (fun (_, ft) -> field_type ctx ft) f)
+  | Array f -> Array (field_type ctx f)
 
-let convert_sub_type ctx (s : T.subtype) : B.subtype =
+let sub_type ctx (s : T.subtype) : B.subtype =
   {
-    typ = convert_comp_type ctx s.typ;
+    typ = comp_type ctx s.typ;
     supertype = Option.map (resolve_idx ctx.types) s.supertype;
     final = s.final;
   }
 
-let convert_rec_type ctx r = Array.map (fun (_, s) -> convert_sub_type ctx s) r
-let convert_global_type ctx g = convert_mut_type convert_valtype ctx g
+let rec_type ctx r = Array.map (fun (_, s) -> sub_type ctx s) r
+let global_type ctx g = mut_type valtype ctx g
 
-let convert_table_type_fix ctx (t : T.tabletype) : B.tabletype =
-  { limits = t.limits; reftype = convert_reftype ctx t.reftype }
+let table_type_fix ctx (t : T.tabletype) : B.tabletype =
+  { limits = t.limits; reftype = reftype ctx t.reftype }
 
-let convert_block_type ~resolve_type ctx (b : T.blocktype) : B.blocktype =
+let block_type ~resolve_type ctx (b : T.blocktype) : B.blocktype =
   match b with
   | Typeuse (Some i, _) -> Typeuse (resolve_idx ctx.types i)
-  | Typeuse (None, Some ft) -> Typeuse (resolve_type (convert_func_type ctx ft))
-  | Typeuse (None, None) ->
-      failwith "Inline block types not supported yet (need index)"
-  | Valtype v -> Valtype (convert_valtype ctx v)
+  | Typeuse (None, Some ft) -> Typeuse (resolve_type (func_type ctx ft))
+  | Typeuse (None, None) -> assert false
+  | Valtype v -> Valtype (valtype ctx v)
 
-let convert_catch ctx (c : T.catch) : B.catch =
+let catch ctx (c : T.catch) : B.catch =
   match c with
   | Catch (tag, label) ->
       Catch (resolve_idx ctx.tags tag, resolve_label ctx.labels label)
@@ -147,8 +144,8 @@ let convert_catch ctx (c : T.catch) : B.catch =
   | CatchAll label -> CatchAll (resolve_label ctx.labels label)
   | CatchAllRef label -> CatchAllRef (resolve_label ctx.labels label)
 
-let rec convert_instr ~resolve_type ctx (i : 'info T.instr) =
-  let recurse = convert_instr ~resolve_type in
+let rec instr ~resolve_type ctx (i : 'info T.instr) =
+  let recurse = instr ~resolve_type in
   let desc : _ B.instr_desc =
     match i.desc with
     | Block { label; typ; block } ->
@@ -156,7 +153,7 @@ let rec convert_instr ~resolve_type ctx (i : 'info T.instr) =
         Block
           {
             label = ();
-            typ = Option.map (convert_block_type ~resolve_type ctx) typ;
+            typ = Option.map (block_type ~resolve_type ctx) typ;
             block = List.map (recurse ctx') block;
           }
     | Loop { label; typ; block } ->
@@ -164,7 +161,7 @@ let rec convert_instr ~resolve_type ctx (i : 'info T.instr) =
         Loop
           {
             label = ();
-            typ = Option.map (convert_block_type ~resolve_type ctx) typ;
+            typ = Option.map (block_type ~resolve_type ctx) typ;
             block = List.map (recurse ctx') block;
           }
     | If { label; typ; if_block; else_block } ->
@@ -172,7 +169,7 @@ let rec convert_instr ~resolve_type ctx (i : 'info T.instr) =
         If
           {
             label = ();
-            typ = Option.map (convert_block_type ~resolve_type ctx) typ;
+            typ = Option.map (block_type ~resolve_type ctx) typ;
             if_block = List.map (recurse ctx') if_block;
             else_block = List.map (recurse ctx') else_block;
           }
@@ -191,13 +188,13 @@ let rec convert_instr ~resolve_type ctx (i : 'info T.instr) =
           | Some i -> resolve_idx ctx.types i
           | None -> (
               match type_opt with
-              | Some ft -> resolve_type (convert_func_type ctx ft)
-              | None -> failwith "CallIndirect requires type")
+              | Some ft -> resolve_type (func_type ctx ft)
+              | None -> assert false)
         in
         CallIndirect (resolve_idx ctx.tables table, type_idx)
     | Drop -> Drop
     | Select None -> Select None
-    | Select (Some l) -> Select (Some (List.map (convert_valtype ctx) l))
+    | Select (Some l) -> Select (Some (List.map (valtype ctx) l))
     | LocalGet i -> LocalGet (resolve_idx ctx.locals i)
     | LocalSet i -> LocalSet (resolve_idx ctx.locals i)
     | LocalTee i -> LocalTee (resolve_idx ctx.locals i)
@@ -215,7 +212,7 @@ let rec convert_instr ~resolve_type ctx (i : 'info T.instr) =
     | Const (F64 x) -> Const (F64 (float_of_string x))
     | UnOp op -> UnOp op
     | BinOp op -> BinOp op
-    | RefNull t -> RefNull (convert_heaptype ctx t)
+    | RefNull t -> RefNull (heaptype ctx t)
     | RefFunc i -> RefFunc (resolve_idx ctx.funcs i)
     | RefIsNull -> RefIsNull
     | TryTable { label; typ; catches; block } ->
@@ -223,8 +220,8 @@ let rec convert_instr ~resolve_type ctx (i : 'info T.instr) =
         TryTable
           {
             label = ();
-            typ = Option.map (convert_block_type ~resolve_type ctx) typ;
-            catches = List.map (convert_catch ctx) catches;
+            typ = Option.map (block_type ~resolve_type ctx) typ;
+            catches = List.map (catch ctx) catches;
             block = List.map (recurse ctx') block;
           }
     | Try { label; typ; block; catches; catch_all } ->
@@ -232,7 +229,7 @@ let rec convert_instr ~resolve_type ctx (i : 'info T.instr) =
         Try
           {
             label = ();
-            typ = Option.map (convert_block_type ~resolve_type ctx) typ;
+            typ = Option.map (block_type ~resolve_type ctx) typ;
             block = List.map (recurse ctx') block;
             catches =
               List.map
@@ -392,7 +389,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             (fun i (_, subtype) ->
               match subtype.T.typ with
               | T.Func f ->
-                  let b_f = convert_func_type ctx f in
+                  let b_f = func_type ctx f in
                   if not (Hashtbl.mem type_map b_f) then
                     Hashtbl.add type_map b_f (idx + i)
               | _ -> ())
@@ -420,35 +417,34 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
       (fun f ->
         match f with
         | T.Import { module_; name; desc; _ } ->
-            let desc =
+            let desc : B.importdesc =
               match desc with
-              | T.Func (Some i, _) -> B.Func (resolve_idx ctx.types i)
-              | T.Func (None, Some (params, results)) ->
+              | Func (Some i, _) -> Func (resolve_idx ctx.types i)
+              | Func (None, Some (params, results)) ->
                   (* Inline type in Import *)
                   let params =
                     Array.of_list
-                      (List.map (fun (_, t) -> convert_valtype ctx t) params)
+                      (List.map (fun (_, t) -> valtype ctx t) params)
                   in
                   let results =
-                    Array.of_list (List.map (convert_valtype ctx) results)
+                    Array.of_list (List.map (valtype ctx) results)
                   in
-                  B.Func (resolve_type { B.params; results })
-              | T.Func (None, None) ->
-                  failwith "Func import missing type"
-              | T.Table t -> B.Table (convert_table_type_fix ctx t)
-              | T.Memory l -> B.Memory l
-              | T.Global g -> B.Global (convert_global_type ctx g)
-              | T.Tag (Some i, _) -> B.Tag (resolve_idx ctx.types i)
-              | T.Tag (None, Some (params, results)) ->
+                  Func (resolve_type { params; results })
+              | Func (None, None) -> assert false
+              | Table t -> Table (table_type_fix ctx t)
+              | Memory l -> Memory l
+              | Global g -> Global (global_type ctx g)
+              | Tag (Some i, _) -> Tag (resolve_idx ctx.types i)
+              | Tag (None, Some (params, results)) ->
                   let params =
                     Array.of_list
-                      (List.map (fun (_, t) -> convert_valtype ctx t) params)
+                      (List.map (fun (_, t) -> valtype ctx t) params)
                   in
                   let results =
-                    Array.of_list (List.map (convert_valtype ctx) results)
+                    Array.of_list (List.map (valtype ctx) results)
                   in
-                  B.Tag (resolve_type { B.params; results })
-              | T.Tag (None, None) -> failwith "Tag import missing type"
+                  Tag (resolve_type { params; results })
+              | Tag (None, None) -> failwith "Tag import missing type"
             in
             Some { B.module_; name; desc }
         | _ -> None)
@@ -457,8 +453,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
 
   let explicit_types =
     List.filter_map
-      (fun f ->
-        match f with T.Types r -> Some (convert_rec_type ctx r) | _ -> None)
+      (fun f -> match f with T.Types r -> Some (rec_type ctx r) | _ -> None)
       fields
   in
 
@@ -469,15 +464,11 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
         | T.Func { typ = Some i, _; _ } -> Some (resolve_idx ctx.types i)
         | T.Func { typ = None, Some (params, results); _ } ->
             let params =
-              Array.of_list
-                (List.map (fun (_, t) -> convert_valtype ctx t) params)
+              Array.of_list (List.map (fun (_, t) -> valtype ctx t) params)
             in
-            let results =
-              Array.of_list (List.map (convert_valtype ctx) results)
-            in
+            let results = Array.of_list (List.map (valtype ctx) results) in
             Some (resolve_type { B.params; results })
-        | T.Func { typ = None, None; _ } ->
-             failwith "Func missing type"
+        | T.Func { typ = None, None; _ } -> failwith "Func missing type"
         | _ -> None)
       fields
   in
@@ -525,13 +516,11 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
               (empty_space, 0) locals
           in
           let func_ctx = { ctx with locals = locals_space } in
-          let b_locals =
-            List.map (fun (_, v) -> convert_valtype ctx v) locals
-          in
+          let b_locals = List.map (fun (_, v) -> valtype ctx v) locals in
           let converted_func =
             {
               B.locals = b_locals;
-              instrs = List.map (convert_instr ~resolve_type func_ctx) instrs;
+              instrs = List.map (instr ~resolve_type func_ctx) instrs;
             }
           in
 
@@ -564,8 +553,8 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
         | T.Global { typ; init; _ } ->
             Some
               {
-                B.typ = convert_global_type ctx typ;
-                B.init = List.map (convert_instr ~resolve_type ctx) init;
+                B.typ = global_type ctx typ;
+                B.init = List.map (instr ~resolve_type ctx) init;
               }
         | _ -> None)
       fields
@@ -576,16 +565,13 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
       (fun f ->
         match f with
         | T.Export { name; kind; index } ->
-            let kind, index =
+            let (kind : B.exportable), index =
               match kind with
-              | T.Func -> ((B.Func : B.exportable), resolve_idx ctx.funcs index)
-              | T.Table ->
-                  ((B.Table : B.exportable), resolve_idx ctx.tables index)
-              | T.Memory ->
-                  ((B.Memory : B.exportable), resolve_idx ctx.memories index)
-              | T.Global ->
-                  ((B.Global : B.exportable), resolve_idx ctx.globals index)
-              | T.Tag -> ((B.Tag : B.exportable), resolve_idx ctx.tags index)
+              | Func -> (Func, resolve_idx ctx.funcs index)
+              | Table -> (Table, resolve_idx ctx.tables index)
+              | Memory -> (Memory, resolve_idx ctx.memories index)
+              | Global -> (Global, resolve_idx ctx.globals index)
+              | Tag -> (Tag, resolve_idx ctx.tags index)
             in
             Some { B.name; kind; index }
         | _ -> None)
@@ -609,13 +595,14 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
               | Passive -> Passive
               | Active (i, ex) ->
                   Active
-                    (resolve_idx ctx.tables i, List.map (convert_instr ~resolve_type ctx) ex)
+                    ( resolve_idx ctx.tables i,
+                      List.map (instr ~resolve_type ctx) ex )
               | Declare -> Declare
             in
             Some
               {
-                B.typ = convert_reftype ctx typ;
-                init = List.map (List.map (convert_instr ~resolve_type ctx)) init;
+                B.typ = reftype ctx typ;
+                init = List.map (List.map (instr ~resolve_type ctx)) init;
                 mode;
               }
         | _ -> None)
@@ -632,7 +619,8 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
               | Passive -> Passive
               | Active (i, ex) ->
                   Active
-                    (resolve_idx ctx.memories i, List.map (convert_instr ~resolve_type ctx) ex)
+                    ( resolve_idx ctx.memories i,
+                      List.map (instr ~resolve_type ctx) ex )
             in
             Some { B.init; mode }
         | _ -> None)
@@ -645,13 +633,10 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
         match f with
         | T.Tag { typ = Some i, _; _ } -> Some (resolve_idx ctx.types i)
         | Tag { typ = None, Some (params, results); _ } ->
-             let params =
-              Array.of_list
-                (List.map (fun (_, t) -> convert_valtype ctx t) params)
+            let params =
+              Array.of_list (List.map (fun (_, t) -> valtype ctx t) params)
             in
-            let results =
-              Array.of_list (List.map (convert_valtype ctx) results)
-            in
+            let results = Array.of_list (List.map (valtype ctx) results) in
             Some (resolve_type { B.params; results })
         | Tag { typ = None, None; _ } ->
             failwith "Tag type must have an explicit type index or inline type"
@@ -663,7 +648,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     explicit_types
     @ (List.rev !extra_types
       |> List.map (fun ft ->
-             [| { B.typ = B.Func ft; supertype = None; final = true } |]))
+          [| { B.typ = B.Func ft; supertype = None; final = true } |]))
   in
 
   let invert_map map =

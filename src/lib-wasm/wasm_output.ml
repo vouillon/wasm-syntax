@@ -154,10 +154,13 @@ module Encoder = struct
 
   let rec instr ~source_map_t b (i : Ast.location instr) =
     let generated_offset = Buffer.length b in
-    if i.info.Utils.Ast.loc_start.Lexing.pos_fname <> "" &&
-       i.info.Utils.Ast.loc_start.Lexing.pos_lnum <> -1 &&
-       i.info.Utils.Ast.loc_start.Lexing.pos_cnum <> -1 then
-      Source_map.add_mapping source_map_t ~generated_offset ~original_location:i.info;
+    if
+      i.info.Utils.Ast.loc_start.Lexing.pos_fname <> ""
+      && i.info.Utils.Ast.loc_start.Lexing.pos_lnum <> -1
+      && i.info.Utils.Ast.loc_start.Lexing.pos_cnum <> -1
+    then
+      Source_map.add_mapping source_map_t ~generated_offset
+        ~original_location:i.info;
 
     match i.desc with
     | Unreachable -> byte b 0x00
@@ -500,8 +503,7 @@ module Encoder = struct
         uint b elem_idx
     | ArrayGet (s, type_idx) ->
         byte b 0xFB;
-        byte
-          b
+        byte b
           (match s with
           | None -> 0x0B
           | Some Signed -> 0x0C
@@ -568,7 +570,9 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
 
   (* 1. Type Section *)
   if m.types <> [] then
-    output_section out_channel 1 (Encoder.vec (fun b t -> Encoder.vec Encoder.subtype b (Array.to_list t))) m.types;
+    output_section out_channel 1
+      (Encoder.vec (fun b t -> Encoder.vec Encoder.subtype b (Array.to_list t)))
+      m.types;
 
   (* 2. Import Section *)
   if m.imports <> [] then
@@ -611,7 +615,11 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
 
   (* 6. Tag Section *)
   if m.tags <> [] then
-    output_section out_channel 13 (Encoder.vec (fun b i -> Encoder.byte b 0x00; Encoder.sint b i)) m.tags;
+    output_section out_channel 13
+      (Encoder.vec (fun b i ->
+           Encoder.byte b 0x00;
+           Encoder.sint b i))
+      m.tags;
 
   (* 7. Global Section *)
   if m.globals <> [] then
@@ -638,45 +646,57 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
 
   (* 9. Start Section *)
   (match m.start with
-  | Some i ->
-      output_section out_channel 8 Encoder.sint i
+  | Some i -> output_section out_channel 8 Encoder.sint i
   | None -> ());
 
   (* 10. Element Section *)
   if m.elem <> [] then
     output_section out_channel 9
       (Encoder.vec (fun b (e : Ast.location elem) ->
-         match e.mode with
-         | Active (table, offset) ->
-             Encoder.byte b 0x06;
-             Encoder.uint b table;
-             List.iter (Encoder.instr ~source_map_t b) offset;
-             Encoder.byte b 0x0B;
-             Encoder.reftype b e.typ;
-             Encoder.vec (fun b ex -> List.iter (Encoder.instr ~source_map_t b) ex; Encoder.byte b 0x0B) b e.init
-             
-         | Passive ->
-             Encoder.byte b 0x05;
-             Encoder.reftype b e.typ;
-             Encoder.vec (fun b ex -> List.iter (Encoder.instr ~source_map_t b) ex; Encoder.byte b 0x0B) b e.init
-             
-         | Declare ->
-             Encoder.byte b 0x07;
-             Encoder.reftype b e.typ;
-             Encoder.vec (fun b ex -> List.iter (Encoder.instr ~source_map_t b) ex; Encoder.byte b 0x0B) b e.init
-      ))
+           match e.mode with
+           | Active (table, offset) ->
+               Encoder.byte b 0x06;
+               Encoder.uint b table;
+               List.iter (Encoder.instr ~source_map_t b) offset;
+               Encoder.byte b 0x0B;
+               Encoder.reftype b e.typ;
+               Encoder.vec
+                 (fun b ex ->
+                   List.iter (Encoder.instr ~source_map_t b) ex;
+                   Encoder.byte b 0x0B)
+                 b e.init
+           | Passive ->
+               Encoder.byte b 0x05;
+               Encoder.reftype b e.typ;
+               Encoder.vec
+                 (fun b ex ->
+                   List.iter (Encoder.instr ~source_map_t b) ex;
+                   Encoder.byte b 0x0B)
+                 b e.init
+           | Declare ->
+               Encoder.byte b 0x07;
+               Encoder.reftype b e.typ;
+               Encoder.vec
+                 (fun b ex ->
+                   List.iter (Encoder.instr ~source_map_t b) ex;
+                   Encoder.byte b 0x0B)
+                 b e.init))
       m.elem;
 
   (* 12. Data Count Section *)
   if m.data <> [] then
-     output_section out_channel 12 Encoder.uint (List.length m.data);
+    output_section out_channel 12 Encoder.uint (List.length m.data);
 
   (* 11. Code Section *)
   if m.code <> [] then
     output_section out_channel 10
       (Encoder.vec (fun b (c : Ast.location code) ->
            let b_code = Buffer.create 128 in
-           Encoder.vec (fun b t -> Encoder.uint b 1; Encoder.valtype b t) b_code c.locals;
+           Encoder.vec
+             (fun b t ->
+               Encoder.uint b 1;
+               Encoder.valtype b t)
+             b_code c.locals;
            List.iter (Encoder.instr ~source_map_t b_code) c.instrs;
            Encoder.byte b_code 0x0B;
            Encoder.uint b (Buffer.length b_code);
@@ -693,17 +713,16 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
                Encoder.name b d.init
            | Active (mem, offset) ->
                if mem = 0 then (
-                  Encoder.byte b 0x00;
-                  List.iter (Encoder.instr ~source_map_t b) offset;
-                  Encoder.byte b 0x0B;
-                  Encoder.name b d.init
-               ) else (
-                  Encoder.byte b 0x02;
-                  Encoder.uint b mem;
-                  List.iter (Encoder.instr ~source_map_t b) offset;
-                  Encoder.byte b 0x0B;
-                  Encoder.name b d.init
-               )))
+                 Encoder.byte b 0x00;
+                 List.iter (Encoder.instr ~source_map_t b) offset;
+                 Encoder.byte b 0x0B;
+                 Encoder.name b d.init)
+               else (
+                 Encoder.byte b 0x02;
+                 Encoder.uint b mem;
+                 List.iter (Encoder.instr ~source_map_t b) offset;
+                 Encoder.byte b 0x0B;
+                 Encoder.name b d.init)))
       m.data;
 
   (* Custom Name Section *)
@@ -739,33 +758,44 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
       Encoder.uint b (Buffer.length b_sub);
       Buffer.add_buffer b b_sub)
   in
-  
+
   let b_names = Buffer.create 1024 in
   (match m.names.module_ with
   | Some name ->
-      Encoder.byte b_names 0x00; (* Module name subsection ID *)
+      Encoder.byte b_names 0x00;
+      (* Module name subsection ID *)
       let b_sub = Buffer.create 64 in
       Encoder.name b_sub name;
       Encoder.uint b_names (Buffer.length b_sub);
       Buffer.add_buffer b_names b_sub
   | None -> ());
 
-  output_name_subsection 0x01 m.names.functions b_names; (* Function names *)
-  output_indirect_name_subsection 0x02 m.names.locals b_names; (* Local names *)
-  output_indirect_name_subsection 0x03 m.names.labels b_names; (* Label names *)
-  output_name_subsection 0x04 m.names.types b_names; (* Type names *)
-  output_name_subsection 0x05 m.names.tables b_names; (* Table names *)
-  output_name_subsection 0x06 m.names.memories b_names; (* Memory names *)
-  output_name_subsection 0x07 m.names.globals b_names; (* Global names *)
-  output_name_subsection 0x08 m.names.elem b_names; (* Elem names *)
-  output_name_subsection 0x09 m.names.data b_names; (* Data names *)
+  output_name_subsection 0x01 m.names.functions b_names;
+  (* Function names *)
+  output_indirect_name_subsection 0x02 m.names.locals b_names;
+  (* Local names *)
+  output_indirect_name_subsection 0x03 m.names.labels b_names;
+  (* Label names *)
+  output_name_subsection 0x04 m.names.types b_names;
+  (* Type names *)
+  output_name_subsection 0x05 m.names.tables b_names;
+  (* Table names *)
+  output_name_subsection 0x06 m.names.memories b_names;
+  (* Memory names *)
+  output_name_subsection 0x07 m.names.globals b_names;
+  (* Global names *)
+  output_name_subsection 0x08 m.names.elem b_names;
+  (* Elem names *)
+  output_name_subsection 0x09 m.names.data b_names;
 
+  (* Data names *)
   if Buffer.length b_names > 0 then (
     let b_custom_section_content = Buffer.create (Buffer.length b_names + 10) in
     Encoder.name b_custom_section_content "name";
     Buffer.add_buffer b_custom_section_content b_names;
 
-    Out_channel.output_byte out_channel 0; (* Custom section ID (0) *)
+    Out_channel.output_byte out_channel 0;
+    (* Custom section ID (0) *)
     let len = Buffer.length b_custom_section_content in
     let rec output_uint i =
       if i < 128 then Out_channel.output_byte out_channel i
@@ -774,12 +804,14 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
         output_uint (i lsr 7))
     in
     output_uint len;
-    Buffer.output_buffer out_channel b_custom_section_content
-  );
+    Buffer.output_buffer out_channel b_custom_section_content);
 
   (* Generate source map file *)
-  (match opt_source_map_file with
+  match opt_source_map_file with
   | Some map_file_name ->
-      let json_content = Source_map.to_json source_map_t ~file_name:map_file_name in
-      Out_channel.with_open_text map_file_name (fun oc -> Out_channel.output_string oc json_content)
-  | None -> ())
+      let json_content =
+        Source_map.to_json source_map_t ~file_name:map_file_name
+      in
+      Out_channel.with_open_text map_file_name (fun oc ->
+          Out_channel.output_string oc json_content)
+  | None -> ()
