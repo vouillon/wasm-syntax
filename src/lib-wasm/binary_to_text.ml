@@ -75,13 +75,19 @@ let blocktype type_names (b : B.blocktype) : T.blocktype =
   | Typeuse i -> Typeuse (Some (index ~map:type_names i), None)
   | Valtype v -> Valtype (valtype type_names v)
 
-let catch (names : B.names) (c : B.catch) : T.catch =
+let get_label_reference stack i =
+  match List.nth stack i with
+  | Some s -> no_loc (T.Id s)
+  | None | (exception Failure _) -> numeric_index i
+
+let catch (names : B.names) stack (c : B.catch) : T.catch =
   match c with
-  | Catch (tag, label) -> Catch (index ~map:names.tags tag, numeric_index label)
+  | Catch (tag, label) ->
+      Catch (index ~map:names.tags tag, get_label_reference stack label)
   | CatchRef (tag, label) ->
-      CatchRef (index ~map:names.tags tag, numeric_index label)
-  | CatchAll label -> CatchAll (numeric_index label)
-  | CatchAllRef label -> CatchAllRef (numeric_index label)
+      CatchRef (index ~map:names.tags tag, get_label_reference stack label)
+  | CatchAll label -> CatchAll (get_label_reference stack label)
+  | CatchAllRef label -> CatchAllRef (get_label_reference stack label)
 
 let field_index (names : B.names) s_idx f_idx =
   match B.IntMap.find_opt s_idx names.fields with
@@ -92,11 +98,6 @@ let get_label_name label_names label_counter =
   let idx = !label_counter in
   incr label_counter;
   B.IntMap.find_opt idx label_names
-
-let get_label_reference stack i =
-  match List.nth stack i with
-  | Some s -> no_loc (T.Id s)
-  | None | (exception Failure _) -> numeric_index i
 
 let rec instr (names : B.names) local_names label_names label_counter stack
     (i : 'info B.instr) =
@@ -149,7 +150,7 @@ let rec instr (names : B.names) local_names label_names label_counter stack
           {
             label = Option.map (fun s -> s) name;
             typ = Option.map (blocktype names.types) typ;
-            catches = List.map (catch names) catches;
+            catches = List.map (catch names stack) catches;
             block =
               List.map
                 (instr names local_names label_names label_counter stack')
