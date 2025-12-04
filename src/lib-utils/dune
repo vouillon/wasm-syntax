@@ -1,4 +1,11 @@
 (library
  (name utils)
  (public_name wax.utils)
- (libraries unix))
+ (libraries unix)
+ (modules ast colors printer uint32 uint64))
+
+(library
+ (name source_map)
+ (public_name wax.source_map)
+ (libraries utils)
+ (modules source_map))
