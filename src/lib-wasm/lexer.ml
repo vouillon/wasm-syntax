@@ -130,11 +130,11 @@ let rec token lexbuf =
         (Sedlexing.Utf8.sub_lexeme lexbuf 1
            (Sedlexing.lexeme_length lexbuf - 1))
   | eof -> EOF
-  | "i32" -> VALTYPE I32
-  | "i64" -> VALTYPE I64
-  | "f32" -> VALTYPE F32
-  | "f64" -> VALTYPE F64
-  | "v128" -> VALTYPE V128
+  | "i32" -> I32
+  | "i64" -> I64
+  | "f32" -> F32
+  | "f64" -> F64
+  | "v128" -> V128
   | "i8" -> PACKEDTYPE I8
   | "i16" -> PACKEDTYPE I16
   | "any" -> ANY

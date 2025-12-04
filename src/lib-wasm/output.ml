@@ -296,7 +296,7 @@ let blocktype =
   | Valtype t -> [ list [ keyword "result"; valtype t ] ]
   | Typeuse t -> typeuse' t
 
-let limits { mi; ma } =
+let limits { mi; ma; address_type = _ } =
   u64 ~style:Constant mi :: option (fun i -> [ u64 ~style:Constant i ]) ma
 
 let tabletype { limits = l; reftype = typ } = limits l @ [ reftype typ ]

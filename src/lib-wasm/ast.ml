@@ -17,7 +17,12 @@ module Uint64 = Utils.Uint64
 
 type packedtype = I8 | I16
 type 'typ muttype = { mut : bool; typ : 'typ }
-type limits = { mi : Uint64.t; ma : Uint64.t option }
+
+type limits = {
+  mi : Uint64.t;
+  ma : Uint64.t option;
+  address_type : [ `I32 | `I64 ];
+}
 
 module Make_types (X : sig
   type idx
@@ -63,7 +68,13 @@ struct
 
   type subtype = { typ : comptype; supertype : X.idx option; final : bool }
   type rectype = subtype X.annotated_array
-  type nonrec limits = limits = { mi : Uint64.t; ma : Uint64.t option }
+
+  type nonrec limits = limits = {
+    mi : Uint64.t;
+    ma : Uint64.t option;
+    address_type : [ `I32 | `I64 ];
+  }
+
   type globaltype = valtype muttype
   type tabletype = { limits : limits; reftype : reftype }
 end

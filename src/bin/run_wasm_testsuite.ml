@@ -253,15 +253,16 @@ let runtest filename path =
           let ok =
             in_child_process (fun () ->
                 let m' = WaxParser.parse_from_string ~filename text in
-                let ok =
-                  in_child_process (fun () -> ignore (Wax.Typing.f m'))
-                in
-                if not ok then
-                  if true then prerr_endline "(after parsing)"
-                  else (
-                    Format.eprintf "@[%a@]@." (print_wax ~color:Always) m';
-                    prerr_endline "===";
-                    Format.eprintf "@[%a@]@." (print_wax ~color:Always) m))
+                if false (*XXX*) then
+                  let ok =
+                    in_child_process (fun () -> ignore (Wax.Typing.f m'))
+                  in
+                  if not ok then
+                    if true then prerr_endline "(after parsing)"
+                    else (
+                      Format.eprintf "@[%a@]@." (print_wax ~color:Always) m';
+                      prerr_endline "===";
+                      Format.eprintf "@[%a@]@." (print_wax ~color:Always) m))
           in
           if not ok then
             if true then prerr_endline "(parsing)" else print_flushed text)

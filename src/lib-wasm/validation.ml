@@ -1211,14 +1211,20 @@ let register_exports ctx lst =
       Hashtbl.add ctx.exports name ())
     lst
 
-let limits { mi; ma } max =
+let limits { mi; ma; address_type } max_fn =
+  let max = max_fn address_type in
   assert (
     match ma with
     | None -> Uint64.compare mi max <= 0
     | Some ma -> Uint64.compare mi ma <= 0 && Uint64.compare ma max <= 0)
 
-let max_memory_size = Uint64.of_int 65536
-let max_table_size = Uint64.of_string "0xffff_ffff"
+let max_memory_size = function
+  | `I32 -> Uint64.of_int 65536
+  | `I64 -> Uint64.of_string "0x1_0000_0000_0000"
+
+let max_table_size = function
+  | `I32 -> Uint64.of_string "0xffff_ffff"
+  | `I64 -> Uint64.of_string "0xffff_ffff_ffff_ffff"
 
 let rec register_typeuses ctx l =
   List.iter (fun i -> register_typeuses' ctx i) l

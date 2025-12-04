@@ -111,14 +111,13 @@ module Encoder = struct
     mut b f.mut
 
   let limits b (l : limits) =
-    match l.ma with
-    | None ->
-        byte b 0x00;
-        uint64 b l.mi
-    | Some m ->
-        byte b 0x01;
-        uint64 b l.mi;
-        uint64 b m
+    let flag =
+      (if l.ma <> None then 0x01 else 0x00)
+      lor if l.address_type = `I64 then 0x04 else 0x00
+    in
+    byte b flag;
+    uint64 b l.mi;
+    match l.ma with None -> () | Some m -> uint64 b m
 
   let globaltype b (t : globaltype) =
     valtype b t.typ;

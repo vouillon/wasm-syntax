@@ -10,7 +10,7 @@ ZZZ
 %token <string> FLOAT
 %token <string> STRING
 %token <string> ID
-%token <Ast.Text.valtype> VALTYPE
+%token I32 I64 F32 F64
 %token <Ast.Text.packedtype> PACKEDTYPE
 %token LPAREN "("
 %token RPAREN ")"
@@ -278,7 +278,11 @@ tupletype:
 | "(" TUPLE l = list(valtype) ")" { l }
 
 valtype:
-| t = VALTYPE { t }
+| I32 { I32 }
+| I64 { I64 }
+| F32 { F32 }
+| F64 { F64 }
+| V128 { V128 }
 | t = reftype { Ref t }
 | t = tupletype { Tuple t }
 
@@ -342,9 +346,15 @@ subtype:
   { {final; supertype; typ} }
 | typ = comptype { {final = true; supertype = None; typ } }
 
+address_type:
+| I32 { `I32 }
+| I64 { `I64 }
+
 limits:
-| mi = u64 { {mi; ma = None} }
-| mi = u64 ma = u64 { {mi; ma = Some ma} }
+| mi = u64 { {mi; ma = None; address_type = `I32} }
+| mi = u64 ma = u64 { {mi; ma = Some ma; address_type = `I32} }
+| at = address_type mi = u64 { {mi; ma = None; address_type = at} }
+| at = address_type mi = u64 ma = u64 { {mi; ma = Some ma; address_type = at} }
 
 memtype:
 | l = limits { l }
@@ -657,7 +667,7 @@ memory:
 | "(" MEMORY id = ID? r = exports("(" DATA s = datastring ")" { s }) ")"
   { let (exports, s) = r in
     let sz = Uint64.of_int ((String.length s + 65535) lsr 16) in
-    Memory {id; limits = {mi = sz; ma = Some sz}; init = Some s; exports} }
+    Memory {id; limits = {mi = sz; ma = Some sz; address_type = `I32}; init = Some s; exports} }
 | "(" MEMORY id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = memtype ")"
@@ -673,14 +683,14 @@ table:
   r = exports(t = reftype "(" ELEM e = list(elemexpr) ")" {t, e}) ")"
    { let (exports, (reftype, elem)) = r in
      let len = Uint64.of_int (List.length elem) in
-     Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
+     Table {id; typ = {limits ={mi=len; ma =Some len; address_type = `I32}; reftype};
             init = Init_segment elem; exports} }
 | "(" TABLE id = ID?
   r = exports(t = reftype "(" ELEM e = nonempty_list(idx) ")" {t, e}) ")"
    { let (exports, (reftype, elem)) = r in
      let len = Uint64.of_int (List.length elem) in
      let elem = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) elem in
-     Table {id; typ = {limits ={mi=len; ma =Some len}; reftype};
+     Table {id; typ = {limits ={mi=len; ma =Some len; address_type = `I32}; reftype};
             init = Init_segment elem; exports} }
 | "(" TABLE id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })

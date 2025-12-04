@@ -1,5 +1,10 @@
 (*
 TODO:
+- Typing: fix handling of _
+  Order to pop from stack:  _2 + _1
+  Order of evaluation:      e1 + e2   ==> _ + 1 is ok; 1 + _ is not
+- To_wasm: branch to return
+- Typing: implement LUB / GLB (for br_table)
 - we need to decide on an order to visit subexpression in structs
 - fix typeuse validation (add a type if not already present)
 - check that underscores are properly placed
@@ -773,10 +778,10 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
   | Call
       ( ({ desc = StructGet (a, ({ desc = "fill"; _ } as meth)); _ } as func),
         [ j; v; n ] ) ->
-      let* n' = instruction ctx n in
-      let* v' = instruction ctx v in
-      let* j' = instruction ctx j in
       let* a' = instruction ctx a in
+      let* j' = instruction ctx j in
+      let* v' = instruction ctx v in
+      let* n' = instruction ctx n in
       check_type ctx n' (UnionFind.make (Valtype { typ = I32; internal = I32 }));
       check_type ctx j' (UnionFind.make (Valtype { typ = I32; internal = I32 }));
       (match UnionFind.find (expression_type a') with
@@ -805,11 +810,11 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
   | Call
       ( ({ desc = StructGet (a1, ({ desc = "copy"; _ } as meth)); _ } as func),
         [ i1; a2; i2; n ] ) ->
-      let* n' = instruction ctx n in
-      let* i2' = instruction ctx i2 in
-      let* a2' = instruction ctx a2 in
-      let* i1' = instruction ctx i1 in
       let* a1' = instruction ctx a1 in
+      let* i1' = instruction ctx i1 in
+      let* a2' = instruction ctx a2 in
+      let* i2' = instruction ctx i2 in
+      let* n' = instruction ctx n in
       check_type ctx n' (UnionFind.make (Valtype { typ = I32; internal = I32 }));
       check_type ctx i2'
         (UnionFind.make (Valtype { typ = I32; internal = I32 }));
@@ -837,8 +842,8 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
   | Call
       ( ({ desc = Get ({ desc = "rotl" | "rotr"; _ } as meth); _ } as func),
         [ i1; i2 ] ) ->
-      let* i2' = instruction ctx i2 in
       let* i1' = instruction ctx i1 in
+      let* i2' = instruction ctx i2 in
       let ty = check_int_bin_op (expression_type i1') (expression_type i2') in
       return_expression i
         (Call ({ desc = Get meth; info = ([], func.info) }, [ i1'; i2' ]))
@@ -847,15 +852,15 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
       ( ({ desc = Get ({ desc = "copysign" | "min" | "max"; _ } as meth); _ } as
          func),
         [ i1; i2 ] ) ->
-      let* i2' = instruction ctx i2 in
       let* i1' = instruction ctx i1 in
+      let* i2' = instruction ctx i2 in
       let ty = check_float_bin_op (expression_type i1') (expression_type i2') in
       return_expression i
         (Call ({ desc = Get meth; info = ([], func.info) }, [ i1'; i2' ]))
         ty
   | Call (i', l) -> (
-      let* i' = instruction ctx i' in
       let* l' = instructions ctx l in
+      let* i' = instruction ctx i' in
       match UnionFind.find (expression_type i') with
       | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
           match Tbl.find ctx.types ty with
@@ -883,8 +888,8 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
           | _ -> assert false)
       | _ -> assert false (*ZZZ*))
   | TailCall (i', l) -> (
-      let* i' = instruction ctx i' in
       let* l' = instructions ctx l in
+      let* i' = instruction ctx i' in
       match UnionFind.find (expression_type i') with
       | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
           match Tbl.find ctx.types ty with
@@ -998,8 +1003,8 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
                 with
                 | None -> assert false (*ZZZ*)
                 | Some (name, i') ->
-                    let* l = prev in
                     let* i' = instruction ctx i' in
+                    let* l = prev in
                     let typ = unpack_type f in
                     check_type ctx i'
                       (UnionFind.make
@@ -1069,8 +1074,8 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
       in
       return_expression i (StructGet (i', field)) ty
   | StructSet (i1, field, i2) -> (
-      let* i2' = instruction ctx i2 in
       let* i1' = instruction ctx i1 in
+      let* i2' = instruction ctx i2 in
       let ty1 = expression_type i1' in
       match UnionFind.find ty1 with
       | Valtype { typ = Ref { typ = Type ty; _ }; _ } -> (
@@ -1097,8 +1102,8 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
           | _ -> assert false (*ZZZ*))
       | _ -> assert false (*ZZZ*))
   | Array (ty, i1, i2) -> (
-      let* i2' = instruction ctx i2 in
       let* i1' = instruction ctx i1 in
+      let* i2' = instruction ctx i2 in
       check_type ctx i2'
         (UnionFind.make (Valtype { typ = I32; internal = I32 }));
       match ty with
@@ -1143,8 +1148,8 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
                 let typ = UnionFind.make (Valtype typ) in
                 List.fold_left
                   (fun prev i' ->
-                    let* l = prev in
                     let* i' = instruction ctx i' in
+                    let* l = prev in
                     check_type ctx i' typ;
                     return (i' :: l))
                   (return []) instrs
@@ -1156,8 +1161,8 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
             (UnionFind.make
                (Valtype { typ; internal = valtype ctx.type_context typ })))
   | ArrayGet (i1, i2) -> (
-      let* i2' = instruction ctx i2 in
       let* i1' = instruction ctx i1 in
+      let* i2' = instruction ctx i2 in
       check_type ctx i2'
         (UnionFind.make (Valtype { typ = I32; internal = I32 }));
       match UnionFind.find (expression_type i1') with
@@ -1170,9 +1175,9 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
           | _ -> assert false)
       | _ -> assert false (*ZZZ*))
   | ArraySet (i1, i2, i3) -> (
-      let* i3' = instruction ctx i3 in
-      let* i2' = instruction ctx i2 in
       let* i1' = instruction ctx i1 in
+      let* i2' = instruction ctx i2 in
+      let* i3' = instruction ctx i3 in
       check_type ctx i2'
         (UnionFind.make (Valtype { typ = I32; internal = I32 }));
       match UnionFind.find (expression_type i1') with
@@ -1195,8 +1200,8 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
           | _ -> assert false)
       | _ -> assert false (*ZZZ*))
   | BinOp (op, i1, i2) ->
-      let* i2' = instruction ctx i2 in
       let* i1' = instruction ctx i1 in
+      let* i2' = instruction ctx i2 in
       let ty =
         let ty1 = expression_type i1' in
         let ty2 = expression_type i2' in
@@ -1636,9 +1641,9 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
       let* l' = instructions ctx l in
       return_statement i (Sequence l') (List.map expression_type l')
   | Select (i1, i2, i3) ->
-      let* i1' = instruction ctx i1 in
-      let* i3' = instruction ctx i3 in
       let* i2' = instruction ctx i2 in
+      let* i3' = instruction ctx i3 in
+      let* i1' = instruction ctx i1 in
       check_type ctx i1'
         (UnionFind.make (Valtype { typ = I32; internal = I32 }));
       let ty =
@@ -1683,8 +1688,8 @@ and instructions ctx l =
   match l with
   | [] -> return []
   | i :: r ->
-      let* r' = instructions ctx r in
       let* i' = instruction ctx i in
+      let* r' = instructions ctx r in
       return (i' :: r')
 
 and block_contents ctx l =
@@ -1930,7 +1935,7 @@ let f fields =
           ( List.map
               (fun ty ->
                 match UnionFind.find ty with
-                | Any | Null -> Value (Ref { nullable = true; typ = Any })
+                | Any | Null -> Value (Ref { nullable = true; typ = None_ })
                 | Number -> Value I32
                 | Int8 -> Packed I8
                 | Int16 -> Packed I16
