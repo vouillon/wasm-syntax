@@ -1,11 +1,8 @@
 (*
 TODO:
-- enforce expressions
-- return a typed tree
 - we need to decide on an order to visit subexpression in structs
 - fix typeuse validation (add a type if not already present)
 - check that underscores are properly placed
-- check for floating types? when an instruction may trap (Div)?
 - error messages
 - locations on the heap when push several values?
 - more methods rather than global functions (no ambiguity)?
@@ -469,6 +466,8 @@ type stack =
   | Empty
   | Cons of location * inferred_type UnionFind.t * stack
 
+type state = { stack : stack; available : bool }
+
 let output_inferred_type f ty =
   match UnionFind.find ty with
   | Any -> Format.fprintf f "any"
@@ -488,14 +487,14 @@ let rec output_stack f st =
       Format.fprintf f "@ %a%a" output_inferred_type ty output_stack st
 
 let print_stack st =
-  Format.eprintf "@[Stack:%a@]@." output_stack st;
+  Format.eprintf "@[Stack:%a@]@." output_stack st.stack;
   (st, ())
 
 let _ = print_stack
 
 let unreachable e st =
   let _, v = e st in
-  (Unreachable, v)
+  ({ stack = Unreachable; available = true }, v)
 
 let return v st = (st, v)
 
@@ -503,26 +502,25 @@ let ( let* ) e f st =
   let st, v = e st in
   f v st
 
-let pop_any st =
-  match st with
-  | Unreachable -> (Unreachable, UnionFind.make Any)
-  | Cons (_, ty, r) -> (r, ty)
+let pop_any _i st =
+  assert st.available;
+  (*ZZZ*)
+  match st.stack with
+  | Unreachable -> ({ st with stack = Unreachable }, UnionFind.make Any)
+  | Cons (_, ty, r) -> ({ st with stack = r }, ty)
   | Empty -> assert false (*ZZZ*)
 
 let pop ctx ty st =
-  match st with
-  | Unreachable -> (Unreachable, ())
+  match st.stack with
+  | Unreachable -> ({ st with stack = Unreachable }, ())
   | Cons (_, ty', r) ->
       let ok = subtype ctx ty' ty in
       if not ok then
         Format.eprintf "%a <: %a@." output_inferred_type ty'
           output_inferred_type ty;
       assert ok;
-      (r, ())
+      ({ st with stack = r }, ())
   | Empty -> assert false
-
-let push_poly loc ty st = (Cons (loc, ty, st), ())
-let push loc ty st = push_poly loc ty st
 
 let rec pop_args ctx args =
   match args with
@@ -531,18 +529,24 @@ let rec pop_args ctx args =
       let* () = pop_args ctx rem in
       pop ctx ty
 
+let push loc ty st = ({ stack = Cons (loc, ty, st.stack); available = true }, ())
+
 let rec push_results results =
   match results with
-  | [] -> return ()
+  | [] ->
+      if false then prerr_endline "PUSH";
+      return ()
   | (loc, ty) :: rem ->
       let* () = push loc ty in
       push_results rem
 
 let with_empty_stack f =
-  let st, res = f Empty in
-  match st with
+  if false then prerr_endline "START";
+  let st, res = f { stack = Empty; available = true } in
+  if false then prerr_endline "DONE";
+  match st.stack with
   | Cons _ ->
-      Format.eprintf "@[<2>Stack:%a@]@." output_stack st;
+      Format.eprintf "@[<2>Stack:%a@]@." output_stack st.stack;
       assert false
   | Empty | Unreachable -> res
 
@@ -597,11 +601,16 @@ let field_has_default (ty : fieldtype) =
       | Ref { nullable; _ } -> nullable
       | Tuple _ -> assert false)
 
-let return_statement (i : location instr)
-    (desc : (inferred_type UnionFind.t list * location) instr_desc) ty =
-  return { desc; info = (ty, i.info) }
+let return_statement ?(pop = false) (i : location instr)
+    (desc : (inferred_type UnionFind.t list * location) instr_desc) ty st =
+  if false then
+    Format.eprintf "%b %b -> %b @[%a@]@." pop st.available
+      (st.available && (pop || ty = []))
+      Output.instr i;
+  ( { st with available = st.available && (pop || ty = []) },
+    { desc; info = (ty, i.info) } )
 
-let return_expression i desc ty = return_statement i desc [ ty ]
+let return_expression ?pop i desc ty = return_statement ?pop i desc [ ty ]
 
 let expression_type i =
   match i.info with [ ty ], _ -> ty | _ -> assert false (*ZZZ*)
@@ -700,8 +709,8 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
       (* ZZZ Only at top_level *)
       return_statement i Nop []
   | Pop ->
-      let* ty = pop_any in
-      return_expression i Pop ty
+      let* ty = pop_any i in
+      return_expression ~pop:true i Pop ty
   | Null -> return_expression i Null (UnionFind.make Null)
   | Get idx as desc ->
       let ty =
@@ -926,7 +935,7 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
   | Float _ as desc -> return_expression i desc (UnionFind.make Float)
   | Cast (i', typ) ->
       let* i' = instruction ctx i' in
-      let ty =
+      let ty, skip =
         let ty' = expression_type i' in
         match typ with
         | Valtype typ ->
@@ -937,7 +946,8 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
               Format.eprintf "cast %a => %a@." output_inferred_type ty'
                 Output.valtype typ);
             assert ok;
-            UnionFind.make (Valtype { typ; internal = ty })
+            let ty = UnionFind.make (Valtype { typ; internal = ty }) in
+            (ty, subtype ctx ty' ty)
         | Signedtype { typ; _ } ->
             let ok = signed_cast ctx ty' typ in
             if not ok then (
@@ -956,9 +966,9 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
               | `F32 -> (F32, F32)
               | `F64 -> (F64, F64)
             in
-            UnionFind.make (Valtype { typ; internal = ty })
+            (UnionFind.make (Valtype { typ; internal = ty }), false)
       in
-      return_expression i (Cast (i', typ)) ty
+      return_expression ~pop:skip i (Cast (i', typ)) ty
   | Test (i, ty) ->
       let* i' = instruction ctx i in
       let typ = Ref { nullable = true; typ = top_heap_type ctx ty.typ } in
@@ -1931,20 +1941,3 @@ let f fields =
             loc ))
         f)
     fields
-
-(*
-- Arity inference?
-  ==> we know the type of a block; how do we split the block to check this type?
-- Use stack to type sequence of instructions
-
-Expressions may consume some of the stack but return a single value
-_
-=> expects one value on the stack; leave the stack unchanged
-
-f(_,_,x)
-=> expects two values on the stack; return some values (depending on f)
-
-_+1
-
-Annotated syntax tree: type (+ is it checked or inferred?)
-*)

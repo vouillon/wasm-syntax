@@ -336,7 +336,9 @@ let branch_target ctx (idx : Ast.Text.idx) =
   | Id id ->
       let rec find l id =
         match l with
-        | [] -> assert false
+        | [] ->
+            prerr_endline id;
+            assert false
         | (Some id', res) :: _ when id = id' -> res
         | _ :: rem -> find rem id
         (* ZZZ *)
