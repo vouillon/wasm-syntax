@@ -308,7 +308,7 @@ let rec push_results results =
 let rec output_stack f st =
   match st with
   | Empty -> ()
-  | Unreachable -> Format.fprintf f "unreachable"
+  | Unreachable -> Format.fprintf f "@ unreachable"
   | Cons (ty, st) ->
       Format.fprintf f "@ %a%a"
         (Format.pp_print_option
@@ -317,7 +317,7 @@ let rec output_stack f st =
         ty output_stack st
 
 let print_stack st =
-  Format.eprintf "Stack:%a@." output_stack st;
+  Format.eprintf "@[<2>Stack:%a@]@." output_stack st;
   (st, ())
 
 let _ = print_stack
@@ -326,7 +326,7 @@ let with_empty_stack f =
   let st, () = f Empty in
   match st with
   | Cons _ ->
-      Format.eprintf "Stack:%a@." output_stack st;
+      Format.eprintf "@[<2>Stack:%a@]@." output_stack st;
       assert false
   | Empty | Unreachable -> ()
 

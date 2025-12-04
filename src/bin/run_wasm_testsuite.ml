@@ -239,7 +239,14 @@ let runtest filename path =
           prerr_endline (Printexc.to_string e);
           Format.eprintf "@[%a@]@." (print_module ~color:Always) m
       | m ->
-          let ok = in_child_process (fun () -> ignore (Wax.Typing.f m)) in
+          let ok =
+            in_child_process (fun () ->
+                let m = Wax.Typing.f m in
+                let m = Conversion.To_wasm.module_ m in
+                let ok = in_child_process (fun () -> Wasm.Validation.f m) in
+                if not ok then
+                  Format.eprintf "@[%a@]@." (print_module ~color:Always) m)
+          in
           if not ok then Format.eprintf "@[%a@]@." (print_wax ~color:Always) m;
           let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
           let ok =

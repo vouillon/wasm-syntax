@@ -62,7 +62,23 @@ let blocktype typ : Text.blocktype option =
   | [||], [| typ |] -> Some (Valtype (valtype typ))
   | _ -> Some (Typeuse (None, Some (functype typ)))
 
-let binop op operand_type : _ Text.instr_desc =
+let print_instr i =
+  Format.eprintf "%a@."
+    (fun f i -> Utils.Printer.run f (fun pp -> Wax.Output.instr pp i))
+    i
+
+(*
+let print_storagetype i =
+  Format.eprintf "%a@."
+    (fun f i -> Utils.Printer.run f (fun pp -> Wax.Output.storagetype pp i))
+    i
+*)
+let print_valtype i =
+  Format.eprintf "%a@."
+    (fun f i -> Utils.Printer.run f (fun pp -> Wax.Output.valtype pp i))
+    i
+
+let binop i op operand_type : _ Text.instr_desc =
   match (op, operand_type) with
   | Add, I32 -> BinOp (I32 Add)
   | Sub, I32 -> BinOp (I32 Sub)
@@ -130,7 +146,9 @@ let binop op operand_type : _ Text.instr_desc =
   | Gt None, F64 -> BinOp (F64 Gt)
   | Le None, F64 -> BinOp (F64 Le)
   | Ge None, F64 -> BinOp (F64 Ge)
-  | _ -> assert false
+  | _ ->
+      print_instr i;
+      assert false
 
 let folded loc desc args =
   [ with_loc loc (Text.Folded (with_loc loc desc, args)) ]
@@ -151,14 +169,29 @@ let typeuse typ sign =
   in
   (idx, type_info)
 
-let expr_type i = match i.info with [ t ], _ -> t | _ -> assert false
+let expr_type i =
+  match i.info with
+  | [ t ], _ -> t
+  | _ ->
+      print_instr i;
+      assert false
+
 let expr_valtype i = unpack_type (expr_type i)
 let expr_reftype i = match expr_valtype i with Ref r -> r | _ -> assert false
 
 let expr_type_name i =
-  match expr_reftype i with { typ = Type idx; _ } -> idx | _ -> assert false
+  match expr_reftype i with
+  | { typ = Type idx; _ } -> idx
+  | _ ->
+      print_valtype (Ref (expr_reftype i));
+      print_instr i;
+      assert false
 
-let expr_type_kind ctx i = Hashtbl.find ctx.type_kinds (expr_type_name i).desc
+let expr_type_kind ctx i =
+  match expr_reftype i with
+  | { typ = Array; _ } -> `Array
+  | _ -> Hashtbl.find ctx.type_kinds (expr_type_name i).desc
+
 let label i l = with_loc (snd i.info) (Text.Id l)
 
 let rec instruction ctx i : location Text.instr list =
@@ -291,8 +324,7 @@ let rec instruction ctx i : location Text.instr list =
               match (in_ty, cast_ty) with
               (* I31 *)
               | I32, Valtype (Ref { typ = I31; _ }) -> RefI31
-              | Ref { typ = I31; _ }, Signedtype { typ = `I32; signage; _ } ->
-                  I31Get signage
+              | Ref _, Signedtype { typ = `I32; signage; _ } -> I31Get signage
               (* Extern / Any *)
               | Ref { typ = Any; _ }, Valtype (Ref { typ = Extern; _ }) ->
                   ExternConvertAny
@@ -332,7 +364,16 @@ let rec instruction ctx i : location Text.instr list =
                   UnOp (F64 (Convert (`I32, signage)))
               | I64, Signedtype { typ = `F64; signage; _ } ->
                   UnOp (F64 (Convert (`I64, signage)))
-              | _ -> assert false
+              (* Identity *)
+              | I32, Valtype I32
+              | I64, Valtype I64
+              | F32, Valtype F32
+              | F64, Valtype F64 ->
+                  Nop
+              | _ ->
+                  print_valtype in_ty;
+                  print_instr i;
+                  assert false
             in
             folded loc instr code
       in
@@ -469,7 +510,7 @@ let rec instruction ctx i : location Text.instr list =
           (*ZZZ Support in types?*)
           folded loc (Text.UnOp (I32 Eqz)) (folded loc RefEq (code_a @ code_b))
       | _ ->
-          let opcode = binop op operand_type in
+          let opcode = binop i op operand_type in
           folded loc opcode (code_a @ code_b))
   | UnOp (op, a) -> (
       let operand_type = expr_valtype a in
@@ -491,11 +532,21 @@ let rec instruction ctx i : location Text.instr list =
       | Not, Ref _ -> folded loc RefIsNull (instruction ctx a)
       | Pos, _ -> instruction ctx a
       | _ -> assert false)
-  | Let (decls, body_opt) -> (
-      let body =
-        match body_opt with Some e -> instruction ctx e | None -> []
-      in
+  | Let (decls, None) ->
       let binding (id, ty) =
+        match id with
+        | Some name ->
+            let ty = Option.get ty in
+            let wasm_name = Namespace.add ctx.namespace name.desc in
+            ctx.locals <- StringMap.add name.desc wasm_name ctx.locals;
+            ctx.allocated_locals :=
+              (Some wasm_name, valtype ty) :: !(ctx.allocated_locals)
+        | None -> assert false
+      in
+      List.iter binding (List.rev decls);
+      []
+  | Let (decls, Some body) ->
+      let binding (id, ty) e =
         match id with
         | Some name ->
             let ty = Option.value ~default:(expr_valtype i) ty in
@@ -503,13 +554,12 @@ let rec instruction ctx i : location Text.instr list =
             ctx.locals <- StringMap.add name.desc wasm_name ctx.locals;
             ctx.allocated_locals :=
               (Some wasm_name, valtype ty) :: !(ctx.allocated_locals);
-            Text.LocalSet (with_loc name.info (Text.Id wasm_name))
-        | None -> Text.Drop
+            folded loc
+              (Text.LocalSet (with_loc name.info (Text.Id wasm_name)))
+              (instruction ctx e)
+        | None -> folded loc Text.Drop (instruction ctx e)
       in
-      match decls with
-      | [ b ] -> folded loc (binding b) body
-      | _ ->
-          body @ List.map (fun b -> with_loc loc (binding b)) (List.rev decls))
+      List.concat (List.map2 binding decls [ body ])
   | Br (l, None) ->
       (*ZZZ label should be located*)
       folded loc (Br (label i l)) []
@@ -556,7 +606,9 @@ let rec instruction ctx i : location Text.instr list =
         | typ -> Some [ valtype typ ]
       in
       folded loc (Select typ) (code_then @ code_else @ code_cond)
-  | String _ -> assert false
+  | String (Some idx, _) ->
+      folded loc (ArrayNewFixed (index idx, Uint32.zero)) []
+  | String (None, _) -> assert false
 
 let import attributes =
   List.find_map

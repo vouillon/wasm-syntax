@@ -343,16 +343,16 @@ let cast ctx ty ty' =
   | (Number | Int), Ref { typ = I31; _ } ->
       UnionFind.set ty (Valtype { typ = I32; internal = I32 });
       true
-  | (Number | Int), I32 | Int, F32 ->
+  | (Number | Int | Any), I32 | Int, F32 ->
       UnionFind.set ty (Valtype { typ = I32; internal = I32 });
       true
-  | (Number | Int), I64 | Int, F64 ->
+  | (Number | Int | Any), I64 | Int, F64 ->
       UnionFind.set ty (Valtype { typ = I64; internal = I64 });
       true
-  | (Number | Float), F32 | Float, I32 ->
+  | (Number | Float | Any), F32 | Float, I32 ->
       UnionFind.set ty (Valtype { typ = F32; internal = F32 });
       true
-  | (Number | Float), F64 | Float, I64 ->
+  | (Number | Float | Any), F64 | Float, I64 ->
       UnionFind.set ty (Valtype { typ = F64; internal = F64 });
       true
   | Null, Ref { typ = ty'; _ } ->
@@ -401,11 +401,25 @@ let cast ctx ty ty' =
   | Valtype { internal = Tuple _; _ }, _
   | (Int8 | Int16), _ ->
       false
-  | Any, _ -> true
+  | Any, Ref { typ = ty'; nullable } ->
+      let ty' = Ref { nullable; typ = top_heap_type ctx ty' } in
+      let ity' = valtype ctx.type_context ty' in
+      UnionFind.set ty (Valtype { typ = ty'; internal = ity' });
+      true
+  | Any, V128 ->
+      UnionFind.set ty (Valtype { typ = V128; internal = V128 });
+      true
+  | Any, Tuple _ -> assert false
 
 let signed_cast ctx ty ty' =
   let ity = UnionFind.find ty in
   match (ity, ty') with
+  | Any, `I32 ->
+      UnionFind.set ty (Valtype { typ = F32; internal = F32 });
+      true
+  | Any, (`F32 | `F64) ->
+      UnionFind.set ty (Valtype { typ = I32; internal = I32 });
+      true
   | (Int8 | Int16), `I32 -> true
   | Valtype { internal = Ref _ as ity; _ }, `I32 ->
       let ty' = Ref { nullable = true; typ = Any } in
@@ -419,7 +433,7 @@ let signed_cast ctx ty ty' =
              internal = Ref { typ = Any; nullable = true };
            });
       true
-  | (Number | Int), `I64 ->
+  | (Any | Number | Int), `I64 ->
       UnionFind.set ty (Valtype { typ = I32; internal = I32 });
       true
   | Valtype { internal = I32; _ }, `I64
@@ -449,7 +463,6 @@ let signed_cast ctx ty ty' =
           } ),
       _ ) ->
       false
-  | Any, _ -> true (*ZZZ ?*)
 
 type stack =
   | Unreachable
@@ -915,52 +928,35 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
       let* i' = instruction ctx i' in
       let ty =
         let ty' = expression_type i' in
-        match UnionFind.find ty' with
-        | Any -> (
-            match typ with
-            | Valtype typ ->
-                let ty = valtype ctx.type_context typ in
-                UnionFind.make (Valtype { typ; internal = ty })
-            | Signedtype { typ; _ } ->
-                let typ, (ty : Internal.valtype) =
-                  match typ with
-                  | `I32 -> (I32, I32)
-                  | `I64 -> (I64, I64)
-                  | `F32 -> (F32, F32)
-                  | `F64 -> (F64, F64)
-                in
-                UnionFind.make (Valtype { typ; internal = ty }))
-        | _ -> (
-            match typ with
-            | Valtype typ ->
-                let ty = valtype ctx.type_context typ in
-                let ok = cast ctx ty' typ in
-                if not ok then (
-                  Format.eprintf "%a@." Output.instr i;
-                  Format.eprintf "cast %a => %a@." output_inferred_type ty'
-                    Output.valtype typ);
-                assert ok;
-                UnionFind.make (Valtype { typ; internal = ty })
-            | Signedtype { typ; _ } ->
-                let ok = signed_cast ctx ty' typ in
-                if not ok then (
-                  Format.eprintf "%a@." Output.instr i;
-                  Format.eprintf "signed cast %a => %s@." output_inferred_type
-                    ty'
-                    (match typ with
-                    | `I32 -> "i32"
-                    | `I64 -> "i64"
-                    | `F32 -> "f32"
-                    | `F64 -> "f64"));
-                assert ok;
-                let typ, (ty : Internal.valtype) =
-                  match typ with
-                  | `I32 -> (I32, I32)
-                  | `I64 -> (I64, I64)
-                  | `F32 -> (F32, F32)
-                  | `F64 -> (F64, F64)
-                in
-                UnionFind.make (Valtype { typ; internal = ty }))
+        match typ with
+        | Valtype typ ->
+            let ty = valtype ctx.type_context typ in
+            let ok = cast ctx ty' typ in
+            if not ok then (
+              Format.eprintf "%a@." Output.instr i;
+              Format.eprintf "cast %a => %a@." output_inferred_type ty'
+                Output.valtype typ);
+            assert ok;
+            UnionFind.make (Valtype { typ; internal = ty })
+        | Signedtype { typ; _ } ->
+            let ok = signed_cast ctx ty' typ in
+            if not ok then (
+              Format.eprintf "%a@." Output.instr i;
+              Format.eprintf "signed cast %a => %s@." output_inferred_type ty'
+                (match typ with
+                | `I32 -> "i32"
+                | `I64 -> "i64"
+                | `F32 -> "f32"
+                | `F64 -> "f64"));
+            assert ok;
+            let typ, (ty : Internal.valtype) =
+              match typ with
+              | `I32 -> (I32, I32)
+              | `I64 -> (I64, I64)
+              | `F32 -> (F32, F32)
+              | `F64 -> (F64, F64)
+            in
+            UnionFind.make (Valtype { typ; internal = ty })
       in
       return_expression i (Cast (i', typ)) ty
   | Test (i, ty) ->
@@ -1197,20 +1193,20 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
         match (UnionFind.find ty1, UnionFind.find ty2) with
         | Any, Any -> (
             match op with
-            | Add | Sub | Mul -> UnionFind.make Number
+            | Add | Sub | Mul ->
+                UnionFind.merge ty1 ty2 Number;
+                ty1
             | Div (Some _) | Rem _ | And | Or | Xor | Shl | Shr _ ->
-                UnionFind.make Int
-            | Div None -> UnionFind.make Float
-            | Eq
-            | Lt (Some _)
-            | Gt (Some _)
-            | Le (Some _)
-            | Ge (Some _)
-            | Lt None
-            | Gt None
-            | Le None
-            | Ge None
-            | Ne ->
+                UnionFind.merge ty1 ty2 Int;
+                ty1
+            | Lt (Some _) | Gt (Some _) | Le (Some _) | Ge (Some _) | Eq | Ne ->
+                UnionFind.merge ty1 ty2 (Valtype { typ = I32; internal = I32 });
+                UnionFind.make (Valtype { typ = I32; internal = I32 })
+            | Div None ->
+                UnionFind.merge ty1 ty2 Float;
+                ty1
+            | Lt None | Gt None | Le None | Ge None ->
+                UnionFind.merge ty1 ty2 (Valtype { typ = F32; internal = F32 });
                 UnionFind.make (Valtype { typ = I32; internal = I32 }))
         | typ, Any | Any, typ -> (
             UnionFind.merge ty1 ty2 typ;
@@ -1924,8 +1920,7 @@ let f fields =
           ( List.map
               (fun ty ->
                 match UnionFind.find ty with
-                | Any -> Value I32
-                | Null -> Value (Ref { nullable = true; typ = Any })
+                | Any | Null -> Value (Ref { nullable = true; typ = Any })
                 | Number -> Value I32
                 | Int8 -> Packed I8
                 | Int16 -> Packed I16

@@ -29,165 +29,88 @@ let with_open_out file f =
   | Some file -> Out_channel.with_open_bin file f
   | None -> f stdout
 
-let wat_to_wat ~input_file ~output_file ~validate ~color ~source_map_file:opt_source_map_file =
-
-  let _ = opt_source_map_file in (* Ignored for non-wasm output *)
-
+let wat_to_wat ~input_file ~output_file ~validate ~color
+    ~source_map_file:opt_source_map_file =
+  let _ = opt_source_map_file in
+  (* Ignored for non-wasm output *)
   let text = with_open_in input_file In_channel.input_all in
-
   let ast =
-
     Wat_parser.parse_from_string
-
       ~filename:(Option.value ~default:"-" input_file)
-
       text
-
   in
-
   if validate then Wasm.Validation.f ast;
-
   with_open_out output_file (fun oc ->
-
       let print_wat f m =
-
         Utils.Printer.run f (fun p ->
-
             Wasm.Output.module_ ~color ~out_channel:oc p m)
-
       in
-
       let fmt = Format.formatter_of_out_channel oc in
-
       Format.fprintf fmt "%a@." print_wat ast)
 
-
-
-let wat_to_wax ~input_file ~output_file ~validate ~color ~source_map_file:opt_source_map_file =
-
-  let _ = opt_source_map_file in (* Ignored for non-wasm output *)
-
+let wat_to_wax ~input_file ~output_file ~validate ~color
+    ~source_map_file:opt_source_map_file =
+  let _ = opt_source_map_file in
+  (* Ignored for non-wasm output *)
   let text = with_open_in input_file In_channel.input_all in
-
   let ast =
-
     Wat_parser.parse_from_string
-
       ~filename:(Option.value ~default:"-" input_file)
-
       text
-
   in
-
   if validate then Wasm.Validation.f ast;
-
   let wax_ast = Conversion.From_wasm.module_ ast in
-
   if validate then ignore (Wax.Typing.f wax_ast);
-
   with_open_out output_file (fun oc ->
-
       let print_wax f m =
-
         Utils.Printer.run f (fun p ->
-
             Wax.Output.module_ p ~color ~out_channel:oc m)
-
       in
-
       let fmt = Format.formatter_of_out_channel oc in
-
       Format.fprintf fmt "%a@." print_wax wax_ast)
 
-
-
-let wax_to_wat ~input_file ~output_file ~validate ~color ~source_map_file:opt_source_map_file =
-
-  let _ = opt_source_map_file in (* Ignored for non-wasm output *)
-
+let wax_to_wat ~input_file ~output_file ~validate ~color
+    ~source_map_file:opt_source_map_file =
+  let _ = opt_source_map_file in
+  (* Ignored for non-wasm output *)
   let text = with_open_in input_file In_channel.input_all in
-
   let ast =
-
     Wax_parser.parse_from_string
-
       ~filename:(Option.value ~default:"-" input_file)
-
       text
-
   in
-
   let ast = Wax.Typing.f ast in
-
-  let name, fields = Conversion.To_wasm.module_ ast in
-
-  let name =
-
-    match name with
-
-    | Some { desc = Id id; _ } -> Some id
-
-    | Some { desc = Num _; _ } -> None
-
-    | None -> None
-
-  in
-
-  let wasm_ast = (name, fields) in
-
+  let wasm_ast = Conversion.To_wasm.module_ ast in
   if validate then Wasm.Validation.f wasm_ast;
-
   with_open_out output_file (fun oc ->
-
       let print_wat f m =
-
         Utils.Printer.run f (fun p ->
-
             Wasm.Output.module_ ~color ~out_channel:oc p m)
-
       in
-
       let fmt = Format.formatter_of_out_channel oc in
-
       Format.fprintf fmt "%a@." print_wat wasm_ast)
 
-
-
-let wax_to_wax ~input_file ~output_file ~validate ~color ~source_map_file:opt_source_map_file =
-
-  let _ = opt_source_map_file in (* Ignored for non-wasm output *)
-
+let wax_to_wax ~input_file ~output_file ~validate ~color
+    ~source_map_file:opt_source_map_file =
+  let _ = opt_source_map_file in
+  (* Ignored for non-wasm output *)
   let text = with_open_in input_file In_channel.input_all in
-
   let ast =
-
     Wax_parser.parse_from_string
-
       ~filename:(Option.value ~default:"-" input_file)
-
       text
-
   in
-
   if validate then ignore (Wax.Typing.f ast);
-
   with_open_out output_file (fun oc ->
-
       let print_wax f m =
-
         Utils.Printer.run f (fun p ->
-
             Wax.Output.module_ p ~color ~out_channel:oc m)
-
       in
-
       let fmt = Format.formatter_of_out_channel oc in
-
       Format.fprintf fmt "%a@." print_wax ast)
 
-
-
-let wax_to_wasm ~input_file ~output_file ~validate ~color ~source_map_file:(opt_source_map_file : string option) =
+let wax_to_wasm ~input_file ~output_file ~validate ~color
+    ~source_map_file:(opt_source_map_file : string option) =
   let text = with_open_in input_file In_channel.input_all in
   let ast =
     Wax_parser.parse_from_string
@@ -195,47 +118,26 @@ let wax_to_wasm ~input_file ~output_file ~validate ~color ~source_map_file:(opt_
       text
   in
   let ast = Wax.Typing.f ast in
-  let name, fields = Conversion.To_wasm.module_ ast in
-  let name =
-    match name with
-    | Some { desc = Id id; _ } -> Some id
-    | Some { desc = Num _; _ } -> None
-    | None -> None
-  in
-  let wasm_ast_text = (name, fields) in
+  let wasm_ast_text = Conversion.To_wasm.module_ ast in
   if validate then Wasm.Validation.f wasm_ast_text;
   let wasm_ast_binary = Wasm.Text_to_binary.module_ wasm_ast_text in
   with_open_out output_file (fun oc ->
-      Wasm.Wasm_output.module_ ~color ~out_channel:oc
-        ?opt_source_map_file wasm_ast_binary)
+      Wasm.Wasm_output.module_ ~color ~out_channel:oc ?opt_source_map_file
+        wasm_ast_binary)
 
-
-
-let wat_to_wasm ~input_file ~output_file ~validate ~color ~source_map_file:opt_source_map_file =
-
+let wat_to_wasm ~input_file ~output_file ~validate ~color
+    ~source_map_file:opt_source_map_file =
   let text = with_open_in input_file In_channel.input_all in
-
   let ast =
-
     Wat_parser.parse_from_string
-
       ~filename:(Option.value ~default:"-" input_file)
-
       text
-
   in
-
   if validate then Wasm.Validation.f ast;
-
   let wasm_ast_binary = Wasm.Text_to_binary.module_ ast in
-
   with_open_out output_file (fun oc ->
-
-      Wasm.Wasm_output.module_ ~color ~out_channel:oc
-
-        ?opt_source_map_file wasm_ast_binary)
-
-
+      Wasm.Wasm_output.module_ ~color ~out_channel:oc ?opt_source_map_file
+        wasm_ast_binary)
 
 type format = Wat | Wasm | Wax
 
@@ -294,7 +196,12 @@ let convert input_file output_file input_format_opt output_format_opt validate
     | Wax, Wax -> wax_to_wax
     | Wax, Wasm -> wax_to_wasm
     | _ ->
-        fun ~input_file:_ ~output_file:_ ~validate:_ ~color:_ ~source_map_file:_ ->
+        fun ~input_file:_
+          ~output_file:_
+          ~validate:_
+          ~color:_
+          ~source_map_file:_
+        ->
           Printf.eprintf
             "Error: Conversion from '%s' (%s) to '%s' (%s) not supported yet. \
              Run 'wax --help' for supported formats and their descriptions.\n"
@@ -304,7 +211,8 @@ let convert input_file output_file input_format_opt output_format_opt validate
             (format_description output_format);
           exit 123
   in
-  convert ~input_file ~output_file ~validate ~color ~source_map_file:opt_source_map_file
+  convert ~input_file ~output_file ~validate ~color
+    ~source_map_file:opt_source_map_file
 
 (* Define the input file argument (optional for stdin) *)
 let input_file =

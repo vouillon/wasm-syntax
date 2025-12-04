@@ -808,3 +808,9 @@ let valtype printer i =
   let theme = get_theme use_color in
   let pp = { printer; theme; style_override = None } in
   valtype pp i
+
+let storagetype printer i =
+  let use_color = should_use_color ~color:Auto ~out_channel:(Some stderr) in
+  let theme = get_theme use_color in
+  let pp = { printer; theme; style_override = None } in
+  storagetype pp i
