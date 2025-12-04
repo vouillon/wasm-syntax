@@ -1,0 +1,1 @@
+val module_ : ?color:Utils.Colors.flag -> ?out_channel:out_channel -> 'info Ast.Binary.module_ -> unit
