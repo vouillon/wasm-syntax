@@ -727,7 +727,6 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let ty, sz = memory_instruction_type_and_size ty in
       check_memarg limits sz memarg;
       let* () = pop ctx ty in
-      let* () = print_stack in
       let* () = pop ctx (address_type_to_valtype limits.address_type) in
       return ()
   | StoreS (idx, memarg, ty, sz) ->
@@ -794,7 +793,6 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop ctx (Ref typ.reftype) in
       pop ctx addr_ty
   | TableCopy (idx, idx') ->
-      let* () = print_stack in
       let ty = Sequence.get ctx.modul.tables idx in
       let ty' = Sequence.get ctx.modul.tables idx' in
       assert (
@@ -1265,7 +1263,7 @@ let max_memory_size = function
   | `I64 -> Uint64.of_string "0x1_0000_0000_0000"
 
 let max_table_size = function
-  | `I32 -> Uint64.of_string "0x10000_0000"
+  | `I32 -> Uint64.of_string "0xffff_fffe"
   | `I64 -> Uint64.of_string "0xffff_ffff_ffff_ffff"
 
 let rec register_typeuses ctx l =
