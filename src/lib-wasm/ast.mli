@@ -513,9 +513,10 @@ module Binary : sig
   type indirect_name_map = string IntMap.t IntMap.t
 
   type names = {
-    module_ : string;
+    module_ : string option;
     functions : name_map;
     locals : indirect_name_map;
+    labels : indirect_name_map;
     types : name_map;
     fields : indirect_name_map;
     tags : name_map;

@@ -88,69 +88,119 @@ let field_index (names : B.names) s_idx f_idx =
   | Some field_map -> index ~map:field_map f_idx
   | None -> numeric_index f_idx
 
-let rec instr (names : B.names) local_names (i : _ B.instr) =
+let get_label_name label_names label_counter =
+  let idx = !label_counter in
+  incr label_counter;
+  B.IntMap.find_opt idx label_names
+
+let get_label_reference stack i =
+  match List.nth stack i with
+  | Some s -> no_loc (T.Id s)
+  | None | (exception Failure _) -> numeric_index i
+
+let rec instr (names : B.names) local_names label_names label_counter stack
+    (i : 'info B.instr) =
   let desc : _ T.instr_desc =
     match i.desc with
     | Block { label = _; typ; block } ->
+        let name = get_label_name label_names label_counter in
+        let stack' = name :: stack in
         Block
           {
-            label = None;
+            label = Option.map (fun s -> s) name;
             typ = Option.map (blocktype names.types) typ;
-            block = List.map (instr names local_names) block;
+            block =
+              List.map
+                (instr names local_names label_names label_counter stack')
+                block;
           }
     | Loop { label = _; typ; block } ->
+        let name = get_label_name label_names label_counter in
+        let stack' = name :: stack in
         Loop
           {
-            label = None;
+            label = Option.map (fun s -> s) name;
             typ = Option.map (blocktype names.types) typ;
-            block = List.map (instr names local_names) block;
+            block =
+              List.map
+                (instr names local_names label_names label_counter stack')
+                block;
           }
     | If { label = _; typ; if_block; else_block } ->
+        let name = get_label_name label_names label_counter in
+        let stack' = name :: stack in
         If
           {
-            label = None;
+            label = Option.map (fun s -> s) name;
             typ = Option.map (blocktype names.types) typ;
-            if_block = List.map (instr names local_names) if_block;
-            else_block = List.map (instr names local_names) else_block;
+            if_block =
+              List.map
+                (instr names local_names label_names label_counter stack')
+                if_block;
+            else_block =
+              List.map
+                (instr names local_names label_names label_counter stack')
+                else_block;
           }
     | TryTable { label = _; typ; catches; block } ->
+        let name = get_label_name label_names label_counter in
+        let stack' = name :: stack in
         TryTable
           {
-            label = None;
+            label = Option.map (fun s -> s) name;
             typ = Option.map (blocktype names.types) typ;
             catches = List.map (catch names) catches;
-            block = List.map (instr names local_names) block;
+            block =
+              List.map
+                (instr names local_names label_names label_counter stack')
+                block;
           }
     | Try { label = _; typ; block; catches; catch_all } ->
+        let name = get_label_name label_names label_counter in
+        let stack' = name :: stack in
         Try
           {
-            label = None;
+            label = Option.map (fun s -> s) name;
             typ = Option.map (blocktype names.types) typ;
-            block = List.map (instr names local_names) block;
+            block =
+              List.map
+                (instr names local_names label_names label_counter stack')
+                block;
             catches =
               List.map
                 (fun (tag, b) ->
                   ( index ~map:names.tags tag,
-                    List.map (instr names local_names) b ))
+                    List.map
+                      (instr names local_names label_names label_counter stack')
+                      b ))
                 catches;
             catch_all =
-              Option.map (List.map (instr names local_names)) catch_all;
+              Option.map
+                (List.map
+                   (instr names local_names label_names label_counter stack'))
+                catch_all;
           }
     | Unreachable -> Unreachable
     | Nop -> Nop
     | Throw i -> Throw (index ~map:names.tags i)
     | ThrowRef -> ThrowRef
-    | Br i -> Br (numeric_index i)
-    | Br_if i -> Br_if (numeric_index i)
-    | Br_table (l, d) -> Br_table (List.map numeric_index l, numeric_index d)
-    | Br_on_null i -> Br_on_null (numeric_index i)
-    | Br_on_non_null i -> Br_on_non_null (numeric_index i)
+    | Br i -> Br (get_label_reference stack i)
+    | Br_if i -> Br_if (get_label_reference stack i)
+    | Br_table (l, d) ->
+        let target i = (get_label_reference stack) i in
+        Br_table (List.map target l, target d)
+    | Br_on_null i -> Br_on_null (get_label_reference stack i)
+    | Br_on_non_null i -> Br_on_non_null (get_label_reference stack i)
     | Br_on_cast (l, r1, r2) ->
         Br_on_cast
-          (numeric_index l, reftype names.types r1, reftype names.types r2)
+          ( get_label_reference stack l,
+            reftype names.types r1,
+            reftype names.types r2 )
     | Br_on_cast_fail (l, r1, r2) ->
         Br_on_cast_fail
-          (numeric_index l, reftype names.types r1, reftype names.types r2)
+          ( get_label_reference stack l,
+            reftype names.types r1,
+            reftype names.types r2 )
     | Return -> Return
     | Call i -> Call (index ~map:names.functions i)
     | CallRef i -> CallRef (index ~map:names.types i)
@@ -240,14 +290,18 @@ let rec instr (names : B.names) local_names (i : _ B.instr) =
     | AnyConvertExtern -> AnyConvertExtern
     | Folded (i1, il) ->
         Folded
-          (instr names local_names i1, List.map (instr names local_names) il)
+          ( instr names local_names label_names label_counter stack i1,
+            List.map
+              (instr names local_names label_names label_counter stack)
+              il )
     | Pop v -> Pop (valtype names.types v)
     | TupleMake i -> TupleMake i
     | TupleExtract (i1, i2) -> TupleExtract (i1, i2)
   in
   { desc; info = i.info }
 
-let expr names local_names e = List.map (instr names local_names) e
+let expr names local_names e =
+  List.map (instr names local_names B.IntMap.empty (ref 0) []) e
 
 let elemmode (names : B.names) local_names (e : _ B.elemmode) : _ T.elemmode =
   match e with
@@ -308,13 +362,21 @@ let module_ (m : _ B.module_) : _ T.module_ =
           | Some map -> map
           | None -> B.IntMap.empty
         in
+        let label_names =
+          match B.IntMap.find_opt global_idx m.names.labels with
+          | Some map -> map
+          | None -> B.IntMap.empty
+        in
         T.Func
           {
             id = id m.names.functions global_idx;
             typ = (Some (index ~map:m.names.types func_type_idx), None);
             locals =
               List.map (fun v -> (None, valtype m.names.types v)) code.locals;
-            instrs = List.map (instr m.names local_names) code.instrs;
+            instrs =
+              List.map
+                (instr m.names local_names label_names (ref 0) [])
+                code.instrs;
             exports = [];
           })
       m.functions
@@ -329,11 +391,11 @@ let module_ (m : _ B.module_) : _ T.module_ =
             B.reftype = { B.nullable = false; B.typ = B.Func };
           }
         in
-        T.Table
+        Table
           {
             id = id m.names.tables global_idx;
             typ = tabletype m.names.types b_tabletype;
-            init = T.Init_default;
+            init = Init_default;
             exports = [];
           })
       m.tables
@@ -342,7 +404,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
     List.mapi
       (fun i (l : B.limits) : _ T.modulefield ->
         let global_idx = mem_cnt + i in
-        T.Memory
+        Memory
           {
             id = id m.names.memories global_idx;
             limits = l;
@@ -355,7 +417,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
     List.mapi
       (fun i (g : _ B.global) : _ T.modulefield ->
         let global_idx = global_cnt + i in
-        T.Global
+        Global
           {
             id = id m.names.globals global_idx;
             typ = globaltype m.names.types g.typ;
@@ -367,7 +429,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
   let exports =
     List.map
       (fun (e : B.export) : _ T.modulefield ->
-        T.Export
+        Export
           {
             name = e.name;
             kind = e.kind;
@@ -387,7 +449,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
   let elems =
     List.mapi
       (fun i (e : _ B.elem) : _ T.modulefield ->
-        T.Elem
+        Elem
           {
             id = id m.names.elem i;
             typ = reftype m.names.types e.typ;
@@ -399,7 +461,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
   let datas =
     List.mapi
       (fun i (d : _ B.data) : _ T.modulefield ->
-        T.Data
+        Data
           {
             id = id m.names.data i;
             init = d.init;
@@ -411,7 +473,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
     List.mapi
       (fun i type_idx : _ T.modulefield ->
         let global_idx = tag_cnt + i in
-        T.Tag
+        Tag
           {
             id = id m.names.tags global_idx;
             typ = (Some (index ~map:m.names.types type_idx), None);
