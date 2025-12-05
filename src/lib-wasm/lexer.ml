@@ -231,18 +231,18 @@ let rec token lexbuf =
   | "v128.load16x4_u" -> VEC_LOAD Load16x4U
   | "v128.load32x2_s" -> VEC_LOAD Load32x2S
   | "v128.load32x2_u" -> VEC_LOAD Load32x2U
-  | "v128.load8_lane" -> VEC_LOAD_LANE (Load `I8)
-  | "v128.load16_lane" -> VEC_LOAD_LANE (Load `I16)
-  | "v128.load32_lane" -> VEC_LOAD_LANE (Load `I32)
-  | "v128.load64_lane" -> VEC_LOAD_LANE (Load `I64)
-  | "v128.store8_lane" -> VEC_STORE_LANE (Store `I8)
-  | "v128.store16_lane" -> VEC_STORE_LANE (Store `I16)
-  | "v128.store32_lane" -> VEC_STORE_LANE (Store `I32)
-  | "v128.store64_lane" -> VEC_STORE_LANE (Store `I64)
-  | "v128.load8_splat" -> VEC_LOAD_SPLAT (Load `I8)
-  | "v128.load16_splat" -> VEC_LOAD_SPLAT (Load `I16)
-  | "v128.load32_splat" -> VEC_LOAD_SPLAT (Load `I32)
-  | "v128.load64_splat" -> VEC_LOAD_SPLAT (Load `I64)
+  | "v128.load8_lane" -> VEC_LOAD_LANE `I8
+  | "v128.load16_lane" -> VEC_LOAD_LANE `I16
+  | "v128.load32_lane" -> VEC_LOAD_LANE `I32
+  | "v128.load64_lane" -> VEC_LOAD_LANE `I64
+  | "v128.store8_lane" -> VEC_STORE_LANE `I8
+  | "v128.store16_lane" -> VEC_STORE_LANE `I16
+  | "v128.store32_lane" -> VEC_STORE_LANE `I32
+  | "v128.store64_lane" -> VEC_STORE_LANE `I64
+  | "v128.load8_splat" -> VEC_LOAD_SPLAT `I8
+  | "v128.load16_splat" -> VEC_LOAD_SPLAT `I16
+  | "v128.load32_splat" -> VEC_LOAD_SPLAT `I32
+  | "v128.load64_splat" -> VEC_LOAD_SPLAT `I64
   | "v128.load32_zero" -> VEC_LOAD_EXTEND Load32Zero
   | "v128.load64_zero" -> VEC_LOAD_EXTEND Load64Zero
   | "i32.load8_u" -> LOADS (`I32, `I8, Unsigned)
@@ -260,20 +260,20 @@ let rec token lexbuf =
   | "f32.store" -> STORE NumF32
   | "f64.store" -> STORE NumF64
   | "v128.store" -> VEC_STORE
-  | "i8x16.extract_lane_s" -> VEC_EXTRACT (Load `I8, Some Signed)
-  | "i8x16.extract_lane_u" -> VEC_EXTRACT (Load `I8, Some Unsigned)
-  | "i8x16.replace_lane" -> VEC_REPLACE (Load `I8)
-  | "i16x8.extract_lane_s" -> VEC_EXTRACT (Load `I16, Some Signed)
-  | "i16x8.extract_lane_u" -> VEC_EXTRACT (Load `I16, Some Unsigned)
-  | "i16x8.replace_lane" -> VEC_REPLACE (Load `I16)
-  | "i32x4.extract_lane" -> VEC_EXTRACT (Load `I32, None)
-  | "i32x4.replace_lane" -> VEC_REPLACE (Load `I32)
-  | "i64x2.extract_lane" -> VEC_EXTRACT (Load `I64, None)
-  | "i64x2.replace_lane" -> VEC_REPLACE (Load `I64)
-  | "f32x4.extract_lane" -> VEC_EXTRACT (Load `F32, None)
-  | "f32x4.replace_lane" -> VEC_REPLACE (Load `F32)
-  | "f64x2.extract_lane" -> VEC_EXTRACT (Load `F64, None)
-  | "f64x2.replace_lane" -> VEC_REPLACE (Load `F64)
+  | "i8x16.extract_lane_s" -> VEC_EXTRACT (I8x16, Some Signed)
+  | "i8x16.extract_lane_u" -> VEC_EXTRACT (I8x16, Some Unsigned)
+  | "i8x16.replace_lane" -> VEC_REPLACE I8x16
+  | "i16x8.extract_lane_s" -> VEC_EXTRACT (I16x8, Some Signed)
+  | "i16x8.extract_lane_u" -> VEC_EXTRACT (I16x8, Some Unsigned)
+  | "i16x8.replace_lane" -> VEC_REPLACE I16x8
+  | "i32x4.extract_lane" -> VEC_EXTRACT (I32x4, None)
+  | "i32x4.replace_lane" -> VEC_REPLACE I32x4
+  | "i64x2.extract_lane" -> VEC_EXTRACT (I64x2, None)
+  | "i64x2.replace_lane" -> VEC_REPLACE I64x2
+  | "f32x4.extract_lane" -> VEC_EXTRACT (F32x4, None)
+  | "f32x4.replace_lane" -> VEC_REPLACE F32x4
+  | "f64x2.extract_lane" -> VEC_EXTRACT (F64x2, None)
+  | "f64x2.replace_lane" -> VEC_REPLACE F64x2
   | "i8x16.splat" -> INSTR (VecSplat (Splat I8x16))
   | "i16x8.splat" -> INSTR (VecSplat (Splat I16x8))
   | "i32x4.splat" -> INSTR (VecSplat (Splat I32x4))
@@ -551,6 +551,7 @@ let rec token lexbuf =
   | "i32x4.max_s" -> INSTR (VecBinOp (VecMax (Some Signed, I32x4)))
   | "i32x4.max_u" -> INSTR (VecBinOp (VecMax (Some Unsigned, I32x4)))
   | "i8x16.relaxed_swizzle" -> INSTR (VecBinOp VecRelaxedSwizzle)
+  | "v128.i8x16.swizzle" -> INSTR (VecBinOp VecSwizzle)
   | "i32x4.relaxed_trunc_f32x4_s" ->
       INSTR (VecUnOp (VecRelaxedTrunc (`F32, Signed, I32x4)))
   | "i32x4.relaxed_trunc_f32x4_u" ->

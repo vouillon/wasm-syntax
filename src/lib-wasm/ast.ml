@@ -400,9 +400,7 @@ struct
     | Load32Zero
     | Load64Zero
 
-  type nonrec vec_lane_op = vec_lane_op =
-    | Load of [ `I8 | `I16 | `I32 | `I64 | `F32 | `F64 ]
-    | Store of [ `I8 | `I16 | `I32 | `I64 ]
+
 
   type nonrec vec_splat_op = vec_splat_op = Splat of vec_shape
   type nonrec vec_shuffle_op = vec_shuffle_op = Shuffle
@@ -538,12 +536,12 @@ struct
     | VecBitselect
     | VecLoad of X.idx * vec_load_op * memarg
     | VecStore of X.idx * memarg
-    | VecLoadLane of X.idx * vec_lane_op * memarg * X.int32_t
-    | VecStoreLane of X.idx * vec_lane_op * memarg * X.int32_t
-    | VecLoadSplat of X.idx * vec_lane_op * memarg
+    | VecLoadLane of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg * X.int32_t
+    | VecStoreLane of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg * X.int32_t
+    | VecLoadSplat of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg
     | VecLoadExtend of X.idx * vec_load_op * memarg
-    | VecExtract of vec_lane_op * signage option * X.int32_t
-    | VecReplace of vec_lane_op * X.int32_t
+    | VecExtract of vec_shape * signage option * X.int32_t
+    | VecReplace of vec_shape * X.int32_t
     | VecSplat of vec_splat_op
     | VecShuffle of vec_shuffle_op * X.v128_t
     | I32WrapI64

@@ -96,12 +96,10 @@ ZZZ
 %token <Ast.vec_bitmask_op> VEC_BITMASK_OP
 %token <Ast.vec_tern_op> VEC_TERN_OP
 %token VEC_BITSELECT
-%token <Ast.vec_lane_op * Ast.Text.signage option> VEC_EXTRACT
-%token <Ast.vec_lane_op> VEC_REPLACE
+%token <Ast.vec_shape * Ast.signage option> VEC_EXTRACT
+%token <Ast.vec_shape> VEC_REPLACE
+%token <[ `I8 | `I16 | `I32 | `I64 ]> VEC_LOAD_LANE VEC_STORE_LANE VEC_LOAD_SPLAT
 %token VEC_SHUFFLE
-%token <Ast.vec_lane_op> VEC_LOAD_LANE
-%token <Ast.vec_lane_op> VEC_STORE_LANE
-%token <Ast.vec_lane_op> VEC_LOAD_SPLAT
 %token <Ast.vec_load_op> VEC_LOAD_EXTEND
 %token <[`I32|`I64] * [`I8 | `I16 | `I32] * Ast.Text.signage> LOADS
 %token MEMORY_SIZE
@@ -199,11 +197,11 @@ module Uint64 = Utils.Uint64
 module V128 = Utils.V128
 open Ast.Text
 
-let lane_width = function
-  | Ast.Load `I8 | Ast.Store `I8 -> Uint64.of_int 1
-  | Ast.Load `I16 | Ast.Store `I16 -> Uint64.of_int 2
-  | Ast.Load `I32 | Ast.Store `I32 | Ast.Load `F32 -> Uint64.of_int 4
-  | Ast.Load `I64 | Ast.Store `I64 | Ast.Load `F64 -> Uint64.of_int 8
+let lane_width : [ `I8 | `I16 | `I32 | `I64 ] -> Uint64.t = function
+  | `I8 -> Uint64.of_int 1
+  | `I16 -> Uint64.of_int 2
+  | `I32 -> Uint64.of_int 4
+  | `I64 -> Uint64.of_int 8
 
 let load_extend_width = function
   | Ast.Load8x8S | Ast.Load8x8U -> Uint64.of_int 8
@@ -570,28 +568,60 @@ plaininstr:
 | V128_CONST F64X2 f0 = f64 f1 = f64
   { let components = [f0; f1] in
     with_loc $sloc (VecConst {V128.shape = F64x2; components}) }
-| op = VEC_EXTRACT i = NAT { with_loc $sloc (VecExtract (fst op, snd op, i)) }
-| op = VEC_REPLACE i = NAT { with_loc $sloc (VecReplace (op, i)) }
+| op = VEC_EXTRACT i = NAT
+  { let lane = int_of_string i in
+    let max_lane = match fst op with I8x16 -> 16 | I16x8 -> 8 | I32x4 | F32x4 -> 4 | I64x2 | F64x2 -> 2 in
+    if lane >= max_lane then raise (Parsing.Syntax_error ($sloc, "constant out of range"));
+    with_loc $sloc (VecExtract (fst op, snd op, i)) }
+| op = VEC_REPLACE i = NAT
+  { let lane = int_of_string i in
+    let max_lane = match op with I8x16 -> 16 | I16x8 -> 8 | I32x4 | F32x4 -> 4 | I64x2 | F64x2 -> 2 in
+    if lane >= max_lane then raise (Parsing.Syntax_error ($sloc, "constant out of range"));
+    with_loc $sloc (VecReplace (op, i)) }
 | VEC_SHUFFLE i0=i8 i1=i8 i2=i8 i3=i8 i4=i8 i5=i8 i6=i8 i7=i8 i8=i8 i9=i8 i10=i8 i11=i8 i12=i8 i13=i8 i14=i8 i15=i8
   { let components = [i0; i1; i2; i3; i4; i5; i6; i7; i8; i9; i10; i11; i12; i13; i14; i15] in
     with_loc $sloc (VecShuffle (Shuffle, {V128.shape = I8x16; components})) }
 | op = VEC_LOAD_LANE m = memarg_explicit l = NAT
-  { with_loc $sloc (VecLoadLane (Ast.no_loc (Num Uint32.zero), op, m (lane_width op), l)) }
+  { let lane = int_of_string l in
+    let max_lane = 16 / (Uint64.to_int (lane_width op)) in
+    if lane >= max_lane then raise (Parsing.Syntax_error ($sloc, "constant out of range"));
+    with_loc $sloc (VecLoadLane (Ast.no_loc (Num Uint32.zero), op, m (lane_width op), l)) }
 | op = VEC_LOAD_LANE i = idx m = memarg_explicit l = NAT
-  { with_loc $sloc (VecLoadLane (i, op, m (lane_width op), l)) }
+  { let lane = int_of_string l in
+    let max_lane = 16 / (Uint64.to_int (lane_width op)) in
+    if lane >= max_lane then raise (Parsing.Syntax_error ($sloc, "constant out of range"));
+    with_loc $sloc (VecLoadLane (i, op, m (lane_width op), l)) }
 | op = VEC_LOAD_LANE l = NAT
-  { with_loc $sloc (VecLoadLane (Ast.no_loc (Num Uint32.zero), op, {offset=Uint64.zero; align=lane_width op}, l)) }
+  { let lane = int_of_string l in
+    let max_lane = 16 / (Uint64.to_int (lane_width op)) in
+    if lane >= max_lane then raise (Parsing.Syntax_error ($sloc, "constant out of range"));
+    with_loc $sloc (VecLoadLane (Ast.no_loc (Num Uint32.zero), op, {offset=Uint64.zero; align=lane_width op}, l)) }
 | op = VEC_LOAD_LANE i = idx l = NAT
-  { with_loc $sloc (VecLoadLane (i, op, {offset=Uint64.zero; align=lane_width op}, l)) }
+  { let lane = int_of_string l in
+    let max_lane = 16 / (Uint64.to_int (lane_width op)) in
+    if lane >= max_lane then raise (Parsing.Syntax_error ($sloc, "constant out of range"));
+    with_loc $sloc (VecLoadLane (i, op, {offset=Uint64.zero; align=lane_width op}, l)) }
 
 | op = VEC_STORE_LANE m = memarg_explicit l = NAT
-  { with_loc $sloc (VecStoreLane (Ast.no_loc (Num Uint32.zero), op, m (lane_width op), l)) }
+  { let lane = int_of_string l in
+    let max_lane = 16 / (Uint64.to_int (lane_width op)) in
+    if lane >= max_lane then raise (Parsing.Syntax_error ($sloc, "constant out of range"));
+    with_loc $sloc (VecStoreLane (Ast.no_loc (Num Uint32.zero), op, m (lane_width op), l)) }
 | op = VEC_STORE_LANE i = idx m = memarg_explicit l = NAT
-  { with_loc $sloc (VecStoreLane (i, op, m (lane_width op), l)) }
+  { let lane = int_of_string l in
+    let max_lane = 16 / (Uint64.to_int (lane_width op)) in
+    if lane >= max_lane then raise (Parsing.Syntax_error ($sloc, "constant out of range"));
+    with_loc $sloc (VecStoreLane (i, op, m (lane_width op), l)) }
 | op = VEC_STORE_LANE l = NAT
-  { with_loc $sloc (VecStoreLane (Ast.no_loc (Num Uint32.zero), op, {offset=Uint64.zero; align=lane_width op}, l)) }
+  { let lane = int_of_string l in
+    let max_lane = 16 / (Uint64.to_int (lane_width op)) in
+    if lane >= max_lane then raise (Parsing.Syntax_error ($sloc, "constant out of range"));
+    with_loc $sloc (VecStoreLane (Ast.no_loc (Num Uint32.zero), op, {offset=Uint64.zero; align=lane_width op}, l)) }
 | op = VEC_STORE_LANE i = idx l = NAT
-  { with_loc $sloc (VecStoreLane (i, op, {offset=Uint64.zero; align=lane_width op}, l)) }
+  { let lane = int_of_string l in
+    let max_lane = 16 / (Uint64.to_int (lane_width op)) in
+    if lane >= max_lane then raise (Parsing.Syntax_error ($sloc, "constant out of range"));
+    with_loc $sloc (VecStoreLane (i, op, {offset=Uint64.zero; align=lane_width op}, l)) }
 
 | op = VEC_LOAD_SPLAT m = memarg_explicit
   { with_loc $sloc (VecLoadSplat (Ast.no_loc (Num Uint32.zero), op, m (lane_width op))) }
@@ -616,24 +646,24 @@ plaininstr:
 | i = INSTR { with_loc $sloc i }
 
 memarg:
-| o = option(MEM_OFFSET) a = option(MEM_ALIGN)
+| o = ioption(MEM_OFFSET) a = option(MEM_ALIGN)
   { fun width ->
     {offset = Option.value ~default:Uint64.zero (Option.map Uint64.of_string o);
-     align = Option.value ~default:width (Option.map Uint64.of_string a)} }
+     align = Option.value ~default:(width : Uint64.t) (Option.map Uint64.of_string a)} }
 | a = MEM_ALIGN o = option(MEM_OFFSET)
   { fun width ->
     {offset = Option.value ~default:Uint64.zero (Option.map Uint64.of_string o);
-     align = Option.value ~default:width (Some (Uint64.of_string a))} }
+     align = Option.value ~default:(width : Uint64.t) (Some (Uint64.of_string a))} }
 
 memarg_explicit:
 | o = MEM_OFFSET a = option(MEM_ALIGN)
   { fun width ->
     {offset = Option.value ~default:Uint64.zero (Some (Uint64.of_string o));
-     align = Option.value ~default:width (Option.map Uint64.of_string a)} }
+     align = Option.value ~default:(width : Uint64.t) (Option.map Uint64.of_string a)} }
 | a = MEM_ALIGN o = option(MEM_OFFSET)
   { fun width ->
     {offset = Option.value ~default:Uint64.zero (Option.map Uint64.of_string o);
-     align = Option.value ~default:width (Some (Uint64.of_string a))} }
+     align = Option.value ~default:(width : Uint64.t) (Some (Uint64.of_string a))} }
 
 callindirect(cont):
 | CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)

@@ -624,10 +624,10 @@ and instruction ch =
         | 4 -> VecLoad (0, Load16x4U, memarg ch)
         | 5 -> VecLoad (0, Load32x2S, memarg ch)
         | 6 -> VecLoad (0, Load32x2U, memarg ch)
-        | 7 -> VecLoadSplat (0, Load `I8, memarg ch)
-        | 8 -> VecLoadSplat (0, Load `I16, memarg ch)
-        | 9 -> VecLoadSplat (0, Load `I32, memarg ch)
-        | 10 -> VecLoadSplat (0, Load `I64, memarg ch)
+        | 7 -> VecLoadSplat (0, `I8, memarg ch)
+        | 8 -> VecLoadSplat (0, `I16, memarg ch)
+        | 9 -> VecLoadSplat (0, `I32, memarg ch)
+        | 10 -> VecLoadSplat (0, `I64, memarg ch)
         | 11 -> VecStore (0, memarg ch)
         | 12 -> VecConst (v128 ch)
         | 13 -> VecShuffle (Shuffle, v128 ch)
@@ -638,22 +638,20 @@ and instruction ch =
         | 18 -> VecSplat (Splat I64x2)
         | 19 -> VecSplat (Splat F32x4)
         | 20 -> VecSplat (Splat F64x2)
-        | 21 -> VecExtract (Load `I8, Some Signed, Int32.of_int (input_byte ch))
-        | 22 ->
-            VecExtract (Load `I8, Some Unsigned, Int32.of_int (input_byte ch))
-        | 23 -> VecReplace (Load `I8, Int32.of_int (input_byte ch))
-        | 24 -> VecExtract (Load `I16, Some Signed, Int32.of_int (input_byte ch))
-        | 25 ->
-            VecExtract (Load `I16, Some Unsigned, Int32.of_int (input_byte ch))
-        | 26 -> VecReplace (Load `I16, Int32.of_int (input_byte ch))
-        | 27 -> VecExtract (Load `I32, None, Int32.of_int (input_byte ch))
-        | 28 -> VecReplace (Load `I32, Int32.of_int (input_byte ch))
-        | 29 -> VecExtract (Load `I64, None, Int32.of_int (input_byte ch))
-        | 30 -> VecReplace (Load `I64, Int32.of_int (input_byte ch))
-        | 31 -> VecExtract (Load `F32, None, Int32.of_int (input_byte ch))
-        | 32 -> VecReplace (Load `F32, Int32.of_int (input_byte ch))
-        | 33 -> VecExtract (Load `F64, None, Int32.of_int (input_byte ch))
-        | 34 -> VecReplace (Load `F64, Int32.of_int (input_byte ch))
+        | 21 -> VecExtract (I8x16, Some Signed, Int32.of_int (uint ch))
+        | 22 -> VecExtract (I8x16, Some Unsigned, Int32.of_int (uint ch))
+        | 23 -> VecReplace (I8x16, Int32.of_int (uint ch))
+        | 24 -> VecExtract (I16x8, Some Signed, Int32.of_int (uint ch))
+        | 25 -> VecExtract (I16x8, Some Unsigned, Int32.of_int (uint ch))
+        | 26 -> VecReplace (I16x8, Int32.of_int (uint ch))
+        | 27 -> VecExtract (I32x4, None, Int32.of_int (uint ch))
+        | 28 -> VecReplace (I32x4, Int32.of_int (uint ch))
+        | 29 -> VecExtract (I64x2, None, Int32.of_int (uint ch))
+        | 30 -> VecReplace (I64x2, Int32.of_int (uint ch))
+        | 31 -> VecExtract (F32x4, None, Int32.of_int (uint ch))
+        | 32 -> VecReplace (F32x4, Int32.of_int (uint ch))
+        | 33 -> VecExtract (F64x2, None, Int32.of_int (uint ch))
+        | 34 -> VecReplace (F64x2, Int32.of_int (uint ch))
         | 35 -> VecBinOp (VecEq I8x16)
         | 36 -> VecBinOp (VecNe I8x16)
         | 77 -> VecUnOp VecNot
@@ -661,42 +659,43 @@ and instruction ch =
         | 79 -> VecBinOp VecAndNot
         | 80 -> VecBinOp VecOr
         | 81 -> VecBinOp VecXor
-        | 82 -> VecBitmask (Bitmask I8x16)
-        | 83 -> VecBitmask (Bitmask I16x8)
-        | 84 -> VecBitmask (Bitmask I32x4)
-        | 85 -> VecBitmask (Bitmask I64x2)
+
+        | 84 ->
+            let m = memarg ch in
+            let l = input_byte ch in
+            VecLoadLane (0, `I8, m, Int32.of_int l)
+        | 85 ->
+            let m = memarg ch in
+            let l = input_byte ch in
+            VecLoadLane (0, `I16, m, Int32.of_int l)
         | 86 ->
             let m = memarg ch in
             let l = input_byte ch in
-            VecLoadLane (0, Load `I8, m, Int32.of_int l)
+            VecLoadLane (0, `I32, m, Int32.of_int l)
         | 87 ->
             let m = memarg ch in
             let l = input_byte ch in
-            VecLoadLane (0, Load `I16, m, Int32.of_int l)
+            VecLoadLane (0, `I64, m, Int32.of_int l)
         | 88 ->
             let m = memarg ch in
             let l = input_byte ch in
-            VecLoadLane (0, Load `I32, m, Int32.of_int l)
+            VecStoreLane (0, `I8, m, Int32.of_int l)
         | 89 ->
             let m = memarg ch in
             let l = input_byte ch in
-            VecLoadLane (0, Load `I64, m, Int32.of_int l)
+            VecStoreLane (0, `I16, m, Int32.of_int l)
         | 90 ->
             let m = memarg ch in
             let l = input_byte ch in
-            VecStoreLane (0, Store `I8, m, Int32.of_int l)
+            VecStoreLane (0, `I32, m, Int32.of_int l)
         | 91 ->
             let m = memarg ch in
             let l = input_byte ch in
-            VecStoreLane (0, Store `I16, m, Int32.of_int l)
-        | 92 ->
-            let m = memarg ch in
-            let l = input_byte ch in
-            VecStoreLane (0, Store `I32, m, Int32.of_int l)
-        | 93 ->
-            let m = memarg ch in
-            let l = input_byte ch in
-            VecStoreLane (0, Store `I64, m, Int32.of_int l)
+            VecStoreLane (0, `I64, m, Int32.of_int l)
+        | 92 -> VecLoadSplat (0, `I8, memarg ch)
+        | 93 -> VecLoadSplat (0, `I16, memarg ch)
+        | 94 -> VecLoadSplat (0, `I32, memarg ch)
+        | 95 -> VecLoadSplat (0, `I64, memarg ch)
         | 96 -> VecUnOp (VecAbs I8x16)
         | 97 -> VecUnOp (VecNeg I8x16)
         | 98 -> VecTest (AnyTrue I8x16)

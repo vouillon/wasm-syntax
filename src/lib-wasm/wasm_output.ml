@@ -691,6 +691,36 @@ module Encoder = struct
         byte b 0x1E
     | Pop _ | TupleMake _ -> ()
     | TupleExtract _ -> failwith "unsupported binaryen extension"
+    | VecLoadLane (_, op, m, lane) ->
+        byte b 0xFD;
+        uint b
+          (match op with
+          | `I8 -> 84
+          | `I16 -> 85
+          | `I32 -> 86
+          | `I64 -> 87);
+        memarg b m 0;
+        uint b (Int32.to_int lane)
+    | VecStoreLane (_, op, m, lane) ->
+        byte b 0xFD;
+        uint b
+          (match op with
+          | `I8 -> 88
+          | `I16 -> 89
+          | `I32 -> 90
+          | `I64 -> 91);
+        memarg b m 0;
+        uint b (Int32.to_int lane)
+    | VecLoadSplat (_, op, m) ->
+        byte b 0xFD;
+        uint b
+          (match op with
+          | `I8 -> 92
+          | `I16 -> 93
+          | `I32 -> 94
+          | `I64 -> 95);
+
+        memarg b m 0
     | VecLoad (_, op, m) ->
         byte b 0xFD;
         uint b
@@ -705,45 +735,47 @@ module Encoder = struct
           | Load32Zero -> 0x5C
           | Load64Zero -> 0x5D);
         memarg b m 0
-    | VecLoadSplat (_, op, m) ->
-        byte b 0xFD;
-        uint b
-          (match op with
-          | Load `I8 -> 7
-          | Load `I16 -> 8
-          | Load `I32 -> 9
-          | Load `I64 -> 10
-
-          | Load `F32 | Load `F64 -> assert false
-          | Store _ -> assert false);
-        memarg b m 0
     | VecStore (_, m) ->
         byte b 0xFD;
         uint b 11;
         memarg b m 0
-    | VecLoadLane (_, op, m, idx) ->
+    | VecLoadExtend (idx, op, m) ->
         byte b 0xFD;
         uint b
           (match op with
-          | Load `I8 -> 86
-          | Load `I16 -> 87
-          | Load `I32 -> 88
-          | Load `I64 -> 89
-          | Load `F32 | Load `F64 -> assert false
-          | Store _ -> assert false);
-        memarg b m 0;
-        byte b (Int32.to_int idx)
-    | VecStoreLane (_, op, m, idx) ->
+          | Load8x8S -> 88
+          | Load8x8U -> 89
+          | Load16x4S -> 90
+          | Load16x4U -> 91
+          | Load32x2S -> 92
+          | Load32x2U -> 93
+          | Load32Zero | Load64Zero | Load128 -> assert false);
+        memarg b m idx
+    | VecExtract (op, s, lane) ->
+        byte b 0xFD;
+        uint b
+          (match (op, s) with
+          | I8x16, Some Signed -> 21
+          | I8x16, Some Unsigned -> 22
+          | I16x8, Some Signed -> 24
+          | I16x8, Some Unsigned -> 25
+          | I32x4, None -> 27
+          | I64x2, None -> 29
+          | F32x4, None -> 31
+          | F64x2, None -> 33
+          | _ -> failwith "Invalid VecExtract op");
+        uint b (Int32.to_int lane)
+    | VecReplace (op, lane) ->
         byte b 0xFD;
         uint b
           (match op with
-          | Store `I8 -> 90
-          | Store `I16 -> 91
-          | Store `I32 -> 92
-          | Store `I64 -> 93
-          | Load _ -> assert false);
-        memarg b m 0;
-        byte b (Int32.to_int idx)
+          | I8x16 -> 23
+          | I16x8 -> 26
+          | I32x4 -> 28
+          | I64x2 -> 30
+          | F32x4 -> 32
+          | F64x2 -> 34);
+        uint b (Int32.to_int lane)
     | VecConst v ->
         byte b 0xFD;
         uint b 12;
@@ -765,45 +797,6 @@ module Encoder = struct
           | I64x2 -> 18
           | F32x4 -> 19
           | F64x2 -> 20)
-    | VecLoadExtend (idx, op, m) ->
-        byte b 0xFD;
-        uint b
-          (match op with
-          | Load8x8S -> 88
-          | Load8x8U -> 89
-          | Load16x4S -> 90
-          | Load16x4U -> 91
-          | Load32x2S -> 92
-          | Load32x2U -> 93
-          | Load32Zero | Load64Zero | Load128 -> assert false);
-        memarg b m idx
-    | VecExtract (Load width, signage, lane) ->
-        byte b 0xFD;
-        uint b
-          (match (width, signage) with
-          | `I8, Some Signed -> 21
-          | `I8, Some Unsigned -> 22
-          | `I16, Some Signed -> 24
-          | `I16, Some Unsigned -> 25
-          | `I32, _ -> 27
-          | `I64, _ -> 29
-          | `F32, _ -> 31
-          | `F64, _ -> 33
-          | _ -> assert false);
-        byte b (Int32.to_int lane)
-    | VecExtract (Store _, _, _) -> assert false
-    | VecReplace (op, lane) ->
-        byte b 0xFD;
-        uint b
-          (match op with
-          | Load `I8 -> 23
-          | Load `I16 -> 26
-          | Load `I32 -> 28
-          | Load `I64 -> 30
-          | Load `F32 -> 32
-          | Load `F64 -> 34
-          | Store _ -> assert false);
-        byte b (Int32.to_int lane)
     | VecUnOp op ->
         byte b 0xFD;
         uint b
@@ -1037,10 +1030,10 @@ module Encoder = struct
         byte b 0xFD;
         uint b
           (match op with
-          | Bitmask I8x16 -> 82
-          | Bitmask I16x8 -> 83
-          | Bitmask I32x4 -> 84
-          | Bitmask I64x2 -> 85
+          | Bitmask I8x16 -> 100
+          | Bitmask I16x8 -> 132
+          | Bitmask I32x4 -> 164
+          | Bitmask I64x2 -> 196
           | _ -> failwith "Invalid VecBitmask op")
     | VecTernOp op ->
         byte b 0xFD;

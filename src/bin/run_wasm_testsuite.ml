@@ -310,5 +310,6 @@ let () =
           "relaxed-simd";*)
           "try_delegate.wast";
           "rethrow.wast";
+          "simd_memory-multi.wast";
         ])
     ".wast" runtest
