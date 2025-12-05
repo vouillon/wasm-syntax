@@ -409,20 +409,18 @@ module Encoder = struct
         byte b 0xFC;
         byte b 0x09;
         uint b i
-    | Const c -> (
-        match c with
-        | I32 i ->
+    | Const (I32 i) ->
             byte b 0x41;
             sint32 b i
-        | I64 i ->
+    | Const (I64 i) ->
             byte b 0x42;
             sint64 b i
-        | F32 f ->
+    | Const (F32 f) ->
             byte b 0x43;
             f32 b f
-        | F64 f ->
+    | Const (F64 f) ->
             byte b 0x44;
-            f64 b f)
+        f64 b f
     | UnOp op -> (
         match op with
         | I32 Clz -> byte b 0x67
@@ -798,11 +796,13 @@ module Encoder = struct
         byte b 0xFD;
         uint b
           (match op with
-          | Load `I8 -> 18
-          | Load `I16 -> 19
-          | Load `I32 -> 20
-          | Load `I64 -> 21
-          | _ -> failwith "Invalid VecReplace op");
+          | Load `I8 -> 23
+          | Load `I16 -> 26
+          | Load `I32 -> 28
+          | Load `I64 -> 30
+          | Load `F32 -> 32
+          | Load `F64 -> 34
+          | Store _ -> assert false);
         byte b (Int32.to_int lane)
     | VecUnOp op ->
         byte b 0xFD;
@@ -873,64 +873,64 @@ module Encoder = struct
           (match op with
           | VecEq I8x16 -> 35
           | VecNe I8x16 -> 36
-          | VecLt (Signed, I8x16) -> 37
-          | VecLt (Unsigned, I8x16) -> 38
-          | VecGt (Signed, I8x16) -> 39
-          | VecGt (Unsigned, I8x16) -> 40
-          | VecLe (Signed, I8x16) -> 41
-          | VecLe (Unsigned, I8x16) -> 42
-          | VecGe (Signed, I8x16) -> 43
-          | VecGe (Unsigned, I8x16) -> 44
+          | VecLt (Some Signed, I8x16) -> 41
+          | VecLt (Some Unsigned, I8x16) -> 42
+          | VecGt (Some Signed, I8x16) -> 43
+          | VecGt (Some Unsigned, I8x16) -> 44
+          | VecLe (Some Signed, I8x16) -> 45
+          | VecLe (Some Unsigned, I8x16) -> 46
+          | VecGe (Some Signed, I8x16) -> 47
+          | VecGe (Some Unsigned, I8x16) -> 48
           | VecEq I16x8 -> 45
           | VecNe I16x8 -> 46
-          | VecLt (Signed, I16x8) -> 47
-          | VecLt (Unsigned, I16x8) -> 48
-          | VecGt (Signed, I16x8) -> 49
-          | VecGt (Unsigned, I16x8) -> 50
-          | VecLe (Signed, I16x8) -> 51
-          | VecLe (Unsigned, I16x8) -> 52
-          | VecGe (Signed, I16x8) -> 53
-          | VecGe (Unsigned, I16x8) -> 54
+          | VecLt (Some Signed, I16x8) -> 49
+          | VecLt (Some Unsigned, I16x8) -> 50
+          | VecGt (Some Signed, I16x8) -> 51
+          | VecGt (Some Unsigned, I16x8) -> 52
+          | VecLe (Some Signed, I16x8) -> 53
+          | VecLe (Some Unsigned, I16x8) -> 54
+          | VecGe (Some Signed, I16x8) -> 55
+          | VecGe (Some Unsigned, I16x8) -> 56
           | VecEq I32x4 -> 55
           | VecNe I32x4 -> 56
-          | VecLt (Signed, I32x4) -> 57
-          | VecLt (Unsigned, I32x4) -> 58
-          | VecGt (Signed, I32x4) -> 59
-          | VecGt (Unsigned, I32x4) -> 60
-          | VecLe (Signed, I32x4) -> 61
-          | VecLe (Unsigned, I32x4) -> 62
-          | VecGe (Signed, I32x4) -> 63
-          | VecGe (Unsigned, I32x4) -> 64
+          | VecLt (Some Signed, I32x4) -> 57
+          | VecLt (Some Unsigned, I32x4) -> 58
+          | VecGt (Some Signed, I32x4) -> 59
+          | VecGt (Some Unsigned, I32x4) -> 60
+          | VecLe (Some Signed, I32x4) -> 61
+          | VecLe (Some Unsigned, I32x4) -> 62
+          | VecGe (Some Signed, I32x4) -> 63
+          | VecGe (Some Unsigned, I32x4) -> 64
           | VecEq I64x2 -> 164
           | VecNe I64x2 -> 165
-          | VecLt (Signed, I64x2) -> 166
-          | VecLt (Unsigned, I64x2) -> failwith "Unsigned Lt not supported for I64x2"
-          | VecGt (Signed, I64x2) -> 167
-          | VecGt (Unsigned, I64x2) -> failwith "Unsigned Gt not supported for I64x2"
-          | VecLe (Signed, I64x2) -> 168
-          | VecLe (Unsigned, I64x2) -> failwith "Unsigned Le not supported for I64x2"
-          | VecGe (Signed, I64x2) -> 169
-          | VecGe (Unsigned, I64x2) -> failwith "Unsigned Ge not supported for I64x2"
+          | VecLt (Some Signed, I64x2) -> 166
+          | VecLt (Some Unsigned, I64x2) -> failwith "Unsigned Lt not supported for I64x2"
+          | VecGt (Some Signed, I64x2) -> 167
+          | VecGt (Some Unsigned, I64x2) -> failwith "Unsigned Gt not supported for I64x2"
+          | VecLe (Some Signed, I64x2) -> 168
+          | VecLe (Some Unsigned, I64x2) -> failwith "Unsigned Le not supported for I64x2"
+          | VecGe (Some Signed, I64x2) -> 169
+          | VecGe (Some Unsigned, I64x2) -> failwith "Unsigned Ge not supported for I64x2"
           | VecEq F32x4 -> 65
           | VecNe F32x4 -> 66
-          | VecLt (Signed, F32x4) -> 67
-          | VecLt (Unsigned, F32x4) -> failwith "Unsigned Lt not supported for F32x4"
-          | VecGt (Signed, F32x4) -> 68
-          | VecGt (Unsigned, F32x4) -> failwith "Unsigned Gt not supported for F32x4"
-          | VecLe (Signed, F32x4) -> 69
-          | VecLe (Unsigned, F32x4) -> failwith "Unsigned Le not supported for F32x4"
-          | VecGe (Signed, F32x4) -> 70
-          | VecGe (Unsigned, F32x4) -> failwith "Unsigned Ge not supported for F32x4"
+          | VecLt (None, F32x4) -> 67
+          | VecLt (Some _, F32x4) -> failwith "Signage not supported for F32x4"
+          | VecGt (None, F32x4) -> 68
+          | VecGt (Some _, F32x4) -> failwith "Signage not supported for F32x4"
+          | VecLe (None, F32x4) -> 69
+          | VecLe (Some _, F32x4) -> failwith "Signage not supported for F32x4"
+          | VecGe (None, F32x4) -> 70
+          | VecGe (Some _, F32x4) -> failwith "Signage not supported for F32x4"
           | VecEq F64x2 -> 71
           | VecNe F64x2 -> 72
-          | VecLt (Signed, F64x2) -> 73
-          | VecLt (Unsigned, F64x2) -> failwith "Unsigned Lt not supported for F64x2"
-          | VecGt (Signed, F64x2) -> 74
-          | VecGt (Unsigned, F64x2) -> failwith "Unsigned Gt not supported for F64x2"
-          | VecLe (Signed, F64x2) -> 75
-          | VecLe (Unsigned, F64x2) -> failwith "Unsigned Le not supported for F64x2"
-          | VecGe (Signed, F64x2) -> 76
-          | VecGe (Unsigned, F64x2) -> failwith "Unsigned Ge not supported for F64x2"
+          | VecLt (None, F64x2) -> 73
+          | VecLt (Some _, F64x2) -> failwith "Signage not supported for F64x2"
+          | VecGt (None, F64x2) -> 74
+          | VecGt (Some _, F64x2) -> failwith "Signage not supported for F64x2"
+          | VecLe (None, F64x2) -> 75
+          | VecLe (Some _, F64x2) -> failwith "Signage not supported for F64x2"
+          | VecGe (None, F64x2) -> 76
+          | VecGe (Some _, F64x2) -> failwith "Signage not supported for F64x2"
           | VecAnd -> 78
           | VecAndNot -> 79
           | VecOr -> 80
@@ -1041,7 +1041,6 @@ module Encoder = struct
           | Bitmask I16x8 -> 83
           | Bitmask I32x4 -> 84
           | Bitmask I64x2 -> 85
-
           | _ -> failwith "Invalid VecBitmask op")
     | VecTernOp op ->
         byte b 0xFD;

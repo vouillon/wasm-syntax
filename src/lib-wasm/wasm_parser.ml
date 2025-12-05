@@ -150,7 +150,7 @@ let ref_eq = Ref ref_eq
 
 let valtype i ch =
   match i with
-  | 0x7B -> Ast.Binary.Types.V128
+  | 0x7B -> V128
   | 0x7C -> F64
   | 0x7D -> F32
   | 0x7E -> I64
@@ -639,10 +639,12 @@ and instruction ch =
         | 19 -> VecSplat (Splat F32x4)
         | 20 -> VecSplat (Splat F64x2)
         | 21 -> VecExtract (Load `I8, Some Signed, Int32.of_int (input_byte ch))
-        | 22 -> VecExtract (Load `I8, Some Unsigned, Int32.of_int (input_byte ch))
+        | 22 ->
+            VecExtract (Load `I8, Some Unsigned, Int32.of_int (input_byte ch))
         | 23 -> VecReplace (Load `I8, Int32.of_int (input_byte ch))
         | 24 -> VecExtract (Load `I16, Some Signed, Int32.of_int (input_byte ch))
-        | 25 -> VecExtract (Load `I16, Some Unsigned, Int32.of_int (input_byte ch))
+        | 25 ->
+            VecExtract (Load `I16, Some Unsigned, Int32.of_int (input_byte ch))
         | 26 -> VecReplace (Load `I16, Int32.of_int (input_byte ch))
         | 27 -> VecExtract (Load `I32, None, Int32.of_int (input_byte ch))
         | 28 -> VecReplace (Load `I32, Int32.of_int (input_byte ch))
@@ -654,46 +656,6 @@ and instruction ch =
         | 34 -> VecReplace (Load `F64, Int32.of_int (input_byte ch))
         | 35 -> VecBinOp (VecEq I8x16)
         | 36 -> VecBinOp (VecNe I8x16)
-        | 37 -> VecBinOp (VecLt (Signed, I8x16))
-        | 38 -> VecBinOp (VecLt (Unsigned, I8x16))
-        | 39 -> VecBinOp (VecGt (Signed, I8x16))
-        | 40 -> VecBinOp (VecGt (Unsigned, I8x16))
-        | 41 -> VecBinOp (VecLe (Signed, I8x16))
-        | 42 -> VecBinOp (VecLe (Unsigned, I8x16))
-        | 43 -> VecBinOp (VecGe (Signed, I8x16))
-        | 44 -> VecBinOp (VecGe (Unsigned, I8x16))
-        | 45 -> VecBinOp (VecEq I16x8)
-        | 46 -> VecBinOp (VecNe I16x8)
-        | 47 -> VecBinOp (VecLt (Signed, I16x8))
-        | 48 -> VecBinOp (VecLt (Unsigned, I16x8))
-        | 49 -> VecBinOp (VecGt (Signed, I16x8))
-        | 50 -> VecBinOp (VecGt (Unsigned, I16x8))
-        | 51 -> VecBinOp (VecLe (Signed, I16x8))
-        | 52 -> VecBinOp (VecLe (Unsigned, I16x8))
-        | 53 -> VecBinOp (VecGe (Signed, I16x8))
-        | 54 -> VecBinOp (VecGe (Unsigned, I16x8))
-        | 55 -> VecBinOp (VecEq I32x4)
-        | 56 -> VecBinOp (VecNe I32x4)
-        | 57 -> VecBinOp (VecLt (Signed, I32x4))
-        | 58 -> VecBinOp (VecLt (Unsigned, I32x4))
-        | 59 -> VecBinOp (VecGt (Signed, I32x4))
-        | 60 -> VecBinOp (VecGt (Unsigned, I32x4))
-        | 61 -> VecBinOp (VecLe (Signed, I32x4))
-        | 62 -> VecBinOp (VecLe (Unsigned, I32x4))
-        | 63 -> VecBinOp (VecGe (Signed, I32x4))
-        | 64 -> VecBinOp (VecGe (Unsigned, I32x4))
-        | 65 -> VecBinOp (VecEq F32x4)
-        | 66 -> VecBinOp (VecNe F32x4)
-        | 67 -> VecBinOp (VecLt (Signed, F32x4))
-        | 68 -> VecBinOp (VecGt (Signed, F32x4))
-        | 69 -> VecBinOp (VecLe (Signed, F32x4))
-        | 70 -> VecBinOp (VecGe (Signed, F32x4))
-        | 71 -> VecBinOp (VecEq F64x2)
-        | 72 -> VecBinOp (VecNe F64x2)
-        | 73 -> VecBinOp (VecLt (Signed, F64x2))
-        | 74 -> VecBinOp (VecGt (Signed, F64x2))
-        | 75 -> VecBinOp (VecLe (Signed, F64x2))
-        | 76 -> VecBinOp (VecGe (Signed, F64x2))
         | 77 -> VecUnOp VecNot
         | 78 -> VecBinOp VecAnd
         | 79 -> VecBinOp VecAndNot
@@ -782,10 +744,12 @@ and instruction ch =
         | 151 -> VecBinOp (VecMin (Some Unsigned, I16x8))
         | 152 -> VecBinOp (VecMax (Some Signed, I16x8))
         | 153 -> VecBinOp (VecMax (Some Unsigned, I16x8))
-        | 155 -> VecBinOp (VecAvgr (Unsigned, I16x8))
-        | 156 -> VecBinOp (VecQ15MulrSat I16x8)
-        | 157 -> VecUnOp (VecExtAddPairwise (Signed, I16x8))
-        | 158 -> VecUnOp (VecExtAddPairwise (Unsigned, I16x8))
+        | 154 -> VecBinOp (VecAvgr (Unsigned, I16x8))
+        | 155 -> VecBinOp (VecQ15MulrSat I16x8)
+        | 156 -> VecBinOp (VecExtMulLow (Signed, I16x8))
+        | 157 -> VecBinOp (VecExtMulHigh (Signed, I16x8))
+        | 158 -> VecBinOp (VecExtMulLow (Unsigned, I16x8))
+        | 159 -> VecBinOp (VecExtMulHigh (Unsigned, I16x8))
         | 160 -> VecUnOp (VecAbs I32x4)
         | 161 -> VecUnOp (VecNeg I32x4)
         | 162 -> VecTest (AnyTrue I32x4)
@@ -853,7 +817,6 @@ and instruction ch =
         | 253 -> VecUnOp (VecFloor F64x2)
         | 254 -> VecUnOp (VecTrunc F64x2)
         | 255 -> VecUnOp (VecNearest F64x2)
-
         (* Relaxed SIMD *)
         | 0x100 -> VecBinOp VecRelaxedSwizzle
         | 0x101 -> VecUnOp (VecRelaxedTrunc (`F32, Signed, I32x4))

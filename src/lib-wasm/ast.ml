@@ -178,16 +178,18 @@ type vec_bin_op =
   | VecDot of vec_shape
   | VecEq of vec_shape
   | VecNe of vec_shape
-  | VecLt of signage * vec_shape
-  | VecGt of signage * vec_shape
-  | VecLe of signage * vec_shape
-  | VecGe of signage * vec_shape
+  | VecLt of signage option * vec_shape
+  | VecGt of signage option * vec_shape
+  | VecLe of signage option * vec_shape
+  | VecGe of signage option * vec_shape
   | VecAnd
   | VecOr
   | VecXor
   | VecAndNot
   | VecNarrow of signage * vec_shape
   | VecSwizzle
+  | VecExtMulLow of signage * vec_shape
+  | VecExtMulHigh of signage * vec_shape
   (* Relaxed SIMD *)
   | VecRelaxedSwizzle
   | VecRelaxedMin of vec_shape
@@ -358,16 +360,18 @@ struct
     | VecDot of vec_shape
     | VecEq of vec_shape
     | VecNe of vec_shape
-    | VecLt of signage * vec_shape
-    | VecGt of signage * vec_shape
-    | VecLe of signage * vec_shape
-    | VecGe of signage * vec_shape
+    | VecLt of signage option * vec_shape
+    | VecGt of signage option * vec_shape
+    | VecLe of signage option * vec_shape
+    | VecGe of signage option * vec_shape
     | VecAnd
     | VecOr
     | VecXor
     | VecAndNot
     | VecNarrow of signage * vec_shape
     | VecSwizzle
+    | VecExtMulLow of signage * vec_shape
+    | VecExtMulHigh of signage * vec_shape
     (* Relaxed SIMD *)
     | VecRelaxedSwizzle
     | VecRelaxedMin of vec_shape

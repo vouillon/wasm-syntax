@@ -96,6 +96,13 @@ ZZZ
 %token <Ast.vec_bitmask_op> VEC_BITMASK_OP
 %token <Ast.vec_tern_op> VEC_TERN_OP
 %token VEC_BITSELECT
+%token <Ast.vec_lane_op * Ast.Text.signage option> VEC_EXTRACT
+%token <Ast.vec_lane_op> VEC_REPLACE
+%token VEC_SHUFFLE
+%token <Ast.vec_lane_op> VEC_LOAD_LANE
+%token <Ast.vec_lane_op> VEC_STORE_LANE
+%token <Ast.vec_lane_op> VEC_LOAD_SPLAT
+%token <Ast.vec_load_op> VEC_LOAD_EXTEND
 %token <[`I32|`I64] * [`I8 | `I16 | `I32] * Ast.Text.signage> LOADS
 %token MEMORY_SIZE
 %token MEMORY_GROW
@@ -191,6 +198,20 @@ module Uint32 = Utils.Uint32
 module Uint64 = Utils.Uint64
 module V128 = Utils.V128
 open Ast.Text
+
+let lane_width = function
+  | Ast.Load `I8 | Ast.Store `I8 -> Uint64.of_int 1
+  | Ast.Load `I16 | Ast.Store `I16 -> Uint64.of_int 2
+  | Ast.Load `I32 | Ast.Store `I32 | Ast.Load `F32 -> Uint64.of_int 4
+  | Ast.Load `I64 | Ast.Store `I64 | Ast.Load `F64 -> Uint64.of_int 8
+
+let load_extend_width = function
+  | Ast.Load8x8S | Ast.Load8x8U -> Uint64.of_int 8
+  | Ast.Load16x4S | Ast.Load16x4U -> Uint64.of_int 8
+  | Ast.Load32x2S | Ast.Load32x2U -> Uint64.of_int 8
+  | Ast.Load32Zero -> Uint64.of_int 4
+  | Ast.Load64Zero -> Uint64.of_int 8
+  | Ast.Load128 -> Uint64.of_int 16
 
 let with_loc (loc_start, loc_end) desc =
   {Ast.desc; info = { Ast.loc_start; loc_end }}
@@ -549,6 +570,46 @@ plaininstr:
 | V128_CONST F64X2 f0 = f64 f1 = f64
   { let components = [f0; f1] in
     with_loc $sloc (VecConst {V128.shape = F64x2; components}) }
+| op = VEC_EXTRACT i = NAT { with_loc $sloc (VecExtract (fst op, snd op, i)) }
+| op = VEC_REPLACE i = NAT { with_loc $sloc (VecReplace (op, i)) }
+| VEC_SHUFFLE i0=i8 i1=i8 i2=i8 i3=i8 i4=i8 i5=i8 i6=i8 i7=i8 i8=i8 i9=i8 i10=i8 i11=i8 i12=i8 i13=i8 i14=i8 i15=i8
+  { let components = [i0; i1; i2; i3; i4; i5; i6; i7; i8; i9; i10; i11; i12; i13; i14; i15] in
+    with_loc $sloc (VecShuffle (Shuffle, {V128.shape = I8x16; components})) }
+| op = VEC_LOAD_LANE m = memarg_explicit l = NAT
+  { with_loc $sloc (VecLoadLane (Ast.no_loc (Num Uint32.zero), op, m (lane_width op), l)) }
+| op = VEC_LOAD_LANE i = idx m = memarg_explicit l = NAT
+  { with_loc $sloc (VecLoadLane (i, op, m (lane_width op), l)) }
+| op = VEC_LOAD_LANE l = NAT
+  { with_loc $sloc (VecLoadLane (Ast.no_loc (Num Uint32.zero), op, {offset=Uint64.zero; align=lane_width op}, l)) }
+| op = VEC_LOAD_LANE i = idx l = NAT
+  { with_loc $sloc (VecLoadLane (i, op, {offset=Uint64.zero; align=lane_width op}, l)) }
+
+| op = VEC_STORE_LANE m = memarg_explicit l = NAT
+  { with_loc $sloc (VecStoreLane (Ast.no_loc (Num Uint32.zero), op, m (lane_width op), l)) }
+| op = VEC_STORE_LANE i = idx m = memarg_explicit l = NAT
+  { with_loc $sloc (VecStoreLane (i, op, m (lane_width op), l)) }
+| op = VEC_STORE_LANE l = NAT
+  { with_loc $sloc (VecStoreLane (Ast.no_loc (Num Uint32.zero), op, {offset=Uint64.zero; align=lane_width op}, l)) }
+| op = VEC_STORE_LANE i = idx l = NAT
+  { with_loc $sloc (VecStoreLane (i, op, {offset=Uint64.zero; align=lane_width op}, l)) }
+
+| op = VEC_LOAD_SPLAT m = memarg_explicit
+  { with_loc $sloc (VecLoadSplat (Ast.no_loc (Num Uint32.zero), op, m (lane_width op))) }
+| op = VEC_LOAD_SPLAT i = idx m = memarg_explicit
+  { with_loc $sloc (VecLoadSplat (i, op, m (lane_width op))) }
+| op = VEC_LOAD_SPLAT
+  { with_loc $sloc (VecLoadSplat (Ast.no_loc (Num Uint32.zero), op, {offset=Uint64.zero; align=lane_width op})) }
+| op = VEC_LOAD_SPLAT i = idx
+  { with_loc $sloc (VecLoadSplat (i, op, {offset=Uint64.zero; align=lane_width op})) }
+
+| op = VEC_LOAD_EXTEND m = memarg_explicit
+  { with_loc $sloc (VecLoadExtend (Ast.no_loc (Num Uint32.zero), op, m (load_extend_width op))) }
+| op = VEC_LOAD_EXTEND i = idx m = memarg_explicit
+  { with_loc $sloc (VecLoadExtend (i, op, m (load_extend_width op))) }
+| op = VEC_LOAD_EXTEND
+  { with_loc $sloc (VecLoadExtend (Ast.no_loc (Num Uint32.zero), op, {offset=Uint64.zero; align=load_extend_width op})) }
+| op = VEC_LOAD_EXTEND i = idx
+  { with_loc $sloc (VecLoadExtend (i, op, {offset=Uint64.zero; align=load_extend_width op})) }
 | TUPLE_MAKE l = u32 { with_loc $sloc (TupleMake l) }
 | TUPLE_EXTRACT l = u32 i = u32
   { with_loc $sloc (TupleExtract (l, i)) }
@@ -559,6 +620,20 @@ memarg:
   { fun width ->
     {offset = Option.value ~default:Uint64.zero (Option.map Uint64.of_string o);
      align = Option.value ~default:width (Option.map Uint64.of_string a)} }
+| a = MEM_ALIGN o = option(MEM_OFFSET)
+  { fun width ->
+    {offset = Option.value ~default:Uint64.zero (Option.map Uint64.of_string o);
+     align = Option.value ~default:width (Some (Uint64.of_string a))} }
+
+memarg_explicit:
+| o = MEM_OFFSET a = option(MEM_ALIGN)
+  { fun width ->
+    {offset = Option.value ~default:Uint64.zero (Some (Uint64.of_string o));
+     align = Option.value ~default:width (Option.map Uint64.of_string a)} }
+| a = MEM_ALIGN o = option(MEM_OFFSET)
+  { fun width ->
+    {offset = Option.value ~default:Uint64.zero (Option.map Uint64.of_string o);
+     align = Option.value ~default:width (Some (Uint64.of_string a))} }
 
 callindirect(cont):
 | CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
@@ -663,10 +738,9 @@ typeuse(cont):
 typeuse_no_bindings(cont):
 | "(" TYPE i = idx ")" rem = params_and_results_no_bindings(cont)
   { let (s, r) = rem in
-    begin match s with
+    (match s with
      | {params = [||]; results = [||]} -> Some i, None
-     | _ -> Some i, Some s
-    end,
+     | _ -> Some i, Some s),
     r }
 | rem = params_and_results_no_bindings(cont)
   { let (s, r) = rem in (None, Some s), r }
@@ -952,4 +1026,3 @@ meta:
 | "(" SCRIPT ID? s = script ")" { s }
 | "(" INPUT ID? STRING ")" { [] }
 | "(" OUTPUT ID? STRING? ")" { [] }
-
