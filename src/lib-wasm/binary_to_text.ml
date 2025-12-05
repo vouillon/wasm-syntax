@@ -386,17 +386,14 @@ let module_ (m : _ B.module_) : _ T.module_ =
     List.mapi
       (fun i (t : _ B.table) : _ T.modulefield ->
         let global_idx = table_cnt + i in
-        let b_tabletype =
-          {
-            B.limits = t.typ;
-            B.reftype = { B.nullable = false; B.typ = B.Func };
-          }
-        in
         Table
           {
             id = id m.names.tables global_idx;
-            typ = tabletype m.names.types b_tabletype;
-            init = Init_default;
+            typ = tabletype m.names.types t.typ;
+            init =
+              (match t.expr with
+              | Some e -> Init_expr (expr m.names B.IntMap.empty e)
+              | None -> Init_default);
             exports = [];
           })
       m.tables

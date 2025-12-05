@@ -139,14 +139,49 @@ let wat_to_wasm ~input_file ~output_file ~validate ~color
       Wasm.Wasm_output.module_ ~color ~out_channel:oc ?opt_source_map_file
         wasm_ast_binary)
 
+let wasm_to_wasm ~input_file ~output_file ~validate:_validate ~color
+    ~source_map_file:opt_source_map_file =
+  let text = with_open_in input_file In_channel.input_all in
+  let ast = Wasm.Wasm_parser.module_ text in
+  (* if validate then Wasm.Validation.f ast; *)
+  with_open_out output_file (fun oc ->
+      Wasm.Wasm_output.module_ ~color ~out_channel:oc ?opt_source_map_file ast)
+
+let wasm_to_wat ~input_file ~output_file ~validate ~color
+    ~source_map_file:opt_source_map_file =
+  let _ = opt_source_map_file in
+  let text = with_open_in input_file In_channel.input_all in
+  let binary_ast = Wasm.Wasm_parser.module_ text in
+  let text_ast = Wasm.Binary_to_text.module_ binary_ast in
+  if validate then Wasm.Validation.f text_ast;
+  with_open_out output_file (fun oc ->
+      let print_wat f m =
+        Utils.Printer.run f (fun p ->
+            Wasm.Output.module_ ~color ~out_channel:oc p m)
+      in
+      let fmt = Format.formatter_of_out_channel oc in
+      Format.fprintf fmt "%a@." print_wat text_ast)
+
+let wasm_to_wax ~input_file ~output_file ~validate ~color
+    ~source_map_file:opt_source_map_file =
+  let _ = opt_source_map_file in
+  let text = with_open_in input_file In_channel.input_all in
+  let binary_ast = Wasm.Wasm_parser.module_ text in
+  let text_ast = Wasm.Binary_to_text.module_ binary_ast in
+  if validate then Wasm.Validation.f text_ast;
+  let wax_ast = Conversion.From_wasm.module_ text_ast in
+  if validate then ignore (Wax.Typing.f wax_ast);
+  with_open_out output_file (fun oc ->
+      let print_wax f m =
+        Utils.Printer.run f (fun p ->
+            Wax.Output.module_ p ~color ~out_channel:oc m)
+      in
+      let fmt = Format.formatter_of_out_channel oc in
+      Format.fprintf fmt "%a@." print_wax wax_ast)
+
 type format = Wat | Wasm | Wax
 
 let string_of_format = function Wat -> "wat" | Wasm -> "wasm" | Wax -> "wax"
-
-let format_description = function
-  | Wat -> "Wasm text format"
-  | Wasm -> "Wasm binary format"
-  | Wax -> "Wax language"
 
 let format_of_string = function
   | "wat" -> Ok Wat
@@ -195,21 +230,9 @@ let convert input_file output_file input_format_opt output_format_opt validate
     | Wax, Wat -> wax_to_wat
     | Wax, Wax -> wax_to_wax
     | Wax, Wasm -> wax_to_wasm
-    | _ ->
-        fun ~input_file:_
-          ~output_file:_
-          ~validate:_
-          ~color:_
-          ~source_map_file:_
-        ->
-          Printf.eprintf
-            "Error: Conversion from '%s' (%s) to '%s' (%s) not supported yet. \
-             Run 'wax --help' for supported formats and their descriptions.\n"
-            (string_of_format input_format)
-            (format_description input_format)
-            (string_of_format output_format)
-            (format_description output_format);
-          exit 123
+    | Wasm, Wat -> wasm_to_wat
+    | Wasm, Wasm -> wasm_to_wasm
+    | Wasm, Wax -> wasm_to_wax
   in
   convert ~input_file ~output_file ~validate ~color
     ~source_map_file:opt_source_map_file
@@ -325,6 +348,9 @@ let convert_cmd =
       `P "- Wax to Wat (compilation / sugar removal)";
       `P "- Wax to Wax (formatting / checking)";
       `P "- Wax to Wasm (compilation to binary)";
+      `P "- Wasm to Wasm (binary round-trip)";
+      `P "- Wasm to Wat (disassembly)";
+      `P "- Wasm to Wax (decompilation)";
       `P "Default conversion: wax -> wasm";
       `S Manpage.s_examples;
       `P "Convert file with auto-detected formats:";

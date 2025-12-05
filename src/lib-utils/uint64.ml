@@ -15,6 +15,7 @@ let to_int i =
   match Int64.unsigned_to_int i with Some i -> i | None -> assert false
 
 let to_int64 i = i
+let of_int64 i = i
 let zero = 0L
 let one = 1L
 let compare = Int64.unsigned_compare

@@ -101,7 +101,7 @@ Expecing a field type.
 
 parse: LPAREN GLOBAL LPAREN MUT TYPE
 ##
-## Ends in an error in state: 975.
+## Ends in an error in state: 980.
 ##
 ## globaltype -> LPAREN MUT . valtype RPAREN [ TUPLE_MAKE TUPLE_EXTRACT TRY_TABLE TRY THROW_REF THROW TABLE_SIZE TABLE_SET TABLE_INIT TABLE_GROW TABLE_GET TABLE_FILL TABLE_COPY STRUCT_SET STRUCT_NEW_DEFAULT STRUCT_NEW STRUCT_GET STORES STORE SELECT RPAREN RETURN_CALL_REF RETURN_CALL_INDIRECT RETURN_CALL REF_TEST REF_NULL REF_FUNC REF_CAST POP MEMORY_SIZE MEMORY_INIT MEMORY_GROW MEMORY_FILL MEMORY_COPY LPAREN LOOP LOCAL_TEE LOCAL_SET LOCAL_GET LOADS LOAD INSTR IF I64_CONST I32_CONST GLOBAL_SET GLOBAL_GET F64_CONST F32_CONST ELEM_DROP DATA_DROP CALL_REF CALL_INDIRECT CALL BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR BLOCK ARRAY_SET ARRAY_NEW_FIXED ARRAY_NEW_ELEM ARRAY_NEW_DEFAULT ARRAY_NEW_DATA ARRAY_NEW ARRAY_INIT_ELEM ARRAY_INIT_DATA ARRAY_GET ARRAY_FILL ARRAY_COPY ]
 ##
@@ -117,7 +117,7 @@ Expecting a value type.
 
 parse: LPAREN GLOBAL LPAREN IMPORT STRING STRING RPAREN TYPE
 ##
-## Ends in an error in state: 1000.
+## Ends in an error in state: 1005.
 ##
 ## global -> LPAREN GLOBAL option(ID) exports(__anonymous_20) . globaltype RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -133,7 +133,7 @@ Expecting a global type.
 
 parse: LPAREN IMPORT STRING STRING LPAREN GLOBAL TYPE
 ##
-## Ends in an error in state: 972.
+## Ends in an error in state: 977.
 ##
 ## importdesc -> LPAREN GLOBAL . option(ID) globaltype RPAREN [ RPAREN ]
 ##
@@ -145,7 +145,7 @@ Expecting a global identifier or a global type.
 
 parse: LPAREN IMPORT STRING STRING LPAREN GLOBAL ID TYPE
 ##
-## Ends in an error in state: 973.
+## Ends in an error in state: 978.
 ##
 ## importdesc -> LPAREN GLOBAL option(ID) . globaltype RPAREN [ RPAREN ]
 ##
@@ -173,7 +173,7 @@ Expecting a global type.
 
 parse: LPAREN MODULE LPAREN REC RPAREN EOF
 ##
-## Ends in an error in state: 1154.
+## Ends in an error in state: 1159.
 ##
 ## parse -> LPAREN MODULE option(ID) list(modulefield) . RPAREN EOF [ # ]
 ##
@@ -184,8 +184,8 @@ parse: LPAREN MODULE LPAREN REC RPAREN EOF
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 1145, spurious reduction of production list(modulefield) ->
-## In state 1147, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
+## In state 1150, spurious reduction of production list(modulefield) ->
+## In state 1152, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
 ##
 
 Expecting a module field or a closing parenthesis.
@@ -193,7 +193,7 @@ Expecting a module field or a closing parenthesis.
 
 parse: LPAREN REC RPAREN RPAREN
 ##
-## Ends in an error in state: 1158.
+## Ends in an error in state: 1163.
 ##
 ## parse -> list(modulefield) . EOF [ # ]
 ##
@@ -204,8 +204,8 @@ parse: LPAREN REC RPAREN RPAREN
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 1145, spurious reduction of production list(modulefield) ->
-## In state 1147, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
+## In state 1150, spurious reduction of production list(modulefield) ->
+## In state 1152, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
 ##
 
 Expecting a module field.
@@ -6212,7 +6212,7 @@ parse: LPAREN TABLE LPAREN IMPORT STRING STRING RPAREN NAT RPAREN
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: LPAREN MEMORY I32 V128_CONST
+parse: LPAREN IMPORT STRING STRING LPAREN MEMORY I32 V128_CONST
 ##
 ## Ends in an error in state: 910.
 ##
@@ -6492,21 +6492,47 @@ parse: LPAREN MEMORY LPAREN EXPORT STRING RPAREN V128_CONST
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: LPAREN MEMORY LPAREN DATA V128_CONST
+parse: LPAREN MEMORY I32 V128_CONST
 ##
 ## Ends in an error in state: 942.
 ##
-## exports(__anonymous_12) -> LPAREN DATA . datastring RPAREN [ RPAREN ]
+## exports(__anonymous_12) -> address_type . LPAREN DATA datastring RPAREN [ RPAREN ]
+## limits -> address_type . u64 [ RPAREN ]
+## limits -> address_type . u64 u64 [ RPAREN ]
 ##
 ## The known suffix of the stack is as follows:
-## LPAREN DATA
+## address_type
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: LPAREN MEMORY I32 LPAREN V128_CONST
+##
+## Ends in an error in state: 943.
+##
+## exports(__anonymous_12) -> address_type LPAREN . DATA datastring RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## address_type LPAREN
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: LPAREN MEMORY I32 LPAREN DATA V128_CONST
+##
+## Ends in an error in state: 944.
+##
+## exports(__anonymous_12) -> address_type LPAREN DATA . datastring RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## address_type LPAREN DATA
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 parse: LPAREN DATA STRING V128_CONST
 ##
-## Ends in an error in state: 943.
+## Ends in an error in state: 945.
 ##
 ## list(STRING) -> STRING . list(STRING) [ RPAREN ]
 ##
@@ -6516,9 +6542,21 @@ parse: LPAREN DATA STRING V128_CONST
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
+parse: LPAREN MEMORY LPAREN DATA V128_CONST
+##
+## Ends in an error in state: 950.
+##
+## exports(__anonymous_12) -> LPAREN DATA . datastring RPAREN [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN DATA
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
 parse: LPAREN MEMORY NAT STRUCTREF
 ##
-## Ends in an error in state: 948.
+## Ends in an error in state: 953.
 ##
 ## memory -> LPAREN MEMORY option(ID) exports(memtype) . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -6538,7 +6576,7 @@ parse: LPAREN MEMORY NAT STRUCTREF
 
 parse: LPAREN MEMORY LPAREN IMPORT STRING STRING RPAREN V128_CONST
 ##
-## Ends in an error in state: 950.
+## Ends in an error in state: 955.
 ##
 ## memory -> LPAREN MEMORY option(ID) exports(__anonymous_13) . memtype RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -6550,7 +6588,7 @@ parse: LPAREN MEMORY LPAREN IMPORT STRING STRING RPAREN V128_CONST
 
 parse: LPAREN MEMORY LPAREN IMPORT STRING STRING RPAREN NAT STRUCTREF
 ##
-## Ends in an error in state: 951.
+## Ends in an error in state: 956.
 ##
 ## memory -> LPAREN MEMORY option(ID) exports(__anonymous_13) memtype . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -6569,7 +6607,7 @@ parse: LPAREN MEMORY LPAREN IMPORT STRING STRING RPAREN NAT STRUCTREF
 
 parse: LPAREN MEMORY LPAREN DATA RPAREN V128_CONST
 ##
-## Ends in an error in state: 953.
+## Ends in an error in state: 958.
 ##
 ## memory -> LPAREN MEMORY option(ID) exports(__anonymous_12) . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -6581,7 +6619,7 @@ parse: LPAREN MEMORY LPAREN DATA RPAREN V128_CONST
 
 parse: LPAREN IMPORT V128_CONST
 ##
-## Ends in an error in state: 955.
+## Ends in an error in state: 960.
 ##
 ## import -> LPAREN IMPORT . name name importdesc RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -6593,7 +6631,7 @@ parse: LPAREN IMPORT V128_CONST
 
 parse: LPAREN IMPORT STRING V128_CONST
 ##
-## Ends in an error in state: 956.
+## Ends in an error in state: 961.
 ##
 ## import -> LPAREN IMPORT name . name importdesc RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -6605,7 +6643,7 @@ parse: LPAREN IMPORT STRING V128_CONST
 
 parse: LPAREN IMPORT STRING STRING V128_CONST
 ##
-## Ends in an error in state: 957.
+## Ends in an error in state: 962.
 ##
 ## import -> LPAREN IMPORT name name . importdesc RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -6617,7 +6655,7 @@ parse: LPAREN IMPORT STRING STRING V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN V128_CONST
 ##
-## Ends in an error in state: 958.
+## Ends in an error in state: 963.
 ##
 ## importdesc -> LPAREN . FUNC option(ID) typeuse(RPAREN) [ RPAREN ]
 ## importdesc -> LPAREN . MEMORY option(ID) limits RPAREN [ RPAREN ]
@@ -6633,7 +6671,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN TAG V128_CONST
 ##
-## Ends in an error in state: 959.
+## Ends in an error in state: 964.
 ##
 ## importdesc -> LPAREN TAG . option(ID) typeuse(RPAREN) [ RPAREN ]
 ##
@@ -6645,7 +6683,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN TAG V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN TAG ID V128_CONST
 ##
-## Ends in an error in state: 960.
+## Ends in an error in state: 965.
 ##
 ## importdesc -> LPAREN TAG option(ID) . typeuse(RPAREN) [ RPAREN ]
 ##
@@ -6657,7 +6695,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN TAG ID V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN TABLE V128_CONST
 ##
-## Ends in an error in state: 962.
+## Ends in an error in state: 967.
 ##
 ## importdesc -> LPAREN TABLE . option(ID) tabletype(__anonymous_9) RPAREN [ RPAREN ]
 ##
@@ -6669,7 +6707,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN TABLE V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN TABLE ID V128_CONST
 ##
-## Ends in an error in state: 963.
+## Ends in an error in state: 968.
 ##
 ## importdesc -> LPAREN TABLE option(ID) . tabletype(__anonymous_9) RPAREN [ RPAREN ]
 ##
@@ -6681,7 +6719,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN TABLE ID V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN TABLE NAT ANYREF V128_CONST
 ##
-## Ends in an error in state: 964.
+## Ends in an error in state: 969.
 ##
 ## importdesc -> LPAREN TABLE option(ID) tabletype(__anonymous_9) . RPAREN [ RPAREN ]
 ##
@@ -6693,7 +6731,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN TABLE NAT ANYREF V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN TABLE NAT RPAREN
 ##
-## Ends in an error in state: 966.
+## Ends in an error in state: 971.
 ##
 ## tabletype(__anonymous_9) -> limits . reftype [ RPAREN ]
 ##
@@ -6711,7 +6749,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN TABLE NAT RPAREN
 
 parse: LPAREN IMPORT STRING STRING LPAREN MEMORY V128_CONST
 ##
-## Ends in an error in state: 968.
+## Ends in an error in state: 973.
 ##
 ## importdesc -> LPAREN MEMORY . option(ID) limits RPAREN [ RPAREN ]
 ##
@@ -6723,7 +6761,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN MEMORY V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN MEMORY ID V128_CONST
 ##
-## Ends in an error in state: 969.
+## Ends in an error in state: 974.
 ##
 ## importdesc -> LPAREN MEMORY option(ID) . limits RPAREN [ RPAREN ]
 ##
@@ -6735,7 +6773,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN MEMORY ID V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN MEMORY NAT STRUCTREF
 ##
-## Ends in an error in state: 970.
+## Ends in an error in state: 975.
 ##
 ## importdesc -> LPAREN MEMORY option(ID) limits . RPAREN [ RPAREN ]
 ##
@@ -6753,7 +6791,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN MEMORY NAT STRUCTREF
 
 parse: LPAREN IMPORT STRING STRING LPAREN GLOBAL LPAREN V128_CONST
 ##
-## Ends in an error in state: 974.
+## Ends in an error in state: 979.
 ##
 ## globaltype -> LPAREN . MUT valtype RPAREN [ RPAREN ]
 ## reftype -> LPAREN . REF boption(NULL) heaptype RPAREN [ RPAREN ]
@@ -6767,7 +6805,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN GLOBAL LPAREN V128_CONST
 
 parse: LPAREN GLOBAL LPAREN MUT ANYREF V128_CONST
 ##
-## Ends in an error in state: 976.
+## Ends in an error in state: 981.
 ##
 ## globaltype -> LPAREN MUT valtype . RPAREN [ TUPLE_MAKE TUPLE_EXTRACT TRY_TABLE TRY THROW_REF THROW TABLE_SIZE TABLE_SET TABLE_INIT TABLE_GROW TABLE_GET TABLE_FILL TABLE_COPY STRUCT_SET STRUCT_NEW_DEFAULT STRUCT_NEW STRUCT_GET STORES STORE SELECT RPAREN RETURN_CALL_REF RETURN_CALL_INDIRECT RETURN_CALL REF_TEST REF_NULL REF_FUNC REF_CAST POP MEMORY_SIZE MEMORY_INIT MEMORY_GROW MEMORY_FILL MEMORY_COPY LPAREN LOOP LOCAL_TEE LOCAL_SET LOCAL_GET LOADS LOAD INSTR IF I64_CONST I32_CONST GLOBAL_SET GLOBAL_GET F64_CONST F32_CONST ELEM_DROP DATA_DROP CALL_REF CALL_INDIRECT CALL BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR BLOCK ARRAY_SET ARRAY_NEW_FIXED ARRAY_NEW_ELEM ARRAY_NEW_DEFAULT ARRAY_NEW_DATA ARRAY_NEW ARRAY_INIT_ELEM ARRAY_INIT_DATA ARRAY_GET ARRAY_FILL ARRAY_COPY ]
 ##
@@ -6779,7 +6817,7 @@ parse: LPAREN GLOBAL LPAREN MUT ANYREF V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN GLOBAL ANYREF V128_CONST
 ##
-## Ends in an error in state: 979.
+## Ends in an error in state: 984.
 ##
 ## importdesc -> LPAREN GLOBAL option(ID) globaltype . RPAREN [ RPAREN ]
 ##
@@ -6791,7 +6829,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN GLOBAL ANYREF V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN FUNC V128_CONST
 ##
-## Ends in an error in state: 981.
+## Ends in an error in state: 986.
 ##
 ## importdesc -> LPAREN FUNC . option(ID) typeuse(RPAREN) [ RPAREN ]
 ##
@@ -6803,7 +6841,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN FUNC V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN FUNC ID V128_CONST
 ##
-## Ends in an error in state: 982.
+## Ends in an error in state: 987.
 ##
 ## importdesc -> LPAREN FUNC option(ID) . typeuse(RPAREN) [ RPAREN ]
 ##
@@ -6815,7 +6853,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN FUNC ID V128_CONST
 
 parse: LPAREN IMPORT STRING STRING LPAREN FUNC RPAREN V128_CONST
 ##
-## Ends in an error in state: 984.
+## Ends in an error in state: 989.
 ##
 ## import -> LPAREN IMPORT name name importdesc . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -6827,7 +6865,7 @@ parse: LPAREN IMPORT STRING STRING LPAREN FUNC RPAREN V128_CONST
 
 parse: LPAREN GLOBAL V128_CONST
 ##
-## Ends in an error in state: 986.
+## Ends in an error in state: 991.
 ##
 ## global -> LPAREN GLOBAL . option(ID) exports(__anonymous_19) RPAREN [ RPAREN LPAREN EOF ]
 ## global -> LPAREN GLOBAL . option(ID) exports(__anonymous_20) globaltype RPAREN [ RPAREN LPAREN EOF ]
@@ -6840,7 +6878,7 @@ parse: LPAREN GLOBAL V128_CONST
 
 parse: LPAREN GLOBAL ID V128_CONST
 ##
-## Ends in an error in state: 987.
+## Ends in an error in state: 992.
 ##
 ## global -> LPAREN GLOBAL option(ID) . exports(__anonymous_19) RPAREN [ RPAREN LPAREN EOF ]
 ## global -> LPAREN GLOBAL option(ID) . exports(__anonymous_20) globaltype RPAREN [ RPAREN LPAREN EOF ]
@@ -6853,7 +6891,7 @@ parse: LPAREN GLOBAL ID V128_CONST
 
 parse: LPAREN GLOBAL LPAREN V128_CONST
 ##
-## Ends in an error in state: 988.
+## Ends in an error in state: 993.
 ##
 ## exports(__anonymous_19) -> LPAREN . EXPORT name RPAREN exports(__anonymous_19) [ RPAREN ]
 ## exports(__anonymous_20) -> LPAREN . IMPORT name name RPAREN [ V128 STRUCTREF NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF LPAREN I64 I32 I31REF FUNCREF F64 F32 EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
@@ -6870,7 +6908,7 @@ parse: LPAREN GLOBAL LPAREN V128_CONST
 
 parse: LPAREN GLOBAL LPAREN IMPORT V128_CONST
 ##
-## Ends in an error in state: 989.
+## Ends in an error in state: 994.
 ##
 ## exports(__anonymous_20) -> LPAREN IMPORT . name name RPAREN [ V128 STRUCTREF NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF LPAREN I64 I32 I31REF FUNCREF F64 F32 EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
 ##
@@ -6882,7 +6920,7 @@ parse: LPAREN GLOBAL LPAREN IMPORT V128_CONST
 
 parse: LPAREN GLOBAL LPAREN IMPORT STRING V128_CONST
 ##
-## Ends in an error in state: 990.
+## Ends in an error in state: 995.
 ##
 ## exports(__anonymous_20) -> LPAREN IMPORT name . name RPAREN [ V128 STRUCTREF NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF LPAREN I64 I32 I31REF FUNCREF F64 F32 EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
 ##
@@ -6894,7 +6932,7 @@ parse: LPAREN GLOBAL LPAREN IMPORT STRING V128_CONST
 
 parse: LPAREN GLOBAL LPAREN IMPORT STRING STRING V128_CONST
 ##
-## Ends in an error in state: 991.
+## Ends in an error in state: 996.
 ##
 ## exports(__anonymous_20) -> LPAREN IMPORT name name . RPAREN [ V128 STRUCTREF NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF LPAREN I64 I32 I31REF FUNCREF F64 F32 EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
 ##
@@ -6906,7 +6944,7 @@ parse: LPAREN GLOBAL LPAREN IMPORT STRING STRING V128_CONST
 
 parse: LPAREN GLOBAL LPAREN EXPORT V128_CONST
 ##
-## Ends in an error in state: 993.
+## Ends in an error in state: 998.
 ##
 ## exports(__anonymous_19) -> LPAREN EXPORT . name RPAREN exports(__anonymous_19) [ RPAREN ]
 ## exports(__anonymous_20) -> LPAREN EXPORT . name RPAREN exports(__anonymous_20) [ V128 STRUCTREF NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF LPAREN I64 I32 I31REF FUNCREF F64 F32 EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
@@ -6919,7 +6957,7 @@ parse: LPAREN GLOBAL LPAREN EXPORT V128_CONST
 
 parse: LPAREN GLOBAL LPAREN EXPORT STRING V128_CONST
 ##
-## Ends in an error in state: 994.
+## Ends in an error in state: 999.
 ##
 ## exports(__anonymous_19) -> LPAREN EXPORT name . RPAREN exports(__anonymous_19) [ RPAREN ]
 ## exports(__anonymous_20) -> LPAREN EXPORT name . RPAREN exports(__anonymous_20) [ V128 STRUCTREF NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF LPAREN I64 I32 I31REF FUNCREF F64 F32 EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
@@ -6932,7 +6970,7 @@ parse: LPAREN GLOBAL LPAREN EXPORT STRING V128_CONST
 
 parse: LPAREN GLOBAL LPAREN EXPORT STRING RPAREN V128_CONST
 ##
-## Ends in an error in state: 995.
+## Ends in an error in state: 1000.
 ##
 ## exports(__anonymous_19) -> LPAREN EXPORT name RPAREN . exports(__anonymous_19) [ RPAREN ]
 ## exports(__anonymous_20) -> LPAREN EXPORT name RPAREN . exports(__anonymous_20) [ V128 STRUCTREF NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF LPAREN I64 I32 I31REF FUNCREF F64 F32 EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
@@ -6945,7 +6983,7 @@ parse: LPAREN GLOBAL LPAREN EXPORT STRING RPAREN V128_CONST
 
 parse: LPAREN GLOBAL ANYREF V128_CONST
 ##
-## Ends in an error in state: 996.
+## Ends in an error in state: 1001.
 ##
 ## exports(__anonymous_19) -> globaltype . expr [ RPAREN ]
 ##
@@ -6957,7 +6995,7 @@ parse: LPAREN GLOBAL ANYREF V128_CONST
 
 parse: LPAREN GLOBAL LPAREN IMPORT STRING STRING RPAREN ANYREF V128_CONST
 ##
-## Ends in an error in state: 1001.
+## Ends in an error in state: 1006.
 ##
 ## global -> LPAREN GLOBAL option(ID) exports(__anonymous_20) globaltype . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -6969,7 +7007,7 @@ parse: LPAREN GLOBAL LPAREN IMPORT STRING STRING RPAREN ANYREF V128_CONST
 
 parse: LPAREN FUNC V128_CONST
 ##
-## Ends in an error in state: 1005.
+## Ends in an error in state: 1010.
 ##
 ## func -> LPAREN FUNC . option(ID) exports(typeuse(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
 ## func -> LPAREN FUNC . option(ID) exports(__anonymous_10) typeuse(__anonymous_11) RPAREN [ RPAREN LPAREN EOF ]
@@ -6982,7 +7020,7 @@ parse: LPAREN FUNC V128_CONST
 
 parse: LPAREN FUNC ID V128_CONST
 ##
-## Ends in an error in state: 1006.
+## Ends in an error in state: 1011.
 ##
 ## func -> LPAREN FUNC option(ID) . exports(typeuse(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
 ## func -> LPAREN FUNC option(ID) . exports(__anonymous_10) typeuse(__anonymous_11) RPAREN [ RPAREN LPAREN EOF ]
@@ -6995,7 +7033,7 @@ parse: LPAREN FUNC ID V128_CONST
 
 parse: LPAREN FUNC LPAREN V128_CONST
 ##
-## Ends in an error in state: 1007.
+## Ends in an error in state: 1012.
 ##
 ## exports(__anonymous_10) -> LPAREN . IMPORT name name RPAREN [ RPAREN LPAREN ]
 ## exports(__anonymous_10) -> LPAREN . EXPORT name RPAREN exports(__anonymous_10) [ RPAREN LPAREN ]
@@ -7022,7 +7060,7 @@ parse: LPAREN FUNC LPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN TYPE V128_CONST
 ##
-## Ends in an error in state: 1008.
+## Ends in an error in state: 1013.
 ##
 ## typeuse(locals(instrs(RPAREN))) -> LPAREN TYPE . idx RPAREN params_and_results(locals(instrs(RPAREN))) [ RPAREN LPAREN EOF ]
 ##
@@ -7034,7 +7072,7 @@ parse: LPAREN FUNC LPAREN TYPE V128_CONST
 
 parse: LPAREN FUNC LPAREN TYPE NAT V128_CONST
 ##
-## Ends in an error in state: 1009.
+## Ends in an error in state: 1014.
 ##
 ## typeuse(locals(instrs(RPAREN))) -> LPAREN TYPE idx . RPAREN params_and_results(locals(instrs(RPAREN))) [ RPAREN LPAREN EOF ]
 ##
@@ -7046,7 +7084,7 @@ parse: LPAREN FUNC LPAREN TYPE NAT V128_CONST
 
 parse: LPAREN FUNC LPAREN TYPE NAT RPAREN V128_CONST
 ##
-## Ends in an error in state: 1010.
+## Ends in an error in state: 1015.
 ##
 ## typeuse(locals(instrs(RPAREN))) -> LPAREN TYPE idx RPAREN . params_and_results(locals(instrs(RPAREN))) [ RPAREN LPAREN EOF ]
 ##
@@ -7058,7 +7096,7 @@ parse: LPAREN FUNC LPAREN TYPE NAT RPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN PARAM RPAREN LPAREN V128_CONST
 ##
-## Ends in an error in state: 1011.
+## Ends in an error in state: 1016.
 ##
 ## foldedinstr -> LPAREN . plaininstr list(foldedinstr) RPAREN [ TUPLE_MAKE TUPLE_EXTRACT TRY_TABLE TRY THROW_REF THROW TABLE_SIZE TABLE_SET TABLE_INIT TABLE_GROW TABLE_GET TABLE_FILL TABLE_COPY STRUCT_SET STRUCT_NEW_DEFAULT STRUCT_NEW STRUCT_GET STORES STORE SELECT RPAREN RETURN_CALL_REF RETURN_CALL_INDIRECT RETURN_CALL REF_TEST REF_NULL REF_FUNC REF_CAST POP MEMORY_SIZE MEMORY_INIT MEMORY_GROW MEMORY_FILL MEMORY_COPY LPAREN LOOP LOCAL_TEE LOCAL_SET LOCAL_GET LOADS LOAD INSTR IF I64_CONST I32_CONST GLOBAL_SET GLOBAL_GET F64_CONST F32_CONST ELEM_DROP DATA_DROP CALL_REF CALL_INDIRECT CALL BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR BLOCK ARRAY_SET ARRAY_NEW_FIXED ARRAY_NEW_ELEM ARRAY_NEW_DEFAULT ARRAY_NEW_DATA ARRAY_NEW ARRAY_INIT_ELEM ARRAY_INIT_DATA ARRAY_GET ARRAY_FILL ARRAY_COPY ]
 ## foldedinstr -> LPAREN . ambiguous_instr(list(foldedinstr)) RPAREN [ TUPLE_MAKE TUPLE_EXTRACT TRY_TABLE TRY THROW_REF THROW TABLE_SIZE TABLE_SET TABLE_INIT TABLE_GROW TABLE_GET TABLE_FILL TABLE_COPY STRUCT_SET STRUCT_NEW_DEFAULT STRUCT_NEW STRUCT_GET STORES STORE SELECT RPAREN RETURN_CALL_REF RETURN_CALL_INDIRECT RETURN_CALL REF_TEST REF_NULL REF_FUNC REF_CAST POP MEMORY_SIZE MEMORY_INIT MEMORY_GROW MEMORY_FILL MEMORY_COPY LPAREN LOOP LOCAL_TEE LOCAL_SET LOCAL_GET LOADS LOAD INSTR IF I64_CONST I32_CONST GLOBAL_SET GLOBAL_GET F64_CONST F32_CONST ELEM_DROP DATA_DROP CALL_REF CALL_INDIRECT CALL BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR BLOCK ARRAY_SET ARRAY_NEW_FIXED ARRAY_NEW_ELEM ARRAY_NEW_DEFAULT ARRAY_NEW_DATA ARRAY_NEW ARRAY_INIT_ELEM ARRAY_INIT_DATA ARRAY_GET ARRAY_FILL ARRAY_COPY ]
@@ -7081,7 +7119,7 @@ parse: LPAREN FUNC LPAREN PARAM RPAREN LPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN RESULT V128_CONST
 ##
-## Ends in an error in state: 1012.
+## Ends in an error in state: 1017.
 ##
 ## results(locals(instrs(RPAREN))) -> LPAREN RESULT . list(valtype) RPAREN results(locals(instrs(RPAREN))) [ RPAREN LPAREN EOF ]
 ##
@@ -7093,7 +7131,7 @@ parse: LPAREN FUNC LPAREN RESULT V128_CONST
 
 parse: LPAREN FUNC LPAREN RESULT RPAREN V128_CONST
 ##
-## Ends in an error in state: 1014.
+## Ends in an error in state: 1019.
 ##
 ## results(locals(instrs(RPAREN))) -> LPAREN RESULT list(valtype) RPAREN . results(locals(instrs(RPAREN))) [ RPAREN LPAREN EOF ]
 ##
@@ -7105,7 +7143,7 @@ parse: LPAREN FUNC LPAREN RESULT RPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN RESULT RPAREN LPAREN V128_CONST
 ##
-## Ends in an error in state: 1015.
+## Ends in an error in state: 1020.
 ##
 ## foldedinstr -> LPAREN . plaininstr list(foldedinstr) RPAREN [ TUPLE_MAKE TUPLE_EXTRACT TRY_TABLE TRY THROW_REF THROW TABLE_SIZE TABLE_SET TABLE_INIT TABLE_GROW TABLE_GET TABLE_FILL TABLE_COPY STRUCT_SET STRUCT_NEW_DEFAULT STRUCT_NEW STRUCT_GET STORES STORE SELECT RPAREN RETURN_CALL_REF RETURN_CALL_INDIRECT RETURN_CALL REF_TEST REF_NULL REF_FUNC REF_CAST POP MEMORY_SIZE MEMORY_INIT MEMORY_GROW MEMORY_FILL MEMORY_COPY LPAREN LOOP LOCAL_TEE LOCAL_SET LOCAL_GET LOADS LOAD INSTR IF I64_CONST I32_CONST GLOBAL_SET GLOBAL_GET F64_CONST F32_CONST ELEM_DROP DATA_DROP CALL_REF CALL_INDIRECT CALL BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR BLOCK ARRAY_SET ARRAY_NEW_FIXED ARRAY_NEW_ELEM ARRAY_NEW_DEFAULT ARRAY_NEW_DATA ARRAY_NEW ARRAY_INIT_ELEM ARRAY_INIT_DATA ARRAY_GET ARRAY_FILL ARRAY_COPY ]
 ## foldedinstr -> LPAREN . ambiguous_instr(list(foldedinstr)) RPAREN [ TUPLE_MAKE TUPLE_EXTRACT TRY_TABLE TRY THROW_REF THROW TABLE_SIZE TABLE_SET TABLE_INIT TABLE_GROW TABLE_GET TABLE_FILL TABLE_COPY STRUCT_SET STRUCT_NEW_DEFAULT STRUCT_NEW STRUCT_GET STORES STORE SELECT RPAREN RETURN_CALL_REF RETURN_CALL_INDIRECT RETURN_CALL REF_TEST REF_NULL REF_FUNC REF_CAST POP MEMORY_SIZE MEMORY_INIT MEMORY_GROW MEMORY_FILL MEMORY_COPY LPAREN LOOP LOCAL_TEE LOCAL_SET LOCAL_GET LOADS LOAD INSTR IF I64_CONST I32_CONST GLOBAL_SET GLOBAL_GET F64_CONST F32_CONST ELEM_DROP DATA_DROP CALL_REF CALL_INDIRECT CALL BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR BLOCK ARRAY_SET ARRAY_NEW_FIXED ARRAY_NEW_ELEM ARRAY_NEW_DEFAULT ARRAY_NEW_DATA ARRAY_NEW ARRAY_INIT_ELEM ARRAY_INIT_DATA ARRAY_GET ARRAY_FILL ARRAY_COPY ]
@@ -7126,7 +7164,7 @@ parse: LPAREN FUNC LPAREN RESULT RPAREN LPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN LOCAL V128_CONST
 ##
-## Ends in an error in state: 1016.
+## Ends in an error in state: 1021.
 ##
 ## locals(instrs(RPAREN)) -> LPAREN LOCAL . ID valtype RPAREN locals(instrs(RPAREN)) [ RPAREN LPAREN EOF ]
 ## locals(instrs(RPAREN)) -> LPAREN LOCAL . list(valtype) RPAREN locals(instrs(RPAREN)) [ RPAREN LPAREN EOF ]
@@ -7139,7 +7177,7 @@ parse: LPAREN FUNC LPAREN LOCAL V128_CONST
 
 parse: LPAREN FUNC LPAREN LOCAL ID V128_CONST
 ##
-## Ends in an error in state: 1017.
+## Ends in an error in state: 1022.
 ##
 ## locals(instrs(RPAREN)) -> LPAREN LOCAL ID . valtype RPAREN locals(instrs(RPAREN)) [ RPAREN LPAREN EOF ]
 ##
@@ -7151,7 +7189,7 @@ parse: LPAREN FUNC LPAREN LOCAL ID V128_CONST
 
 parse: LPAREN FUNC LPAREN LOCAL ID ANYREF V128_CONST
 ##
-## Ends in an error in state: 1018.
+## Ends in an error in state: 1023.
 ##
 ## locals(instrs(RPAREN)) -> LPAREN LOCAL ID valtype . RPAREN locals(instrs(RPAREN)) [ RPAREN LPAREN EOF ]
 ##
@@ -7163,7 +7201,7 @@ parse: LPAREN FUNC LPAREN LOCAL ID ANYREF V128_CONST
 
 parse: LPAREN FUNC LPAREN LOCAL ID ANYREF RPAREN V128_CONST
 ##
-## Ends in an error in state: 1019.
+## Ends in an error in state: 1024.
 ##
 ## locals(instrs(RPAREN)) -> LPAREN LOCAL ID valtype RPAREN . locals(instrs(RPAREN)) [ RPAREN LPAREN EOF ]
 ##
@@ -7175,7 +7213,7 @@ parse: LPAREN FUNC LPAREN LOCAL ID ANYREF RPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN LOCAL RPAREN LPAREN V128_CONST
 ##
-## Ends in an error in state: 1020.
+## Ends in an error in state: 1025.
 ##
 ## foldedinstr -> LPAREN . plaininstr list(foldedinstr) RPAREN [ TUPLE_MAKE TUPLE_EXTRACT TRY_TABLE TRY THROW_REF THROW TABLE_SIZE TABLE_SET TABLE_INIT TABLE_GROW TABLE_GET TABLE_FILL TABLE_COPY STRUCT_SET STRUCT_NEW_DEFAULT STRUCT_NEW STRUCT_GET STORES STORE SELECT RPAREN RETURN_CALL_REF RETURN_CALL_INDIRECT RETURN_CALL REF_TEST REF_NULL REF_FUNC REF_CAST POP MEMORY_SIZE MEMORY_INIT MEMORY_GROW MEMORY_FILL MEMORY_COPY LPAREN LOOP LOCAL_TEE LOCAL_SET LOCAL_GET LOADS LOAD INSTR IF I64_CONST I32_CONST GLOBAL_SET GLOBAL_GET F64_CONST F32_CONST ELEM_DROP DATA_DROP CALL_REF CALL_INDIRECT CALL BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR BLOCK ARRAY_SET ARRAY_NEW_FIXED ARRAY_NEW_ELEM ARRAY_NEW_DEFAULT ARRAY_NEW_DATA ARRAY_NEW ARRAY_INIT_ELEM ARRAY_INIT_DATA ARRAY_GET ARRAY_FILL ARRAY_COPY ]
 ## foldedinstr -> LPAREN . ambiguous_instr(list(foldedinstr)) RPAREN [ TUPLE_MAKE TUPLE_EXTRACT TRY_TABLE TRY THROW_REF THROW TABLE_SIZE TABLE_SET TABLE_INIT TABLE_GROW TABLE_GET TABLE_FILL TABLE_COPY STRUCT_SET STRUCT_NEW_DEFAULT STRUCT_NEW STRUCT_GET STORES STORE SELECT RPAREN RETURN_CALL_REF RETURN_CALL_INDIRECT RETURN_CALL REF_TEST REF_NULL REF_FUNC REF_CAST POP MEMORY_SIZE MEMORY_INIT MEMORY_GROW MEMORY_FILL MEMORY_COPY LPAREN LOOP LOCAL_TEE LOCAL_SET LOCAL_GET LOADS LOAD INSTR IF I64_CONST I32_CONST GLOBAL_SET GLOBAL_GET F64_CONST F32_CONST ELEM_DROP DATA_DROP CALL_REF CALL_INDIRECT CALL BR_TABLE BR_ON_NULL BR_ON_NON_NULL BR_ON_CAST_FAIL BR_ON_CAST BR_IF BR BLOCK ARRAY_SET ARRAY_NEW_FIXED ARRAY_NEW_ELEM ARRAY_NEW_DEFAULT ARRAY_NEW_DATA ARRAY_NEW ARRAY_INIT_ELEM ARRAY_INIT_DATA ARRAY_GET ARRAY_FILL ARRAY_COPY ]
@@ -7195,7 +7233,7 @@ parse: LPAREN FUNC LPAREN LOCAL RPAREN LPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN LOCAL RPAREN V128_CONST
 ##
-## Ends in an error in state: 1024.
+## Ends in an error in state: 1029.
 ##
 ## locals(instrs(RPAREN)) -> LPAREN LOCAL list(valtype) RPAREN . locals(instrs(RPAREN)) [ RPAREN LPAREN EOF ]
 ##
@@ -7207,7 +7245,7 @@ parse: LPAREN FUNC LPAREN LOCAL RPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN PARAM V128_CONST
 ##
-## Ends in an error in state: 1028.
+## Ends in an error in state: 1033.
 ##
 ## params(results(locals(instrs(RPAREN)))) -> LPAREN PARAM . ID valtype RPAREN params(results(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
 ## params(results(locals(instrs(RPAREN)))) -> LPAREN PARAM . list(valtype) RPAREN params(results(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
@@ -7220,7 +7258,7 @@ parse: LPAREN FUNC LPAREN PARAM V128_CONST
 
 parse: LPAREN FUNC LPAREN PARAM ID V128_CONST
 ##
-## Ends in an error in state: 1029.
+## Ends in an error in state: 1034.
 ##
 ## params(results(locals(instrs(RPAREN)))) -> LPAREN PARAM ID . valtype RPAREN params(results(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
 ##
@@ -7232,7 +7270,7 @@ parse: LPAREN FUNC LPAREN PARAM ID V128_CONST
 
 parse: LPAREN FUNC LPAREN PARAM ID ANYREF V128_CONST
 ##
-## Ends in an error in state: 1030.
+## Ends in an error in state: 1035.
 ##
 ## params(results(locals(instrs(RPAREN)))) -> LPAREN PARAM ID valtype . RPAREN params(results(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
 ##
@@ -7244,7 +7282,7 @@ parse: LPAREN FUNC LPAREN PARAM ID ANYREF V128_CONST
 
 parse: LPAREN FUNC LPAREN PARAM ID ANYREF RPAREN V128_CONST
 ##
-## Ends in an error in state: 1031.
+## Ends in an error in state: 1036.
 ##
 ## params(results(locals(instrs(RPAREN)))) -> LPAREN PARAM ID valtype RPAREN . params(results(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
 ##
@@ -7256,7 +7294,7 @@ parse: LPAREN FUNC LPAREN PARAM ID ANYREF RPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN PARAM RPAREN V128_CONST
 ##
-## Ends in an error in state: 1035.
+## Ends in an error in state: 1040.
 ##
 ## params(results(locals(instrs(RPAREN)))) -> LPAREN PARAM list(valtype) RPAREN . params(results(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
 ##
@@ -7268,7 +7306,7 @@ parse: LPAREN FUNC LPAREN PARAM RPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT V128_CONST
 ##
-## Ends in an error in state: 1039.
+## Ends in an error in state: 1044.
 ##
 ## exports(__anonymous_10) -> LPAREN IMPORT . name name RPAREN [ RPAREN LPAREN ]
 ##
@@ -7280,7 +7318,7 @@ parse: LPAREN FUNC LPAREN IMPORT V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT STRING V128_CONST
 ##
-## Ends in an error in state: 1040.
+## Ends in an error in state: 1045.
 ##
 ## exports(__anonymous_10) -> LPAREN IMPORT name . name RPAREN [ RPAREN LPAREN ]
 ##
@@ -7292,7 +7330,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING V128_CONST
 ##
-## Ends in an error in state: 1041.
+## Ends in an error in state: 1046.
 ##
 ## exports(__anonymous_10) -> LPAREN IMPORT name name . RPAREN [ RPAREN LPAREN ]
 ##
@@ -7304,7 +7342,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING V128_CONST
 
 parse: LPAREN FUNC LPAREN EXPORT V128_CONST
 ##
-## Ends in an error in state: 1043.
+## Ends in an error in state: 1048.
 ##
 ## exports(__anonymous_10) -> LPAREN EXPORT . name RPAREN exports(__anonymous_10) [ RPAREN LPAREN ]
 ## exports(typeuse(locals(instrs(RPAREN)))) -> LPAREN EXPORT . name RPAREN exports(typeuse(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
@@ -7317,7 +7355,7 @@ parse: LPAREN FUNC LPAREN EXPORT V128_CONST
 
 parse: LPAREN FUNC LPAREN EXPORT STRING V128_CONST
 ##
-## Ends in an error in state: 1044.
+## Ends in an error in state: 1049.
 ##
 ## exports(__anonymous_10) -> LPAREN EXPORT name . RPAREN exports(__anonymous_10) [ RPAREN LPAREN ]
 ## exports(typeuse(locals(instrs(RPAREN)))) -> LPAREN EXPORT name . RPAREN exports(typeuse(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
@@ -7330,7 +7368,7 @@ parse: LPAREN FUNC LPAREN EXPORT STRING V128_CONST
 
 parse: LPAREN FUNC LPAREN EXPORT STRING RPAREN V128_CONST
 ##
-## Ends in an error in state: 1045.
+## Ends in an error in state: 1050.
 ##
 ## exports(__anonymous_10) -> LPAREN EXPORT name RPAREN . exports(__anonymous_10) [ RPAREN LPAREN ]
 ## exports(typeuse(locals(instrs(RPAREN)))) -> LPAREN EXPORT name RPAREN . exports(typeuse(locals(instrs(RPAREN)))) [ RPAREN LPAREN EOF ]
@@ -7343,7 +7381,7 @@ parse: LPAREN FUNC LPAREN EXPORT STRING RPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN V128_CONST
 ##
-## Ends in an error in state: 1051.
+## Ends in an error in state: 1056.
 ##
 ## func -> LPAREN FUNC option(ID) exports(__anonymous_10) . typeuse(__anonymous_11) RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7355,7 +7393,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN V128_CONST
 ##
-## Ends in an error in state: 1052.
+## Ends in an error in state: 1057.
 ##
 ## params(results(__anonymous_11)) -> LPAREN . PARAM ID valtype RPAREN params(results(__anonymous_11)) [ RPAREN ]
 ## params(results(__anonymous_11)) -> LPAREN . PARAM list(valtype) RPAREN params(results(__anonymous_11)) [ RPAREN ]
@@ -7370,7 +7408,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN TYPE V128_CONST
 ##
-## Ends in an error in state: 1053.
+## Ends in an error in state: 1058.
 ##
 ## typeuse(__anonymous_11) -> LPAREN TYPE . idx RPAREN params_and_results(__anonymous_11) [ RPAREN ]
 ##
@@ -7382,7 +7420,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN TYPE V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN TYPE NAT V128_CONST
 ##
-## Ends in an error in state: 1054.
+## Ends in an error in state: 1059.
 ##
 ## typeuse(__anonymous_11) -> LPAREN TYPE idx . RPAREN params_and_results(__anonymous_11) [ RPAREN ]
 ##
@@ -7394,7 +7432,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN TYPE NAT V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN TYPE NAT RPAREN V128_CONST
 ##
-## Ends in an error in state: 1055.
+## Ends in an error in state: 1060.
 ##
 ## typeuse(__anonymous_11) -> LPAREN TYPE idx RPAREN . params_and_results(__anonymous_11) [ RPAREN ]
 ##
@@ -7406,7 +7444,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN TYPE NAT RPAREN V12
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM RPAREN LPAREN V128_CONST
 ##
-## Ends in an error in state: 1056.
+## Ends in an error in state: 1061.
 ##
 ## params(results(__anonymous_11)) -> LPAREN . PARAM ID valtype RPAREN params(results(__anonymous_11)) [ RPAREN ]
 ## params(results(__anonymous_11)) -> LPAREN . PARAM list(valtype) RPAREN params(results(__anonymous_11)) [ RPAREN ]
@@ -7420,7 +7458,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM RPAREN LPAREN
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN RESULT V128_CONST
 ##
-## Ends in an error in state: 1057.
+## Ends in an error in state: 1062.
 ##
 ## results(__anonymous_11) -> LPAREN RESULT . list(valtype) RPAREN results(__anonymous_11) [ RPAREN ]
 ##
@@ -7432,7 +7470,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN RESULT V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN RESULT RPAREN V128_CONST
 ##
-## Ends in an error in state: 1059.
+## Ends in an error in state: 1064.
 ##
 ## results(__anonymous_11) -> LPAREN RESULT list(valtype) RPAREN . results(__anonymous_11) [ RPAREN ]
 ##
@@ -7444,7 +7482,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN RESULT RPAREN V128_
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN RESULT RPAREN LPAREN V128_CONST
 ##
-## Ends in an error in state: 1060.
+## Ends in an error in state: 1065.
 ##
 ## results(__anonymous_11) -> LPAREN . RESULT list(valtype) RPAREN results(__anonymous_11) [ RPAREN ]
 ##
@@ -7456,7 +7494,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN RESULT RPAREN LPARE
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM V128_CONST
 ##
-## Ends in an error in state: 1062.
+## Ends in an error in state: 1067.
 ##
 ## params(results(__anonymous_11)) -> LPAREN PARAM . ID valtype RPAREN params(results(__anonymous_11)) [ RPAREN ]
 ## params(results(__anonymous_11)) -> LPAREN PARAM . list(valtype) RPAREN params(results(__anonymous_11)) [ RPAREN ]
@@ -7469,7 +7507,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM ID V128_CONST
 ##
-## Ends in an error in state: 1063.
+## Ends in an error in state: 1068.
 ##
 ## params(results(__anonymous_11)) -> LPAREN PARAM ID . valtype RPAREN params(results(__anonymous_11)) [ RPAREN ]
 ##
@@ -7481,7 +7519,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM ID V128_CONST
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM ID ANYREF V128_CONST
 ##
-## Ends in an error in state: 1064.
+## Ends in an error in state: 1069.
 ##
 ## params(results(__anonymous_11)) -> LPAREN PARAM ID valtype . RPAREN params(results(__anonymous_11)) [ RPAREN ]
 ##
@@ -7493,7 +7531,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM ID ANYREF V12
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM ID ANYREF RPAREN V128_CONST
 ##
-## Ends in an error in state: 1065.
+## Ends in an error in state: 1070.
 ##
 ## params(results(__anonymous_11)) -> LPAREN PARAM ID valtype RPAREN . params(results(__anonymous_11)) [ RPAREN ]
 ##
@@ -7505,7 +7543,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM ID ANYREF RPA
 
 parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM RPAREN V128_CONST
 ##
-## Ends in an error in state: 1069.
+## Ends in an error in state: 1074.
 ##
 ## params(results(__anonymous_11)) -> LPAREN PARAM list(valtype) RPAREN . params(results(__anonymous_11)) [ RPAREN ]
 ##
@@ -7517,7 +7555,7 @@ parse: LPAREN FUNC LPAREN IMPORT STRING STRING RPAREN LPAREN PARAM RPAREN V128_C
 
 parse: LPAREN EXPORT V128_CONST
 ##
-## Ends in an error in state: 1076.
+## Ends in an error in state: 1081.
 ##
 ## export -> LPAREN EXPORT . name exportdesc RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7529,7 +7567,7 @@ parse: LPAREN EXPORT V128_CONST
 
 parse: LPAREN EXPORT STRING V128_CONST
 ##
-## Ends in an error in state: 1077.
+## Ends in an error in state: 1082.
 ##
 ## export -> LPAREN EXPORT name . exportdesc RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7541,7 +7579,7 @@ parse: LPAREN EXPORT STRING V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN V128_CONST
 ##
-## Ends in an error in state: 1078.
+## Ends in an error in state: 1083.
 ##
 ## exportdesc -> LPAREN . FUNC idx RPAREN [ RPAREN ]
 ## exportdesc -> LPAREN . GLOBAL idx RPAREN [ RPAREN ]
@@ -7557,7 +7595,7 @@ parse: LPAREN EXPORT STRING LPAREN V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN TAG V128_CONST
 ##
-## Ends in an error in state: 1079.
+## Ends in an error in state: 1084.
 ##
 ## exportdesc -> LPAREN TAG . idx RPAREN [ RPAREN ]
 ##
@@ -7569,7 +7607,7 @@ parse: LPAREN EXPORT STRING LPAREN TAG V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN TAG NAT V128_CONST
 ##
-## Ends in an error in state: 1080.
+## Ends in an error in state: 1085.
 ##
 ## exportdesc -> LPAREN TAG idx . RPAREN [ RPAREN ]
 ##
@@ -7581,7 +7619,7 @@ parse: LPAREN EXPORT STRING LPAREN TAG NAT V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN TABLE V128_CONST
 ##
-## Ends in an error in state: 1082.
+## Ends in an error in state: 1087.
 ##
 ## exportdesc -> LPAREN TABLE . idx RPAREN [ RPAREN ]
 ##
@@ -7593,7 +7631,7 @@ parse: LPAREN EXPORT STRING LPAREN TABLE V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN TABLE NAT V128_CONST
 ##
-## Ends in an error in state: 1083.
+## Ends in an error in state: 1088.
 ##
 ## exportdesc -> LPAREN TABLE idx . RPAREN [ RPAREN ]
 ##
@@ -7605,7 +7643,7 @@ parse: LPAREN EXPORT STRING LPAREN TABLE NAT V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN MEMORY V128_CONST
 ##
-## Ends in an error in state: 1085.
+## Ends in an error in state: 1090.
 ##
 ## exportdesc -> LPAREN MEMORY . idx RPAREN [ RPAREN ]
 ##
@@ -7617,7 +7655,7 @@ parse: LPAREN EXPORT STRING LPAREN MEMORY V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN MEMORY NAT V128_CONST
 ##
-## Ends in an error in state: 1086.
+## Ends in an error in state: 1091.
 ##
 ## exportdesc -> LPAREN MEMORY idx . RPAREN [ RPAREN ]
 ##
@@ -7629,7 +7667,7 @@ parse: LPAREN EXPORT STRING LPAREN MEMORY NAT V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN GLOBAL V128_CONST
 ##
-## Ends in an error in state: 1088.
+## Ends in an error in state: 1093.
 ##
 ## exportdesc -> LPAREN GLOBAL . idx RPAREN [ RPAREN ]
 ##
@@ -7641,7 +7679,7 @@ parse: LPAREN EXPORT STRING LPAREN GLOBAL V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN GLOBAL NAT V128_CONST
 ##
-## Ends in an error in state: 1089.
+## Ends in an error in state: 1094.
 ##
 ## exportdesc -> LPAREN GLOBAL idx . RPAREN [ RPAREN ]
 ##
@@ -7653,7 +7691,7 @@ parse: LPAREN EXPORT STRING LPAREN GLOBAL NAT V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN FUNC V128_CONST
 ##
-## Ends in an error in state: 1091.
+## Ends in an error in state: 1096.
 ##
 ## exportdesc -> LPAREN FUNC . idx RPAREN [ RPAREN ]
 ##
@@ -7665,7 +7703,7 @@ parse: LPAREN EXPORT STRING LPAREN FUNC V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN FUNC NAT V128_CONST
 ##
-## Ends in an error in state: 1092.
+## Ends in an error in state: 1097.
 ##
 ## exportdesc -> LPAREN FUNC idx . RPAREN [ RPAREN ]
 ##
@@ -7677,7 +7715,7 @@ parse: LPAREN EXPORT STRING LPAREN FUNC NAT V128_CONST
 
 parse: LPAREN EXPORT STRING LPAREN FUNC NAT RPAREN V128_CONST
 ##
-## Ends in an error in state: 1094.
+## Ends in an error in state: 1099.
 ##
 ## export -> LPAREN EXPORT name exportdesc . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7689,7 +7727,7 @@ parse: LPAREN EXPORT STRING LPAREN FUNC NAT RPAREN V128_CONST
 
 parse: LPAREN ELEM V128_CONST
 ##
-## Ends in an error in state: 1096.
+## Ends in an error in state: 1101.
 ##
 ## elem -> LPAREN ELEM . option(ID) elemlist RPAREN [ RPAREN LPAREN EOF ]
 ## elem -> LPAREN ELEM . option(ID) LPAREN TABLE idx RPAREN offset elemlist RPAREN [ RPAREN LPAREN EOF ]
@@ -7705,7 +7743,7 @@ parse: LPAREN ELEM V128_CONST
 
 parse: LPAREN ELEM ID V128_CONST
 ##
-## Ends in an error in state: 1097.
+## Ends in an error in state: 1102.
 ##
 ## elem -> LPAREN ELEM option(ID) . elemlist RPAREN [ RPAREN LPAREN EOF ]
 ## elem -> LPAREN ELEM option(ID) . LPAREN TABLE idx RPAREN offset elemlist RPAREN [ RPAREN LPAREN EOF ]
@@ -7721,7 +7759,7 @@ parse: LPAREN ELEM ID V128_CONST
 
 parse: LPAREN ELEM LPAREN V128_CONST
 ##
-## Ends in an error in state: 1098.
+## Ends in an error in state: 1103.
 ##
 ## elem -> LPAREN ELEM option(ID) LPAREN . TABLE idx RPAREN offset elemlist RPAREN [ RPAREN LPAREN EOF ]
 ## foldedinstr -> LPAREN . plaininstr list(foldedinstr) RPAREN [ STRUCTREF RPAREN NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF NAT LPAREN ID I31REF FUNCREF FUNC EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
@@ -7742,7 +7780,7 @@ parse: LPAREN ELEM LPAREN V128_CONST
 
 parse: LPAREN ELEM LPAREN TABLE V128_CONST
 ##
-## Ends in an error in state: 1099.
+## Ends in an error in state: 1104.
 ##
 ## elem -> LPAREN ELEM option(ID) LPAREN TABLE . idx RPAREN offset elemlist RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7754,7 +7792,7 @@ parse: LPAREN ELEM LPAREN TABLE V128_CONST
 
 parse: LPAREN ELEM LPAREN TABLE NAT V128_CONST
 ##
-## Ends in an error in state: 1100.
+## Ends in an error in state: 1105.
 ##
 ## elem -> LPAREN ELEM option(ID) LPAREN TABLE idx . RPAREN offset elemlist RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7766,7 +7804,7 @@ parse: LPAREN ELEM LPAREN TABLE NAT V128_CONST
 
 parse: LPAREN ELEM LPAREN TABLE NAT RPAREN V128_CONST
 ##
-## Ends in an error in state: 1101.
+## Ends in an error in state: 1106.
 ##
 ## elem -> LPAREN ELEM option(ID) LPAREN TABLE idx RPAREN . offset elemlist RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7778,7 +7816,7 @@ parse: LPAREN ELEM LPAREN TABLE NAT RPAREN V128_CONST
 
 parse: LPAREN DATA LPAREN MEMORY NAT RPAREN LPAREN V128_CONST
 ##
-## Ends in an error in state: 1102.
+## Ends in an error in state: 1107.
 ##
 ## foldedinstr -> LPAREN . plaininstr list(foldedinstr) RPAREN [ STRUCTREF STRING RPAREN NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF LPAREN I31REF FUNCREF FUNC EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
 ## foldedinstr -> LPAREN . ambiguous_instr(list(foldedinstr)) RPAREN [ STRUCTREF STRING RPAREN NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF LPAREN I31REF FUNCREF FUNC EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
@@ -7797,7 +7835,7 @@ parse: LPAREN DATA LPAREN MEMORY NAT RPAREN LPAREN V128_CONST
 
 parse: LPAREN DATA LPAREN OFFSET V128_CONST
 ##
-## Ends in an error in state: 1103.
+## Ends in an error in state: 1108.
 ##
 ## offset -> LPAREN OFFSET . expr RPAREN [ STRUCTREF STRING RPAREN NULLREF NULLFUNCREF NULLEXTERNREF NULLEXNREF NAT LPAREN ID I31REF FUNCREF FUNC EXTERNREF EXNREF EQREF ARRAYREF ANYREF ]
 ##
@@ -7809,7 +7847,7 @@ parse: LPAREN DATA LPAREN OFFSET V128_CONST
 
 parse: LPAREN ELEM LPAREN TABLE NAT RPAREN LPAREN TRY_TABLE RPAREN V128_CONST
 ##
-## Ends in an error in state: 1106.
+## Ends in an error in state: 1111.
 ##
 ## elem -> LPAREN ELEM option(ID) LPAREN TABLE idx RPAREN offset . elemlist RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7821,7 +7859,7 @@ parse: LPAREN ELEM LPAREN TABLE NAT RPAREN LPAREN TRY_TABLE RPAREN V128_CONST
 
 parse: LPAREN ELEM FUNC V128_CONST
 ##
-## Ends in an error in state: 1107.
+## Ends in an error in state: 1112.
 ##
 ## elemlist -> FUNC . list(idx) [ RPAREN ]
 ##
@@ -7833,7 +7871,7 @@ parse: LPAREN ELEM FUNC V128_CONST
 
 parse: LPAREN ELEM FUNC NAT V128_CONST
 ##
-## Ends in an error in state: 1109.
+## Ends in an error in state: 1114.
 ##
 ## list(idx) -> idx . list(idx) [ RPAREN ]
 ##
@@ -7845,7 +7883,7 @@ parse: LPAREN ELEM FUNC NAT V128_CONST
 
 parse: LPAREN ELEM ANYREF V128_CONST
 ##
-## Ends in an error in state: 1111.
+## Ends in an error in state: 1116.
 ##
 ## elemlist -> reftype . list(elemexpr) [ RPAREN ]
 ##
@@ -7857,7 +7895,7 @@ parse: LPAREN ELEM ANYREF V128_CONST
 
 parse: LPAREN ELEM DECLARE V128_CONST
 ##
-## Ends in an error in state: 1116.
+## Ends in an error in state: 1121.
 ##
 ## elem -> LPAREN ELEM option(ID) DECLARE . elemlist RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7869,7 +7907,7 @@ parse: LPAREN ELEM DECLARE V128_CONST
 
 parse: LPAREN ELEM LPAREN TRY_TABLE RPAREN V128_CONST
 ##
-## Ends in an error in state: 1119.
+## Ends in an error in state: 1124.
 ##
 ## elem -> LPAREN ELEM option(ID) offset . elemlist RPAREN [ RPAREN LPAREN EOF ]
 ## elem -> LPAREN ELEM option(ID) offset . list(idx) RPAREN [ RPAREN LPAREN EOF ]
@@ -7882,7 +7920,7 @@ parse: LPAREN ELEM LPAREN TRY_TABLE RPAREN V128_CONST
 
 parse: LPAREN DATA V128_CONST
 ##
-## Ends in an error in state: 1126.
+## Ends in an error in state: 1131.
 ##
 ## data -> LPAREN DATA . option(ID) datastring RPAREN [ RPAREN LPAREN EOF ]
 ## data -> LPAREN DATA . option(ID) LPAREN MEMORY idx RPAREN offset datastring RPAREN [ RPAREN LPAREN EOF ]
@@ -7896,7 +7934,7 @@ parse: LPAREN DATA V128_CONST
 
 parse: LPAREN DATA ID V128_CONST
 ##
-## Ends in an error in state: 1127.
+## Ends in an error in state: 1132.
 ##
 ## data -> LPAREN DATA option(ID) . datastring RPAREN [ RPAREN LPAREN EOF ]
 ## data -> LPAREN DATA option(ID) . LPAREN MEMORY idx RPAREN offset datastring RPAREN [ RPAREN LPAREN EOF ]
@@ -7910,7 +7948,7 @@ parse: LPAREN DATA ID V128_CONST
 
 parse: LPAREN DATA LPAREN V128_CONST
 ##
-## Ends in an error in state: 1128.
+## Ends in an error in state: 1133.
 ##
 ## data -> LPAREN DATA option(ID) LPAREN . MEMORY idx RPAREN offset datastring RPAREN [ RPAREN LPAREN EOF ]
 ## foldedinstr -> LPAREN . plaininstr list(foldedinstr) RPAREN [ STRING RPAREN ]
@@ -7930,7 +7968,7 @@ parse: LPAREN DATA LPAREN V128_CONST
 
 parse: LPAREN DATA LPAREN MEMORY V128_CONST
 ##
-## Ends in an error in state: 1129.
+## Ends in an error in state: 1134.
 ##
 ## data -> LPAREN DATA option(ID) LPAREN MEMORY . idx RPAREN offset datastring RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7942,7 +7980,7 @@ parse: LPAREN DATA LPAREN MEMORY V128_CONST
 
 parse: LPAREN DATA LPAREN MEMORY NAT V128_CONST
 ##
-## Ends in an error in state: 1130.
+## Ends in an error in state: 1135.
 ##
 ## data -> LPAREN DATA option(ID) LPAREN MEMORY idx . RPAREN offset datastring RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7954,7 +7992,7 @@ parse: LPAREN DATA LPAREN MEMORY NAT V128_CONST
 
 parse: LPAREN DATA LPAREN MEMORY NAT RPAREN V128_CONST
 ##
-## Ends in an error in state: 1131.
+## Ends in an error in state: 1136.
 ##
 ## data -> LPAREN DATA option(ID) LPAREN MEMORY idx RPAREN . offset datastring RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7966,7 +8004,7 @@ parse: LPAREN DATA LPAREN MEMORY NAT RPAREN V128_CONST
 
 parse: LPAREN DATA LPAREN MEMORY NAT RPAREN LPAREN TRY_TABLE RPAREN V128_CONST
 ##
-## Ends in an error in state: 1132.
+## Ends in an error in state: 1137.
 ##
 ## data -> LPAREN DATA option(ID) LPAREN MEMORY idx RPAREN offset . datastring RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7978,7 +8016,7 @@ parse: LPAREN DATA LPAREN MEMORY NAT RPAREN LPAREN TRY_TABLE RPAREN V128_CONST
 
 parse: LPAREN DATA LPAREN TRY_TABLE RPAREN V128_CONST
 ##
-## Ends in an error in state: 1135.
+## Ends in an error in state: 1140.
 ##
 ## data -> LPAREN DATA option(ID) offset . datastring RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -7990,7 +8028,7 @@ parse: LPAREN DATA LPAREN TRY_TABLE RPAREN V128_CONST
 
 parse: LPAREN DATA RPAREN V128_CONST
 ##
-## Ends in an error in state: 1145.
+## Ends in an error in state: 1150.
 ##
 ## list(modulefield) -> modulefield . list(modulefield) [ RPAREN EOF ]
 ##
@@ -8002,7 +8040,7 @@ parse: LPAREN DATA RPAREN V128_CONST
 
 parse: LPAREN MODULE RPAREN V128_CONST
 ##
-## Ends in an error in state: 1155.
+## Ends in an error in state: 1160.
 ##
 ## parse -> LPAREN MODULE option(ID) list(modulefield) RPAREN . EOF [ # ]
 ##
@@ -8014,7 +8052,7 @@ parse: LPAREN MODULE RPAREN V128_CONST
 
 parse_script: V128_CONST
 ##
-## Ends in an error in state: 1160.
+## Ends in an error in state: 1165.
 ##
 ## parse_script' -> . parse_script [ # ]
 ##
@@ -8026,7 +8064,7 @@ parse_script: V128_CONST
 
 parse_script: LPAREN V128_CONST
 ##
-## Ends in an error in state: 1161.
+## Ends in an error in state: 1166.
 ##
 ## action -> LPAREN . INVOKE option(ID) STRING list(const) RPAREN [ LPAREN EOF ]
 ## action -> LPAREN . GET option(ID) STRING RPAREN [ LPAREN EOF ]
@@ -8082,7 +8120,7 @@ parse_script: LPAREN V128_CONST
 
 parse_script: LPAREN SCRIPT V128_CONST
 ##
-## Ends in an error in state: 1162.
+## Ends in an error in state: 1167.
 ##
 ## meta -> LPAREN SCRIPT . option(ID) script RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8094,7 +8132,7 @@ parse_script: LPAREN SCRIPT V128_CONST
 
 parse_script: LPAREN SCRIPT ID V128_CONST
 ##
-## Ends in an error in state: 1163.
+## Ends in an error in state: 1168.
 ##
 ## meta -> LPAREN SCRIPT option(ID) . script RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8106,7 +8144,7 @@ parse_script: LPAREN SCRIPT ID V128_CONST
 
 parse_script: LPAREN SCRIPT LPAREN V128_CONST
 ##
-## Ends in an error in state: 1164.
+## Ends in an error in state: 1169.
 ##
 ## action -> LPAREN . INVOKE option(ID) STRING list(const) RPAREN [ RPAREN LPAREN EOF ]
 ## action -> LPAREN . GET option(ID) STRING RPAREN [ RPAREN LPAREN EOF ]
@@ -8136,7 +8174,7 @@ parse_script: LPAREN SCRIPT LPAREN V128_CONST
 
 parse_script: LPAREN REGISTER V128_CONST
 ##
-## Ends in an error in state: 1165.
+## Ends in an error in state: 1170.
 ##
 ## register -> LPAREN REGISTER . STRING option(ID) RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8148,7 +8186,7 @@ parse_script: LPAREN REGISTER V128_CONST
 
 parse_script: LPAREN REGISTER STRING V128_CONST
 ##
-## Ends in an error in state: 1166.
+## Ends in an error in state: 1171.
 ##
 ## register -> LPAREN REGISTER STRING . option(ID) RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8160,7 +8198,7 @@ parse_script: LPAREN REGISTER STRING V128_CONST
 
 parse_script: LPAREN REGISTER STRING ID V128_CONST
 ##
-## Ends in an error in state: 1167.
+## Ends in an error in state: 1172.
 ##
 ## register -> LPAREN REGISTER STRING option(ID) . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8172,7 +8210,7 @@ parse_script: LPAREN REGISTER STRING ID V128_CONST
 
 parse_script: LPAREN OUTPUT V128_CONST
 ##
-## Ends in an error in state: 1169.
+## Ends in an error in state: 1174.
 ##
 ## meta -> LPAREN OUTPUT . option(ID) option(STRING) RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8184,7 +8222,7 @@ parse_script: LPAREN OUTPUT V128_CONST
 
 parse_script: LPAREN OUTPUT ID V128_CONST
 ##
-## Ends in an error in state: 1170.
+## Ends in an error in state: 1175.
 ##
 ## meta -> LPAREN OUTPUT option(ID) . option(STRING) RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8196,7 +8234,7 @@ parse_script: LPAREN OUTPUT ID V128_CONST
 
 parse_script: LPAREN OUTPUT STRING V128_CONST
 ##
-## Ends in an error in state: 1172.
+## Ends in an error in state: 1177.
 ##
 ## meta -> LPAREN OUTPUT option(ID) option(STRING) . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8208,7 +8246,7 @@ parse_script: LPAREN OUTPUT STRING V128_CONST
 
 parse_script: LPAREN MODULE V128_CONST
 ##
-## Ends in an error in state: 1174.
+## Ends in an error in state: 1179.
 ##
 ## instance -> LPAREN MODULE . INSTANCE option(__anonymous_21) RPAREN [ STRING RPAREN LPAREN EOF ]
 ## module_ -> LPAREN MODULE . option(DEFINITION) option(ID) list(modulefield) RPAREN [ STRING RPAREN LPAREN EOF ]
@@ -8223,7 +8261,7 @@ parse_script: LPAREN MODULE V128_CONST
 
 parse_script: LPAREN MODULE INSTANCE V128_CONST
 ##
-## Ends in an error in state: 1175.
+## Ends in an error in state: 1180.
 ##
 ## instance -> LPAREN MODULE INSTANCE . option(__anonymous_21) RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8235,7 +8273,7 @@ parse_script: LPAREN MODULE INSTANCE V128_CONST
 
 parse_script: LPAREN MODULE INSTANCE ID V128_CONST
 ##
-## Ends in an error in state: 1176.
+## Ends in an error in state: 1181.
 ##
 ## option(__anonymous_21) -> ID . option(ID) [ RPAREN ]
 ##
@@ -8247,7 +8285,7 @@ parse_script: LPAREN MODULE INSTANCE ID V128_CONST
 
 parse_script: LPAREN MODULE INSTANCE ID ID V128_CONST
 ##
-## Ends in an error in state: 1178.
+## Ends in an error in state: 1183.
 ##
 ## instance -> LPAREN MODULE INSTANCE option(__anonymous_21) . RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8259,7 +8297,7 @@ parse_script: LPAREN MODULE INSTANCE ID ID V128_CONST
 
 parse_script: LPAREN MODULE DEFINITION V128_CONST
 ##
-## Ends in an error in state: 1181.
+## Ends in an error in state: 1186.
 ##
 ## module_ -> LPAREN MODULE option(DEFINITION) . option(ID) list(modulefield) RPAREN [ STRING RPAREN LPAREN EOF ]
 ## module_ -> LPAREN MODULE option(DEFINITION) . option(ID) BINARY list(STRING) RPAREN [ STRING RPAREN LPAREN EOF ]
@@ -8273,7 +8311,7 @@ parse_script: LPAREN MODULE DEFINITION V128_CONST
 
 parse_script: LPAREN MODULE ID V128_CONST
 ##
-## Ends in an error in state: 1182.
+## Ends in an error in state: 1187.
 ##
 ## module_ -> LPAREN MODULE option(DEFINITION) option(ID) . list(modulefield) RPAREN [ STRING RPAREN LPAREN EOF ]
 ## module_ -> LPAREN MODULE option(DEFINITION) option(ID) . BINARY list(STRING) RPAREN [ STRING RPAREN LPAREN EOF ]
@@ -8287,7 +8325,7 @@ parse_script: LPAREN MODULE ID V128_CONST
 
 parse_script: LPAREN MODULE QUOTE V128_CONST
 ##
-## Ends in an error in state: 1183.
+## Ends in an error in state: 1188.
 ##
 ## module_ -> LPAREN MODULE option(DEFINITION) option(ID) QUOTE . list(STRING) RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8299,7 +8337,7 @@ parse_script: LPAREN MODULE QUOTE V128_CONST
 
 parse_script: LPAREN MODULE BINARY V128_CONST
 ##
-## Ends in an error in state: 1186.
+## Ends in an error in state: 1191.
 ##
 ## module_ -> LPAREN MODULE option(DEFINITION) option(ID) BINARY . list(STRING) RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8311,7 +8349,7 @@ parse_script: LPAREN MODULE BINARY V128_CONST
 
 parse_script: LPAREN MODULE LPAREN DATA RPAREN EOF
 ##
-## Ends in an error in state: 1189.
+## Ends in an error in state: 1194.
 ##
 ## module_ -> LPAREN MODULE option(DEFINITION) option(ID) list(modulefield) . RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8322,15 +8360,15 @@ parse_script: LPAREN MODULE LPAREN DATA RPAREN EOF
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 1145, spurious reduction of production list(modulefield) ->
-## In state 1147, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
+## In state 1150, spurious reduction of production list(modulefield) ->
+## In state 1152, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 parse_script: LPAREN INVOKE V128_CONST
 ##
-## Ends in an error in state: 1191.
+## Ends in an error in state: 1196.
 ##
 ## action -> LPAREN INVOKE . option(ID) STRING list(const) RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8342,7 +8380,7 @@ parse_script: LPAREN INVOKE V128_CONST
 
 parse_script: LPAREN INVOKE ID V128_CONST
 ##
-## Ends in an error in state: 1192.
+## Ends in an error in state: 1197.
 ##
 ## action -> LPAREN INVOKE option(ID) . STRING list(const) RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8354,7 +8392,7 @@ parse_script: LPAREN INVOKE ID V128_CONST
 
 parse_script: LPAREN INVOKE STRING V128_CONST
 ##
-## Ends in an error in state: 1193.
+## Ends in an error in state: 1198.
 ##
 ## action -> LPAREN INVOKE option(ID) STRING . list(const) RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8366,7 +8404,7 @@ parse_script: LPAREN INVOKE STRING V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN V128_CONST
 ##
-## Ends in an error in state: 1194.
+## Ends in an error in state: 1199.
 ##
 ## const -> LPAREN . I32_CONST i32 RPAREN [ RPAREN LPAREN ]
 ## const -> LPAREN . I64_CONST i64 RPAREN [ RPAREN LPAREN ]
@@ -8385,7 +8423,7 @@ parse_script: LPAREN INVOKE STRING LPAREN V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN V128 V128_CONST
 ##
-## Ends in an error in state: 1195.
+## Ends in an error in state: 1200.
 ##
 ## const -> LPAREN V128 . vec_shape nonempty_list(NAT) RPAREN [ RPAREN LPAREN ]
 ##
@@ -8397,7 +8435,7 @@ parse_script: LPAREN INVOKE STRING LPAREN V128 V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN V128 F32X4 V128_CONST
 ##
-## Ends in an error in state: 1203.
+## Ends in an error in state: 1208.
 ##
 ## const -> LPAREN V128 vec_shape . nonempty_list(NAT) RPAREN [ RPAREN LPAREN ]
 ##
@@ -8409,7 +8447,7 @@ parse_script: LPAREN INVOKE STRING LPAREN V128 F32X4 V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN V128 F32X4 NAT V128_CONST
 ##
-## Ends in an error in state: 1204.
+## Ends in an error in state: 1209.
 ##
 ## nonempty_list(NAT) -> NAT . [ RPAREN ]
 ## nonempty_list(NAT) -> NAT . nonempty_list(NAT) [ RPAREN ]
@@ -8422,7 +8460,7 @@ parse_script: LPAREN INVOKE STRING LPAREN V128 F32X4 NAT V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN REF_NULL V128_CONST
 ##
-## Ends in an error in state: 1208.
+## Ends in an error in state: 1213.
 ##
 ## const -> LPAREN REF_NULL . heaptype RPAREN [ RPAREN LPAREN ]
 ##
@@ -8434,7 +8472,7 @@ parse_script: LPAREN INVOKE STRING LPAREN REF_NULL V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN REF_NULL NAT V128_CONST
 ##
-## Ends in an error in state: 1209.
+## Ends in an error in state: 1214.
 ##
 ## const -> LPAREN REF_NULL heaptype . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8446,7 +8484,7 @@ parse_script: LPAREN INVOKE STRING LPAREN REF_NULL NAT V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN REF_HOST V128_CONST
 ##
-## Ends in an error in state: 1211.
+## Ends in an error in state: 1216.
 ##
 ## const -> LPAREN REF_HOST . NAT RPAREN [ RPAREN LPAREN ]
 ##
@@ -8458,7 +8496,7 @@ parse_script: LPAREN INVOKE STRING LPAREN REF_HOST V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN REF_HOST NAT V128_CONST
 ##
-## Ends in an error in state: 1212.
+## Ends in an error in state: 1217.
 ##
 ## const -> LPAREN REF_HOST NAT . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8470,7 +8508,7 @@ parse_script: LPAREN INVOKE STRING LPAREN REF_HOST NAT V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN REF_EXTERN V128_CONST
 ##
-## Ends in an error in state: 1214.
+## Ends in an error in state: 1219.
 ##
 ## const -> LPAREN REF_EXTERN . NAT RPAREN [ RPAREN LPAREN ]
 ##
@@ -8482,7 +8520,7 @@ parse_script: LPAREN INVOKE STRING LPAREN REF_EXTERN V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN REF_EXTERN NAT V128_CONST
 ##
-## Ends in an error in state: 1215.
+## Ends in an error in state: 1220.
 ##
 ## const -> LPAREN REF_EXTERN NAT . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8494,7 +8532,7 @@ parse_script: LPAREN INVOKE STRING LPAREN REF_EXTERN NAT V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN I64_CONST V128_CONST
 ##
-## Ends in an error in state: 1217.
+## Ends in an error in state: 1222.
 ##
 ## const -> LPAREN I64_CONST . i64 RPAREN [ RPAREN LPAREN ]
 ##
@@ -8506,7 +8544,7 @@ parse_script: LPAREN INVOKE STRING LPAREN I64_CONST V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN I64_CONST INT V128_CONST
 ##
-## Ends in an error in state: 1218.
+## Ends in an error in state: 1223.
 ##
 ## const -> LPAREN I64_CONST i64 . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8518,7 +8556,7 @@ parse_script: LPAREN INVOKE STRING LPAREN I64_CONST INT V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN I32_CONST V128_CONST
 ##
-## Ends in an error in state: 1220.
+## Ends in an error in state: 1225.
 ##
 ## const -> LPAREN I32_CONST . i32 RPAREN [ RPAREN LPAREN ]
 ##
@@ -8530,7 +8568,7 @@ parse_script: LPAREN INVOKE STRING LPAREN I32_CONST V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN I32_CONST INT V128_CONST
 ##
-## Ends in an error in state: 1221.
+## Ends in an error in state: 1226.
 ##
 ## const -> LPAREN I32_CONST i32 . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8542,7 +8580,7 @@ parse_script: LPAREN INVOKE STRING LPAREN I32_CONST INT V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN F64_CONST V128_CONST
 ##
-## Ends in an error in state: 1223.
+## Ends in an error in state: 1228.
 ##
 ## const -> LPAREN F64_CONST . f64 RPAREN [ RPAREN LPAREN ]
 ##
@@ -8554,7 +8592,7 @@ parse_script: LPAREN INVOKE STRING LPAREN F64_CONST V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN F64_CONST FLOAT V128_CONST
 ##
-## Ends in an error in state: 1224.
+## Ends in an error in state: 1229.
 ##
 ## const -> LPAREN F64_CONST f64 . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8566,7 +8604,7 @@ parse_script: LPAREN INVOKE STRING LPAREN F64_CONST FLOAT V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN F32_CONST V128_CONST
 ##
-## Ends in an error in state: 1226.
+## Ends in an error in state: 1231.
 ##
 ## const -> LPAREN F32_CONST . f32 RPAREN [ RPAREN LPAREN ]
 ##
@@ -8578,7 +8616,7 @@ parse_script: LPAREN INVOKE STRING LPAREN F32_CONST V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN F32_CONST FLOAT V128_CONST
 ##
-## Ends in an error in state: 1227.
+## Ends in an error in state: 1232.
 ##
 ## const -> LPAREN F32_CONST f32 . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8590,7 +8628,7 @@ parse_script: LPAREN INVOKE STRING LPAREN F32_CONST FLOAT V128_CONST
 
 parse_script: LPAREN INVOKE STRING LPAREN F32_CONST FLOAT RPAREN V128_CONST
 ##
-## Ends in an error in state: 1231.
+## Ends in an error in state: 1236.
 ##
 ## list(const) -> const . list(const) [ RPAREN ]
 ##
@@ -8602,7 +8640,7 @@ parse_script: LPAREN INVOKE STRING LPAREN F32_CONST FLOAT RPAREN V128_CONST
 
 parse_script: LPAREN INPUT V128_CONST
 ##
-## Ends in an error in state: 1233.
+## Ends in an error in state: 1238.
 ##
 ## meta -> LPAREN INPUT . option(ID) STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8614,7 +8652,7 @@ parse_script: LPAREN INPUT V128_CONST
 
 parse_script: LPAREN INPUT ID V128_CONST
 ##
-## Ends in an error in state: 1234.
+## Ends in an error in state: 1239.
 ##
 ## meta -> LPAREN INPUT option(ID) . STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8626,7 +8664,7 @@ parse_script: LPAREN INPUT ID V128_CONST
 
 parse_script: LPAREN INPUT STRING V128_CONST
 ##
-## Ends in an error in state: 1235.
+## Ends in an error in state: 1240.
 ##
 ## meta -> LPAREN INPUT option(ID) STRING . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8638,7 +8676,7 @@ parse_script: LPAREN INPUT STRING V128_CONST
 
 parse_script: LPAREN GET V128_CONST
 ##
-## Ends in an error in state: 1237.
+## Ends in an error in state: 1242.
 ##
 ## action -> LPAREN GET . option(ID) STRING RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8650,7 +8688,7 @@ parse_script: LPAREN GET V128_CONST
 
 parse_script: LPAREN GET ID V128_CONST
 ##
-## Ends in an error in state: 1238.
+## Ends in an error in state: 1243.
 ##
 ## action -> LPAREN GET option(ID) . STRING RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8662,7 +8700,7 @@ parse_script: LPAREN GET ID V128_CONST
 
 parse_script: LPAREN GET STRING V128_CONST
 ##
-## Ends in an error in state: 1239.
+## Ends in an error in state: 1244.
 ##
 ## action -> LPAREN GET option(ID) STRING . RPAREN [ STRING RPAREN LPAREN EOF ]
 ##
@@ -8674,7 +8712,7 @@ parse_script: LPAREN GET STRING V128_CONST
 
 parse_script: LPAREN ASSERT_UNLINKABLE V128_CONST
 ##
-## Ends in an error in state: 1241.
+## Ends in an error in state: 1246.
 ##
 ## assertion -> LPAREN ASSERT_UNLINKABLE . script_instance STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8686,7 +8724,7 @@ parse_script: LPAREN ASSERT_UNLINKABLE V128_CONST
 
 parse_script: LPAREN ASSERT_UNLINKABLE LPAREN V128_CONST
 ##
-## Ends in an error in state: 1242.
+## Ends in an error in state: 1247.
 ##
 ## instance -> LPAREN . MODULE INSTANCE option(__anonymous_21) RPAREN [ STRING ]
 ## module_ -> LPAREN . MODULE option(DEFINITION) option(ID) list(modulefield) RPAREN [ STRING ]
@@ -8701,7 +8739,7 @@ parse_script: LPAREN ASSERT_UNLINKABLE LPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_UNLINKABLE LPAREN MODULE RPAREN V128_CONST
 ##
-## Ends in an error in state: 1243.
+## Ends in an error in state: 1248.
 ##
 ## assertion -> LPAREN ASSERT_UNLINKABLE script_instance . STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8713,7 +8751,7 @@ parse_script: LPAREN ASSERT_UNLINKABLE LPAREN MODULE RPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_UNLINKABLE LPAREN MODULE RPAREN STRING V128_CONST
 ##
-## Ends in an error in state: 1244.
+## Ends in an error in state: 1249.
 ##
 ## assertion -> LPAREN ASSERT_UNLINKABLE script_instance STRING . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8725,7 +8763,7 @@ parse_script: LPAREN ASSERT_UNLINKABLE LPAREN MODULE RPAREN STRING V128_CONST
 
 parse_script: LPAREN ASSERT_TRAP V128_CONST
 ##
-## Ends in an error in state: 1248.
+## Ends in an error in state: 1253.
 ##
 ## assertion -> LPAREN ASSERT_TRAP . action STRING RPAREN [ RPAREN LPAREN EOF ]
 ## assertion -> LPAREN ASSERT_TRAP . script_instance STRING RPAREN [ RPAREN LPAREN EOF ]
@@ -8738,7 +8776,7 @@ parse_script: LPAREN ASSERT_TRAP V128_CONST
 
 parse_script: LPAREN ASSERT_TRAP LPAREN V128_CONST
 ##
-## Ends in an error in state: 1249.
+## Ends in an error in state: 1254.
 ##
 ## action -> LPAREN . INVOKE option(ID) STRING list(const) RPAREN [ STRING ]
 ## action -> LPAREN . GET option(ID) STRING RPAREN [ STRING ]
@@ -8755,7 +8793,7 @@ parse_script: LPAREN ASSERT_TRAP LPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_TRAP LPAREN MODULE RPAREN V128_CONST
 ##
-## Ends in an error in state: 1250.
+## Ends in an error in state: 1255.
 ##
 ## assertion -> LPAREN ASSERT_TRAP script_instance . STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8767,7 +8805,7 @@ parse_script: LPAREN ASSERT_TRAP LPAREN MODULE RPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_TRAP LPAREN MODULE RPAREN STRING V128_CONST
 ##
-## Ends in an error in state: 1251.
+## Ends in an error in state: 1256.
 ##
 ## assertion -> LPAREN ASSERT_TRAP script_instance STRING . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8779,7 +8817,7 @@ parse_script: LPAREN ASSERT_TRAP LPAREN MODULE RPAREN STRING V128_CONST
 
 parse_script: LPAREN ASSERT_TRAP LPAREN GET STRING RPAREN V128_CONST
 ##
-## Ends in an error in state: 1253.
+## Ends in an error in state: 1258.
 ##
 ## assertion -> LPAREN ASSERT_TRAP action . STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8791,7 +8829,7 @@ parse_script: LPAREN ASSERT_TRAP LPAREN GET STRING RPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_TRAP LPAREN GET STRING RPAREN STRING V128_CONST
 ##
-## Ends in an error in state: 1254.
+## Ends in an error in state: 1259.
 ##
 ## assertion -> LPAREN ASSERT_TRAP action STRING . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8803,7 +8841,7 @@ parse_script: LPAREN ASSERT_TRAP LPAREN GET STRING RPAREN STRING V128_CONST
 
 parse_script: LPAREN ASSERT_RETURN_NAN V128_CONST
 ##
-## Ends in an error in state: 1256.
+## Ends in an error in state: 1261.
 ##
 ## assertion -> LPAREN ASSERT_RETURN_NAN . action RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8815,7 +8853,7 @@ parse_script: LPAREN ASSERT_RETURN_NAN V128_CONST
 
 parse_script: LPAREN ASSERT_EXCEPTION LPAREN V128_CONST
 ##
-## Ends in an error in state: 1257.
+## Ends in an error in state: 1262.
 ##
 ## action -> LPAREN . INVOKE option(ID) STRING list(const) RPAREN [ STRING RPAREN LPAREN ]
 ## action -> LPAREN . GET option(ID) STRING RPAREN [ STRING RPAREN LPAREN ]
@@ -8828,7 +8866,7 @@ parse_script: LPAREN ASSERT_EXCEPTION LPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_RETURN_NAN LPAREN GET STRING RPAREN V128_CONST
 ##
-## Ends in an error in state: 1258.
+## Ends in an error in state: 1263.
 ##
 ## assertion -> LPAREN ASSERT_RETURN_NAN action . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8840,7 +8878,7 @@ parse_script: LPAREN ASSERT_RETURN_NAN LPAREN GET STRING RPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_RETURN V128_CONST
 ##
-## Ends in an error in state: 1260.
+## Ends in an error in state: 1265.
 ##
 ## assertion -> LPAREN ASSERT_RETURN . action list(result_pat) RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8852,7 +8890,7 @@ parse_script: LPAREN ASSERT_RETURN V128_CONST
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN V128_CONST
 ##
-## Ends in an error in state: 1261.
+## Ends in an error in state: 1266.
 ##
 ## assertion -> LPAREN ASSERT_RETURN action . list(result_pat) RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -8864,7 +8902,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN V128
 ##
-## Ends in an error in state: 1262.
+## Ends in an error in state: 1267.
 ##
 ## result_pat -> LPAREN . I32_CONST i32 RPAREN [ RPAREN LPAREN ]
 ## result_pat -> LPAREN . I64_CONST i64 RPAREN [ RPAREN LPAREN ]
@@ -8893,7 +8931,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN V128
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN V128_CONST V128_CONST
 ##
-## Ends in an error in state: 1263.
+## Ends in an error in state: 1268.
 ##
 ## result_pat -> LPAREN V128_CONST . vec_shape nonempty_list(NAT) RPAREN [ RPAREN LPAREN ]
 ##
@@ -8905,7 +8943,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN V128_CONST V1
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN V128_CONST F32X4 V128_CONST
 ##
-## Ends in an error in state: 1264.
+## Ends in an error in state: 1269.
 ##
 ## result_pat -> LPAREN V128_CONST vec_shape . nonempty_list(NAT) RPAREN [ RPAREN LPAREN ]
 ##
@@ -8917,7 +8955,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN V128_CONST F3
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_STRUCT V128_CONST
 ##
-## Ends in an error in state: 1267.
+## Ends in an error in state: 1272.
 ##
 ## result_pat -> LPAREN REF_STRUCT . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8929,7 +8967,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_STRUCT V1
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_NULL V128_CONST
 ##
-## Ends in an error in state: 1269.
+## Ends in an error in state: 1274.
 ##
 ## result_pat -> LPAREN REF_NULL . RPAREN [ RPAREN LPAREN ]
 ## result_pat -> LPAREN REF_NULL . heaptype RPAREN [ RPAREN LPAREN ]
@@ -8942,7 +8980,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_NULL V128
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_NULL NAT V128_CONST
 ##
-## Ends in an error in state: 1271.
+## Ends in an error in state: 1276.
 ##
 ## result_pat -> LPAREN REF_NULL heaptype . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8954,7 +8992,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_NULL NAT 
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_HOST V128_CONST
 ##
-## Ends in an error in state: 1273.
+## Ends in an error in state: 1278.
 ##
 ## result_pat -> LPAREN REF_HOST . NAT RPAREN [ RPAREN LPAREN ]
 ##
@@ -8966,7 +9004,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_HOST V128
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_HOST NAT V128_CONST
 ##
-## Ends in an error in state: 1274.
+## Ends in an error in state: 1279.
 ##
 ## result_pat -> LPAREN REF_HOST NAT . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8978,7 +9016,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_HOST NAT 
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_FUNC V128_CONST
 ##
-## Ends in an error in state: 1276.
+## Ends in an error in state: 1281.
 ##
 ## result_pat -> LPAREN REF_FUNC . RPAREN [ RPAREN LPAREN ]
 ##
@@ -8990,7 +9028,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_FUNC V128
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_EXTERN V128_CONST
 ##
-## Ends in an error in state: 1278.
+## Ends in an error in state: 1283.
 ##
 ## result_pat -> LPAREN REF_EXTERN . RPAREN [ RPAREN LPAREN ]
 ## result_pat -> LPAREN REF_EXTERN . NAT RPAREN [ RPAREN LPAREN ]
@@ -9003,7 +9041,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_EXTERN V1
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_EXTERN NAT V128_CONST
 ##
-## Ends in an error in state: 1280.
+## Ends in an error in state: 1285.
 ##
 ## result_pat -> LPAREN REF_EXTERN NAT . RPAREN [ RPAREN LPAREN ]
 ##
@@ -9015,7 +9053,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_EXTERN NA
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_ARRAY V128_CONST
 ##
-## Ends in an error in state: 1282.
+## Ends in an error in state: 1287.
 ##
 ## result_pat -> LPAREN REF_ARRAY . RPAREN [ RPAREN LPAREN ]
 ##
@@ -9027,7 +9065,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF_ARRAY V12
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF V128_CONST
 ##
-## Ends in an error in state: 1284.
+## Ends in an error in state: 1289.
 ##
 ## result_pat -> LPAREN REF . RPAREN [ RPAREN LPAREN ]
 ##
@@ -9039,7 +9077,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN REF V128_CONS
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN INSTR V128_CONST
 ##
-## Ends in an error in state: 1286.
+## Ends in an error in state: 1291.
 ##
 ## result_pat -> LPAREN INSTR . RPAREN [ RPAREN LPAREN ]
 ##
@@ -9051,7 +9089,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN INSTR V128_CO
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN I64_CONST V128_CONST
 ##
-## Ends in an error in state: 1288.
+## Ends in an error in state: 1293.
 ##
 ## result_pat -> LPAREN I64_CONST . i64 RPAREN [ RPAREN LPAREN ]
 ##
@@ -9063,7 +9101,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN I64_CONST V12
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN I64_CONST INT V128_CONST
 ##
-## Ends in an error in state: 1289.
+## Ends in an error in state: 1294.
 ##
 ## result_pat -> LPAREN I64_CONST i64 . RPAREN [ RPAREN LPAREN ]
 ##
@@ -9075,7 +9113,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN I64_CONST INT
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN I32_CONST V128_CONST
 ##
-## Ends in an error in state: 1291.
+## Ends in an error in state: 1296.
 ##
 ## result_pat -> LPAREN I32_CONST . i32 RPAREN [ RPAREN LPAREN ]
 ##
@@ -9087,7 +9125,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN I32_CONST V12
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN I32_CONST INT V128_CONST
 ##
-## Ends in an error in state: 1292.
+## Ends in an error in state: 1297.
 ##
 ## result_pat -> LPAREN I32_CONST i32 . RPAREN [ RPAREN LPAREN ]
 ##
@@ -9099,7 +9137,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN I32_CONST INT
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F64_CONST V128_CONST
 ##
-## Ends in an error in state: 1294.
+## Ends in an error in state: 1299.
 ##
 ## result_pat -> LPAREN F64_CONST . f64 RPAREN [ RPAREN LPAREN ]
 ## result_pat -> LPAREN F64_CONST . NAN RPAREN [ RPAREN LPAREN ]
@@ -9112,7 +9150,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F64_CONST V12
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F64_CONST NAN V128_CONST
 ##
-## Ends in an error in state: 1295.
+## Ends in an error in state: 1300.
 ##
 ## result_pat -> LPAREN F64_CONST NAN . RPAREN [ RPAREN LPAREN ]
 ##
@@ -9124,7 +9162,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F64_CONST NAN
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F64_CONST FLOAT V128_CONST
 ##
-## Ends in an error in state: 1297.
+## Ends in an error in state: 1302.
 ##
 ## result_pat -> LPAREN F64_CONST f64 . RPAREN [ RPAREN LPAREN ]
 ##
@@ -9136,7 +9174,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F64_CONST FLO
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F32_CONST V128_CONST
 ##
-## Ends in an error in state: 1299.
+## Ends in an error in state: 1304.
 ##
 ## result_pat -> LPAREN F32_CONST . f32 RPAREN [ RPAREN LPAREN ]
 ## result_pat -> LPAREN F32_CONST . NAN RPAREN [ RPAREN LPAREN ]
@@ -9149,7 +9187,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F32_CONST V12
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F32_CONST NAN V128_CONST
 ##
-## Ends in an error in state: 1300.
+## Ends in an error in state: 1305.
 ##
 ## result_pat -> LPAREN F32_CONST NAN . RPAREN [ RPAREN LPAREN ]
 ##
@@ -9161,7 +9199,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F32_CONST NAN
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F32_CONST FLOAT V128_CONST
 ##
-## Ends in an error in state: 1302.
+## Ends in an error in state: 1307.
 ##
 ## result_pat -> LPAREN F32_CONST f32 . RPAREN [ RPAREN LPAREN ]
 ##
@@ -9173,7 +9211,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN F32_CONST FLO
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN EITHER V128_CONST
 ##
-## Ends in an error in state: 1304.
+## Ends in an error in state: 1309.
 ##
 ## result_pat -> LPAREN EITHER . nonempty_list(result_pat) RPAREN [ RPAREN LPAREN ]
 ##
@@ -9185,7 +9223,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN EITHER V128_C
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN EITHER LPAREN INSTR RPAREN V128_CONST
 ##
-## Ends in an error in state: 1305.
+## Ends in an error in state: 1310.
 ##
 ## nonempty_list(result_pat) -> result_pat . [ RPAREN ]
 ## nonempty_list(result_pat) -> result_pat . nonempty_list(result_pat) [ RPAREN ]
@@ -9198,7 +9236,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN EITHER LPAREN
 
 parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN INSTR RPAREN V128_CONST
 ##
-## Ends in an error in state: 1309.
+## Ends in an error in state: 1314.
 ##
 ## list(result_pat) -> result_pat . list(result_pat) [ RPAREN ]
 ##
@@ -9210,7 +9248,7 @@ parse_script: LPAREN ASSERT_RETURN LPAREN GET STRING RPAREN LPAREN INSTR RPAREN 
 
 parse_script: LPAREN ASSERT_MALFORMED V128_CONST
 ##
-## Ends in an error in state: 1313.
+## Ends in an error in state: 1318.
 ##
 ## assertion -> LPAREN ASSERT_MALFORMED . module_ STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9222,7 +9260,7 @@ parse_script: LPAREN ASSERT_MALFORMED V128_CONST
 
 parse_script: LPAREN ASSERT_INVALID LPAREN V128_CONST
 ##
-## Ends in an error in state: 1314.
+## Ends in an error in state: 1319.
 ##
 ## module_ -> LPAREN . MODULE option(DEFINITION) option(ID) list(modulefield) RPAREN [ STRING ]
 ## module_ -> LPAREN . MODULE option(DEFINITION) option(ID) BINARY list(STRING) RPAREN [ STRING ]
@@ -9236,7 +9274,7 @@ parse_script: LPAREN ASSERT_INVALID LPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_INVALID LPAREN MODULE V128_CONST
 ##
-## Ends in an error in state: 1315.
+## Ends in an error in state: 1320.
 ##
 ## module_ -> LPAREN MODULE . option(DEFINITION) option(ID) list(modulefield) RPAREN [ STRING ]
 ## module_ -> LPAREN MODULE . option(DEFINITION) option(ID) BINARY list(STRING) RPAREN [ STRING ]
@@ -9250,7 +9288,7 @@ parse_script: LPAREN ASSERT_INVALID LPAREN MODULE V128_CONST
 
 parse_script: LPAREN ASSERT_MALFORMED LPAREN MODULE RPAREN V128_CONST
 ##
-## Ends in an error in state: 1316.
+## Ends in an error in state: 1321.
 ##
 ## assertion -> LPAREN ASSERT_MALFORMED module_ . STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9262,7 +9300,7 @@ parse_script: LPAREN ASSERT_MALFORMED LPAREN MODULE RPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_MALFORMED LPAREN MODULE RPAREN STRING V128_CONST
 ##
-## Ends in an error in state: 1317.
+## Ends in an error in state: 1322.
 ##
 ## assertion -> LPAREN ASSERT_MALFORMED module_ STRING . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9274,7 +9312,7 @@ parse_script: LPAREN ASSERT_MALFORMED LPAREN MODULE RPAREN STRING V128_CONST
 
 parse_script: LPAREN ASSERT_INVALID V128_CONST
 ##
-## Ends in an error in state: 1319.
+## Ends in an error in state: 1324.
 ##
 ## assertion -> LPAREN ASSERT_INVALID . module_ STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9286,7 +9324,7 @@ parse_script: LPAREN ASSERT_INVALID V128_CONST
 
 parse_script: LPAREN ASSERT_INVALID LPAREN MODULE RPAREN V128_CONST
 ##
-## Ends in an error in state: 1320.
+## Ends in an error in state: 1325.
 ##
 ## assertion -> LPAREN ASSERT_INVALID module_ . STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9298,7 +9336,7 @@ parse_script: LPAREN ASSERT_INVALID LPAREN MODULE RPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_INVALID LPAREN MODULE RPAREN STRING V128_CONST
 ##
-## Ends in an error in state: 1321.
+## Ends in an error in state: 1326.
 ##
 ## assertion -> LPAREN ASSERT_INVALID module_ STRING . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9310,7 +9348,7 @@ parse_script: LPAREN ASSERT_INVALID LPAREN MODULE RPAREN STRING V128_CONST
 
 parse_script: LPAREN ASSERT_EXHAUSTION V128_CONST
 ##
-## Ends in an error in state: 1323.
+## Ends in an error in state: 1328.
 ##
 ## assertion -> LPAREN ASSERT_EXHAUSTION . action STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9322,7 +9360,7 @@ parse_script: LPAREN ASSERT_EXHAUSTION V128_CONST
 
 parse_script: LPAREN ASSERT_EXHAUSTION LPAREN GET STRING RPAREN V128_CONST
 ##
-## Ends in an error in state: 1324.
+## Ends in an error in state: 1329.
 ##
 ## assertion -> LPAREN ASSERT_EXHAUSTION action . STRING RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9334,7 +9372,7 @@ parse_script: LPAREN ASSERT_EXHAUSTION LPAREN GET STRING RPAREN V128_CONST
 
 parse_script: LPAREN ASSERT_EXHAUSTION LPAREN GET STRING RPAREN STRING V128_CONST
 ##
-## Ends in an error in state: 1325.
+## Ends in an error in state: 1330.
 ##
 ## assertion -> LPAREN ASSERT_EXHAUSTION action STRING . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9346,7 +9384,7 @@ parse_script: LPAREN ASSERT_EXHAUSTION LPAREN GET STRING RPAREN STRING V128_CONS
 
 parse_script: LPAREN ASSERT_EXCEPTION V128_CONST
 ##
-## Ends in an error in state: 1327.
+## Ends in an error in state: 1332.
 ##
 ## assertion -> LPAREN ASSERT_EXCEPTION . action RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9358,7 +9396,7 @@ parse_script: LPAREN ASSERT_EXCEPTION V128_CONST
 
 parse_script: LPAREN ASSERT_EXCEPTION LPAREN GET STRING RPAREN V128_CONST
 ##
-## Ends in an error in state: 1328.
+## Ends in an error in state: 1333.
 ##
 ## assertion -> LPAREN ASSERT_EXCEPTION action . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9370,7 +9408,7 @@ parse_script: LPAREN ASSERT_EXCEPTION LPAREN GET STRING RPAREN V128_CONST
 
 parse_script: LPAREN SCRIPT LPAREN SCRIPT RPAREN EOF
 ##
-## Ends in an error in state: 1330.
+## Ends in an error in state: 1335.
 ##
 ## meta -> LPAREN SCRIPT option(ID) script . RPAREN [ RPAREN LPAREN EOF ]
 ##
@@ -9381,16 +9419,16 @@ parse_script: LPAREN SCRIPT LPAREN SCRIPT RPAREN EOF
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 1337, spurious reduction of production list(cmd) ->
-## In state 1338, spurious reduction of production list(cmd) -> cmd list(cmd)
-## In state 1335, spurious reduction of production script -> list(cmd)
+## In state 1342, spurious reduction of production list(cmd) ->
+## In state 1343, spurious reduction of production list(cmd) -> cmd list(cmd)
+## In state 1340, spurious reduction of production script -> list(cmd)
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 parse_script: LPAREN SCRIPT RPAREN V128_CONST
 ##
-## Ends in an error in state: 1337.
+## Ends in an error in state: 1342.
 ##
 ## list(cmd) -> cmd . list(cmd) [ RPAREN EOF ]
 ##
@@ -9402,7 +9440,7 @@ parse_script: LPAREN SCRIPT RPAREN V128_CONST
 
 parse_script: LPAREN SCRIPT RPAREN RPAREN
 ##
-## Ends in an error in state: 1341.
+## Ends in an error in state: 1346.
 ##
 ## parse_script -> script . EOF [ # ]
 ##
@@ -9413,16 +9451,16 @@ parse_script: LPAREN SCRIPT RPAREN RPAREN
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 1337, spurious reduction of production list(cmd) ->
-## In state 1338, spurious reduction of production list(cmd) -> cmd list(cmd)
-## In state 1335, spurious reduction of production script -> list(cmd)
+## In state 1342, spurious reduction of production list(cmd) ->
+## In state 1343, spurious reduction of production list(cmd) -> cmd list(cmd)
+## In state 1340, spurious reduction of production script -> list(cmd)
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
 parse_script: LPAREN DATA RPAREN V128_CONST
 ##
-## Ends in an error in state: 1345.
+## Ends in an error in state: 1350.
 ##
 ## nonempty_list(modulefield) -> modulefield . [ EOF ]
 ## nonempty_list(modulefield) -> modulefield . nonempty_list(modulefield) [ EOF ]

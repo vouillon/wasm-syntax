@@ -156,9 +156,14 @@ module Encoder = struct
         byte b 0x4E;
         vec' subtype b t
 
-  let memarg b (m : memarg) =
-    uint b (Utils.Uint64.to_int m.align);
-    uint b (Utils.Uint64.to_int m.offset)
+  let memarg b (m : memarg) idx =
+    if idx = 0 then (
+      uint b (Utils.Uint64.to_int m.align);
+      uint b (Utils.Uint64.to_int m.offset))
+    else (
+      uint b (Utils.Uint64.to_int m.align lor 64);
+      uint b (Utils.Uint64.to_int m.offset);
+      uint b idx)
 
   let blocktype b (t : blocktype) =
     match t with Valtype v -> valtype b v | Typeuse i -> sint b i
@@ -338,17 +343,17 @@ module Encoder = struct
         uint b i1;
         uint b i2
     | ElemDrop i ->
+        byte b 0xFC;
         byte b 0x0D;
-        byte b 0x14;
         uint b i
-    | Load (_mem_idx, m, op) ->
+    | Load (mem_idx, m, op) ->
         (match op with
         | I32 () -> byte b 0x28
         | I64 () -> byte b 0x29
         | F32 () -> byte b 0x2A
         | F64 () -> byte b 0x2B);
-        memarg b m
-    | LoadS (_mem_idx, m, typ, sz, s) ->
+        memarg b m mem_idx
+    | LoadS (mem_idx, m, typ, sz, s) ->
         (match (typ, sz, s) with
         | `I32, `I8, Signed -> byte b 0x2C
         | `I32, `I8, Unsigned -> byte b 0x2D
@@ -361,15 +366,15 @@ module Encoder = struct
         | `I64, `I32, Signed -> byte b 0x34
         | `I64, `I32, Unsigned -> byte b 0x35
         | _ -> failwith "Invalid LoadS combination");
-        memarg b m
-    | Store (_mem_idx, m, op) ->
+        memarg b m mem_idx
+    | Store (mem_idx, m, op) ->
         (match op with
         | I32 () -> byte b 0x36
         | I64 () -> byte b 0x37
         | F32 () -> byte b 0x38
         | F64 () -> byte b 0x39);
-        memarg b m
-    | StoreS (_mem_idx, m, typ, sz) ->
+        memarg b m mem_idx
+    | StoreS (mem_idx, m, typ, sz) ->
         (match (typ, sz) with
         | `I32, `I8 -> byte b 0x3A
         | `I32, `I16 -> byte b 0x3B
@@ -377,13 +382,13 @@ module Encoder = struct
         | `I64, `I16 -> byte b 0x3D
         | `I64, `I32 -> byte b 0x3E
         | _ -> failwith "Invalid StoreS combination");
-        memarg b m
+        memarg b m mem_idx
     | MemorySize i ->
         byte b 0x3F;
-        byte b (if i = 0 then 0x00 else i)
+        uint b i
     | MemoryGrow i ->
         byte b 0x40;
-        byte b (if i = 0 then 0x00 else i)
+        uint b i
     | MemoryFill i ->
         byte b 0xFC;
         byte b 0x0B;
@@ -750,7 +755,14 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
   (* 4. Table Section *)
   if m.tables <> [] then
     output_section out_channel 4
-      (Encoder.vec (fun b (t : Ast.location table) -> Encoder.limits b t.typ))
+      (Encoder.vec (fun b (t : Ast.location table) ->
+           match t.expr with
+           | Some e ->
+               Encoder.byte b 0x40;
+               Encoder.byte b 0x00;
+               Encoder.tabletype b t.typ;
+               Encoder.expr ~source_map_t b e
+           | None -> Encoder.tabletype b t.typ))
       m.tables;
 
   (* 5. Memory Section *)
@@ -796,8 +808,46 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
   if m.elem <> [] then
     output_section out_channel 9
       (Encoder.vec (fun b (e : Ast.location elem) ->
-           match e.mode with
-           | Active (table, offset) ->
+           let get_func_indices exprs =
+             try
+               Some
+                 (List.map
+                    (function
+                      | [ { Ast.desc = Ast.Binary.RefFunc idx; _ } ] -> idx
+                      | _ -> raise Exit)
+                    exprs)
+             with Exit -> None
+           in
+           let is_funcref = e.typ.nullable && e.typ.typ = Func in
+           let indices_opt =
+             if is_funcref then get_func_indices e.init else None
+           in
+           match (e.mode, indices_opt) with
+           | Active (0, offset), Some idxs ->
+               Encoder.byte b 0x00;
+               Encoder.expr ~source_map_t b offset;
+               Encoder.vec Encoder.uint b idxs
+           | Active (0, offset), None when is_funcref ->
+               Encoder.byte b 0x04;
+               Encoder.expr ~source_map_t b offset;
+               Encoder.vec
+                 (fun b ex -> Encoder.expr ~source_map_t b ex)
+                 b e.init
+           | Active (table, offset), Some idxs ->
+               Encoder.byte b 0x02;
+               Encoder.uint b table;
+               Encoder.expr ~source_map_t b offset;
+               Encoder.byte b 0x00;
+               Encoder.vec Encoder.uint b idxs
+           | Passive, Some idxs ->
+               Encoder.byte b 0x01;
+               Encoder.byte b 0x00;
+               Encoder.vec Encoder.uint b idxs
+           | Declare, Some idxs ->
+               Encoder.byte b 0x03;
+               Encoder.byte b 0x00;
+               Encoder.vec Encoder.uint b idxs
+           | Active (table, offset), _ ->
                Encoder.byte b 0x06;
                Encoder.uint b table;
                Encoder.expr ~source_map_t b offset;
@@ -805,13 +855,13 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
                Encoder.vec
                  (fun b ex -> Encoder.expr ~source_map_t b ex)
                  b e.init
-           | Passive ->
+           | Passive, _ ->
                Encoder.byte b 0x05;
                Encoder.reftype b e.typ;
                Encoder.vec
                  (fun b ex -> Encoder.expr ~source_map_t b ex)
                  b e.init
-           | Declare ->
+           | Declare, _ ->
                Encoder.byte b 0x07;
                Encoder.reftype b e.typ;
                Encoder.vec
@@ -931,8 +981,12 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
   output_name_subsection 0x08 m.names.elem b_names;
   (* Elem names *)
   output_name_subsection 0x09 m.names.data b_names;
-
   (* Data names *)
+  output_indirect_name_subsection 0x0A m.names.fields b_names;
+  (* Field names *)
+  output_name_subsection 0x0B m.names.tags b_names;
+  (* Tag names *)
+
   if Buffer.length b_names > 0 then (
     let b_custom_section_content = Buffer.create (Buffer.length b_names + 10) in
     Encoder.name b_custom_section_content "name";

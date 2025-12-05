@@ -496,7 +496,7 @@ module Binary : sig
     | Tag of typeuse
 
   type import = { module_ : string; name : string; desc : importdesc }
-  type 'info table = { typ : limits; expr : 'info expr option }
+  type 'info table = { typ : tabletype; expr : 'info expr option }
 
   type 'info memory = {
     id : id option;

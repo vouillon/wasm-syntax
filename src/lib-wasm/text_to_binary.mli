@@ -1,3 +1,3 @@
 open Ast
 
-val module_ : 'info Text.module_ -> 'info Binary.module_
+val module_ : location Text.module_ -> location Binary.module_

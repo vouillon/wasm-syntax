@@ -662,7 +662,13 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     List.filter_map
       (fun f ->
         match f with
-        | T.Table { typ; _ } -> Some { B.typ = typ.limits; B.expr = None }
+        | T.Table { typ; init; _ } ->
+            let expr =
+              match init with
+              | T.Init_expr e -> Some (List.map (instr ~resolve_type ctx) e)
+              | _ -> None
+            in
+            Some { B.typ = table_type_fix ctx typ; B.expr }
         | _ -> None)
       fields
   in
@@ -713,46 +719,83 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
       fields
   in
 
+  let table_import_count =
+    List.fold_left
+      (fun acc f ->
+        match f with T.Import { desc = T.Table _; _ } -> acc + 1 | _ -> acc)
+      0 fields
+  in
+
   let elem =
-    List.filter_map
-      (fun f ->
-        match f with
-        | T.Elem { typ; init; mode; _ } ->
-            let mode : 'info B.elemmode =
-              match mode with
-              | Passive -> Passive
-              | Active (i, ex) ->
-                  Active
-                    ( resolve_idx ctx.tables i,
-                      List.map (instr ~resolve_type ctx) ex )
-              | Declare -> Declare
-            in
-            Some
-              {
-                B.typ = reftype ctx typ;
-                init = List.map (List.map (instr ~resolve_type ctx)) init;
-                mode;
-              }
-        | _ -> None)
-      fields
+    let rec scan fields table_idx acc =
+      match fields with
+      | [] -> List.rev acc
+      | T.Elem { typ; init; mode; _ } :: rest ->
+          let mode : 'info B.elemmode =
+            match mode with
+            | Passive -> Passive
+            | Active (i, ex) ->
+                Active
+                  ( resolve_idx ctx.tables i,
+                    List.map (instr ~resolve_type ctx) ex )
+            | Declare -> Declare
+          in
+          let e =
+            {
+              B.typ = reftype ctx typ;
+              init = List.map (List.map (instr ~resolve_type ctx)) init;
+              mode;
+            }
+          in
+          scan rest table_idx (e :: acc)
+      | T.Table { typ; init = T.Init_segment exprs; _ } :: rest ->
+          let mode = B.Active (table_idx, [ Ast.no_loc (B.Const (B.I32 0l)) ]) in
+          let e =
+            {
+              B.typ = reftype ctx typ.reftype;
+              init = List.map (List.map (instr ~resolve_type ctx)) exprs;
+              mode;
+            }
+          in
+          scan rest (table_idx + 1) (e :: acc)
+      | T.Table _ :: rest -> scan rest (table_idx + 1) acc
+      | _ :: rest -> scan rest table_idx acc
+    in
+    scan fields table_import_count []
+  in
+
+  let memory_import_count =
+    List.fold_left
+      (fun acc f ->
+        match f with T.Import { desc = T.Memory _; _ } -> acc + 1 | _ -> acc)
+      0 fields
   in
 
   let data =
-    List.filter_map
-      (fun f ->
-        match f with
-        | T.Data { init; mode; _ } ->
-            let mode : 'info B.datamode =
-              match mode with
-              | Passive -> Passive
-              | Active (i, ex) ->
-                  Active
-                    ( resolve_idx ctx.memories i,
-                      List.map (instr ~resolve_type ctx) ex )
-            in
-            Some { B.init; mode }
-        | _ -> None)
-      fields
+    let rec scan fields mem_idx acc =
+      match fields with
+      | [] -> List.rev acc
+      | T.Data { init; mode; _ } :: rest ->
+          let mode : 'info B.datamode =
+            match mode with
+            | Passive -> Passive
+            | Active (i, ex) ->
+                Active
+                  ( resolve_idx ctx.memories i,
+                    List.map (instr ~resolve_type ctx) ex )
+          in
+          let d = { B.init; mode } in
+          scan rest mem_idx (d :: acc)
+      | T.Memory { init = Some init; _ } :: rest ->
+          let (mode : 'info B.datamode) =
+            B.Active (mem_idx, [ Ast.no_loc (B.Const (B.I32 0l)) ])
+          in
+          let d = { B.init; mode } in
+          scan rest (mem_idx + 1) (d :: acc)
+      | T.Memory _ :: rest -> scan rest (mem_idx + 1) acc
+      | _ :: rest -> scan rest mem_idx acc
+    in
+    scan fields memory_import_count []
   in
 
   let tags =

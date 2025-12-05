@@ -11,6 +11,7 @@ val to_int : t -> int
 (** Convert to an OCaml [int]. May raise if the value doesn't fit. *)
 
 val to_int64 : t -> int64
+val of_int64 : int64 -> t
 val zero : t
 val one : t
 val compare : t -> t -> int
