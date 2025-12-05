@@ -556,13 +556,21 @@ and instruction ch =
         | 22 -> RefCast (nullable (heaptype ch))
         | 23 -> RefCast { nullable = false; typ = heaptype ch }
         | 24 ->
-            let a = uint ch in
-            let b = reftype_first_byte ch in
-            Br_on_cast (a, b, reftype_first_byte ch)
+            let flags = input_byte ch in
+            let label = uint ch in
+            let ht1 = heaptype ch in
+            let ht2 = heaptype ch in
+            let rt1 = { nullable = flags land 1 <> 0; typ = ht1 } in
+            let rt2 = { nullable = flags land 2 <> 0; typ = ht2 } in
+            Br_on_cast (label, rt1, rt2)
         | 25 ->
-            let a = uint ch in
-            let b = reftype_first_byte ch in
-            Br_on_cast_fail (a, b, reftype_first_byte ch)
+            let flags = input_byte ch in
+            let label = uint ch in
+            let ht1 = heaptype ch in
+            let ht2 = heaptype ch in
+            let rt1 = { nullable = flags land 1 <> 0; typ = ht1 } in
+            let rt2 = { nullable = flags land 2 <> 0; typ = ht2 } in
+            Br_on_cast_fail (label, rt1, rt2)
         | 26 -> AnyConvertExtern
         | 27 -> ExternConvertAny
         | 28 -> RefI31
@@ -581,16 +589,16 @@ and instruction ch =
         | 7 -> UnOp (I64 (TruncSat (`F64, Unsigned)))
         | 8 ->
             let i = uint ch in
-            let _ = assert (input_byte ch = 0) in
-            MemoryInit (i, uint ch)
+            let m = uint ch in
+            MemoryInit (i, m)
         | 9 -> DataDrop (uint ch)
         | 10 ->
-            assert (input_byte ch = 0);
-            assert (input_byte ch = 0);
-            MemoryCopy (0, 0)
+            let m_dst = uint ch in
+            let m_src = uint ch in
+            MemoryCopy (m_dst, m_src)
         | 11 ->
-            assert (input_byte ch = 0);
-            MemoryFill 0
+            let m = uint ch in
+            MemoryFill m
         | 12 ->
             let i = uint ch in
             TableInit (i, uint ch)
@@ -606,7 +614,10 @@ and instruction ch =
   in
   Ast.no_loc desc
 
-let expr ch = instructions ch []
+let expr ch =
+  let instrs = instructions ch [] in
+  if input_byte ch <> 0x0B then failwith "expr must end with 0x0B";
+  instrs
 
 let elem ch =
   let mode_byte = uint ch in
