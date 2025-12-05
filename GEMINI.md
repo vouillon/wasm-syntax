@@ -60,6 +60,11 @@ The CLI supports the following flows:
     * `printer.ml` / `.mli` - Generic `Format` wrappers/helpers.
     * `uint32.ml` / `.mli`, `uint64.ml` / `.mli` - Unsigned integer handling.
     * `colors.ml` / `.mli` - Terminal color support.
+    * `source_map.ml` / '.mli' - Source map output support
+* `src/lib-conversion/` - AST-to-AST transformation.
+    * `from_wasm.ml` / `.mli` - Logic to convert WAT -> Wax.
+    * `to_wasm.ml` / `.mli` - Logic to convert Wax -> WAT.
+    * `namespace.ml` - Namespace management for conversion.
 * `src/lib-wasm/` - **Target Language** (WAT) handling.
     * `ast.ml` / `.mli` - Wasm AST (Functor-based).
     * `ast_utils.ml` / `.mli` - AST traversal and utility functions.
@@ -70,16 +75,16 @@ The CLI supports the following flows:
     * `folding.ml` / `.mli` - Folded vs. Unfolded instruction conversion.
     * `output.ml` / `.mli` - WAT Pretty-printing.
     * `misc.ml` / `.mli` - Miscellaneous helpers.
+    * `binary_to_text.ml` / '.mli' - Conversion from binary to text format
+    * `text_to_binary.ml` / '.mli' - Conversion from text to binary format
+    * `wasm_output.ml` / '.mli' - Wasm binary format output
+    * `wasm_parser.ml` / 'mli` -  Wasm binary format parsing
 * `src/lib-wax/` - **Source Language** (Wax) handling.
     * `ast.ml` / `.mli` - Wax AST (Recursive).
     * `ast_utils.ml` / `.mli` - AST traversal and utility functions.
     * `parser.mly` / `lexer.ml` - Wax parsing.
     * `typing.ml` / `.mli` - Semantic analysis and type checking.
     * `output.ml` / `.mli` - Wax Pretty-printing (AST traversal).
-* `src/lib-conversion/` - AST-to-AST transformation.
-    * `from_wasm.ml` / `.mli` - Logic to convert WAT -> Wax.
-    * `to_wasm.ml` / `.mli` - Logic to convert Wax -> WAT.
-    * `namespace.ml` - Namespace management for conversion.
 * `test/` - **Immutable** regression test suite (Source + `.expected` files).
 
 ## AST Reference (Condensed)
