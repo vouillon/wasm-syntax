@@ -865,6 +865,12 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   | DataDrop _ | TableGet _ | TableSet _ | TableSize _ | TableGrow _
   | TableFill _ | TableCopy _ | TableInit _ | ElemDrop _ | TupleExtract _ ->
       Stack.push_poly (with_loc Unreachable)
+  | VecConst _ | VecUnOp _ | VecBinOp _ | VecTest _ | VecShift _ | VecBitmask _
+  | VecLoad _ | VecStore _ | VecLoadLane _ | VecStoreLane _ | VecLoadSplat _
+  | VecLoadExtend _ | VecExtract _ | VecReplace _ | VecSplat _ | VecShuffle _
+  | VecBitselect | VecTernOp _ ->
+      failwith "SIMD instructions not supported in Wax"
+
 (* ZZZ *)
 
 and instructions ctx l =

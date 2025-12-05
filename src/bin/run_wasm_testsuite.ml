@@ -6,6 +6,20 @@
   (on unfolded code without identifiers?)
 *)
 
+let wasm_only = ref false
+let color = ref Utils.Colors.Always
+
+let () =
+  let speclist =
+    [
+      ("--wasm-only", Arg.Set wasm_only, "Generate WebAssembly output only");
+      ("--no-color", Arg.Unit (fun () -> color := Never), "Disable color output");
+    ]
+  in
+  Arg.parse speclist
+    (fun arg -> raise (Arg.Bad (Printf.sprintf "Unexpected argument: %s" arg)))
+    "Usage: run_wasm_testsuite [options]"
+
 let print_flushed s =
   print_string s;
   flush stdout
@@ -93,24 +107,31 @@ let in_child_process ?(quiet = false) f =
       let _, status = Unix.waitpid [] pid in
       status = Unix.WEXITED 0
 
+let counter = ref 0
+let outputs = ref []
+
 let iter_files dirs skip suffix f =
   let pool = create_pool (Domain.recommended_domain_count ()) in
   let rec visit root dir =
     let entries = Sys.readdir (Filename.concat root dir) in
+    Array.sort compare entries;
     Array.iter
       (fun entry ->
         let path = Filename.concat dir entry in
         if not (skip entry) then
           let full_path = Filename.concat root path in
           if Sys.is_directory full_path then visit root path
-          else if Filename.check_suffix entry suffix then
+          else if Filename.check_suffix entry suffix then (
+            let i = !counter in
+            incr counter;
             in_child_process_async pool
-              ~on_termination:(fun _ s -> print_flushed s)
-              (fun () -> f full_path path))
+              ~on_termination:(fun _ s -> outputs := (i, s) :: !outputs)
+              (fun () -> f full_path path)))
       entries
   in
   List.iter (fun root -> visit root "") dirs;
-  wait_all_children pool
+  wait_all_children pool;
+  List.iter (fun (_, s) -> print_flushed s) (List.sort compare !outputs)
 
 type script =
   ([ `Valid | `Invalid of string | `Malformed of string ]
@@ -165,8 +186,10 @@ let print_module ~color f m =
 
 let runtest filename path =
   if true then
-    Format.eprintf "%s==== %s ====%s@." Utils.Colors.Ansi.grey path
-      Utils.Colors.Ansi.reset;
+    Format.eprintf "%s==== %s ====%s@."
+      (match !color with Always -> Utils.Colors.Ansi.grey | _ -> "")
+      path
+      (match !color with Always -> Utils.Colors.Ansi.reset | _ -> "");
   let lst = ScriptParser.parse ~filename in
   (* Parsing *)
   let lst =
@@ -185,7 +208,7 @@ let runtest filename path =
                   Wasm.Validation.f ast;
                   if false then
                     Format.printf "@[<2>Result:@ %a@]@."
-                      (print_module ~color:Always)
+                      (print_module ~color:!color)
                       ast)
             in
             if ok then
@@ -216,13 +239,13 @@ let runtest filename path =
                   Wasm.Validation.f m;
                   if false then
                     Format.printf "@[<2>Result:@ %a@]@."
-                      (print_module ~color:Always)
+                      (print_module ~color:!color)
                       m)
             in
             if ok then
               Format.eprintf "@[<2>Validation should have failed (%s):@ %a@]@."
                 reason
-                (print_module ~color:Always)
+                (print_module ~color:!color)
                 m;
             false)
       (lst @ lst')
@@ -234,38 +257,39 @@ let runtest filename path =
   in
   List.iter
     (fun m ->
-      match Conversion.From_wasm.module_ m with
-      | exception e ->
-          prerr_endline (Printexc.to_string e);
-          Format.eprintf "@[%a@]@." (print_module ~color:Always) m
-      | m ->
-          let ok =
-            in_child_process (fun () ->
-                let m = Wax.Typing.f m in
-                let m' = Conversion.To_wasm.module_ m in
-                let ok = in_child_process (fun () -> Wasm.Validation.f m') in
-                if not ok then (
-                  Format.eprintf "@[%a@]@." (print_module ~color:Always) m';
-                  Format.eprintf "@[%a@]@." (print_wax ~color:Always) m))
-          in
-          if not ok then Format.eprintf "@[%a@]@." (print_wax ~color:Always) m;
-          let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
-          let ok =
-            in_child_process (fun () ->
-                let m' = WaxParser.parse_from_string ~filename text in
-                if false (*XXX*) then
-                  let ok =
-                    in_child_process (fun () -> ignore (Wax.Typing.f m'))
-                  in
-                  if not ok then
-                    if true then prerr_endline "(after parsing)"
-                    else (
-                      Format.eprintf "@[%a@]@." (print_wax ~color:Always) m';
-                      prerr_endline "===";
-                      Format.eprintf "@[%a@]@." (print_wax ~color:Always) m))
-          in
-          if not ok then
-            if true then prerr_endline "(parsing)" else print_flushed text)
+      if not !wasm_only then
+        match Conversion.From_wasm.module_ m with
+        | exception e ->
+            prerr_endline (Printexc.to_string e);
+            Format.eprintf "@[%a@]@." (print_module ~color:!color) m
+        | m ->
+            let ok =
+              in_child_process (fun () ->
+                  let m = Wax.Typing.f m in
+                  let m' = Conversion.To_wasm.module_ m in
+                  let ok = in_child_process (fun () -> Wasm.Validation.f m') in
+                  if not ok then (
+                    Format.eprintf "@[%a@]@." (print_module ~color:!color) m';
+                    Format.eprintf "@[%a@]@." (print_wax ~color:!color) m))
+            in
+            if not ok then Format.eprintf "@[%a@]@." (print_wax ~color:!color) m;
+            let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
+            let ok =
+              in_child_process (fun () ->
+                  let m' = WaxParser.parse_from_string ~filename text in
+                  if false (*XXX*) then
+                    let ok =
+                      in_child_process (fun () -> ignore (Wax.Typing.f m'))
+                    in
+                    if not ok then
+                      if true then prerr_endline "(after parsing)"
+                      else (
+                        Format.eprintf "@[%a@]@." (print_wax ~color:!color) m';
+                        prerr_endline "===";
+                        Format.eprintf "@[%a@]@." (print_wax ~color:!color) m))
+            in
+            if not ok then
+              if true then prerr_endline "(parsing)" else print_flushed text)
     lst
 
 let dirs =
@@ -282,8 +306,8 @@ let () =
         [
           "spec-test-1";
           "spec-test-2";
-          "simd";
-          "relaxed-simd";
+          (*          "simd";
+          "relaxed-simd";*)
           "try_delegate.wast";
           "rethrow.wast";
         ])

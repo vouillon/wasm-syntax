@@ -17,3 +17,14 @@
  (alias runtest)
  (action
   (diff output.wat.expected output.wat)))
+
+(rule
+ (action
+  (with-stdout-to wasm_test_suite.output
+   (run ../src/bin/run_wasm_testsuite.exe --wasm-only --no-color))))
+
+
+(rule
+ (alias runtest)
+ (action
+  (diff wasm_test_suite.expected wasm_test_suite.output)))

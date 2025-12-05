@@ -395,30 +395,25 @@ let max_align = Uint64.of_int 8
 let check_memarg limits sz { Ast.Text.offset; align } =
   if limits.address_type = `I32 then
     assert (Uint64.compare offset max_offset_i32_exclusive < 0);
-
-  (* For `I64` address types, any valid `Uint64.t` offset is considered valid,
-
-
-
-     so no explicit upper bound check is needed here beyond type representation. *)
   assert (Uint64.compare align max_align <= 8);
 
   assert (
     match (Uint64.to_int align, sz) with
     | 1, (`I8 | `I16 | `I32 | `I64) -> true
     | 2, (`I16 | `I32 | `I64) -> true
-    | 4, (`I32 | `I64) -> true
-    | 8, `I64 -> true
+    | 4, (`I32 | `I64 | `V128) -> true
+    | 8, (`I64 | `V128) -> true
+    | 16, `V128 -> true
     | _ -> false);
 
   assert (Uint64.compare align max_align <= 0)
 
 let memory_instruction_type_and_size ty =
-  match (ty : _ Ast.Text.op) with
-  | I32 _ -> (I32, `I32)
-  | F32 _ -> (F32, `I32)
-  | I64 _ -> (I64, `I64)
-  | F64 _ -> (F64, `I64)
+  match (ty : Ast.Text.num_type) with
+  | NumI32 -> (I32, `I32)
+  | NumF32 -> (F32, `I32)
+  | NumI64 -> (I64, `I64)
+  | NumF64 -> (F64, `I64)
 
 let field_has_default (ty : fieldtype) =
   match ty.typ with
@@ -719,7 +714,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | LoadS (idx, memarg, ty, sz, _) ->
       let limits = Sequence.get ctx.modul.memories idx in
       let ty = match ty with `I32 -> I32 | `I64 -> I64 in
-      check_memarg limits (sz :> [ `I8 | `I16 | `I32 | `I64 ]) memarg;
+      check_memarg limits (sz :> [ `I8 | `I16 | `I32 | `I64 | `V128 ]) memarg;
       let* () = pop ctx (address_type_to_valtype limits.address_type) in
       push ty
   | Store (idx, memarg, ty) ->
@@ -732,7 +727,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | StoreS (idx, memarg, ty, sz) ->
       let limits = Sequence.get ctx.modul.memories idx in
       let ty = match ty with `I32 -> I32 | `I64 -> I64 in
-      check_memarg limits (sz :> [ `I8 | `I16 | `I32 | `I64 ]) memarg;
+      check_memarg limits (sz :> [ `I8 | `I16 | `I32 | `I64 | `V128 ]) memarg;
       let* () = pop ctx ty in
       pop ctx (address_type_to_valtype limits.address_type)
   | MemorySize idx ->
@@ -752,10 +747,16 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | MemoryCopy (idx, idx') ->
       let limits = Sequence.get ctx.modul.memories idx in
       let limits' = Sequence.get ctx.modul.memories idx' in
-      assert (limits.address_type = limits'.address_type);
+      let address_type =
+        match (limits.address_type, limits'.address_type) with
+        | `I32, _ | _, `I32 -> `I32
+        | `I64, `I64 -> `I64
+      in
       let addr_ty = address_type_to_valtype limits.address_type in
-      let* () = pop ctx addr_ty in
-      let* () = pop ctx addr_ty in
+      let addr_ty' = address_type_to_valtype limits.address_type in
+      let addr_ty'' = address_type_to_valtype address_type in
+      let* () = pop ctx addr_ty'' in
+      let* () = pop ctx addr_ty' in
       pop ctx addr_ty
   | MemoryInit (idx, idx') ->
       let limits = Sequence.get ctx.modul.memories idx in
@@ -767,6 +768,129 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | DataDrop idx ->
       ignore (Sequence.get ctx.modul.data idx);
       return ()
+  | VecConst _ -> push V128
+  | VecUnOp _ ->
+      let* () = pop ctx V128 in
+      push V128
+  | VecBinOp _ ->
+      let* () = pop ctx V128 in
+      let* () = pop ctx V128 in
+      push V128
+  | VecTest _ ->
+      let* () = pop ctx V128 in
+      push I32
+  | VecShift _ ->
+      let* () = pop ctx I32 in
+      let* () = pop ctx V128 in
+      push V128
+  | VecBitmask _ ->
+      let* () = pop ctx V128 in
+      push I32
+  | VecTernOp _ ->
+      let* () = pop ctx V128 in
+      let* () = pop ctx V128 in
+      let* () = pop ctx V128 in
+      push V128
+  | VecBitselect ->
+      let* () = pop ctx V128 in
+      let* () = pop ctx V128 in
+      let* () = pop ctx V128 in
+      push V128
+  | VecSplat (Splat shape) ->
+      let ty =
+        match shape with
+        | I8x16 | I16x8 | I32x4 -> I32
+        | I64x2 -> I64
+        | F32x4 -> F32
+        | F64x2 -> F64
+      in
+      let* () = pop ctx ty in
+      push V128
+  | VecLoad (idx, _, memarg) ->
+      let limits = Sequence.get ctx.modul.memories idx in
+      check_memarg limits `V128 memarg;
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
+      push V128
+  | VecLoadLane (idx, op, memarg, _) ->
+      let limits = Sequence.get ctx.modul.memories idx in
+      let sz =
+        match op with
+        | Load `I8 -> `I8
+        | Load `I16 -> `I16
+        | Load `I32 -> `I32
+        | Load `I64 -> `I64
+        | Load `F32 -> `F32
+        | Load `F64 -> `F64
+        | Store _ -> assert false
+      in
+      check_memarg limits sz memarg;
+      let* () = pop ctx V128 in
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
+      push V128
+  | VecStoreLane (idx, op, memarg, _) ->
+      let limits = Sequence.get ctx.modul.memories idx in
+      let sz =
+        match op with
+        | Store `I8 -> `I8
+        | Store `I16 -> `I16
+        | Store `I32 -> `I32
+        | Store `I64 -> `I64
+        | Load _ -> assert false
+      in
+      check_memarg limits sz memarg;
+      let* () = pop ctx V128 in
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
+      return ()
+  | VecLoadSplat (idx, op, memarg) ->
+      let limits = Sequence.get ctx.modul.memories idx in
+      let sz =
+        match op with
+        | Load `I8 -> `I8
+        | Load `I16 -> `I16
+        | Load `I32 -> `I32
+        | Load `I64 -> `I64
+        | Load `F32 -> `F32
+        | Load `F64 -> `F64
+        | Store _ -> assert false
+      in
+      check_memarg limits sz memarg;
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
+      push V128
+  | VecLoadExtend (idx, op, memarg) ->
+      let limits = Sequence.get ctx.modul.memories idx in
+      let sz =
+        match op with
+        | Load8x8S | Load8x8U -> `I64
+        | Load32x2S | Load32x2U -> `I64
+        | Load32Zero -> `I32
+        | Load64Zero -> `I64
+        | Load16x4S | Load16x4U -> `I64
+        | Load128 -> assert false
+      in
+      check_memarg limits sz memarg;
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
+      push V128
+  | VecExtract (op, _, _) ->
+      let* () = pop ctx V128 in
+      let res_ty =
+        match op with
+        | Load `I8 | Load `I16 | Load `I32 -> I32
+        | Load `I64 -> I64
+        | Load `F32 | Load `F64 -> assert false
+        | Store _ -> assert false
+      in
+      push res_ty
+  | VecReplace (op, _) ->
+      let arg_ty =
+        match op with
+        | Load `I8 | Load `I16 | Load `I32 -> I32
+        | Load `I64 -> I64
+        | Load `F32 | Load `F64 -> assert false
+        | Store _ -> assert false
+      in
+      let* () = pop ctx arg_ty in
+      let* () = pop ctx V128 in
+      push V128
   | TableGet idx ->
       let typ = Sequence.get ctx.modul.tables idx in
       let addr_ty = address_type_to_valtype typ.limits.address_type in
@@ -1135,7 +1259,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
     | TupleMake of Int32.t
     | TupleExtract of Int32.t * Int32.t
 *)
-  | _ ->
+  | TupleExtract _ ->
       Format.eprintf "%a@." print_instr i;
       raise Exit
 
@@ -1190,6 +1314,12 @@ let rec check_constant_instruction ctx (i : _ Ast.Text.instr) =
           | Lt _ | Gt _ | Le _ | Ge _ ) )
   | I32WrapI64 | I64ExtendI32 _ | F32DemoteF64 | F64PromoteF32 | Pop _
   | TupleMake _ | TupleExtract _ ->
+      assert false
+  | VecConst _ -> ()
+  | VecBitselect | VecUnOp _ | VecBinOp _ | VecTest _ | VecShift _
+  | VecBitmask _ | VecLoad _ | VecStore _ | VecLoadLane _ | VecStoreLane _
+  | VecLoadSplat _ | VecLoadExtend _ | VecExtract _ | VecReplace _ | VecSplat _
+  | VecShuffle _ | VecTernOp _ ->
       assert false
 
 and check_constant_instructions ctx l =
@@ -1263,7 +1393,7 @@ let max_memory_size = function
   | `I64 -> Uint64.of_string "0x1_0000_0000_0000"
 
 let max_table_size = function
-  | `I32 -> Uint64.of_string "0xffff_fffe"
+  | `I32 -> Uint64.of_string "0xffff_ffff"
   | `I64 -> Uint64.of_string "0xffff_ffff_ffff_ffff"
 
 let rec register_typeuses ctx l =
@@ -1298,7 +1428,10 @@ and register_typeuses' ctx (i : _ Ast.Text.instr) =
   | ArrayFill _ | ArrayCopy _ | ArrayInitData _ | ArrayInitElem _ | RefI31
   | I31Get _ | Const _ | UnOp _ | BinOp _ | I32WrapI64 | I64ExtendI32 _
   | F32DemoteF64 | F64PromoteF32 | ExternConvertAny | AnyConvertExtern | Pop _
-  | TupleMake _ | TupleExtract _ ->
+  | TupleMake _ | TupleExtract _ | VecBitselect | VecConst _ | VecUnOp _
+  | VecBinOp _ | VecTest _ | VecShift _ | VecBitmask _ | VecLoad _ | VecStore _
+  | VecLoadLane _ | VecStoreLane _ | VecLoadSplat _ | VecLoadExtend _
+  | VecExtract _ | VecReplace _ | VecSplat _ | VecShuffle _ | VecTernOp _ ->
       ()
 
 let build_initial_env ctx fields =

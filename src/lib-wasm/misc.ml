@@ -99,6 +99,18 @@ let rec is_int conv sub s =
 let is_int32 s = is_int Int32.of_string Int32.sub s
 let is_int64 s = is_int Int64.of_string Int64.sub s
 
+let is_int16 s =
+  is_int32 s
+  &&
+  let i = Int32.of_string s in
+  i >= -32768l && i < 65536l
+
+let is_int8 s =
+  is_int32 s
+  &&
+  let i = Int32.of_string s in
+  i >= -128l && i < 256l
+
 let check_float s w f =
   if String.length s <= 2 then f s
   else

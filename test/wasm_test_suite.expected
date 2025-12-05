@@ -1,0 +1,539 @@
+==== address.wast ====
+==== align.wast ====
+==== annotations.wast ====
+File "/home/jerome/sources/Wasm/test/core/annotations.wast", line 2, characters 3-5:
+Unknown operator '@a'.
+==== binary-leb128.wast ====
+==== binary.wast ====
+==== block.wast ====
+File "/home/jerome/sources/Wasm/test/core/block.wast", line 333, characters 34-36:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== br.wast ====
+==== br_if.wast ====
+==== br_on_non_null.wast ====
+==== br_on_null.wast ====
+==== br_table.wast ====
+==== bulk-memory/bulk.wast ====
+==== bulk-memory/memory_copy.wast ====
+==== bulk-memory/memory_fill.wast ====
+==== bulk-memory/memory_init.wast ====
+==== bulk-memory/table-sub.wast ====
+==== bulk-memory/table_copy.wast ====
+==== bulk-memory/table_fill.wast ====
+==== bulk-memory/table_init.wast ====
+==== call.wast ====
+==== call_indirect.wast ====
+==== call_ref.wast ====
+==== comments.wast ====
+==== const.wast ====
+==== conversions.wast ====
+==== custom.wast ====
+==== data.wast ====
+==== elem.wast ====
+Fatal error: exception Not_found
+==== endianness.wast ====
+==== exceptions/tag.wast ====
+Validation should have failed (non-empty tag result type):
+  (module (tag (result i32)))
+Validation should have failed (non-empty tag result type):
+  (module (import "" "" (tag (result i32))))
+Validation should have failed (non-empty tag result type):
+  (module (tag (result i32)))
+Validation should have failed (non-empty tag result type):
+  (module (import "" "" (tag (result i32))))
+==== exceptions/throw.wast ====
+==== exceptions/throw_ref.wast ====
+==== exceptions/try_table.wast ====
+==== exports.wast ====
+==== f32.wast ====
+==== f32_bitwise.wast ====
+==== f32_cmp.wast ====
+==== f64.wast ====
+==== f64_bitwise.wast ====
+==== f64_cmp.wast ====
+==== fac.wast ====
+==== float_exprs.wast ====
+==== float_literals.wast ====
+==== float_memory.wast ====
+==== float_misc.wast ====
+==== forward.wast ====
+==== func.wast ====
+File "/home/jerome/sources/Wasm/test/core/func.wast", line 40, characters 28-30:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== func_ptrs.wast ====
+==== gc/array.wast ====
+==== gc/array_copy.wast ====
+==== gc/array_fill.wast ====
+==== gc/array_init_data.wast ====
+==== gc/array_init_elem.wast ====
+==== gc/array_new_data.wast ====
+==== gc/array_new_elem.wast ====
+==== gc/binary-gc.wast ====
+==== gc/br_on_cast.wast ====
+==== gc/br_on_cast_fail.wast ====
+==== gc/extern.wast ====
+==== gc/i31.wast ====
+==== gc/ref_cast.wast ====
+==== gc/ref_eq.wast ====
+==== gc/ref_test.wast ====
+==== gc/struct.wast ====
+==== gc/type-subtyping.wast ====
+==== global.wast ====
+==== i32.wast ====
+==== i64.wast ====
+==== id.wast ====
+File "/home/jerome/sources/Wasm/test/core/id.wast", line 5, characters 8-10:
+Unknown operator '$"'.
+==== if.wast ====
+File "/home/jerome/sources/Wasm/test/core/if.wast", line 502, characters 34-36:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== imports.wast ====
+==== inline-module.wast ====
+==== instance.wast ====
+==== int_exprs.wast ====
+==== int_literals.wast ====
+==== labels.wast ====
+==== left-to-right.wast ====
+==== linking.wast ====
+==== load.wast ====
+==== local_get.wast ====
+==== local_init.wast ====
+Validation should have failed (uninitialized local):
+  (module (func $uninit  (local $x (ref extern)) (drop (local.get $x))))
+Validation should have failed (uninitialized local):
+  (module
+    (func $uninit-after-end (param $p (ref extern))
+      (local $x (ref extern))
+      (block
+        (local.set $x (local.get $p))
+        (drop (local.tee $x (local.get $p))))
+      (drop (local.get $x))
+    )
+  )
+Validation should have failed (uninitialized local):
+  (module
+    (func $uninit-from-if (param $p (ref extern))
+      (local $x (ref extern))
+      (if (i32.const 0)
+        (then (local.set $x (local.get $p)))
+        (else (local.set $x (local.get $p))))
+      (drop (local.get $x))
+    )
+  )
+Validation should have failed (uninitialized local):
+  (module (func $uninit  (local $x (ref extern)) (drop (local.get $x))))
+Validation should have failed (uninitialized local):
+  (module
+    (func $uninit-after-end (param $p (ref extern))
+      (local $x (ref extern))
+      (block
+        (local.set $x (local.get $p))
+        (drop (local.tee $x (local.get $p))))
+      (drop (local.get $x))
+    )
+  )
+Validation should have failed (uninitialized local):
+  (module
+    (func $uninit-from-if (param $p (ref extern))
+      (local $x (ref extern))
+      (if (i32.const 0)
+        (then (local.set $x (local.get $p)))
+        (else (local.set $x (local.get $p))))
+      (drop (local.get $x))
+    )
+  )
+==== local_set.wast ====
+==== local_tee.wast ====
+==== loop.wast ====
+File "/home/jerome/sources/Wasm/test/core/loop.wast", line 410, characters 34-36:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== memory.wast ====
+==== memory64/address64.wast ====
+==== memory64/align64.wast ====
+==== memory64/binary_leb128_64.wast ====
+==== memory64/bulk64.wast ====
+==== memory64/call_indirect64.wast ====
+==== memory64/endianness64.wast ====
+==== memory64/float_memory64.wast ====
+==== memory64/load64.wast ====
+==== memory64/memory64-imports.wast ====
+==== memory64/memory64.wast ====
+==== memory64/memory_copy64.wast ====
+==== memory64/memory_fill64.wast ====
+==== memory64/memory_grow64.wast ====
+==== memory64/memory_init64.wast ====
+==== memory64/memory_redundancy64.wast ====
+==== memory64/memory_trap64.wast ====
+==== memory64/table64.wast ====
+==== memory64/table_copy64.wast ====
+==== memory64/table_copy_mixed.wast ====
+==== memory64/table_fill64.wast ====
+==== memory64/table_get64.wast ====
+==== memory64/table_grow64.wast ====
+==== memory64/table_init64.wast ====
+==== memory64/table_set64.wast ====
+==== memory64/table_size64.wast ====
+==== memory_grow.wast ====
+==== memory_redundancy.wast ====
+==== memory_size.wast ====
+==== memory_trap.wast ====
+==== multi-memory/address0.wast ====
+==== multi-memory/address1.wast ====
+==== multi-memory/align0.wast ====
+==== multi-memory/binary0.wast ====
+==== multi-memory/data0.wast ====
+==== multi-memory/data1.wast ====
+==== multi-memory/data_drop0.wast ====
+==== multi-memory/exports0.wast ====
+==== multi-memory/float_exprs0.wast ====
+==== multi-memory/float_exprs1.wast ====
+==== multi-memory/float_memory0.wast ====
+==== multi-memory/imports0.wast ====
+==== multi-memory/imports1.wast ====
+==== multi-memory/imports2.wast ====
+==== multi-memory/imports3.wast ====
+==== multi-memory/imports4.wast ====
+==== multi-memory/linking0.wast ====
+==== multi-memory/linking1.wast ====
+==== multi-memory/linking2.wast ====
+==== multi-memory/linking3.wast ====
+==== multi-memory/load0.wast ====
+==== multi-memory/load1.wast ====
+==== multi-memory/load2.wast ====
+==== multi-memory/memory-multi.wast ====
+==== multi-memory/memory_copy0.wast ====
+==== multi-memory/memory_copy1.wast ====
+==== multi-memory/memory_fill0.wast ====
+==== multi-memory/memory_grow.wast ====
+==== multi-memory/memory_init0.wast ====
+==== multi-memory/memory_size0.wast ====
+==== multi-memory/memory_size1.wast ====
+==== multi-memory/memory_size2.wast ====
+==== multi-memory/memory_size3.wast ====
+==== multi-memory/memory_size_import.wast ====
+==== multi-memory/memory_trap0.wast ====
+==== multi-memory/memory_trap1.wast ====
+==== multi-memory/start0.wast ====
+==== multi-memory/store0.wast ====
+==== multi-memory/store1.wast ====
+==== multi-memory/store2.wast ====
+==== multi-memory/traps0.wast ====
+==== names.wast ====
+==== nop.wast ====
+==== obsolete-keywords.wast ====
+==== ref.wast ====
+==== ref_as_non_null.wast ====
+==== ref_func.wast ====
+==== ref_is_null.wast ====
+==== ref_null.wast ====
+==== return.wast ====
+==== return_call.wast ====
+==== return_call_indirect.wast ====
+==== return_call_ref.wast ====
+==== select.wast ====
+==== skip-stack-guard-page.wast ====
+==== stack.wast ====
+Fatal error: exception Invalid_argument("index out of bounds")
+==== start.wast ====
+==== store.wast ====
+==== switch.wast ====
+==== table.wast ====
+==== table_get.wast ====
+==== table_grow.wast ====
+==== table_set.wast ====
+==== table_size.wast ====
+==== token.wast ====
+==== traps.wast ====
+==== type-canon.wast ====
+==== type-equivalence.wast ====
+File "/home/jerome/sources/Wasm/test/core/type-equivalence.wast", line 7, characters 25-27:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== type-rec.wast ====
+==== type.wast ====
+File "/home/jerome/sources/Wasm/test/core/type.wast", line 8, characters 21-23:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== unreachable.wast ====
+==== unreached-invalid.wast ====
+==== unreached-valid.wast ====
+==== unwind.wast ====
+==== utf8-custom-section-id.wast ====
+==== utf8-import-field.wast ====
+==== utf8-import-module.wast ====
+==== utf8-invalid-encoding.wast ====
+==== exceptions/core/throw.wast ====
+==== exceptions/core/try_catch.wast ====
+==== sample.wast ====
+==== spec-test-3/address.wast ====
+==== spec-test-3/align.wast ====
+==== spec-test-3/annotations.wast ====
+File "/home/jerome/sources/Wasm/spectec/test-interpreter/spec-test-3/annotations.wast", line 2, characters 3-5:
+Unknown operator '@a'.
+==== spec-test-3/binary-leb128.wast ====
+==== spec-test-3/binary.wast ====
+==== spec-test-3/block.wast ====
+File "/home/jerome/sources/Wasm/spectec/test-interpreter/spec-test-3/block.wast", line 333, characters 34-36:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== spec-test-3/br.wast ====
+==== spec-test-3/br_if.wast ====
+==== spec-test-3/br_on_non_null.wast ====
+==== spec-test-3/br_on_null.wast ====
+==== spec-test-3/br_table.wast ====
+==== spec-test-3/bulk-memory/bulk.wast ====
+==== spec-test-3/bulk-memory/memory_copy.wast ====
+==== spec-test-3/bulk-memory/memory_fill.wast ====
+==== spec-test-3/bulk-memory/memory_init.wast ====
+==== spec-test-3/bulk-memory/table-sub.wast ====
+==== spec-test-3/bulk-memory/table_copy.wast ====
+==== spec-test-3/bulk-memory/table_fill.wast ====
+==== spec-test-3/bulk-memory/table_init.wast ====
+==== spec-test-3/call.wast ====
+==== spec-test-3/call_indirect.wast ====
+==== spec-test-3/call_ref.wast ====
+==== spec-test-3/comments.wast ====
+==== spec-test-3/const.wast ====
+==== spec-test-3/conversions.wast ====
+==== spec-test-3/custom.wast ====
+==== spec-test-3/data.wast ====
+==== spec-test-3/elem.wast ====
+Fatal error: exception Not_found
+==== spec-test-3/endianness.wast ====
+==== spec-test-3/exceptions/tag.wast ====
+Validation should have failed (non-empty tag result type):
+  (module (tag (result i32)))
+Validation should have failed (non-empty tag result type):
+  (module (import "" "" (tag (result i32))))
+Validation should have failed (non-empty tag result type):
+  (module (tag (result i32)))
+Validation should have failed (non-empty tag result type):
+  (module (import "" "" (tag (result i32))))
+==== spec-test-3/exceptions/throw.wast ====
+==== spec-test-3/exceptions/throw_ref.wast ====
+==== spec-test-3/exceptions/try_table.wast ====
+==== spec-test-3/exports.wast ====
+==== spec-test-3/f32.wast ====
+==== spec-test-3/f32_bitwise.wast ====
+==== spec-test-3/f32_cmp.wast ====
+==== spec-test-3/f64.wast ====
+==== spec-test-3/f64_bitwise.wast ====
+==== spec-test-3/f64_cmp.wast ====
+==== spec-test-3/fac.wast ====
+==== spec-test-3/float_exprs.wast ====
+==== spec-test-3/float_literals.wast ====
+==== spec-test-3/float_memory.wast ====
+==== spec-test-3/float_misc.wast ====
+==== spec-test-3/forward.wast ====
+==== spec-test-3/func.wast ====
+File "/home/jerome/sources/Wasm/spectec/test-interpreter/spec-test-3/func.wast", line 40, characters 28-30:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== spec-test-3/func_ptrs.wast ====
+==== spec-test-3/gc/array.wast ====
+==== spec-test-3/gc/array_copy.wast ====
+==== spec-test-3/gc/array_fill.wast ====
+==== spec-test-3/gc/array_init_data.wast ====
+==== spec-test-3/gc/array_init_elem.wast ====
+==== spec-test-3/gc/array_new_data.wast ====
+==== spec-test-3/gc/array_new_elem.wast ====
+==== spec-test-3/gc/binary-gc.wast ====
+==== spec-test-3/gc/br_on_cast.wast ====
+==== spec-test-3/gc/br_on_cast_fail.wast ====
+==== spec-test-3/gc/extern.wast ====
+==== spec-test-3/gc/i31.wast ====
+==== spec-test-3/gc/ref_cast.wast ====
+==== spec-test-3/gc/ref_eq.wast ====
+==== spec-test-3/gc/ref_test.wast ====
+==== spec-test-3/gc/struct.wast ====
+==== spec-test-3/gc/type-subtyping.wast ====
+==== spec-test-3/global.wast ====
+==== spec-test-3/i32.wast ====
+==== spec-test-3/i64.wast ====
+==== spec-test-3/id.wast ====
+File "/home/jerome/sources/Wasm/spectec/test-interpreter/spec-test-3/id.wast", line 5, characters 8-10:
+Unknown operator '$"'.
+==== spec-test-3/if.wast ====
+File "/home/jerome/sources/Wasm/spectec/test-interpreter/spec-test-3/if.wast", line 502, characters 34-36:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== spec-test-3/imports.wast ====
+==== spec-test-3/inline-module.wast ====
+==== spec-test-3/instance.wast ====
+==== spec-test-3/int_exprs.wast ====
+==== spec-test-3/int_literals.wast ====
+==== spec-test-3/labels.wast ====
+==== spec-test-3/left-to-right.wast ====
+==== spec-test-3/linking.wast ====
+==== spec-test-3/load.wast ====
+==== spec-test-3/local_get.wast ====
+==== spec-test-3/local_init.wast ====
+Validation should have failed (uninitialized local):
+  (module (func $uninit  (local $x (ref extern)) (drop (local.get $x))))
+Validation should have failed (uninitialized local):
+  (module
+    (func $uninit-after-end (param $p (ref extern))
+      (local $x (ref extern))
+      (block
+        (local.set $x (local.get $p))
+        (drop (local.tee $x (local.get $p))))
+      (drop (local.get $x))
+    )
+  )
+Validation should have failed (uninitialized local):
+  (module
+    (func $uninit-from-if (param $p (ref extern))
+      (local $x (ref extern))
+      (if (i32.const 0)
+        (then (local.set $x (local.get $p)))
+        (else (local.set $x (local.get $p))))
+      (drop (local.get $x))
+    )
+  )
+Validation should have failed (uninitialized local):
+  (module (func $uninit  (local $x (ref extern)) (drop (local.get $x))))
+Validation should have failed (uninitialized local):
+  (module
+    (func $uninit-after-end (param $p (ref extern))
+      (local $x (ref extern))
+      (block
+        (local.set $x (local.get $p))
+        (drop (local.tee $x (local.get $p))))
+      (drop (local.get $x))
+    )
+  )
+Validation should have failed (uninitialized local):
+  (module
+    (func $uninit-from-if (param $p (ref extern))
+      (local $x (ref extern))
+      (if (i32.const 0)
+        (then (local.set $x (local.get $p)))
+        (else (local.set $x (local.get $p))))
+      (drop (local.get $x))
+    )
+  )
+==== spec-test-3/local_set.wast ====
+==== spec-test-3/local_tee.wast ====
+==== spec-test-3/loop.wast ====
+File "/home/jerome/sources/Wasm/spectec/test-interpreter/spec-test-3/loop.wast", line 410, characters 34-36:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== spec-test-3/memory.wast ====
+==== spec-test-3/memory64/address64.wast ====
+==== spec-test-3/memory64/align64.wast ====
+==== spec-test-3/memory64/binary_leb128_64.wast ====
+==== spec-test-3/memory64/bulk64.wast ====
+==== spec-test-3/memory64/call_indirect64.wast ====
+==== spec-test-3/memory64/endianness64.wast ====
+==== spec-test-3/memory64/float_memory64.wast ====
+==== spec-test-3/memory64/load64.wast ====
+==== spec-test-3/memory64/memory64-imports.wast ====
+==== spec-test-3/memory64/memory64.wast ====
+==== spec-test-3/memory64/memory_copy64.wast ====
+==== spec-test-3/memory64/memory_fill64.wast ====
+==== spec-test-3/memory64/memory_grow64.wast ====
+==== spec-test-3/memory64/memory_init64.wast ====
+==== spec-test-3/memory64/memory_redundancy64.wast ====
+==== spec-test-3/memory64/memory_trap64.wast ====
+==== spec-test-3/memory64/table64.wast ====
+==== spec-test-3/memory64/table_copy64.wast ====
+==== spec-test-3/memory64/table_copy_mixed.wast ====
+==== spec-test-3/memory64/table_fill64.wast ====
+==== spec-test-3/memory64/table_get64.wast ====
+==== spec-test-3/memory64/table_grow64.wast ====
+==== spec-test-3/memory64/table_init64.wast ====
+==== spec-test-3/memory64/table_set64.wast ====
+==== spec-test-3/memory64/table_size64.wast ====
+==== spec-test-3/memory_grow.wast ====
+==== spec-test-3/memory_redundancy.wast ====
+==== spec-test-3/memory_size.wast ====
+==== spec-test-3/memory_trap.wast ====
+==== spec-test-3/multi-memory/address0.wast ====
+==== spec-test-3/multi-memory/address1.wast ====
+==== spec-test-3/multi-memory/align0.wast ====
+==== spec-test-3/multi-memory/binary0.wast ====
+==== spec-test-3/multi-memory/data0.wast ====
+==== spec-test-3/multi-memory/data1.wast ====
+==== spec-test-3/multi-memory/data_drop0.wast ====
+==== spec-test-3/multi-memory/exports0.wast ====
+==== spec-test-3/multi-memory/float_exprs0.wast ====
+==== spec-test-3/multi-memory/float_exprs1.wast ====
+==== spec-test-3/multi-memory/float_memory0.wast ====
+==== spec-test-3/multi-memory/imports0.wast ====
+==== spec-test-3/multi-memory/imports1.wast ====
+==== spec-test-3/multi-memory/imports2.wast ====
+==== spec-test-3/multi-memory/imports3.wast ====
+==== spec-test-3/multi-memory/imports4.wast ====
+==== spec-test-3/multi-memory/linking0.wast ====
+==== spec-test-3/multi-memory/linking1.wast ====
+==== spec-test-3/multi-memory/linking2.wast ====
+==== spec-test-3/multi-memory/linking3.wast ====
+==== spec-test-3/multi-memory/load0.wast ====
+==== spec-test-3/multi-memory/load1.wast ====
+==== spec-test-3/multi-memory/load2.wast ====
+==== spec-test-3/multi-memory/memory-multi.wast ====
+==== spec-test-3/multi-memory/memory_copy0.wast ====
+==== spec-test-3/multi-memory/memory_copy1.wast ====
+==== spec-test-3/multi-memory/memory_fill0.wast ====
+==== spec-test-3/multi-memory/memory_grow.wast ====
+==== spec-test-3/multi-memory/memory_init0.wast ====
+==== spec-test-3/multi-memory/memory_size0.wast ====
+==== spec-test-3/multi-memory/memory_size1.wast ====
+==== spec-test-3/multi-memory/memory_size2.wast ====
+==== spec-test-3/multi-memory/memory_size3.wast ====
+==== spec-test-3/multi-memory/memory_size_import.wast ====
+==== spec-test-3/multi-memory/memory_trap0.wast ====
+==== spec-test-3/multi-memory/memory_trap1.wast ====
+==== spec-test-3/multi-memory/start0.wast ====
+==== spec-test-3/multi-memory/store0.wast ====
+==== spec-test-3/multi-memory/store1.wast ====
+==== spec-test-3/multi-memory/store2.wast ====
+==== spec-test-3/multi-memory/traps0.wast ====
+==== spec-test-3/names.wast ====
+==== spec-test-3/nop.wast ====
+==== spec-test-3/obsolete-keywords.wast ====
+==== spec-test-3/ref.wast ====
+==== spec-test-3/ref_as_non_null.wast ====
+==== spec-test-3/ref_func.wast ====
+==== spec-test-3/ref_is_null.wast ====
+==== spec-test-3/ref_null.wast ====
+==== spec-test-3/return.wast ====
+==== spec-test-3/return_call.wast ====
+==== spec-test-3/return_call_indirect.wast ====
+==== spec-test-3/return_call_ref.wast ====
+==== spec-test-3/select.wast ====
+==== spec-test-3/skip-stack-guard-page.wast ====
+==== spec-test-3/stack.wast ====
+Fatal error: exception Invalid_argument("index out of bounds")
+==== spec-test-3/start.wast ====
+==== spec-test-3/store.wast ====
+==== spec-test-3/switch.wast ====
+==== spec-test-3/table.wast ====
+==== spec-test-3/table_get.wast ====
+==== spec-test-3/table_grow.wast ====
+==== spec-test-3/table_set.wast ====
+==== spec-test-3/table_size.wast ====
+==== spec-test-3/token.wast ====
+==== spec-test-3/traps.wast ====
+==== spec-test-3/type-canon.wast ====
+==== spec-test-3/type-equivalence.wast ====
+File "/home/jerome/sources/Wasm/spectec/test-interpreter/spec-test-3/type-equivalence.wast", line 7, characters 25-27:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== spec-test-3/type-rec.wast ====
+==== spec-test-3/type.wast ====
+File "/home/jerome/sources/Wasm/spectec/test-interpreter/spec-test-3/type.wast", line 8, characters 21-23:
+Syntax error after 'param' and before '$x'.
+Expecting a parameter identifier or a value type.
+==== spec-test-3/unreachable.wast ====
+==== spec-test-3/unreached-invalid.wast ====
+==== spec-test-3/unreached-valid.wast ====
+==== spec-test-3/unwind.wast ====
+==== spec-test-3/utf8-custom-section-id.wast ====
+==== spec-test-3/utf8-import-field.wast ====
+==== spec-test-3/utf8-import-module.wast ====
+==== spec-test-3/utf8-invalid-encoding.wast ====

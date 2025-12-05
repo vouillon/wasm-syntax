@@ -214,10 +214,11 @@ let rec token lexbuf =
   | "local.tee" -> LOCAL_TEE
   | "global.get" -> GLOBAL_GET
   | "global.set" -> GLOBAL_SET
-  | "i32.load" -> LOAD (I32 ())
-  | "i64.load" -> LOAD (I64 ())
-  | "f32.load" -> LOAD (F32 ())
-  | "f64.load" -> LOAD (F64 ())
+  | "i32.load" -> LOAD NumI32
+  | "i64.load" -> LOAD NumI64
+  | "f32.load" -> LOAD NumF32
+  | "f64.load" -> LOAD NumF64
+  | "v128.load" -> VEC_LOAD Load128
   | "i32.load8_u" -> LOADS (`I32, `I8, Unsigned)
   | "i32.load8_s" -> LOADS (`I32, `I8, Signed)
   | "i64.load8_u" -> LOADS (`I64, `I8, Unsigned)
@@ -228,10 +229,11 @@ let rec token lexbuf =
   | "i64.load16_s" -> LOADS (`I64, `I16, Signed)
   | "i64.load32_u" -> LOADS (`I64, `I32, Unsigned)
   | "i64.load32_s" -> LOADS (`I64, `I32, Signed)
-  | "i32.store" -> STORE (I32 ())
-  | "i64.store" -> STORE (I64 ())
-  | "f32.store" -> STORE (F32 ())
-  | "f64.store" -> STORE (F64 ())
+  | "i32.store" -> STORE NumI32
+  | "i64.store" -> STORE NumI64
+  | "f32.store" -> STORE NumF32
+  | "f64.store" -> STORE NumF64
+  | "v128.store" -> VEC_STORE
   | "i32.store8" -> STORES (`I32, `I8)
   | "i64.store8" -> STORES (`I64, `I8)
   | "i32.store16" -> STORES (`I32, `I16)
@@ -285,6 +287,7 @@ let rec token lexbuf =
   | "i64.const" -> I64_CONST
   | "f32.const" -> F32_CONST
   | "f64.const" -> F64_CONST
+  | "v128.const" -> V128_CONST
   | "i32.clz" -> INSTR (UnOp (I32 Clz))
   | "i32.ctz" -> INSTR (UnOp (I32 Ctz))
   | "i32.popcnt" -> INSTR (UnOp (I32 Popcnt))
@@ -383,6 +386,240 @@ let rec token lexbuf =
   | "f64.gt" -> INSTR (BinOp (F64 Gt))
   | "f64.le" -> INSTR (BinOp (F64 Le))
   | "f64.ge" -> INSTR (BinOp (F64 Ge))
+  | "v128.not" -> INSTR (VecUnOp VecNot)
+  | "v128.and" -> INSTR (VecBinOp VecAnd)
+  | "v128.andnot" -> INSTR (VecBinOp VecAndNot)
+  | "v128.or" -> INSTR (VecBinOp VecOr)
+  | "v128.xor" -> INSTR (VecBinOp VecXor)
+  | "v128.bitselect" -> INSTR VecBitselect
+  | "v128.any_true" ->
+      INSTR (VecTest (AnyTrue I8x16))
+      (* This seems wrong, AnyTrue takes shape *)
+  | "i8x16.abs" -> INSTR (VecUnOp (VecAbs I8x16))
+  | "i8x16.neg" -> INSTR (VecUnOp (VecNeg I8x16))
+  | "i8x16.popcnt" -> INSTR (VecUnOp (VecPopcnt I8x16))
+  | "i8x16.all_true" -> INSTR (VecTest (AllTrue I8x16))
+  | "i8x16.bitmask" -> INSTR (VecBitmask (Bitmask I8x16))
+  | "i8x16.narrow_i16x8_s" -> INSTR (VecBinOp (VecNarrow (Signed, I8x16)))
+  | "i8x16.narrow_i16x8_u" -> INSTR (VecBinOp (VecNarrow (Unsigned, I8x16)))
+  | "i8x16.shl" -> INSTR (VecShift (Shl I8x16))
+  | "i8x16.shr_s" -> INSTR (VecShift (Shr (Signed, I8x16)))
+  | "i8x16.shr_u" -> INSTR (VecShift (Shr (Unsigned, I8x16)))
+  | "i8x16.add" -> INSTR (VecBinOp (VecAdd I8x16))
+  | "i8x16.add_sat_s" -> INSTR (VecBinOp (VecAddSat (Signed, I8x16)))
+  | "i8x16.add_sat_u" -> INSTR (VecBinOp (VecAddSat (Unsigned, I8x16)))
+  | "i8x16.sub" -> INSTR (VecBinOp (VecSub I8x16))
+  | "i8x16.sub_sat_s" -> INSTR (VecBinOp (VecSubSat (Signed, I8x16)))
+  | "i8x16.sub_sat_u" -> INSTR (VecBinOp (VecSubSat (Unsigned, I8x16)))
+  | "i8x16.min_s" -> INSTR (VecBinOp (VecMin (Some Signed, I8x16)))
+  | "i8x16.min_u" -> INSTR (VecBinOp (VecMin (Some Unsigned, I8x16)))
+  | "i8x16.max_s" -> INSTR (VecBinOp (VecMax (Some Signed, I8x16)))
+  | "i8x16.max_u" -> INSTR (VecBinOp (VecMax (Some Unsigned, I8x16)))
+  | "i8x16.avgr_u" -> INSTR (VecBinOp (VecAvgr (Unsigned, I8x16)))
+  | "i8x16.eq" -> INSTR (VecBinOp (VecEq I8x16))
+  | "i8x16.ne" -> INSTR (VecBinOp (VecNe I8x16))
+  | "i8x16.lt_s" -> INSTR (VecBinOp (VecLt (Signed, I8x16)))
+  | "i8x16.lt_u" -> INSTR (VecBinOp (VecLt (Unsigned, I8x16)))
+  | "i8x16.gt_s" -> INSTR (VecBinOp (VecGt (Signed, I8x16)))
+  | "i8x16.gt_u" -> INSTR (VecBinOp (VecGt (Unsigned, I8x16)))
+  | "i8x16.le_s" -> INSTR (VecBinOp (VecLe (Signed, I8x16)))
+  | "i8x16.le_u" -> INSTR (VecBinOp (VecLe (Unsigned, I8x16)))
+  | "i8x16.ge_s" -> INSTR (VecBinOp (VecGe (Signed, I8x16)))
+  | "i8x16.ge_u" -> INSTR (VecBinOp (VecGe (Unsigned, I8x16)))
+  | "i16x8.abs" -> INSTR (VecUnOp (VecAbs I16x8))
+  | "i16x8.neg" -> INSTR (VecUnOp (VecNeg I16x8))
+  | "i16x8.popcnt" -> INSTR (VecUnOp (VecPopcnt I16x8))
+  | "i16x8.all_true" -> INSTR (VecTest (AllTrue I16x8))
+  | "i16x8.bitmask" -> INSTR (VecBitmask (Bitmask I16x8))
+  | "i16x8.narrow_i32x4_s" -> INSTR (VecBinOp (VecNarrow (Signed, I16x8)))
+  | "i16x8.narrow_i32x4_u" -> INSTR (VecBinOp (VecNarrow (Unsigned, I16x8)))
+  | "i16x8.extend_low_i8x16_s" ->
+      INSTR (VecUnOp (VecExtend (`Low, `_8, Signed, I16x8)))
+  | "i16x8.extend_high_i8x16_s" ->
+      INSTR (VecUnOp (VecExtend (`High, `_8, Signed, I16x8)))
+  | "i16x8.extend_low_i8x16_u" ->
+      INSTR (VecUnOp (VecExtend (`Low, `_8, Unsigned, I16x8)))
+  | "i16x8.extend_high_i8x16_u" ->
+      INSTR (VecUnOp (VecExtend (`High, `_8, Unsigned, I16x8)))
+  | "i16x8.shl" -> INSTR (VecShift (Shl I16x8))
+  | "i16x8.shr_s" -> INSTR (VecShift (Shr (Signed, I16x8)))
+  | "i16x8.shr_u" -> INSTR (VecShift (Shr (Unsigned, I16x8)))
+  | "i16x8.add" -> INSTR (VecBinOp (VecAdd I16x8))
+  | "i16x8.add_sat_s" -> INSTR (VecBinOp (VecAddSat (Signed, I16x8)))
+  | "i16x8.add_sat_u" -> INSTR (VecBinOp (VecAddSat (Unsigned, I16x8)))
+  | "i16x8.sub" -> INSTR (VecBinOp (VecSub I16x8))
+  | "i16x8.sub_sat_s" -> INSTR (VecBinOp (VecSubSat (Signed, I16x8)))
+  | "i16x8.sub_sat_u" -> INSTR (VecBinOp (VecSubSat (Unsigned, I16x8)))
+  | "i16x8.mul" -> INSTR (VecBinOp (VecMul I16x8))
+  | "i16x8.min_s" -> INSTR (VecBinOp (VecMin (Some Signed, I16x8)))
+  | "i16x8.min_u" -> INSTR (VecBinOp (VecMin (Some Unsigned, I16x8)))
+  | "i16x8.max_s" -> INSTR (VecBinOp (VecMax (Some Signed, I16x8)))
+  | "i16x8.max_u" -> INSTR (VecBinOp (VecMax (Some Unsigned, I16x8)))
+  | "i16x8.avgr_u" -> INSTR (VecBinOp (VecAvgr (Unsigned, I16x8)))
+  | "i16x8.q15mulr_sat_s" -> INSTR (VecBinOp (VecQ15MulrSat I16x8))
+  | "i16x8.extadd_pairwise_i8x16_s" ->
+      INSTR (VecUnOp (VecExtAddPairwise (Signed, I16x8)))
+  | "i16x8.extadd_pairwise_i8x16_u" ->
+      INSTR (VecUnOp (VecExtAddPairwise (Unsigned, I16x8)))
+  | "i16x8.eq" -> INSTR (VecBinOp (VecEq I16x8))
+  | "i16x8.ne" -> INSTR (VecBinOp (VecNe I16x8))
+  | "i16x8.lt_s" -> INSTR (VecBinOp (VecLt (Signed, I16x8)))
+  | "i16x8.lt_u" -> INSTR (VecBinOp (VecLt (Unsigned, I16x8)))
+  | "i16x8.gt_s" -> INSTR (VecBinOp (VecGt (Signed, I16x8)))
+  | "i16x8.gt_u" -> INSTR (VecBinOp (VecGt (Unsigned, I16x8)))
+  | "i16x8.le_s" -> INSTR (VecBinOp (VecLe (Signed, I16x8)))
+  | "i16x8.le_u" -> INSTR (VecBinOp (VecLe (Unsigned, I16x8)))
+  | "i16x8.ge_s" -> INSTR (VecBinOp (VecGe (Signed, I16x8)))
+  | "i16x8.ge_u" -> INSTR (VecBinOp (VecGe (Unsigned, I16x8)))
+  | "i32x4.abs" -> INSTR (VecUnOp (VecAbs I32x4))
+  | "i32x4.neg" -> INSTR (VecUnOp (VecNeg I32x4))
+  | "i32x4.popcnt" -> INSTR (VecUnOp (VecPopcnt I32x4))
+  | "i32x4.all_true" -> INSTR (VecTest (AllTrue I32x4))
+  | "i32x4.bitmask" -> INSTR (VecBitmask (Bitmask I32x4))
+  | "i32x4.extend_low_i16x8_s" ->
+      INSTR (VecUnOp (VecExtend (`Low, `_16, Signed, I32x4)))
+  | "i32x4.extend_high_i16x8_s" ->
+      INSTR (VecUnOp (VecExtend (`High, `_16, Signed, I32x4)))
+  | "i32x4.extend_low_i16x8_u" ->
+      INSTR (VecUnOp (VecExtend (`Low, `_16, Unsigned, I32x4)))
+  | "i32x4.extend_high_i16x8_u" ->
+      INSTR (VecUnOp (VecExtend (`High, `_16, Unsigned, I32x4)))
+  | "i32x4.shl" -> INSTR (VecShift (Shl I32x4))
+  | "i32x4.shr_s" -> INSTR (VecShift (Shr (Signed, I32x4)))
+  | "i32x4.shr_u" -> INSTR (VecShift (Shr (Unsigned, I32x4)))
+  | "i32x4.add" -> INSTR (VecBinOp (VecAdd I32x4))
+  | "i32x4.sub" -> INSTR (VecBinOp (VecSub I32x4))
+  | "i32x4.mul" -> INSTR (VecBinOp (VecMul I32x4))
+  | "i32x4.min_s" -> INSTR (VecBinOp (VecMin (Some Signed, I32x4)))
+  | "i32x4.min_u" -> INSTR (VecBinOp (VecMin (Some Unsigned, I32x4)))
+  | "i32x4.max_s" -> INSTR (VecBinOp (VecMax (Some Signed, I32x4)))
+  | "i32x4.max_u" -> INSTR (VecBinOp (VecMax (Some Unsigned, I32x4)))
+  | "i8x16.relaxed_swizzle" -> INSTR (VecBinOp VecRelaxedSwizzle)
+  | "i32x4.relaxed_trunc_f32x4_s" ->
+      INSTR (VecUnOp (VecRelaxedTrunc (`F32, Signed, I32x4)))
+  | "i32x4.relaxed_trunc_f32x4_u" ->
+      INSTR (VecUnOp (VecRelaxedTrunc (`F32, Unsigned, I32x4)))
+  | "i32x4.relaxed_trunc_f64x2_s_zero" ->
+      INSTR (VecUnOp (VecRelaxedTruncZero (`F64, Signed, I32x4)))
+  | "i32x4.relaxed_trunc_f64x2_u_zero" ->
+      INSTR (VecUnOp (VecRelaxedTruncZero (`F64, Unsigned, I32x4)))
+  | "f32x4.relaxed_madd" -> VEC_TERN_OP (VecRelaxedMAdd F32x4)
+  | "f32x4.relaxed_nmadd" -> VEC_TERN_OP (VecRelaxedNMAdd F32x4)
+  | "f64x2.relaxed_madd" -> VEC_TERN_OP (VecRelaxedMAdd F64x2)
+  | "f64x2.relaxed_nmadd" -> VEC_TERN_OP (VecRelaxedNMAdd F64x2)
+  | "i8x16.relaxed_laneselect" -> VEC_TERN_OP (VecRelaxedLaneSelect I8x16)
+  | "i16x8.relaxed_laneselect" -> VEC_TERN_OP (VecRelaxedLaneSelect I16x8)
+  | "i32x4.relaxed_laneselect" -> VEC_TERN_OP (VecRelaxedLaneSelect I32x4)
+  | "i64x2.relaxed_laneselect" -> VEC_TERN_OP (VecRelaxedLaneSelect I64x2)
+  | "f32x4.relaxed_min" -> INSTR (VecBinOp (VecRelaxedMin F32x4))
+  | "f32x4.relaxed_max" -> INSTR (VecBinOp (VecRelaxedMax F32x4))
+  | "f64x2.relaxed_min" -> INSTR (VecBinOp (VecRelaxedMin F64x2))
+  | "f64x2.relaxed_max" -> INSTR (VecBinOp (VecRelaxedMax F64x2))
+  | "i16x8.relaxed_q15mulr_s" ->
+      INSTR (VecBinOp (VecRelaxedQ15Mulr (Signed, I16x8)))
+  | "i16x8.relaxed_dot_i8x16_i7x16_s" -> INSTR (VecBinOp (VecRelaxedDot I16x8))
+  | "i32x4.relaxed_dot_i8x16_i7x16_add_s" ->
+      VEC_TERN_OP (VecRelaxedDotAdd I32x4)
+  | "i32x4.dot_i16x8_s" -> INSTR (VecBinOp (VecDot I32x4))
+  | "i32x4.extadd_pairwise_i16x8_s" ->
+      INSTR (VecUnOp (VecExtAddPairwise (Signed, I32x4)))
+  | "i32x4.extadd_pairwise_i16x8_u" ->
+      INSTR (VecUnOp (VecExtAddPairwise (Unsigned, I32x4)))
+  | "i32x4.eq" -> INSTR (VecBinOp (VecEq I32x4))
+  | "i32x4.ne" -> INSTR (VecBinOp (VecNe I32x4))
+  | "i32x4.lt_s" -> INSTR (VecBinOp (VecLt (Signed, I32x4)))
+  | "i32x4.lt_u" -> INSTR (VecBinOp (VecLt (Unsigned, I32x4)))
+  | "i32x4.gt_s" -> INSTR (VecBinOp (VecGt (Signed, I32x4)))
+  | "i32x4.gt_u" -> INSTR (VecBinOp (VecGt (Unsigned, I32x4)))
+  | "i32x4.le_s" -> INSTR (VecBinOp (VecLe (Signed, I32x4)))
+  | "i32x4.le_u" -> INSTR (VecBinOp (VecLe (Unsigned, I32x4)))
+  | "i32x4.ge_s" -> INSTR (VecBinOp (VecGe (Signed, I32x4)))
+  | "i32x4.ge_u" -> INSTR (VecBinOp (VecGe (Unsigned, I32x4)))
+  | "i64x2.abs" -> INSTR (VecUnOp (VecAbs I64x2))
+  | "i64x2.neg" -> INSTR (VecUnOp (VecNeg I64x2))
+  | "i64x2.popcnt" -> INSTR (VecUnOp (VecPopcnt I64x2))
+  | "i64x2.all_true" -> INSTR (VecTest (AllTrue I64x2))
+  | "i64x2.bitmask" -> INSTR (VecBitmask (Bitmask I64x2))
+  | "i64x2.extend_low_i32x4_s" ->
+      INSTR (VecUnOp (VecExtend (`Low, `_32, Signed, I64x2)))
+  | "i64x2.extend_high_i32x4_s" ->
+      INSTR (VecUnOp (VecExtend (`High, `_32, Signed, I64x2)))
+  | "i64x2.extend_low_i32x4_u" ->
+      INSTR (VecUnOp (VecExtend (`Low, `_32, Unsigned, I64x2)))
+  | "i64x2.extend_high_i32x4_u" ->
+      INSTR (VecUnOp (VecExtend (`High, `_32, Unsigned, I64x2)))
+  | "i64x2.shl" -> INSTR (VecShift (Shl I64x2))
+  | "i64x2.shr_s" -> INSTR (VecShift (Shr (Signed, I64x2)))
+  | "i64x2.shr_u" -> INSTR (VecShift (Shr (Unsigned, I64x2)))
+  | "i64x2.add" -> INSTR (VecBinOp (VecAdd I64x2))
+  | "i64x2.sub" -> INSTR (VecBinOp (VecSub I64x2))
+  | "i64x2.mul" -> INSTR (VecBinOp (VecMul I64x2))
+  | "i64x2.eq" -> INSTR (VecBinOp (VecEq I64x2))
+  | "i64x2.ne" -> INSTR (VecBinOp (VecNe I64x2))
+  | "i64x2.lt_s" -> INSTR (VecBinOp (VecLt (Signed, I64x2)))
+  | "i64x2.gt_s" -> INSTR (VecBinOp (VecGt (Signed, I64x2)))
+  | "i64x2.le_s" -> INSTR (VecBinOp (VecLe (Signed, I64x2)))
+  | "i64x2.ge_s" -> INSTR (VecBinOp (VecGe (Signed, I64x2)))
+  | "f32x4.abs" -> INSTR (VecUnOp (VecAbs F32x4))
+  | "f32x4.neg" -> INSTR (VecUnOp (VecNeg F32x4))
+  | "f32x4.sqrt" -> INSTR (VecUnOp (VecSqrt F32x4))
+  | "f32x4.ceil" -> INSTR (VecUnOp (VecCeil F32x4))
+  | "f32x4.floor" -> INSTR (VecUnOp (VecFloor F32x4))
+  | "f32x4.trunc" -> INSTR (VecUnOp (VecTrunc F32x4))
+  | "f32x4.nearest" -> INSTR (VecUnOp (VecNearest F32x4))
+  | "f32x4.add" -> INSTR (VecBinOp (VecAdd F32x4))
+  | "f32x4.sub" -> INSTR (VecBinOp (VecSub F32x4))
+  | "f32x4.mul" -> INSTR (VecBinOp (VecMul F32x4))
+  | "f32x4.div" -> INSTR (VecBinOp (VecDiv F32x4))
+  | "f32x4.min" -> INSTR (VecBinOp (VecMin (None, F32x4)))
+  | "f32x4.max" -> INSTR (VecBinOp (VecMax (None, F32x4)))
+  | "f32x4.pmin" -> INSTR (VecBinOp (VecPMin F32x4))
+  | "f32x4.pmax" -> INSTR (VecBinOp (VecPMax F32x4))
+  | "f32x4.eq" -> INSTR (VecBinOp (VecEq F32x4))
+  | "f32x4.ne" -> INSTR (VecBinOp (VecNe F32x4))
+  | "f32x4.lt" -> INSTR (VecBinOp (VecLt (Signed, F32x4)))
+  | "f32x4.gt" -> INSTR (VecBinOp (VecGt (Signed, F32x4)))
+  | "f32x4.le" -> INSTR (VecBinOp (VecLe (Signed, F32x4)))
+  | "f32x4.ge" -> INSTR (VecBinOp (VecGe (Signed, F32x4)))
+  | "f64x2.abs" -> INSTR (VecUnOp (VecAbs F64x2))
+  | "f64x2.neg" -> INSTR (VecUnOp (VecNeg F64x2))
+  | "f64x2.sqrt" -> INSTR (VecUnOp (VecSqrt F64x2))
+  | "f64x2.ceil" -> INSTR (VecUnOp (VecCeil F64x2))
+  | "f64x2.floor" -> INSTR (VecUnOp (VecFloor F64x2))
+  | "f64x2.trunc" -> INSTR (VecUnOp (VecTrunc F64x2))
+  | "f64x2.nearest" -> INSTR (VecUnOp (VecNearest F64x2))
+  | "f64x2.add" -> INSTR (VecBinOp (VecAdd F64x2))
+  | "f64x2.sub" -> INSTR (VecBinOp (VecSub F64x2))
+  | "f64x2.mul" -> INSTR (VecBinOp (VecMul F64x2))
+  | "f64x2.div" -> INSTR (VecBinOp (VecDiv F64x2))
+  | "f64x2.min" -> INSTR (VecBinOp (VecMin (None, F64x2)))
+  | "f64x2.max" -> INSTR (VecBinOp (VecMax (None, F64x2)))
+  | "f64x2.pmin" -> INSTR (VecBinOp (VecPMin F64x2))
+  | "f64x2.pmax" -> INSTR (VecBinOp (VecPMax F64x2))
+  | "f64x2.eq" -> INSTR (VecBinOp (VecEq F64x2))
+  | "f64x2.ne" -> INSTR (VecBinOp (VecNe F64x2))
+  | "f64x2.lt" -> INSTR (VecBinOp (VecLt (Signed, F64x2)))
+  | "f64x2.gt" -> INSTR (VecBinOp (VecGt (Signed, F64x2)))
+  | "f64x2.le" -> INSTR (VecBinOp (VecLe (Signed, F64x2)))
+  | "f64x2.ge" -> INSTR (VecBinOp (VecGe (Signed, F64x2)))
+  | "i32x4.trunc_sat_f32x4_s" ->
+      INSTR (VecUnOp (VecTruncSat (`F32, Signed, I32x4)))
+  | "i32x4.trunc_sat_f32x4_u" ->
+      INSTR (VecUnOp (VecTruncSat (`F32, Unsigned, I32x4)))
+  | "f32x4.convert_i32x4_s" ->
+      INSTR (VecUnOp (VecConvert (`I32, Signed, F32x4)))
+  | "f32x4.convert_i32x4_u" ->
+      INSTR (VecUnOp (VecConvert (`I32, Unsigned, F32x4)))
+  | "i32x4.trunc_sat_f64x2_s_zero" ->
+      INSTR (VecUnOp (VecTruncSat (`F64, Signed, I32x4)))
+  | "i32x4.trunc_sat_f64x2_u_zero" ->
+      INSTR (VecUnOp (VecTruncSat (`F64, Unsigned, I32x4)))
+  | "f64x2.convert_low_i32x4_s" ->
+      INSTR (VecUnOp (VecConvert (`I32, Signed, F64x2)))
+  | "f64x2.convert_low_i32x4_u" ->
+      INSTR (VecUnOp (VecConvert (`I32, Unsigned, F64x2)))
+  | "f32x4.demote_f64x2_zero" -> INSTR (VecUnOp (VecDemote (`F64, F32x4)))
+  | "f64x2.promote_low_f32x4" -> INSTR (VecUnOp (VecPromote (`F32, F64x2)))
   | "i32.wrap_i64" -> INSTR I32WrapI64
   | "i32.trunc_f32_s" -> INSTR (UnOp (I32 (Trunc (`F32, Signed))))
   | "i32.trunc_f32_u" -> INSTR (UnOp (I32 (Trunc (`F32, Unsigned))))
@@ -451,7 +688,6 @@ let rec token lexbuf =
   | "register" -> REGISTER
   | "invoke" -> INVOKE
   | "get" -> GET
-  | "v128" -> V128
   | "ref.host" -> REF_HOST
   | "i8x16" -> I8X16
   | "i16x8" -> I16X8
@@ -469,7 +705,6 @@ let rec token lexbuf =
   | "assert_return_arithmetic_nan" | "assert_return_canonical_nan" ->
       ASSERT_RETURN_NAN
   | "nan:canonical" | "nan:arithmetic" -> NAN
-  | "v128.const" -> V128_CONST
   | "ref.extern" -> REF_EXTERN
   | "ref.struct" -> REF_STRUCT
   | "ref.array" -> REF_ARRAY

@@ -2,7 +2,7 @@
  (name utils)
  (public_name wax.utils)
  (libraries unix)
- (modules ast colors printer uint32 uint64))
+ (modules ast colors printer uint32 uint64 v128))
 
 (library
  (name source_map)

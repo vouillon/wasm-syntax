@@ -336,6 +336,28 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | Pop i -> Pop (valtype ctx i)
     | TupleMake u -> TupleMake u
     | TupleExtract (u1, u2) -> TupleExtract (u1, u2)
+    | VecLoad (o, op, m) -> VecLoad (resolve_idx ctx.memories o, op, m)
+    | VecStore (o, m) -> VecStore (resolve_idx ctx.memories o, m)
+    | VecLoadLane (o, op, m, idx) ->
+        VecLoadLane (resolve_idx ctx.memories o, op, m, Int32.of_string idx)
+    | VecStoreLane (o, op, m, idx) ->
+        VecStoreLane (resolve_idx ctx.memories o, op, m, Int32.of_string idx)
+    | VecLoadSplat (o, op, m) -> VecLoadSplat (resolve_idx ctx.memories o, op, m)
+    | VecLoadExtend (o, op, m) ->
+        VecLoadExtend (resolve_idx ctx.memories o, op, m)
+    | VecConst v -> VecConst (Utils.V128.to_string v)
+    | VecUnOp op -> VecUnOp op
+    | VecBinOp op -> VecBinOp op
+    | VecTest op -> VecTest op
+    | VecShift op -> VecShift op
+    | VecBitmask op -> VecBitmask op
+    | VecBitselect -> VecBitselect
+    | VecExtract (op, signage, idx) ->
+        VecExtract (op, signage, Int32.of_string idx)
+    | VecReplace (op, idx) -> VecReplace (op, Int32.of_string idx)
+    | VecSplat op -> VecSplat op
+    | VecShuffle (op, v) -> VecShuffle (op, Utils.V128.to_string v)
+    | VecTernOp op -> VecTernOp op
     | Folded (i, is) ->
         Folded (instr ~resolve_type ctx i, List.map (instr ~resolve_type ctx) is)
   in
@@ -749,7 +771,9 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
           in
           scan rest table_idx (e :: acc)
       | T.Table { typ; init = T.Init_segment exprs; _ } :: rest ->
-          let mode = B.Active (table_idx, [ Ast.no_loc (B.Const (B.I32 0l)) ]) in
+          let mode =
+            B.Active (table_idx, [ Ast.no_loc (B.Const (B.I32 0l)) ])
+          in
           let e =
             {
               B.typ = reftype ctx typ.reftype;

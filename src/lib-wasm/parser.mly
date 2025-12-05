@@ -87,9 +87,15 @@ ZZZ
 %token LOCAL_TEE
 %token GLOBAL_GET
 %token GLOBAL_SET
-%token <(unit, unit, unit, unit) Ast.Text.op> STORE
+%token <Ast.Text.num_type> STORE
 %token <[`I32|`I64] * [`I8 | `I16 | `I32]> STORES
-%token <(unit, unit, unit, unit) Ast.Text.op> LOAD
+%token <Ast.Text.num_type> LOAD
+%token <Ast.Text.vec_load_op> VEC_LOAD
+%token VEC_STORE
+%token <Ast.vec_shift_op> VEC_SHIFT_OP
+%token <Ast.vec_bitmask_op> VEC_BITMASK_OP
+%token <Ast.vec_tern_op> VEC_TERN_OP
+%token VEC_BITSELECT
 %token <[`I32|`I64] * [`I8 | `I16 | `I32] * Ast.Text.signage> LOADS
 %token MEMORY_SIZE
 %token MEMORY_GROW
@@ -183,6 +189,7 @@ ZZZ
 %{
 module Uint32 = Utils.Uint32
 module Uint64 = Utils.Uint64
+module V128 = Utils.V128
 open Ast.Text
 
 let with_loc (loc_start, loc_end) desc =
@@ -209,25 +216,37 @@ u32: n = NAT { Uint32.of_string n }
 
 u64: n = NAT { Uint64.of_string n }
 
+i8:
+  i = NAT
+| i = INT
+{ check_constant Misc.is_int8 $sloc i; i }
+
+i16:
+  i = NAT
+| i = INT
+{ check_constant Misc.is_int16 $sloc i; i }
+
 i32:
-  n = NAT { n }
-| i = INT { i }
+  i = NAT
+| i = INT
+{ check_constant Misc.is_int32 $sloc i; i }
 
 i64:
-  n = NAT { n }
-| i = INT { i }
+  i = NAT
+| i = INT
+{ check_constant Misc.is_int64 $sloc i; i }
 
 f32:
   f = NAT
 | f = INT
 | f = FLOAT
- { f }
+{ check_constant Misc.is_float32 $sloc f; f }
 
 f64:
   f = NAT
 | f = INT
 | f = FLOAT
- { f }
+{ check_constant Misc.is_float64 $sloc f; f }
 
 idx:
 | n = u32 { with_loc $sloc (Num n) }
@@ -443,15 +462,23 @@ plaininstr:
 | LOCAL_GET i = idx { with_loc $sloc (LocalGet i) }
 | LOCAL_SET i = idx { with_loc $sloc (LocalSet i) }
 | LOCAL_TEE i = idx { with_loc $sloc (LocalTee i) }
+| op = VEC_SHIFT_OP { with_loc $sloc (VecShift op) }
+| op = VEC_BITMASK_OP { with_loc $sloc (VecBitmask op) }
+| op = VEC_TERN_OP { with_loc $sloc (VecTernOp op) }
+| VEC_BITSELECT { with_loc $sloc VecBitselect }
 | GLOBAL_GET i = idx { with_loc $sloc (GlobalGet i) }
 | GLOBAL_SET i = idx { with_loc $sloc (GlobalSet i) }
 | sz = LOAD i = memidx m = memarg
   { with_loc $sloc (Load (i, m (Uint64.one), sz)) }
+| op = VEC_LOAD i = memidx m = memarg
+  { with_loc $sloc (VecLoad (i, op, m (Uint64.one))) }
 | k = LOADS i = memidx m = memarg
   { let (sz, sz', s) = k in
     with_loc $sloc (LoadS (i, m Uint64.one, sz, sz', s)) }
 | sz = STORE i = memidx m = memarg
-  { with_loc $sloc (Store (i, m Uint64.one, sz)) }
+  { with_loc $sloc (Store (i, m (Uint64.one), sz)) }
+| VEC_STORE i = memidx m = memarg
+  { with_loc $sloc (VecStore (i, m (Uint64.one))) }
 | sz = STORES i = memidx m = memarg
   { with_loc $sloc (StoreS (i, m Uint64.one, fst sz, snd sz)) }
 | MEMORY_SIZE i = memidx { with_loc $sloc (MemorySize i) }
@@ -495,13 +522,33 @@ plaininstr:
 | ARRAY_INIT_DATA i1 = idx i2 = idx { with_loc $sloc (ArrayInitData (i1, i2)) }
 | ARRAY_INIT_ELEM i1 = idx i2 = idx { with_loc $sloc (ArrayInitElem (i1, i2)) }
 | I32_CONST i = i32
-  { check_constant Misc.is_int32 $sloc i; with_loc $sloc (Const (I32 i)) }
+  { with_loc $sloc (Const (I32 i)) }
 | I64_CONST i = i64
-  { check_constant Misc.is_int64 $sloc i; with_loc $sloc (Const (I64 i)) }
+  { with_loc $sloc (Const (I64 i)) }
 | F32_CONST f = f32
-  { check_constant Misc.is_float32 $sloc f; with_loc $sloc (Const (F32 f)) }
+  { with_loc $sloc (Const (F32 f)) }
 | F64_CONST f = f64
-  { check_constant Misc.is_float64 $sloc f; with_loc $sloc (Const (F64 f)) }
+  { with_loc $sloc (Const (F64 f)) }
+| V128_CONST I8X16 i8 i8 i8 i8 i8 i8 i8 i8 i8 i8 i8 i8 i8 i8 i8 i8
+  { let components =
+      [$3; $4; $5; $6; $7; $8; $9; $10; $11; $12; $13; $14; $15; $16; $17; $18]
+    in
+    with_loc $sloc (VecConst {V128.shape = I8x16; components}) }
+| V128_CONST I16X8 i16 i16 i16 i16 i16 i16 i16 i16
+  { let components = [$3; $4; $5; $6; $7; $8; $9; $10] in
+    with_loc $sloc (VecConst {V128.shape = I16x8; components}) }
+| V128_CONST I32X4 i0 = i32 i1 = i32 i2 = i32 i3 = i32
+  { let components = [i0; i1; i2; i3] in
+    with_loc $sloc (VecConst {V128.shape = I32x4; components}) }
+| V128_CONST I64X2 i0 = i64 i1 = i64
+  { let components = [i0; i1] in
+    with_loc $sloc (VecConst {V128.shape = I64x2; components}) }
+| V128_CONST F32X4 f0 = f32 f1 = f32 f2 = f32 f3 = f32
+  { let components = [f0; f1; f2; f3] in
+    with_loc $sloc (VecConst {V128.shape = F32x4; components}) }
+| V128_CONST F64X2 f0 = f64 f1 = f64
+  { let components = [f0; f1] in
+    with_loc $sloc (VecConst {V128.shape = F64x2; components}) }
 | TUPLE_MAKE l = u32 { with_loc $sloc (TupleMake l) }
 | TUPLE_EXTRACT l = u32 i = u32
   { with_loc $sloc (TupleExtract (l, i)) }
@@ -616,9 +663,10 @@ typeuse(cont):
 typeuse_no_bindings(cont):
 | "(" TYPE i = idx ")" rem = params_and_results_no_bindings(cont)
   { let (s, r) = rem in
-    (match s with
+    begin match s with
      | {params = [||]; results = [||]} -> Some i, None
-     | _ -> Some i, Some s),
+     | _ -> Some i, Some s
+    end,
     r }
 | rem = params_and_results_no_bindings(cont)
   { let (s, r) = rem in (None, Some s), r }
@@ -850,7 +898,7 @@ const:
 | "(" I64_CONST i64 ")"
 | "(" F32_CONST f32 ")"
 | "(" F64_CONST f64 ")"
-| "(" V128 vec_shape NAT+ ")"
+| "(" V128_CONST vec_shape f64+ ")"
 | "(" REF_NULL heaptype ")"
 | "(" REF_HOST NAT ")"
 | "(" REF_EXTERN NAT ")"
@@ -877,6 +925,8 @@ assertion:
 | "(" ASSERT_UNLINKABLE m = script_instance STRING ")" { m `Valid }
 | "(" ASSERT_TRAP m = script_instance STRING ")" { m `Valid }
 
+float_or_nan: f64 | NAN {}
+
 result_pat:
 | "(" I32_CONST i32 ")"
 | "(" I64_CONST i64 ")"
@@ -884,7 +934,7 @@ result_pat:
 | "(" F32_CONST NAN ")"
 | "(" F64_CONST f64 ")"
 | "(" F64_CONST NAN ")"
-| "(" V128_CONST vec_shape NAT+ ")"
+| "(" V128_CONST vec_shape float_or_nan+ ")"
 | "(" REF ")"
 | "(" REF_NULL ")"
 | "(" REF_FUNC ")"
@@ -902,3 +952,4 @@ meta:
 | "(" SCRIPT ID? s = script ")" { s }
 | "(" INPUT ID? STRING ")" { [] }
 | "(" OUTPUT ID? STRING? ")" { [] }
+

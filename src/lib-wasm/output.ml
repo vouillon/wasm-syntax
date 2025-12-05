@@ -432,7 +432,7 @@ let float_bin_op _ op =
   | Le -> "le"
   | Ge -> "ge"
 
-let select i32 i64 f32 f64 op =
+let select i32 i64 f32 f64 _ op =
   match op with
   | I32 x -> i32 "32" x
   | I64 x -> i64 "64" x
@@ -448,6 +448,126 @@ let memarg align' { offset; align } =
   if align = align' then []
   else
     [ atom ~style:Attribute (Printf.sprintf "align=" ^ Uint64.to_string align) ]
+
+let vec_shape = function
+  | I8x16 -> "i8x16"
+  | I16x8 -> "i16x8"
+  | I32x4 -> "i32x4"
+  | I64x2 -> "i64x2"
+  | F32x4 -> "f32x4"
+  | F64x2 -> "f64x2"
+
+let vec_un_op op =
+  match op with
+  | VecNeg s -> vec_shape s ^ ".neg"
+  | VecAbs s -> vec_shape s ^ ".abs"
+  | VecSqrt s -> vec_shape s ^ ".sqrt"
+  | VecNot -> "v128.not"
+  | VecTruncSat (f, s, i) ->
+      let f_str = match f with `F32 -> "f32x4" | `F64 -> "f64x2" in
+      let i_str = vec_shape i in
+      i_str ^ ".trunc_sat_" ^ f_str ^ signage "" s
+  | VecConvert (i, s, f) ->
+      let i_str = match i with `I32 -> "i32x4" | `I64 -> "i64x2" in
+      let f_str = vec_shape f in
+      f_str ^ ".convert_" ^ i_str ^ signage "" s
+  | VecExtend (h, sz, s, sh) ->
+      let h_str = match h with `Low -> "low" | `High -> "high" in
+      let sz_str =
+        match sz with `_8 -> "i8x16" | `_16 -> "i16x8" | `_32 -> "i32x4"
+      in
+      vec_shape sh ^ ".extend_" ^ h_str ^ "_" ^ sz_str ^ signage "" s
+  | VecPromote (f, sh) ->
+      let f_str = match f with `F32 -> "f32x4" in
+      vec_shape sh ^ ".promote_low_" ^ f_str
+  | VecDemote (f, sh) ->
+      let f_str = match f with `F64 -> "f64x2" in
+      vec_shape sh ^ ".demote_" ^ f_str ^ "_zero"
+  | VecCeil s -> vec_shape s ^ ".ceil"
+  | VecFloor s -> vec_shape s ^ ".floor"
+  | VecTrunc s -> vec_shape s ^ ".trunc"
+  | VecNearest s -> vec_shape s ^ ".nearest"
+  | VecPopcnt _ -> "popcnt"
+  | VecExtAddPairwise (s, shape) ->
+      "extadd_pairwise_"
+      ^ (match shape with
+        | I16x8 -> "i8x16"
+        | I32x4 -> "i16x8"
+        | _ -> "unknown")
+      ^ signage "" s
+  (* Relaxed SIMD *)
+  | VecRelaxedTrunc (f, s, _) ->
+      let f_str = match f with `F32 -> "f32x4" | `F64 -> "f64x2" in
+      "relaxed_trunc_" ^ f_str ^ signage "" s
+  | VecRelaxedTruncZero (f, s, _) ->
+      let f_str = match f with `F64 -> "f64x2" in
+      "relaxed_trunc_" ^ f_str ^ signage "" s ^ "_zero"
+
+let vec_bin_op op =
+  match op with
+  | VecAdd _ -> "add"
+  | VecSub _ -> "sub"
+  | VecMul _ -> "mul"
+  | VecDiv _ -> "div"
+  | VecMin (s, _) ->
+      "min" ^ Option.fold ~none:"" ~some:(fun s -> signage "" s) s
+  | VecMax (s, _) ->
+      "max" ^ Option.fold ~none:"" ~some:(fun s -> signage "" s) s
+  | VecPMin _ -> "pmin"
+  | VecPMax _ -> "pmax"
+  | VecAvgr (s, _) -> "avgr" ^ signage "" s
+  | VecQ15MulrSat _ -> "q15mulr_sat_s"
+  | VecAddSat (s, _) -> "add_sat" ^ signage "" s
+  | VecSubSat (s, _) -> "sub_sat" ^ signage "" s
+  | VecDot _ -> "dot_i16x8_s"
+  | VecEq _ -> "eq"
+  | VecNe _ -> "ne"
+  | VecLt (s, _) -> "lt" ^ signage "" s
+  | VecGt (s, _) -> "gt" ^ signage "" s
+  | VecLe (s, _) -> "le" ^ signage "" s
+  | VecGe (s, _) -> "ge" ^ signage "" s
+  | VecAnd -> "and"
+  | VecOr -> "or"
+  | VecXor -> "xor"
+  | VecAndNot -> "andnot"
+  | VecNarrow (s, _) -> "narrow_" ^ signage "" s
+  | VecSwizzle -> "swizzle"
+  (* Relaxed SIMD *)
+  | VecRelaxedSwizzle -> "relaxed_swizzle"
+  | VecRelaxedMin _ -> "relaxed_min"
+  | VecRelaxedMax _ -> "relaxed_max"
+  | VecRelaxedQ15Mulr (s, _) -> "relaxed_q15mulr_" ^ signage "" s
+  | VecRelaxedDot _ -> "relaxed_dot_i8x16_i7x16_s"
+
+let vec_tern_op op =
+  match op with
+  | VecRelaxedMAdd _ -> "relaxed_madd"
+  | VecRelaxedNMAdd _ -> "relaxed_nmadd"
+  | VecRelaxedLaneSelect _ -> "relaxed_laneselect"
+  | VecRelaxedDotAdd _ -> "relaxed_dot_i8x16_i7x16_add_s"
+
+let vec_test_op op =
+  match op with
+  | AnyTrue s -> vec_shape s ^ ".any_true"
+  | AllTrue s -> vec_shape s ^ ".all_true"
+
+let vec_shift_op op =
+  match op with
+  | Shl s -> vec_shape s ^ ".shl"
+  | Shr (s, sh) -> vec_shape sh ^ ".shr" ^ signage "" s
+
+let vec_bitmask_op_shape = function Bitmask s -> s
+
+let vec_const { Utils.V128.shape; components } =
+  keyword
+    (match shape with
+    | I8x16 -> "i8x16"
+    | I16x8 -> "i16x8"
+    | I32x4 -> "i32x4"
+    | I64x2 -> "i64x2"
+    | F32x4 -> "f32x4"
+    | F64x2 -> "f64x2")
+  :: List.map (atom ~style:Constant) components
 
 let catches l =
   List.map
@@ -474,25 +594,203 @@ let rec instr i =
                (fun _ i -> i)
                (fun _ i -> i)
                (fun _ i -> i)
+               (fun _ i -> i)
                op);
         ]
-  | UnOp op ->
-      instruction ~loc
-        (type_prefix op (select int_un_op int_un_op float_un_op float_un_op op))
-  | BinOp op ->
-      instruction ~loc
-        (type_prefix op
-           (select int_bin_op int_bin_op float_bin_op float_bin_op op))
+  | UnOp (I32 op) -> instruction ~loc ("i32." ^ int_un_op "32" op)
+  | UnOp (I64 op) -> instruction ~loc ("i64." ^ int_un_op "64" op)
+  | UnOp (F32 op) -> instruction ~loc ("f32." ^ float_un_op "32" op)
+  | UnOp (F64 op) -> instruction ~loc ("f64." ^ float_un_op "64" op)
+  | BinOp (I32 op) -> instruction ~loc ("i32." ^ int_bin_op "32" op)
+  | BinOp (I64 op) -> instruction ~loc ("i64." ^ int_bin_op "64" op)
+  | BinOp (F32 op) -> instruction ~loc ("f32." ^ float_bin_op "32" op)
+  | BinOp (F64 op) -> instruction ~loc ("f64." ^ float_bin_op "64" op)
   | I32WrapI64 -> instruction ~loc "i32.wrap_i64"
   | I64ExtendI32 s -> instruction ~loc (signage "i64.extend_i32" s)
   | F32DemoteF64 -> instruction ~loc "f32.demote_f64"
   | F64PromoteF32 -> instruction ~loc "f64.promote_f32"
+  | VecConst c -> block ~loc (instruction "v128.const" :: vec_const c)
+  | VecShuffle (Shuffle, c) ->
+      block ~loc (instruction "i8x16.shuffle" :: vec_const c)
+  | VecExtract (op, signage, lane) ->
+      block ~loc
+        [
+          instruction
+            (Printf.sprintf "%s.extract_lane%s"
+               (match op with
+               | Load `I8 -> "i8x16"
+               | Load `I16 -> "i16x8"
+               | Load `I32 -> "i32x4"
+               | Load `I64 -> "i64x2"
+               | Load `F32 -> "f32x4"
+               | Load `F64 -> "f64x2"
+               | Store _ -> assert false)
+               (match signage with
+               | Some Signed -> "_s"
+               | Some Unsigned -> "_u"
+               | None -> ""));
+          u32 ~style:Constant (Utils.Uint32.of_string lane);
+        ]
+  | VecReplace (op, lane) ->
+      block ~loc
+        [
+          instruction
+            (Printf.sprintf "%s.replace_lane"
+               (match op with
+               | Load `I8 -> "i8x16"
+               | Load `I16 -> "i16x8"
+               | Load `I32 -> "i32x4"
+               | Load `I64 -> "i64x2"
+               | Load `F32 | Load `F64 -> assert false
+               | Store _ -> assert false));
+          u32 ~style:Constant (Utils.Uint32.of_string lane);
+        ]
+  | VecSplat (Splat sh) -> instruction ~loc (vec_shape sh ^ ".splat")
+  | VecUnOp op ->
+      let shape_str =
+        match op with
+        | VecNeg s
+        | VecAbs s
+        | VecSqrt s
+        | VecCeil s
+        | VecFloor s
+        | VecTrunc s
+        | VecNearest s
+        | VecPopcnt s ->
+            vec_shape s
+        | VecNot -> "v128"
+        | VecTruncSat (_, _, i) -> vec_shape i
+        | VecConvert (_, _, f) -> vec_shape f
+        | VecExtend (_, _, _, sh) -> vec_shape sh
+        | VecPromote (_, sh) -> vec_shape sh
+        | VecDemote (_, sh) -> vec_shape sh
+        | VecExtAddPairwise (_, sh) -> vec_shape sh
+        | VecRelaxedTrunc (_, _, sh) -> vec_shape sh
+        | VecRelaxedTruncZero (_, _, sh) -> vec_shape sh
+      in
+      instruction ~loc (shape_str ^ "." ^ vec_un_op op)
+  | VecBinOp op ->
+      let shape_str =
+        match op with
+        | VecAdd s
+        | VecSub s
+        | VecMul s
+        | VecDiv s
+        | VecMin (_, s)
+        | VecMax (_, s)
+        | VecPMin s
+        | VecPMax s
+        | VecAvgr (_, s)
+        | VecQ15MulrSat s
+        | VecAddSat (_, s)
+        | VecSubSat (_, s)
+        | VecDot s
+        | VecEq s
+        | VecNe s
+        | VecLt (_, s)
+        | VecGt (_, s)
+        | VecLe (_, s)
+        | VecGe (_, s)
+        | VecNarrow (_, s) ->
+            vec_shape s
+        | VecAnd | VecOr | VecXor | VecAndNot | VecSwizzle -> "v128"
+        | VecRelaxedSwizzle -> "v128"
+        | VecRelaxedMin s
+        | VecRelaxedMax s
+        | VecRelaxedQ15Mulr (_, s)
+        | VecRelaxedDot s ->
+            vec_shape s
+      in
+      instruction ~loc (shape_str ^ "." ^ vec_bin_op op)
+  | VecTest op -> instruction ~loc (vec_test_op op)
+  | VecShift op -> instruction ~loc (vec_shift_op op)
+  | VecBitmask op ->
+      instruction ~loc (vec_shape (vec_bitmask_op_shape op) ^ ".bitmask")
+  | VecTernOp op ->
+      let shape_str =
+        match op with
+        | VecRelaxedMAdd s -> vec_shape s
+        | VecRelaxedNMAdd s -> vec_shape s
+        | VecRelaxedLaneSelect s -> vec_shape s
+        | VecRelaxedDotAdd s -> vec_shape s
+      in
+      instruction ~loc (shape_str ^ "." ^ vec_tern_op op)
+  | VecBitselect -> instruction ~loc "v128.bitselect"
+  | VecLoad (i, op, m) ->
+      block ~loc
+        (instruction
+           (match op with
+           | Load128 -> "v128.load"
+           | Load8x8S -> "v128.load8x8_s"
+           | Load8x8U -> "v128.load8x8_u"
+           | Load16x4S -> "v128.load16x4_s"
+           | Load16x4U -> "v128.load16x4_u"
+           | Load32x2S -> "v128.load32x2_s"
+           | Load32x2U -> "v128.load32x2_u"
+           | Load32Zero -> "v128.load32_zero"
+           | Load64Zero -> "v128.load64_zero")
+        :: (memidx i @ memarg Uint64.one m))
+  | VecStore (i, m) ->
+      block ~loc (instruction "v128.store" :: (memidx i @ memarg Uint64.one m))
+  | VecLoadLane (i, op, m, lane) ->
+      block ~loc
+        (instruction
+           (Printf.sprintf "v128.load%s_lane"
+              (match op with
+              | Load `I8 -> "8"
+              | Load `I16 -> "16"
+              | Load `I32 -> "32"
+              | Load `I64 -> "64"
+              | Load `F32 | Load `F64 -> assert false
+              | Store _ -> assert false))
+        :: (memidx i @ memarg Uint64.one m
+           @ [ u32 ~style:Constant (Utils.Uint32.of_string lane) ]))
+  | VecStoreLane (i, op, m, lane) ->
+      block ~loc
+        (instruction
+           (Printf.sprintf "v128.store%s_lane"
+              (match op with
+              | Load `I8 -> "8"
+              | Load `I16 -> "16"
+              | Load `I32 -> "32"
+              | Load `I64 -> "64"
+              | Load `F32 | Load `F64 -> assert false
+              | Store _ -> assert false))
+        :: (memidx i @ memarg Uint64.one m
+           @ [ u32 ~style:Constant (Utils.Uint32.of_string lane) ]))
+  | VecLoadSplat (i, op, m) ->
+      block ~loc
+        (instruction
+           (Printf.sprintf "v128.load%s_splat"
+              (match op with
+              | Load `I8 -> "8"
+              | Load `I16 -> "16"
+              | Load `I32 -> "32"
+              | Load `I64 -> "64"
+              | Load `F32 | Load `F64 -> assert false
+              | Store _ -> assert false))
+        :: (memidx i @ memarg Uint64.one m))
+  | VecLoadExtend (i, op, m) ->
+      block ~loc
+        (instruction
+           (match op with
+           | Load8x8S -> "v128.load8x8_s"
+           | Load8x8U -> "v128.load8x8_u"
+           | Load16x4S -> "v128.load16x4_s"
+           | Load16x4U -> "v128.load16x4_u"
+           | Load32x2S -> "v128.load32x2_s"
+           | Load32x2U -> "v128.load32x2_u"
+           | Load128 | Load32Zero | Load64Zero -> assert false)
+        :: (memidx i @ memarg Uint64.one m))
   | Load (i, m, sz) ->
-      let f s s' _ = s ^ s' in
       block ~loc
         (instruction
            (Printf.sprintf "%s.load"
-              (select (f "i") (f "i") (f "f") (f "f") sz))
+              (match sz with
+              | NumI32 -> "i32"
+              | NumI64 -> "i64"
+              | NumF32 -> "f32"
+              | NumF64 -> "f64"))
         :: (memidx i @ memarg Uint64.one m))
   | LoadS (i, m, sz, sz', s) ->
       block ~loc
@@ -504,11 +802,14 @@ let rec instr i =
               s)
         :: (memidx i @ memarg Uint64.one m))
   | Store (i, m, sz) ->
-      let f s s' _ = s ^ s' in
       block ~loc
         (instruction
            (Printf.sprintf "%s.store"
-              (select (f "i") (f "i") (f "f") (f "f") sz))
+              (match sz with
+              | NumI32 -> "i32"
+              | NumI64 -> "i64"
+              | NumF32 -> "f32"
+              | NumF64 -> "f64"))
         :: (memidx i @ memarg Uint64.one m))
   | StoreS (i, m, sz, sz') ->
       block ~loc

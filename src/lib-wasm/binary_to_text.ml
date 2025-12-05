@@ -295,6 +295,29 @@ let rec instr (names : B.names) local_names label_names label_counter stack
             List.map
               (instr names local_names label_names label_counter stack)
               il )
+    | VecLoad (o, op, m) -> VecLoad (index ~map:names.memories o, op, m)
+    | VecStore (o, m) -> VecStore (index ~map:names.memories o, m)
+    | VecLoadLane (o, op, m, idx) ->
+        VecLoadLane (index ~map:names.memories o, op, m, Int32.to_string idx)
+    | VecStoreLane (o, op, m, idx) ->
+        VecStoreLane (index ~map:names.memories o, op, m, Int32.to_string idx)
+    | VecLoadSplat (o, op, m) ->
+        VecLoadSplat (index ~map:names.memories o, op, m)
+    | VecLoadExtend (o, op, m) ->
+        VecLoadExtend (index ~map:names.memories o, op, m)
+    | VecConst v -> VecConst (Utils.V128.of_string v)
+    | VecUnOp op -> VecUnOp op
+    | VecBinOp op -> VecBinOp op
+    | VecTest op -> VecTest op
+    | VecShift op -> VecShift op
+    | VecBitmask op -> VecBitmask op
+    | VecBitselect -> VecBitselect
+    | VecExtract (op, signage, idx) ->
+        VecExtract (op, signage, Int32.to_string idx)
+    | VecReplace (op, idx) -> VecReplace (op, Int32.to_string idx)
+    | VecSplat op -> VecSplat op
+    | VecShuffle (op, v) -> VecShuffle (op, Utils.V128.of_string v)
+    | VecTernOp op -> VecTernOp op
     | Pop v -> Pop (valtype names.types v)
     | TupleMake i -> TupleMake i
     | TupleExtract (i1, i2) -> TupleExtract (i1, i2)
