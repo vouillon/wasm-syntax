@@ -297,10 +297,10 @@ let rec instr (names : B.names) local_names label_names label_counter stack
               il )
     | VecLoad (o, op, m) -> VecLoad (index ~map:names.memories o, op, m)
     | VecStore (o, m) -> VecStore (index ~map:names.memories o, m)
-    | VecLoadLane (o, op, m, idx) ->
-        VecLoadLane (index ~map:names.memories o, op, m, Int32.to_string idx)
-    | VecStoreLane (o, op, m, idx) ->
-        VecStoreLane (index ~map:names.memories o, op, m, Int32.to_string idx)
+    | VecLoadLane (o, op, m, lane) ->
+        VecLoadLane (index ~map:names.memories o, op, m, lane)
+    | VecStoreLane (o, op, m, lane) ->
+        VecStoreLane (index ~map:names.memories o, op, m, lane)
     | VecLoadSplat (o, op, m) ->
         VecLoadSplat (index ~map:names.memories o, op, m)
     | VecLoadExtend (o, op, m) ->
@@ -312,11 +312,10 @@ let rec instr (names : B.names) local_names label_names label_counter stack
     | VecShift op -> VecShift op
     | VecBitmask op -> VecBitmask op
     | VecBitselect -> VecBitselect
-    | VecExtract (op, signage, idx) ->
-        VecExtract (op, signage, Int32.to_string idx)
-    | VecReplace (op, idx) -> VecReplace (op, Int32.to_string idx)
+    | VecExtract (op, signage, lane) -> VecExtract (op, signage, lane)
+    | VecReplace (op, lane) -> VecReplace (op, lane)
     | VecSplat op -> VecSplat op
-    | VecShuffle (op, v) -> VecShuffle (op, Utils.V128.of_string v)
+    | VecShuffle (op, v) -> VecShuffle (op, v)
     | VecTernOp op -> VecTernOp op
     | Pop v -> Pop (valtype names.types v)
     | TupleMake i -> TupleMake i

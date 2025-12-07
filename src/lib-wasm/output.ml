@@ -557,7 +557,7 @@ let vec_bin_op op =
         match sh with I8x16 -> "i16x8" | I16x8 -> "i32x4" | _ -> "unknown"
       in
       signage ("narrow_" ^ in_shape) s
-  | VecSwizzle -> "i8x16.swizzle"
+  | VecSwizzle -> "swizzle"
   | VecExtMulLow (s, sh) ->
       let in_shape =
         match sh with
@@ -654,16 +654,25 @@ let rec instr i =
   | F32DemoteF64 -> instruction ~loc "f32.demote_f64"
   | F64PromoteF32 -> instruction ~loc "f64.promote_f32"
   | VecConst c -> block ~loc (instruction "v128.const" :: vec_const c)
-  | VecShuffle (Shuffle, c) ->
-      block ~loc (instruction "i8x16.shuffle" :: vec_const c)
+  | VecShuffle (Shuffle, lanes) ->
+      block ~loc
+        (instruction "i8x16.shuffle"
+        :: List.init 16 (fun i ->
+            atom ~style:Constant (Int.to_string (Char.code lanes.[i]))))
   | VecExtract (op, s, lane) ->
-      instruction ~loc
-        (vec_shape op ^ ".extract_lane"
-        ^ (match s with Some s -> signage "" s | None -> "")
-        ^ " "
-        ^ lane)
+      block ~loc
+        [
+          instruction ~loc
+            (vec_shape op ^ ".extract_lane"
+            ^ match s with Some s -> signage "" s | None -> "");
+          atom ~style:Constant (Int.to_string lane);
+        ]
   | VecReplace (op, lane) ->
-      instruction ~loc (vec_shape op ^ ".replace_lane" ^ " " ^ lane)
+      block
+        [
+          instruction ~loc (vec_shape op ^ ".replace_lane");
+          atom ~style:Constant (Int.to_string lane);
+        ]
   | VecSplat (Splat sh) -> instruction ~loc (vec_shape sh ^ ".splat")
   | VecUnOp op ->
       let shape_str =
@@ -712,8 +721,8 @@ let rec instr i =
         | VecGe (_, s)
         | VecNarrow (_, s) ->
             vec_shape s
-        | VecAnd | VecOr | VecXor | VecAndNot | VecSwizzle -> "v128"
-        | VecRelaxedSwizzle -> "v128"
+        | VecAnd | VecOr | VecXor | VecAndNot -> "v128"
+        | VecSwizzle | VecRelaxedSwizzle -> "i8x16"
         | VecRelaxedMin s
         | VecRelaxedMax s
         | VecRelaxedQ15Mulr (_, s)
@@ -756,24 +765,24 @@ let rec instr i =
   | VecLoadLane (i, op, m, lane) ->
       block ~loc
         (instruction
-           (Printf.sprintf "v128.load%s_lane %s"
+           (Printf.sprintf "v128.load%s_lane"
               (match op with
               | `I8 -> "8"
               | `I16 -> "16"
               | `I32 -> "32"
-              | `I64 -> "64")
-              lane)
+              | `I64 -> "64"))
+        :: atom ~style:Constant (Int.to_string lane)
         :: (memidx i @ memarg Uint64.one m))
   | VecStoreLane (i, op, m, lane) ->
       block ~loc
         (instruction
-           (Printf.sprintf "v128.store%s_lane %s"
+           (Printf.sprintf "v128.store%s_lane"
               (match op with
               | `I8 -> "8"
               | `I16 -> "16"
               | `I32 -> "32"
-              | `I64 -> "64")
-              lane)
+              | `I64 -> "64"))
+        :: atom ~style:Constant (Int.to_string lane)
         :: (memidx i @ memarg Uint64.one m))
   | VecLoadSplat (i, op, m) ->
       block ~loc

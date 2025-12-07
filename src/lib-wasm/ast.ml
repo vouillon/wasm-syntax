@@ -400,8 +400,6 @@ struct
     | Load32Zero
     | Load64Zero
 
-
-
   type nonrec vec_splat_op = vec_splat_op = Splat of vec_shape
   type nonrec vec_shuffle_op = vec_shuffle_op = Shuffle
   type blocktype = Typeuse of X.typeuse | Valtype of X.valtype
@@ -536,14 +534,14 @@ struct
     | VecBitselect
     | VecLoad of X.idx * vec_load_op * memarg
     | VecStore of X.idx * memarg
-    | VecLoadLane of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg * X.int32_t
-    | VecStoreLane of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg * X.int32_t
+    | VecLoadLane of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg * int
+    | VecStoreLane of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg * int
     | VecLoadSplat of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg
     | VecLoadExtend of X.idx * vec_load_op * memarg
-    | VecExtract of vec_shape * signage option * X.int32_t
-    | VecReplace of vec_shape * X.int32_t
+    | VecExtract of vec_shape * signage option * int
+    | VecReplace of vec_shape * int
     | VecSplat of vec_splat_op
-    | VecShuffle of vec_shuffle_op * X.v128_t
+    | VecShuffle of vec_shuffle_op * string
     | I32WrapI64
     | I64ExtendI32 of signage
     | F32DemoteF64

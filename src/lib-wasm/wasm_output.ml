@@ -410,16 +410,16 @@ module Encoder = struct
         byte b 0x09;
         uint b i
     | Const (I32 i) ->
-            byte b 0x41;
-            sint32 b i
+        byte b 0x41;
+        sint32 b i
     | Const (I64 i) ->
-            byte b 0x42;
-            sint64 b i
+        byte b 0x42;
+        sint64 b i
     | Const (F32 f) ->
-            byte b 0x43;
-            f32 b f
+        byte b 0x43;
+        f32 b f
     | Const (F64 f) ->
-            byte b 0x44;
+        byte b 0x44;
         f64 b f
     | UnOp op -> (
         match op with
@@ -694,31 +694,19 @@ module Encoder = struct
     | VecLoadLane (_, op, m, lane) ->
         byte b 0xFD;
         uint b
-          (match op with
-          | `I8 -> 84
-          | `I16 -> 85
-          | `I32 -> 86
-          | `I64 -> 87);
+          (match op with `I8 -> 84 | `I16 -> 85 | `I32 -> 86 | `I64 -> 87);
         memarg b m 0;
-        uint b (Int32.to_int lane)
+        uint b lane
     | VecStoreLane (_, op, m, lane) ->
         byte b 0xFD;
         uint b
-          (match op with
-          | `I8 -> 88
-          | `I16 -> 89
-          | `I32 -> 90
-          | `I64 -> 91);
+          (match op with `I8 -> 88 | `I16 -> 89 | `I32 -> 90 | `I64 -> 91);
         memarg b m 0;
-        uint b (Int32.to_int lane)
+        uint b lane
     | VecLoadSplat (_, op, m) ->
         byte b 0xFD;
         uint b
-          (match op with
-          | `I8 -> 92
-          | `I16 -> 93
-          | `I32 -> 94
-          | `I64 -> 95);
+          (match op with `I8 -> 92 | `I16 -> 93 | `I32 -> 94 | `I64 -> 95);
 
         memarg b m 0
     | VecLoad (_, op, m) ->
@@ -764,7 +752,7 @@ module Encoder = struct
           | F32x4, None -> 31
           | F64x2, None -> 33
           | _ -> failwith "Invalid VecExtract op");
-        uint b (Int32.to_int lane)
+        uint b lane
     | VecReplace (op, lane) ->
         byte b 0xFD;
         uint b
@@ -775,7 +763,7 @@ module Encoder = struct
           | I64x2 -> 30
           | F32x4 -> 32
           | F64x2 -> 34);
-        uint b (Int32.to_int lane)
+        uint b lane
     | VecConst v ->
         byte b 0xFD;
         uint b 12;
@@ -845,7 +833,6 @@ module Encoder = struct
           | VecRelaxedTrunc (`F32, Signed, I32x4) -> 0x101
           | VecRelaxedTrunc (`F32, Unsigned, I32x4) -> 0x102
           | VecRelaxedTrunc _ -> assert false
-
           | VecConvert (`I32, Signed, F32x4) -> 258
           | VecConvert (`I32, Unsigned, F32x4) -> 259
           | VecConvert (`I32, Signed, F64x2) -> 262
@@ -859,7 +846,8 @@ module Encoder = struct
           | VecNot -> 77
           | VecExtend _ | VecPopcnt _ | VecExtAddPairwise _ -> assert false
           | VecSqrt _ | VecCeil _ | VecFloor _ | VecTrunc _ | VecNearest _
-          | VecTruncSat _ | VecConvert _ | VecDemote _ | VecPromote _ -> assert false)
+          | VecTruncSat _ | VecConvert _ | VecDemote _ | VecPromote _ ->
+              assert false)
     | VecBinOp op ->
         byte b 0xFD;
         uint b
@@ -897,13 +885,17 @@ module Encoder = struct
           | VecEq I64x2 -> 164
           | VecNe I64x2 -> 165
           | VecLt (Some Signed, I64x2) -> 166
-          | VecLt (Some Unsigned, I64x2) -> failwith "Unsigned Lt not supported for I64x2"
+          | VecLt (Some Unsigned, I64x2) ->
+              failwith "Unsigned Lt not supported for I64x2"
           | VecGt (Some Signed, I64x2) -> 167
-          | VecGt (Some Unsigned, I64x2) -> failwith "Unsigned Gt not supported for I64x2"
+          | VecGt (Some Unsigned, I64x2) ->
+              failwith "Unsigned Gt not supported for I64x2"
           | VecLe (Some Signed, I64x2) -> 168
-          | VecLe (Some Unsigned, I64x2) -> failwith "Unsigned Le not supported for I64x2"
+          | VecLe (Some Unsigned, I64x2) ->
+              failwith "Unsigned Le not supported for I64x2"
           | VecGe (Some Signed, I64x2) -> 169
-          | VecGe (Some Unsigned, I64x2) -> failwith "Unsigned Ge not supported for I64x2"
+          | VecGe (Some Unsigned, I64x2) ->
+              failwith "Unsigned Ge not supported for I64x2"
           | VecEq F32x4 -> 65
           | VecNe F32x4 -> 66
           | VecLt (None, F32x4) -> 67
@@ -978,7 +970,6 @@ module Encoder = struct
           | VecDiv F64x2 -> 247
           | VecMin (None, F64x2) -> 248
           | VecMax (None, F64x2) -> 249
-
           | VecPMin F64x2 -> 250
           | VecPMax F64x2 -> 251
           | VecNarrow (Signed, I8x16) -> 101
@@ -1049,7 +1040,6 @@ module Encoder = struct
           | VecRelaxedLaneSelect I64x2 -> 0x10c
           | VecRelaxedDotAdd I32x4 -> 0x113
           | _ -> failwith "Invalid VecTernOp")
-
     | Folded (i, is) ->
         List.iter (instr ~source_map_t b) is;
         instr ~source_map_t b i
@@ -1346,8 +1336,8 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
   output_indirect_name_subsection 0x0A m.names.fields b_names;
   (* Field names *)
   output_name_subsection 0x0B m.names.tags b_names;
-  (* Tag names *)
 
+  (* Tag names *)
   if Buffer.length b_names > 0 then (
     let b_custom_section_content = Buffer.create (Buffer.length b_names + 10) in
     Encoder.name b_custom_section_content "name";

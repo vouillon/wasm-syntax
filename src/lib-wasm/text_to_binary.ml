@@ -338,10 +338,10 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | TupleExtract (u1, u2) -> TupleExtract (u1, u2)
     | VecLoad (o, op, m) -> VecLoad (resolve_idx ctx.memories o, op, m)
     | VecStore (o, m) -> VecStore (resolve_idx ctx.memories o, m)
-    | VecLoadLane (o, op, m, idx) ->
-        VecLoadLane (resolve_idx ctx.memories o, op, m, Int32.of_string idx)
-    | VecStoreLane (o, op, m, idx) ->
-        VecStoreLane (resolve_idx ctx.memories o, op, m, Int32.of_string idx)
+    | VecLoadLane (o, op, m, lane) ->
+        VecLoadLane (resolve_idx ctx.memories o, op, m, lane)
+    | VecStoreLane (o, op, m, lane) ->
+        VecStoreLane (resolve_idx ctx.memories o, op, m, lane)
     | VecLoadSplat (o, op, m) -> VecLoadSplat (resolve_idx ctx.memories o, op, m)
     | VecLoadExtend (o, op, m) ->
         VecLoadExtend (resolve_idx ctx.memories o, op, m)
@@ -352,11 +352,10 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | VecShift op -> VecShift op
     | VecBitmask op -> VecBitmask op
     | VecBitselect -> VecBitselect
-    | VecExtract (op, signage, idx) ->
-        VecExtract (op, signage, Int32.of_string idx)
-    | VecReplace (op, idx) -> VecReplace (op, Int32.of_string idx)
+    | VecExtract (op, signage, lane) -> VecExtract (op, signage, lane)
+    | VecReplace (op, lane) -> VecReplace (op, lane)
     | VecSplat op -> VecSplat op
-    | VecShuffle (op, v) -> VecShuffle (op, Utils.V128.to_string v)
+    | VecShuffle (op, v) -> VecShuffle (op, v)
     | VecTernOp op -> VecTernOp op
     | Folded (i, is) ->
         Folded (instr ~resolve_type ctx i, List.map (instr ~resolve_type ctx) is)

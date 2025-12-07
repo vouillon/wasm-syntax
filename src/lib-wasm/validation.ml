@@ -390,7 +390,7 @@ let address_type_to_valtype = function `I32 -> I32 | `I64 -> I64
 (* Constants for max offsets *)
 
 let max_offset_i32_exclusive = Uint64.of_string "0x1_0000_0000" (* 2^32 *)
-let max_align = Uint64.of_int 8
+let max_align = Uint64.of_int 16
 
 let check_memarg limits sz { Ast.Text.offset; align } =
   if limits.address_type = `I32 then
@@ -424,6 +424,23 @@ let field_has_default (ty : fieldtype) =
       | I32 | I64 | F32 | F64 | V128 -> true
       | Ref { nullable; _ } -> nullable
       | Tuple _ -> assert false)
+
+let shape_type (shape : Ast.vec_shape) =
+  match shape with
+  | I8x16 | I16x8 | I32x4 -> I32
+  | I64x2 -> I64
+  | F32x4 -> F32
+  | F64x2 -> F64
+
+let check_shape_lanes (shape : Ast.vec_shape) lane =
+  let max_lane =
+    match shape with
+    | I8x16 -> 16
+    | I16x8 -> 8
+    | I32x4 | F32x4 -> 4
+    | I64x2 | F64x2 -> 2
+  in
+  assert (lane < max_lane)
 
 let rec instruction ctx (i : _ Ast.Text.instr) =
   if false then Format.eprintf "%a@." print_instr i;
@@ -769,24 +786,9 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | DataDrop idx ->
       ignore (Sequence.get ctx.modul.data idx);
       return ()
-  | VecBinOp op ->
-      let op_type =
-        match op with
-        | VecLt (s, shape)
-        | VecGt (s, shape)
-        | VecLe (s, shape)
-        | VecGe (s, shape) -> (
-            match shape with
-            | I8x16 | I16x8 | I32x4 | I64x2 ->
-                if s = None then assert false;
-                V128
-            | F32x4 | F64x2 ->
-                if s <> None then assert false;
-                V128)
-        | _ -> V128
-      in
-      let* () = pop ctx op_type in
-      let* () = pop ctx op_type in
+  | VecBinOp _ ->
+      let* () = pop ctx V128 in
+      let* () = pop ctx V128 in
       push V128
   | VecConst _ -> push V128
   | VecUnOp _ ->
@@ -813,18 +815,18 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop ctx V128 in
       push V128
   | VecSplat (Splat shape) ->
-      let ty =
-        match shape with
-        | I8x16 | I16x8 | I32x4 -> I32
-        | I64x2 -> I64
-        | F32x4 -> F32
-        | F64x2 -> F64
-      in
-      let* () = pop ctx ty in
+      let* () = pop ctx (shape_type shape) in
       push V128
-  | VecLoad (idx, _, memarg) ->
+  | VecLoad (idx, sz, memarg) ->
       let limits = Sequence.get ctx.modul.memories idx in
-      check_memarg limits `V128 memarg;
+      check_memarg limits
+        (match sz with
+        | Load128 -> `V128
+        | Load8x8S | Load8x8U | Load16x4S | Load16x4U | Load32x2S | Load32x2U
+        | Load64Zero ->
+            `I64
+        | Load32Zero -> `I32)
+        memarg;
       let* () = pop ctx (address_type_to_valtype limits.address_type) in
       push V128
   | VecStore (idx, memarg) ->
@@ -839,8 +841,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         (op :> [ `I8 | `I16 | `I32 | `I64 | `F32 | `F64 | `V128 ])
         mem;
       let sz = match op with `I8 -> 1 | `I16 -> 2 | `I32 -> 4 | `I64 -> 8 in
-      if Utils.Uint32.to_int (Utils.Uint32.of_string lane) >= 16 / sz then
-        assert false (*ZZZ*);
+      if lane >= 16 / sz then assert false (*ZZZ*);
       let* () = pop ctx I32 in
       let* () = pop ctx V128 in
       push V128
@@ -850,8 +851,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         (op :> [ `I8 | `I16 | `I32 | `I64 | `F32 | `F64 | `V128 ])
         mem;
       let sz = match op with `I8 -> 1 | `I16 -> 2 | `I32 -> 4 | `I64 -> 8 in
-      if Utils.Uint32.to_int (Utils.Uint32.of_string lane) >= 16 / sz then
-        assert false (*ZZZ*);
+      if lane >= 16 / sz then assert false (*ZZZ*);
       let* () = pop ctx I32 in
       let* () = pop ctx V128 in
       return ()
@@ -876,28 +876,17 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       check_memarg limits sz memarg;
       let* () = pop ctx (address_type_to_valtype limits.address_type) in
       push V128
-  | VecExtract (op, _, _) ->
-      let res_ty =
-        match op with
-        | I8x16 | I16x8 | I32x4 -> I32
-        | I64x2 -> I64
-        | F32x4 -> F32
-        | F64x2 -> F64
-      in
+  | VecExtract (shape, _, lane) ->
+      check_shape_lanes shape lane;
       let* () = pop ctx V128 in
-      push res_ty
-  | VecReplace (op, _) ->
-      let arg_ty =
-        match op with
-        | I8x16 | I16x8 | I32x4 -> I32
-        | I64x2 -> I64
-        | F32x4 -> F32
-        | F64x2 -> F64
-      in
-      let* () = pop ctx arg_ty in
+      push (shape_type shape)
+  | VecReplace (shape, lane) ->
+      check_shape_lanes shape lane;
+      let* () = pop ctx (shape_type shape) in
       let* () = pop ctx V128 in
       push V128
-  | VecShuffle (_, _) ->
+  | VecShuffle (_, lanes) ->
+      assert (String.for_all (fun l -> Char.code l < 32) lanes);
       let* () = pop ctx V128 in
       let* () = pop ctx V128 in
       push V128
