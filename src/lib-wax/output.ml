@@ -149,7 +149,9 @@ let print_typed_pat pp (pat, opt_typ) =
 let functype pp { params; results } =
   box pp ~indent:indent_level (fun () ->
       keyword pp "fn";
-      tuple true pp (Array.to_list params);
+      print_paren_list
+        (fun pp (id, ty) -> print_typed_pat pp (id, Some ty))
+        pp (Array.to_list params);
       if results <> [||] then (
         space pp ();
         punctuation pp "->";
@@ -161,7 +163,7 @@ let blocktype pp { params; results } =
   | [||], [| ty |] -> valtype pp ty
   | _ ->
       box pp ~indent:indent_level (fun () ->
-          tuple true pp (Array.to_list params);
+          tuple true pp (List.map snd (Array.to_list params));
           if results <> [||] then (
             space pp ();
             operator pp "->";

@@ -4,6 +4,7 @@ type t
 (** A type context holding recursive type definitions. *)
 
 val create : unit -> t
+val get_type : t -> int -> Ast.Binary.comptype
 
 val add_rectype : t -> Ast.Binary.rectype -> int
 (** Add a recursive type definition to the context. Returns the index of the

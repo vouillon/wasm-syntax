@@ -327,8 +327,8 @@ valtype:
 | t = tupletype { Tuple t }
 
 functype:
-| "(" FUNC r = params_and_results_no_bindings(")")
-  { fst r }
+| "(" FUNC r = params_and_results(")")
+  { let (p, res) = fst r in { params = Array.of_list p; results = Array.of_list res } }
 
 params(cont):
 | c = cont { ([] , c) }
@@ -354,7 +354,7 @@ params_and_results(cont):
 params_and_results_no_bindings(cont):
 | r = params_no_bindings(results(cont))
   { let (p, (r, c)) = r in
-    ({params = Array.of_list p; results = Array.of_list r }, c) }
+    ({params = Array.of_list (List.map (fun t -> (None, t)) p); results = Array.of_list r }, c) }
 
 field:
 | "(" FIELD i = ID t = fieldtype ")" { [(Some i, t)] }

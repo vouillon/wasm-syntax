@@ -187,3 +187,13 @@ let val_subtype subtyping_info ty ty' =
   match (ty, ty') with
   | Ref t, Ref t' -> ref_subtype subtyping_info t t'
   | _ -> ty == ty'
+
+let get_type t idx =
+  let rec find l =
+    match l with
+    | [] -> raise Not_found
+    | (i, r) :: rem ->
+        if idx >= i && idx < i + Array.length r then (r.(idx - i) : subtype).typ
+        else find rem
+  in
+  find t.rev_list

@@ -263,8 +263,16 @@ let valtype_list name tl =
   make_list ~kind:keyword name (fun tl -> List.map valtype tl) tl
 
 let functype { params; results } =
-  valtype_list "param" (Array.to_list params)
-  @ valtype_list "result" (Array.to_list results)
+  let params = Array.to_list params in
+  let params_sexp =
+    if List.for_all (fun (i, _) -> i = None) params then
+      valtype_list "param" (List.map snd params)
+    else
+      List.map
+        (fun (i, t) -> list (keyword "param" :: (opt_id i @ [ valtype t ])))
+        params
+  in
+  params_sexp @ valtype_list "result" (Array.to_list results)
 
 let storagetype typ =
   match typ with Value typ -> valtype typ | Packed typ -> packedtype typ
@@ -626,14 +634,8 @@ let vec_lane_op_nat_align = function
   | `I32 -> 4
   | `I64 -> 8
 
-let num_type_nat_align = function
-  | NumI32 | NumF32 -> 4
-  | NumI64 | NumF64 -> 8
-
-let storage_type_nat_align = function
-  | `I8 -> 1
-  | `I16 -> 2
-  | `I32 -> 4
+let num_type_nat_align = function NumI32 | NumF32 -> 4 | NumI64 | NumF64 -> 8
+let storage_type_nat_align = function `I8 -> 1 | `I16 -> 2 | `I32 -> 4
 
 let catches l =
   List.map
@@ -781,8 +783,7 @@ let rec instr i =
            | Load32x2U -> "v128.load32x2_u"
            | Load32Zero -> "v128.load32_zero"
            | Load64Zero -> "v128.load64_zero")
-        :: (memidx i
-           @ memarg (Uint64.of_int (vec_load_op_nat_align op)) m))
+        :: (memidx i @ memarg (Uint64.of_int (vec_load_op_nat_align op)) m))
   | VecStore (i, m) ->
       block ~loc
         (instruction "v128.store" :: (memidx i @ memarg (Uint64.of_int 16) m))
@@ -795,7 +796,6 @@ let rec instr i =
               | `I16 -> "16"
               | `I32 -> "32"
               | `I64 -> "64"))
-
         :: (memidx i
            @ memarg (Uint64.of_int (vec_lane_op_nat_align op)) m
            @ [ atom ~style:Constant (Int.to_string lane) ]))
@@ -808,7 +808,6 @@ let rec instr i =
               | `I16 -> "16"
               | `I32 -> "32"
               | `I64 -> "64"))
-
         :: (memidx i
            @ memarg (Uint64.of_int (vec_lane_op_nat_align op)) m
            @ [ atom ~style:Constant (Int.to_string lane) ]))
@@ -821,9 +820,7 @@ let rec instr i =
               | `I16 -> "16"
               | `I32 -> "32"
               | `I64 -> "64"))
-
-        :: (memidx i
-           @ memarg (Uint64.of_int (vec_lane_op_nat_align op)) m))
+        :: (memidx i @ memarg (Uint64.of_int (vec_lane_op_nat_align op)) m))
   | VecLoadExtend (i, op, m) ->
       block ~loc
         (instruction
@@ -836,10 +833,8 @@ let rec instr i =
            | Load32x2U -> "v128.load32x2_u"
            | Load32Zero -> "v128.load32_zero"
            | Load64Zero -> "v128.load64_zero"
-
            | Load128 -> assert false)
-        :: (memidx i
-           @ memarg (Uint64.of_int (vec_load_op_nat_align op)) m))
+        :: (memidx i @ memarg (Uint64.of_int (vec_load_op_nat_align op)) m))
   | Load (i, m, sz) ->
       block ~loc
         (instruction
@@ -849,20 +844,16 @@ let rec instr i =
               | NumI64 -> "i64"
               | NumF32 -> "f32"
               | NumF64 -> "f64"))
-
-        :: (memidx i
-           @ memarg (Uint64.of_int (num_type_nat_align sz)) m))
+        :: (memidx i @ memarg (Uint64.of_int (num_type_nat_align sz)) m))
   | LoadS (i, m, sz, sz', s) ->
       block ~loc
         (instruction
            (signage
               (Printf.sprintf "%s.load%s"
-                  (match sz with `I32 -> "i32" | `I64 -> "i64")
-                  (match sz' with `I8 -> "8" | `I16 -> "16" | `I32 -> "32"))
+                 (match sz with `I32 -> "i32" | `I64 -> "i64")
+                 (match sz' with `I8 -> "8" | `I16 -> "16" | `I32 -> "32"))
               s)
-
-        :: (memidx i
-           @ memarg (Uint64.of_int (storage_type_nat_align sz')) m))
+        :: (memidx i @ memarg (Uint64.of_int (storage_type_nat_align sz')) m))
   | Store (i, m, sz) ->
       block ~loc
         (instruction
@@ -872,17 +863,14 @@ let rec instr i =
               | NumI64 -> "i64"
               | NumF32 -> "f32"
               | NumF64 -> "f64"))
-
-        :: (memidx i
-           @ memarg (Uint64.of_int (num_type_nat_align sz)) m))
+        :: (memidx i @ memarg (Uint64.of_int (num_type_nat_align sz)) m))
   | StoreS (i, m, sz, sz') ->
       block ~loc
         (instruction
            (Printf.sprintf "%s.store%s"
               (match sz with `I32 -> "i32" | `I64 -> "i64")
               (match sz' with `I8 -> "8" | `I16 -> "16" | `I32 -> "32"))
-        :: (memidx i
-           @ memarg (Uint64.of_int (storage_type_nat_align sz')) m))
+        :: (memidx i @ memarg (Uint64.of_int (storage_type_nat_align sz')) m))
   | MemorySize m -> block ~loc (instruction "memory.size" :: memidx m)
   | MemoryGrow m -> block ~loc (instruction "memory.grow" :: memidx m)
   | MemoryFill m -> block ~loc (instruction "memory.fill" :: memidx m)

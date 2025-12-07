@@ -158,7 +158,10 @@ let rec valtype st (t : Src.valtype) : Ast.valtype =
 
 let functype st (t : Src.functype) : Ast.functype =
   {
-    params = Array.map (fun t -> valtype st t) t.params;
+    params =
+      Array.map
+        (fun (id, t) -> (Option.map Ast.no_loc id, valtype st t))
+        t.params;
     results = Array.map (fun t -> valtype st t) t.results;
   }
 
@@ -252,8 +255,8 @@ let typeuse_arity ctx (i, ty) =
   | Some i, None -> type_arity ctx i
   | None, None -> assert false
 
-let blocktype_arity ctx (t : Src.blocktype option) =
-  match t with
+let blocktype_arity ctx (typ : Src.blocktype option) =
+  match typ with
   | None -> (0, 0)
   | Some (Valtype _) -> (0, 1)
   | Some (Typeuse t) -> typeuse_no_bindings_arity ctx t
@@ -369,15 +372,21 @@ let reasonable_string =
 let string_args n args =
   try
     if Uint32.of_int (List.length args) <> n then raise Exit;
-    let b = Bytes.create (Uint32.to_int n) in
-    List.iteri
-      (fun i arg ->
+    List.iter
+      (fun arg ->
         match arg.Ast.desc with
         | Ast.Int c
           when let c = int_of_string c in
                c >= 0 && c < 256 ->
-            Bytes.set b i (Char.chr (int_of_string c))
+            ()
         | _ -> raise Exit)
+      args;
+    let b = Bytes.create (Uint32.to_int n) in
+    List.iteri
+      (fun i arg ->
+        match arg.Ast.desc with
+        | Ast.Int c -> Bytes.set b i (Char.chr (int_of_string c))
+        | _ -> assert false)
       args;
     let s = Bytes.to_string b in
     if String.is_valid_utf_8 s && Re.execp reasonable_string s then Some s
@@ -533,11 +542,14 @@ let blocktype ctx (typ : Src.blocktype option) =
   match typ with
   | None -> { Ast.params = [||]; results = [||] }
   | Some (Valtype ty) -> { Ast.params = [||]; results = [| valtype ctx ty |] }
-  | Some (Typeuse (ty, sign)) -> (
-      match (ty, sign) with
+  | Some (Typeuse (ty_idx, sign)) -> (
+      match (ty_idx, sign) with
       | _, Some { Src.params; results } ->
           {
-            Ast.params = Array.map (fun t -> valtype ctx t) params;
+            Ast.params =
+              Array.map
+                (fun (id, t) -> (Option.map Ast.no_loc id, valtype ctx t))
+                params;
             results = Array.map (fun t -> valtype ctx t) results;
           }
       | _, None -> assert false (*ZZZ*))
@@ -912,7 +924,7 @@ let typeuse kind ctx (typ, sign) =
                 Ast.named_params =
                   Array.to_list
                     (Array.mapi
-                       (fun n t ->
+                       (fun n (_, t) ->
                          ( Some
                              (idx ctx `Local
                                 (Ast.no_loc

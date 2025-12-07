@@ -52,7 +52,11 @@ let reftype r : Text.reftype = { nullable = r.nullable; typ = heaptype r.typ }
 let unpack_type f = match f with Value v -> v | Packed _ -> I32
 
 let functype typ : Text.functype =
-  let params = Array.map valtype typ.params in
+  let params =
+    Array.map
+      (fun (id, t) -> (Option.map (fun id -> id.desc) id, valtype t))
+      typ.params
+  in
   let results = Array.map valtype typ.results in
   { params; results }
 

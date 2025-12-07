@@ -231,18 +231,6 @@ parse: TYPE IDENT EQUAL FN LPAREN IDENT UNREACHABLE
 
 Expecting a comma ',', or a closing parenthesis ')'.
 
-parse: TYPE IDENT EQUAL FN LPAREN IDENT COMMA UNREACHABLE
-##
-## Ends in an error in state: 35.
-##
-## separated_nonempty_list(COMMA,valtype) -> valtype COMMA . separated_nonempty_list(COMMA,valtype) [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## valtype COMMA
-##
-
-Expecting a value type.
-
 parse: LET IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 472.
@@ -504,19 +492,6 @@ parse: FN IDENT LPAREN UNREACHABLE
 ##
 
 Expecting a list of function parameters.
-
-parse: FN IDENT LPAREN IDENT UNREACHABLE
-##
-## Ends in an error in state: 439.
-##
-## separated_nonempty_list(COMMA,__anonymous_3) -> simple_pat . COLON valtype [ RPAREN ]
-## separated_nonempty_list(COMMA,__anonymous_3) -> simple_pat . COLON valtype COMMA separated_nonempty_list(COMMA,__anonymous_3) [ RPAREN ]
-##
-## The known suffix of the stack is as follows:
-## simple_pat
-##
-
-Expecting a colon ':' followed by a value type.
 
 parse: FN IDENT LPAREN IDENT COLON UNREACHABLE
 ##

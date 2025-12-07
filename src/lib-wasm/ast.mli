@@ -29,6 +29,7 @@ type limits = {
 module Make_types (X : sig
   type idx
   type 'a annotated_array
+  type 'a opt_annotated_array
 end) : sig
   type heaptype =
     | Func
@@ -56,7 +57,11 @@ end) : sig
     | Ref of reftype
     | Tuple of valtype list
 
-  type functype = { params : valtype array; results : valtype array }
+  type functype = {
+    params : valtype X.opt_annotated_array;
+    results : valtype array;
+  }
+
   type nonrec packedtype = packedtype = I8 | I16
   type storagetype = Value of valtype | Packed of packedtype
   type nonrec 'typ muttype = 'typ muttype = { mut : bool; typ : 'typ }
@@ -571,6 +576,7 @@ module Text : sig
   module X : sig
     type nonrec idx = idx
     type 'a annotated_array = (id option * 'a) array
+    type 'a opt_annotated_array = (id option * 'a) array
     type label = id option
   end
 
@@ -666,6 +672,7 @@ module Binary : sig
   module X : sig
     type nonrec idx = idx
     type 'a annotated_array = 'a array
+    type 'a opt_annotated_array = 'a array
     type label = unit
   end
 

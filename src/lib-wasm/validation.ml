@@ -99,7 +99,7 @@ let rec valtype ctx (ty : Ast.Text.valtype) =
 
 let functype ctx { Ast.Text.params; results } =
   {
-    params = Array.map (fun ty -> valtype ctx ty) params;
+    params = Array.map (fun (_, ty) -> valtype ctx ty) params;
     results = Array.map (fun ty -> valtype ctx ty) results;
   }
 
@@ -286,10 +286,15 @@ let blocktype ctx (ty : Ast.Text.blocktype option) =
   match ty with
   | None -> ([], [])
   | Some (Typeuse (_, Some { params; results })) ->
-      ( Array.to_list (Array.map (valtype ctx) params),
-        Array.to_list (Array.map (valtype ctx) results) )
-  | Some (Typeuse (_, None)) -> assert false (*ZZZ*)
-  | Some (Valtype ty) -> ([], [ valtype ctx ty ])
+      ( Array.to_list (Array.map (fun (_, ty) -> valtype ctx.types ty) params),
+        Array.to_list (Array.map (valtype ctx.types) results) )
+  | Some (Typeuse (Some idx, None)) -> (
+      let ty = resolve_type_index ctx.types idx in
+      match (Types.get_subtype ctx.subtyping_info ty).typ with
+      | Func { params; results } -> (Array.to_list params, Array.to_list results)
+      | _ -> assert false)
+  | Some (Typeuse (None, None)) -> assert false
+  | Some (Valtype ty) -> ([], [ valtype ctx.types ty ])
 
 let rec pop_args ctx args =
   match args with
@@ -446,24 +451,24 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   if false then Format.eprintf "%a@." print_instr i;
   match i.desc with
   | Block { label; typ; block = b } ->
-      let params, results = blocktype ctx.modul.types typ in
+      let params, results = blocktype ctx.modul typ in
       let* () = pop_args ctx params in
       block ctx label params results results b;
       push_results results
   | Loop { label; typ; block = b } ->
-      let params, results = blocktype ctx.modul.types typ in
+      let params, results = blocktype ctx.modul typ in
       let* () = pop_args ctx params in
       block ctx label params results params b;
       push_results results
   | If { label; typ; if_block; else_block } ->
-      let params, results = blocktype ctx.modul.types typ in
+      let params, results = blocktype ctx.modul typ in
       let* () = pop ctx I32 in
       let* () = pop_args ctx params in
       block ctx label params results results if_block;
       block ctx label params results results else_block;
       push_results results
   | TryTable { label; typ; block = b; catches } ->
-      let params, results = blocktype ctx.modul.types typ in
+      let params, results = blocktype ctx.modul typ in
       let* () = pop_args ctx params in
       block ctx label params results results b;
       List.iter
@@ -507,7 +512,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         catches;
       push_results results
   | Try { label; typ; block = b; catches; catch_all } ->
-      let params, results = blocktype ctx.modul.types typ in
+      let params, results = blocktype ctx.modul typ in
       let* () = pop_args ctx params in
       block ctx label params results results b;
       List.iter

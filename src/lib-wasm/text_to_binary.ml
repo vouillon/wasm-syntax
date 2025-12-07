@@ -107,7 +107,7 @@ let field_type ctx f = mut_type storage_type ctx f
 
 let func_type ctx (f : T.functype) : B.functype =
   {
-    params = Array.map (valtype ctx) f.params;
+    params = Array.map (fun (_, t) -> valtype ctx t) f.params;
     results = Array.map (valtype ctx) f.results;
   }
 

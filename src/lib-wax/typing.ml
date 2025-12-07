@@ -149,7 +149,7 @@ let rec valtype ctx ty : Internal.valtype =
 
 let functype ctx { params; results } : Internal.functype =
   {
-    params = Array.map (fun ty -> valtype ctx ty) params;
+    params = Array.map (fun (_, ty) -> valtype ctx ty) params;
     results = Array.map (fun ty -> valtype ctx ty) results;
   }
 
@@ -644,7 +644,7 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
       let params =
         Array.to_list
           (Array.map
-             (fun typ ->
+             (fun (_, typ) ->
                UnionFind.make
                  (Valtype { typ; internal = valtype ctx.type_context typ }))
              params)
@@ -665,7 +665,7 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
       let params0 =
         Array.to_list
           (Array.map
-             (fun typ -> { typ; internal = valtype ctx.type_context typ })
+             (fun (_, typ) -> { typ; internal = valtype ctx.type_context typ })
              params)
       in
       let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params0 in
@@ -686,7 +686,7 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
       let params =
         Array.to_list
           (Array.map
-             (fun typ ->
+             (fun (_, typ) ->
                UnionFind.make
                  (Valtype { typ; internal = valtype ctx.type_context typ }))
              params)
@@ -868,7 +868,7 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
               let types =
                 Array.to_list
                   (Array.map
-                     (fun typ ->
+                     (fun (_, typ) ->
                        UnionFind.make
                          (Valtype
                             { typ; internal = valtype ctx.type_context typ }))
@@ -897,7 +897,7 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
               let types =
                 Array.to_list
                   (Array.map
-                     (fun typ ->
+                     (fun (_, typ) ->
                        UnionFind.make
                          (Valtype
                             { typ; internal = valtype ctx.type_context typ }))
@@ -1592,7 +1592,7 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
         (List.map expression_type lst')
         (Array.to_list
            (Array.map
-              (fun typ ->
+              (fun (_, typ) ->
                 UnionFind.make
                   (Valtype { typ; internal = valtype ctx.type_context typ }))
               params));
@@ -1843,7 +1843,7 @@ let functions ctx fields =
 let funsig _ctx sign =
   (*ZZZ Check signature (unique names) *)
   {
-    params = Array.of_list (List.map snd sign.named_params);
+    params = Array.of_list sign.named_params;
     results = Array.of_list sign.results;
   }
 

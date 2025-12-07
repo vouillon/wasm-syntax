@@ -125,7 +125,7 @@ let locals env typ l =
         match (lookup env.types ty).typ with
         | Func ty ->
             Array.fold_left
-              (fun tbl typ -> Tbl.add None typ tbl)
+              (fun tbl (_, typ) -> Tbl.add None typ tbl)
               Tbl.empty ty.params
         | Struct _ | Array _ -> assert false (*ZZZ*))
     | None, None -> assert false

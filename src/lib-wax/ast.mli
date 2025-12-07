@@ -14,6 +14,7 @@ type idx = (string, location) annotated
 include module type of Wasm.Ast.Make_types (struct
   type nonrec idx = idx
   type 'a annotated_array = (idx * 'a) array
+  type 'a opt_annotated_array = (idx option * 'a) array
 end)
 
 type signage = Wasm.Ast.signage = Signed | Unsigned

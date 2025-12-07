@@ -190,9 +190,9 @@ resulttype:
 | "(" l = separated_nonempty_list(",", valtype) ")" { l }
 
 functype:
-| FN "(" params = separated_list(",", valtype) ")"
+| FN "(" named_params = funcparams ")"
   results = option ("->" r = resulttype {r})
-  { {params = Array.of_list params;
+  { {params = Array.of_list (named_params);
      results = Array.of_list (Option.value ~default:[] results)} }
 
 storagetype:
@@ -262,7 +262,7 @@ tag:
 
 blocktype:
 | "(" params = separated_list(",", valtype) ")" "->" result = resulttype
-  { {params = Array.of_list params; results = Array.of_list result} }
+  { {params = Array.of_list (List.map (fun t -> (None, t)) params); results = Array.of_list result} }
 | t = valtype { {params = [||]; results = [|t|] } }
 
 %inline block:
