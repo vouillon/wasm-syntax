@@ -282,7 +282,6 @@ let rec token lexbuf =
   | "f64x2.splat" -> INSTR (VecSplat (Splat F64x2))
   | "i8x16.shuffle" -> VEC_SHUFFLE
   | "i8x16.swizzle" -> INSTR (VecBinOp VecSwizzle)
-  | "v128.swizzle" -> INSTR (VecBinOp VecSwizzle)
   | "i32.store8" -> STORES (`I32, `I8)
   | "i64.store8" -> STORES (`I64, `I8)
   | "i32.store16" -> STORES (`I32, `I16)
@@ -578,18 +577,30 @@ let rec token lexbuf =
   | "i32x4.relaxed_dot_i8x16_i7x16_add_s" ->
       VEC_TERN_OP (VecRelaxedDotAdd I32x4)
   | "i32x4.dot_i16x8_s" -> INSTR (VecBinOp (VecDot I32x4))
-  | "i16x8.extmul_low_i8x16_s" -> INSTR (VecBinOp (VecExtMulLow (Signed, I16x8)))
-  | "i16x8.extmul_high_i8x16_s" -> INSTR (VecBinOp (VecExtMulHigh (Signed, I16x8)))
-  | "i16x8.extmul_low_i8x16_u" -> INSTR (VecBinOp (VecExtMulLow (Unsigned, I16x8)))
-  | "i16x8.extmul_high_i8x16_u" -> INSTR (VecBinOp (VecExtMulHigh (Unsigned, I16x8)))
-  | "i32x4.extmul_low_i16x8_s" -> INSTR (VecBinOp (VecExtMulLow (Signed, I32x4)))
-  | "i32x4.extmul_high_i16x8_s" -> INSTR (VecBinOp (VecExtMulHigh (Signed, I32x4)))
-  | "i32x4.extmul_low_i16x8_u" -> INSTR (VecBinOp (VecExtMulLow (Unsigned, I32x4)))
-  | "i32x4.extmul_high_i16x8_u" -> INSTR (VecBinOp (VecExtMulHigh (Unsigned, I32x4)))
-  | "i64x2.extmul_low_i32x4_s" -> INSTR (VecBinOp (VecExtMulLow (Signed, I64x2)))
-  | "i64x2.extmul_high_i32x4_s" -> INSTR (VecBinOp (VecExtMulHigh (Signed, I64x2)))
-  | "i64x2.extmul_low_i32x4_u" -> INSTR (VecBinOp (VecExtMulLow (Unsigned, I64x2)))
-  | "i64x2.extmul_high_i32x4_u" -> INSTR (VecBinOp (VecExtMulHigh (Unsigned, I64x2)))
+  | "i16x8.extmul_low_i8x16_s" ->
+      INSTR (VecBinOp (VecExtMulLow (Signed, I16x8)))
+  | "i16x8.extmul_high_i8x16_s" ->
+      INSTR (VecBinOp (VecExtMulHigh (Signed, I16x8)))
+  | "i16x8.extmul_low_i8x16_u" ->
+      INSTR (VecBinOp (VecExtMulLow (Unsigned, I16x8)))
+  | "i16x8.extmul_high_i8x16_u" ->
+      INSTR (VecBinOp (VecExtMulHigh (Unsigned, I16x8)))
+  | "i32x4.extmul_low_i16x8_s" ->
+      INSTR (VecBinOp (VecExtMulLow (Signed, I32x4)))
+  | "i32x4.extmul_high_i16x8_s" ->
+      INSTR (VecBinOp (VecExtMulHigh (Signed, I32x4)))
+  | "i32x4.extmul_low_i16x8_u" ->
+      INSTR (VecBinOp (VecExtMulLow (Unsigned, I32x4)))
+  | "i32x4.extmul_high_i16x8_u" ->
+      INSTR (VecBinOp (VecExtMulHigh (Unsigned, I32x4)))
+  | "i64x2.extmul_low_i32x4_s" ->
+      INSTR (VecBinOp (VecExtMulLow (Signed, I64x2)))
+  | "i64x2.extmul_high_i32x4_s" ->
+      INSTR (VecBinOp (VecExtMulHigh (Signed, I64x2)))
+  | "i64x2.extmul_low_i32x4_u" ->
+      INSTR (VecBinOp (VecExtMulLow (Unsigned, I64x2)))
+  | "i64x2.extmul_high_i32x4_u" ->
+      INSTR (VecBinOp (VecExtMulHigh (Unsigned, I64x2)))
   | "i32x4.extadd_pairwise_i16x8_s" ->
       INSTR (VecUnOp (VecExtAddPairwise (Signed, I32x4)))
   | "i32x4.extadd_pairwise_i16x8_u" ->
@@ -626,7 +637,6 @@ let rec token lexbuf =
   | "f64x2.gt" -> INSTR (VecBinOp (VecGt (None, F64x2)))
   | "f64x2.le" -> INSTR (VecBinOp (VecLe (None, F64x2)))
   | "f64x2.ge" -> INSTR (VecBinOp (VecGe (None, F64x2)))
-
   | "i64x2.extend_low_i32x4_u" ->
       INSTR (VecUnOp (VecExtend (`Low, `_32, Unsigned, I64x2)))
   | "i64x2.extend_high_i32x4_u" ->
@@ -776,7 +786,6 @@ let rec token lexbuf =
   | "invoke" -> INVOKE
   | "get" -> GET
   | "ref.host" -> REF_HOST
-
   | "assert_return" -> ASSERT_RETURN
   | "assert_exception" -> ASSERT_EXCEPTION
   | "assert_trap" -> ASSERT_TRAP

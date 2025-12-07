@@ -842,8 +842,8 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         mem;
       let sz = match op with `I8 -> 1 | `I16 -> 2 | `I32 -> 4 | `I64 -> 8 in
       if lane >= 16 / sz then assert false (*ZZZ*);
-      let* () = pop ctx I32 in
       let* () = pop ctx V128 in
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
       push V128
   | VecStoreLane (idx, op, mem, lane) ->
       let limits = Sequence.get ctx.modul.memories idx in
@@ -852,15 +852,15 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         mem;
       let sz = match op with `I8 -> 1 | `I16 -> 2 | `I32 -> 4 | `I64 -> 8 in
       if lane >= 16 / sz then assert false (*ZZZ*);
-      let* () = pop ctx I32 in
       let* () = pop ctx V128 in
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
       return ()
   | VecLoadSplat (idx, op, mem) ->
       let limits = Sequence.get ctx.modul.memories idx in
       check_memarg limits
         (op :> [ `I8 | `I16 | `I32 | `I64 | `F32 | `F64 | `V128 ])
         mem;
-      let* () = pop ctx I32 in
+      let* () = pop ctx (address_type_to_valtype limits.address_type) in
       push V128
   | VecLoadExtend (idx, op, memarg) ->
       let limits = Sequence.get ctx.modul.memories idx in

@@ -292,23 +292,9 @@ let runtest filename path =
               if true then prerr_endline "(parsing)" else print_flushed text)
     lst
 
-let dirs =
-  [
-    "/home/jerome/sources/Wasm/test/core";
-    "/home/jerome/sources/Wasm/test/legacy";
-    "/home/jerome/sources/Wasm/spectec/test-interpreter";
-  ]
+let dirs = [ "wasm-test-suite" ]
 
 let () =
   iter_files dirs
-    (fun p ->
-      List.mem p
-        [
-          "spec-test-1";
-          "spec-test-2";
-          (*          "simd";
-          "relaxed-simd";*)
-          "try_delegate.wast";
-          "rethrow.wast";
-        ])
+    (fun p -> List.mem p [ "try_delegate.wast"; "rethrow.wast" ])
     ".wast" runtest
