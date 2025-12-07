@@ -6,10 +6,6 @@ Unknown operator '@a'.
 ==== core/binary-leb128.wast ====
 ==== core/binary.wast ====
 ==== core/block.wast ====
-Parsing should have failed (inline function type): (type $sig (func))(func (block (type $sig) (result i32) (i32.const 0)) (unreachable))
-Parsing should have failed (inline function type): (type $sig (func (param i32) (result i32)))(func (block (type $sig) (result i32) (i32.const 0)) (unreachable))
-Parsing should have failed (inline function type): (type $sig (func (param i32) (result i32)))(func (i32.const 0) (block (type $sig) (param i32) (drop)) (unreachable))
-Parsing should have failed (inline function type): (type $sig (func (param i32 i32) (result i32)))(func (i32.const 0) (block (type $sig) (param i32) (result i32)) (unreachable))
 Parsing should have failed (mismatching label): (func block end $l)
 Parsing should have failed (mismatching label): (func block $a end $l)
 ==== core/br.wast ====
@@ -34,7 +30,7 @@ Parsing should have failed (mismatching label): (func block $a end $l)
 ==== core/custom.wast ====
 ==== core/data.wast ====
 ==== core/elem.wast ====
-Fatal error: exception Not_found
+Fatal error: exception Failure("Unbound type 0")
 ==== core/endianness.wast ====
 ==== core/exceptions/tag.wast ====
 Validation should have failed (non-empty tag result type):
@@ -62,13 +58,7 @@ Validation should have failed (non-empty tag result type):
 ==== core/float_misc.wast ====
 ==== core/forward.wast ====
 ==== core/func.wast ====
-Parsing should have failed (inline function type): (type $sig (func (param i32) (result i32)))(func (type $sig) (result i32) (i32.const 0))
-Parsing should have failed (inline function type): (type $sig (func (param i32) (result i32)))(func (type $sig) (param i32) (i32.const 0))
-Parsing should have failed (inline function type): (type $sig (func (param i32 i32) (result i32)))(func (type $sig) (param i32) (result i32) (unreachable))
-Parsing should have failed (duplicate local): (func (param $foo i32) (param $foo i32))
-Parsing should have failed (duplicate local): (func (param $foo i32) (local $foo i32))
-Parsing should have failed (duplicate local): (func (local $foo i32) (local $foo i32))
-Fatal error: exception Not_found
+Fatal error: exception Failure("Unbound type 1")
 ==== core/func_ptrs.wast ====
 ==== core/gc/array.wast ====
 ==== core/gc/array_copy.wast ====
@@ -94,10 +84,6 @@ Fatal error: exception Not_found
 File "wasm-test-suite/core/id.wast", line 5, characters 8-10:
 Unknown operator '$"'.
 ==== core/if.wast ====
-Parsing should have failed (inline function type): (type $sig (func))(func (i32.const 1)  (if (type $sig) (result i32) (then (i32.const 0)) (else (i32.const 2)))  (unreachable))
-Parsing should have failed (inline function type): (type $sig (func (param i32) (result i32)))(func (i32.const 1)  (if (type $sig) (result i32) (then (i32.const 0)) (else (i32.const 2)))  (unreachable))
-Parsing should have failed (inline function type): (type $sig (func (param i32) (result i32)))(func (i32.const 0) (i32.const 1)  (if (type $sig) (param i32) (then (drop)) (else (drop)))  (unreachable))
-Parsing should have failed (inline function type): (type $sig (func (param i32 i32) (result i32)))(func (i32.const 0) (i32.const 1)  (if (type $sig) (param i32) (result i32) (then)) (unreachable))
 Parsing should have failed (mismatching label): (func i32.const 0 if end $l)
 Parsing should have failed (mismatching label): (func i32.const 0 if $a end $l)
 Parsing should have failed (mismatching label): (func i32.const 0 if else $l end)
@@ -166,10 +152,6 @@ Validation should have failed (uninitialized local):
 ==== core/local_set.wast ====
 ==== core/local_tee.wast ====
 ==== core/loop.wast ====
-Parsing should have failed (inline function type): (type $sig (func))(func (loop (type $sig) (result i32) (i32.const 0)) (unreachable))
-Parsing should have failed (inline function type): (type $sig (func (param i32) (result i32)))(func (loop (type $sig) (result i32) (i32.const 0)) (unreachable))
-Parsing should have failed (inline function type): (type $sig (func (param i32) (result i32)))(func (i32.const 0) (loop (type $sig) (param i32) (drop)) (unreachable))
-Parsing should have failed (inline function type): (type $sig (func (param i32 i32) (result i32)))(func (i32.const 0) (loop (type $sig) (param i32) (result i32)) (unreachable))
 Parsing should have failed (mismatching label): (func loop end $l)
 Parsing should have failed (mismatching label): (func loop $a end $l)
 ==== core/memory.wast ====
