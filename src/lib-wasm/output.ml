@@ -771,8 +771,8 @@ let rec instr i =
               | `I16 -> "16"
               | `I32 -> "32"
               | `I64 -> "64"))
-        :: atom ~style:Constant (Int.to_string lane)
-        :: (memidx i @ memarg Uint64.one m))
+        :: (memidx i @ memarg Uint64.one m
+           @ [ atom ~style:Constant (Int.to_string lane) ]))
   | VecStoreLane (i, op, m, lane) ->
       block ~loc
         (instruction
@@ -782,8 +782,8 @@ let rec instr i =
               | `I16 -> "16"
               | `I32 -> "32"
               | `I64 -> "64"))
-        :: atom ~style:Constant (Int.to_string lane)
-        :: (memidx i @ memarg Uint64.one m))
+        :: (memidx i @ memarg Uint64.one m
+           @ [ atom ~style:Constant (Int.to_string lane) ]))
   | VecLoadSplat (i, op, m) ->
       block ~loc
         (instruction

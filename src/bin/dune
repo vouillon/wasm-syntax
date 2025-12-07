@@ -1,7 +1,7 @@
 (executable
  (name main)
  (public_name wax)
- (libraries wasm wax conversion cmdliner))
+ (libraries wasm wax conversion cmdliner unix))
 
 (executables
  (names test_wasm convert pretty_print run_wasm_testsuite)

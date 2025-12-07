@@ -190,7 +190,12 @@ let runtest filename path =
       (match !color with Always -> Utils.Colors.Ansi.grey | _ -> "")
       path
       (match !color with Always -> Utils.Colors.Ansi.reset | _ -> "");
-  let lst = ScriptParser.parse ~filename in
+  let lst =
+    try ScriptParser.parse ~filename
+    with e ->
+      prerr_endline "ZZZ";
+      raise e
+  in
   (* Parsing *)
   let lst =
     List.filter_map
@@ -198,12 +203,22 @@ let runtest filename path =
         match (status, m) with
         | ((`Valid | `Invalid _) as status), `Parsed m -> Some (status, m)
         | ((`Valid | `Invalid _) as status), `Text txt ->
-            Some (status, ModuleParser.parse_from_string ~filename txt)
+            Some
+              ( status,
+                try ModuleParser.parse_from_string ~filename txt
+                with e ->
+                  prerr_endline txt;
+                  raise e )
         | `Malformed _, `Parsed _ -> assert false
         | `Malformed reason, `Text txt ->
             let ok =
               in_child_process ~quiet:true (fun () ->
-                  let ast = ModuleParser.parse_from_string ~filename txt in
+                  let ast =
+                    try ModuleParser.parse_from_string ~filename txt
+                    with e ->
+                      prerr_endline txt;
+                      raise e
+                  in
                   Wasm.Validation.check_syntax ast;
                   Wasm.Validation.f ast;
                   if false then
@@ -222,7 +237,11 @@ let runtest filename path =
       (fun (status, m) ->
         let text = Format.asprintf "%a@." (print_module ~color:Never) m in
         if false then print_flushed text;
-        (status, ModuleParser.parse_from_string ~filename text))
+        try (status, ModuleParser.parse_from_string ~filename text)
+        with e ->
+          prerr_endline "AAA";
+          prerr_endline text;
+          raise e)
       lst
   in
   (* Validation *)
@@ -276,17 +295,18 @@ let runtest filename path =
             let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
             let ok =
               in_child_process (fun () ->
-                  let m' = WaxParser.parse_from_string ~filename text in
-                  if false (*XXX*) then
-                    let ok =
-                      in_child_process (fun () -> ignore (Wax.Typing.f m'))
-                    in
-                    if not ok then
-                      if true then prerr_endline "(after parsing)"
-                      else (
-                        Format.eprintf "@[%a@]@." (print_wax ~color:!color) m';
-                        prerr_endline "===";
-                        Format.eprintf "@[%a@]@." (print_wax ~color:!color) m))
+                  if false then
+                    let m' = WaxParser.parse_from_string ~filename text in
+                    if false (*XXX*) then
+                      let ok =
+                        in_child_process (fun () -> ignore (Wax.Typing.f m'))
+                      in
+                      if not ok then
+                        if true then prerr_endline "(after parsing)"
+                        else (
+                          Format.eprintf "@[%a@]@." (print_wax ~color:!color) m';
+                          prerr_endline "===";
+                          Format.eprintf "@[%a@]@." (print_wax ~color:!color) m))
             in
             if not ok then
               if true then prerr_endline "(parsing)" else print_flushed text)

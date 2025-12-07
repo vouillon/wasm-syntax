@@ -234,6 +234,12 @@ let convert input_file output_file input_format_opt output_format_opt validate
     | Wasm, Wasm -> wasm_to_wasm
     | Wasm, Wax -> wasm_to_wax
   in
+  if
+    output_format = Wasm && output_file = None
+    && Unix.isatty Unix.stdout
+  then (
+    Printf.eprintf "Binary output not allowed on terminal\n";
+    exit 123);
   convert ~input_file ~output_file ~validate ~color
     ~source_map_file:opt_source_map_file
 
