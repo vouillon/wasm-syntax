@@ -20,8 +20,8 @@ open Ast.Binary.Types
 module Sequence = struct
   type 'a t = {
     name : string;
-    index_mapping : (Uint32.t, 'a) Hashtbl.t;
-    label_mapping : (string, 'a) Hashtbl.t;
+    index_mapping : (int, 'a) Hashtbl.t;
+    label_mapping : (string, int) Hashtbl.t;
     mutable last_index : int;
   }
 
@@ -34,18 +34,27 @@ module Sequence = struct
     }
 
   let register seq id v =
-    let idx = Uint32.of_int seq.last_index in
+    let idx = seq.last_index in
     seq.last_index <- seq.last_index + 1;
     Hashtbl.add seq.index_mapping idx v;
-    Option.iter (fun id -> (*ZZZ*) Hashtbl.add seq.label_mapping id v) id
+    Option.iter (fun id -> Hashtbl.add seq.label_mapping id idx) id
 
   let get seq (idx : Ast.Text.idx) =
     match idx.desc with
     | Num n -> (
-        try Hashtbl.find seq.index_mapping n
+        try Hashtbl.find seq.index_mapping (Uint32.to_int n)
         with Not_found ->
           Format.eprintf "Unbound %s %s@." seq.name (Uint32.to_string n);
           exit 1)
+    | Id id -> (
+        try Hashtbl.find seq.index_mapping (Hashtbl.find seq.label_mapping id)
+        with Not_found ->
+          Format.eprintf "Unbound %s $%s@." seq.name id;
+          exit 1)
+
+  let get_index seq (idx : Ast.Text.idx) =
+    match idx.desc with
+    | Num n -> Uint32.to_int n
     | Id id -> (
         try Hashtbl.find seq.label_mapping id
         with Not_found ->
@@ -177,11 +186,14 @@ type module_context = {
   refs : (int, unit) Hashtbl.t;
 }
 
+module IntSet = Set.Make (Int)
+
 type ctx = {
   locals : valtype Sequence.t;
   control_types : (string option * valtype list) list;
   return_types : valtype list;
   modul : module_context;
+  mutable initialized_locals : IntSet.t;
 }
 
 type stack = Unreachable | Empty | Cons of valtype option * stack
@@ -252,6 +264,12 @@ let is_nullable ty =
   | None -> true
   | Some (Ref { nullable; _ }) -> nullable
   | _ -> assert false
+
+let is_defaultable ty =
+  match ty with
+  | I32 | I64 | F32 | F64 | V128 -> true
+  | Ref { nullable; _ } -> nullable
+  | Tuple _ -> assert false
 
 let number_or_vec ty =
   match ty with
@@ -718,9 +736,19 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           let* () = pop ctx typ in
           push typ
       | _ -> assert false)
-  | LocalGet i -> push (get_local ctx i)
-  | LocalSet i -> pop ctx (get_local ~initialize:true ctx i)
+  | LocalGet i ->
+      let ty = get_local ctx i in
+      let idx = Sequence.get_index ctx.locals i in
+      if not (IntSet.mem idx ctx.initialized_locals) then
+        failwith "uninitialized local";
+      push ty
+  | LocalSet i ->
+      let idx = Sequence.get_index ctx.locals i in
+      ctx.initialized_locals <- IntSet.add idx ctx.initialized_locals;
+      pop ctx (get_local ~initialize:true ctx i)
   | LocalTee i ->
+      let idx = Sequence.get_index ctx.locals i in
+      ctx.initialized_locals <- IntSet.add idx ctx.initialized_locals;
       let ty = get_local ~initialize:true ctx i in
       let* () = pop ctx ty in
       push ty
@@ -1342,6 +1370,7 @@ let constant_expression ctx ty expr =
          control_types = [];
          return_types = [];
          modul = ctx;
+         initialized_locals = IntSet.empty;
        }
      in
      let* () = instructions ctx expr in
@@ -1604,19 +1633,30 @@ let functions ctx fields =
           in
           let return_types = Array.to_list func_typ.results in
           let locals = Sequence.make "local" in
+          let initialized_locals = ref IntSet.empty in
+          let i = ref 0 in
           (match typ with
           | _, Some (params, _) ->
               List.iter
                 (fun (id, typ) ->
+                  initialized_locals := IntSet.add !i !initialized_locals;
+                  incr i;
                   Sequence.register locals id (valtype ctx.types typ))
                 params
           | _ ->
               Array.iter
-                (fun typ -> Sequence.register locals None typ)
+                (fun typ ->
+                  initialized_locals := IntSet.add !i !initialized_locals;
+                  incr i;
+                  Sequence.register locals None typ)
                 func_typ.params);
           List.iter
             (fun (id, typ) ->
-              Sequence.register locals id (valtype ctx.types typ))
+              let typ = valtype ctx.types typ in
+              if is_defaultable typ then
+                initialized_locals := IntSet.add !i !initialized_locals;
+              incr i;
+              Sequence.register locals id typ)
             locs;
           with_empty_stack
             (let ctx =
@@ -1625,6 +1665,7 @@ let functions ctx fields =
                  control_types = [ (None, return_types) ];
                  return_types;
                  modul = ctx;
+                 initialized_locals = !initialized_locals;
                }
              in
              let* () = instructions ctx instrs in
