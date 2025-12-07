@@ -227,7 +227,7 @@ let check_constant f loc s =
 %start <string option * Ast.location modulefield list> parse
 %start <([`Valid | `Invalid of string | `Malformed of string ] *
          [`Parsed of string option * Ast.location modulefield list
-         | `Text of string ]) list> parse_script
+         | `Text of string | `Binary of string ]) list> parse_script
 
 %%
 
@@ -916,9 +916,10 @@ cmd:
 module_:
 | "(" MODULE DEFINITION ? name = ID ? l = modulefield * ")"
   { fun status -> [(status, `Parsed (name, l))] }
-| "(" MODULE DEFINITION ? ID ? BINARY STRING *  ")" { fun _ -> [] }
+| "(" MODULE DEFINITION ? ID ? BINARY s = STRING *  ")"
+  { fun status -> [(status, `Binary (String.concat "" s))] }
 | "(" MODULE DEFINITION ? ID ? QUOTE s = STRING *  ")"
-  { fun status -> [(status, `Text (String.concat "" s))] }
+  { fun status -> [(status, `Text (String.concat "\n" s))] }
 
 script_instance:
 | instance { fun _ -> [] }

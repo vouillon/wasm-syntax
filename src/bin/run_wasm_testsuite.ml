@@ -137,7 +137,8 @@ type script =
   ([ `Valid | `Invalid of string | `Malformed of string ]
   * [ `Parsed of
       string option * Wasm.Ast.location Wasm.Ast.Text.modulefield list
-    | `Text of string ])
+    | `Text of string
+    | `Binary of string ])
   list
 
 module Script_parser = struct
@@ -213,7 +214,8 @@ let runtest filename path =
             in
             if ok then
               Format.eprintf "Parsing should have failed (%s): %s@." reason txt;
-            None)
+            None
+        | _, `Binary _ -> None)
       lst
   in
   (* Serialization and reparsing *)
