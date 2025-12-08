@@ -1137,10 +1137,17 @@ let expr name e =
 
 let function_indices typ lst =
   let extract i =
-    match i with [ { Ast.desc = RefFunc idx; _ } ] -> Some idx | _ -> None
+    match i with
+    | [
+     ( { Ast.desc = RefFunc idx; _ }
+     | { Ast.desc = Folded ({ desc = RefFunc idx; _ }, []); _ } );
+    ] ->
+        Some idx
+    | _ -> None
   in
   match typ with
-  | { nullable = false; typ = Func } ->
+  (*ZZZ Check *)
+  | { nullable = true; typ = Func; _ } ->
       if List.for_all (fun i -> extract i <> None) lst then
         Some (List.filter_map extract lst)
       else None
@@ -1205,13 +1212,10 @@ let modulefield f =
         (block (keyword "data" :: opt_id id)
         :: ((match mode with
               | Passive -> []
-              | Active (i, e) -> (
+              | Active (i, e) ->
                   (if i.desc = Num Uint32.zero then []
                    else [ list [ keyword "memory"; index i ] ])
-                  @
-                  match e with
-                  | [ i ] -> [ instr i ]
-                  | _ -> [ expr "offset" e ]))
+                  @ [ expr "offset" e ])
            @ [ quoted_string init ]))
   | Start idx -> list [ keyword "start"; index idx ]
   | Memory { id; limits = l; init; exports = e } ->

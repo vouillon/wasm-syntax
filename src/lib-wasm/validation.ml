@@ -239,9 +239,9 @@ let pop ctx ty st =
   | Cons (None, r) -> (r, ())
   | Cons (Some ty', r) ->
       let ok = Types.val_subtype ctx.modul.subtyping_info ty' ty in
-      if not ok then
+      if not ok then (
         Format.eprintf "%a <: %a@." print_valtype ty' print_valtype ty;
-      assert ok;
+        failwith "type mismatch");
       (r, ())
   | Empty -> assert false
 
@@ -1608,9 +1608,11 @@ let segments ctx fields =
           | Passive | Declare -> ()
           | Active (i, e) ->
               let tabletype = Sequence.get ctx.tables i in
-              assert (
-                Types.val_subtype ctx.subtyping_info (Ref typ)
-                  (Ref tabletype.reftype));
+              if
+                not
+                  (Types.val_subtype ctx.subtyping_info (Ref typ)
+                     (Ref tabletype.reftype))
+              then failwith "type mismatch";
               constant_expression ctx
                 (address_type_to_valtype tabletype.limits.address_type)
                 e);

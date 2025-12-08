@@ -200,6 +200,14 @@ let runtest filename path =
         | ((`Valid | `Invalid _) as status), `Parsed m -> Some (status, m)
         | ((`Valid | `Invalid _) as status), `Text txt ->
             Some (status, ModuleParser.parse_from_string ~filename txt)
+        | ((`Valid | `Invalid _) as status), `Binary txt ->
+            let m =
+              Wasm.Binary_to_text.module_ (Wasm.Wasm_parser.module_ txt)
+            in
+            (*
+            Format.eprintf "%a@." (print_module ~color:!color) m;
+*)
+            Some (status, m)
         | `Malformed _, `Parsed _ -> assert false
         | `Malformed reason, `Text txt ->
             let ok =
@@ -215,7 +223,23 @@ let runtest filename path =
             if ok then
               Format.eprintf "Parsing should have failed (%s): %s@." reason txt;
             None
-        | _, `Binary _ -> None)
+        | `Malformed reason, `Binary txt ->
+            let ok =
+              in_child_process ~quiet:true (fun () ->
+                  let ast =
+                    Wasm.Binary_to_text.module_ (Wasm.Wasm_parser.module_ txt)
+                  in
+                  Wasm.Validation.check_syntax ast;
+                  Wasm.Validation.f ast;
+                  if false then
+                    Format.printf "@[<2>Result:@ %a@]@."
+                      (print_module ~color:!color)
+                      ast)
+            in
+            if ok then
+              Format.eprintf "Parsing should have failed (%s): %s@." reason
+                (String.escaped txt);
+            None)
       lst
   in
   (* Serialization and reparsing *)

@@ -8,7 +8,12 @@ let check_header file contents =
     || not (String.equal header (String.sub contents 0 8))
   then failwith (file ^ " is not a Wasm binary file (bad magic)")
 
-type ch = { buf : string; mutable pos : int; limit : int }
+type ch = {
+  buf : string;
+  mutable pos : int;
+  limit : int;
+  mutable has_data_count : bool;
+}
 
 let pos_in ch = ch.pos
 let seek_in ch pos = ch.pos <- pos
@@ -50,7 +55,11 @@ let rec sint ?(n = 5) ch =
 
 let rec sint32 ?(n = 5) ch =
   let i = Int32.of_int (input_byte ch) in
-  if n = 1 then assert (Int32.compare i 128l < 0);
+  if n = 1 then (
+    assert (Int32.compare i 128l < 0);
+    let sign_bit = Int32.logand i 0x08l <> 0l in
+    let unused_bits = Int32.logand i 0x70l in
+    if sign_bit then assert (unused_bits = 0x70l) else assert (unused_bits = 0l));
   if Int32.compare i 64l < 0 then i
   else if Int32.compare i 128l < 0 then Int32.sub i 128l
   else Int32.add (Int32.sub i 128l) (Int32.shift_left (sint32 ~n:(n - 1) ch) 7)
@@ -94,7 +103,12 @@ let float64 ch =
 let repeat n f ch = Array.init n (fun _ -> f ch)
 let vec f ch = repeat (uint ch) f ch
 let v128 ch = really_input_string ch 16
-let name ch = really_input_string ch (uint ch)
+
+let name ch =
+  let s = really_input_string ch (uint ch) in
+  assert (String.is_valid_utf_8 s);
+  (*ZZZ*)
+  s
 
 type section = { id : int; pos : int; size : int }
 
@@ -105,7 +119,9 @@ let next_section ch =
     let size = uint ch in
     Some { id; pos = pos_in ch; size }
 
-let skip_section ch { pos; size; _ } = seek_in ch (pos + size)
+let skip_section (ch : ch) { pos; size; _ } =
+  assert (ch.pos <= pos + size);
+  seek_in ch (pos + size)
 
 let heaptype ch =
   let i = sint ch in
@@ -185,7 +201,11 @@ let storagetype ch =
 
 let fieldtype ch =
   let typ = storagetype ch in
-  let mut = input_byte ch <> 0 in
+  let c = input_byte ch in
+  let mut =
+    match c with 0 -> false | 1 -> true | _ -> assert false
+    (*ZZZ*)
+  in
   { mut; typ }
 
 let comptype i ch =
@@ -589,10 +609,13 @@ and instruction ch =
         | 6 -> UnOp (I64 (TruncSat (`F64, Signed)))
         | 7 -> UnOp (I64 (TruncSat (`F64, Unsigned)))
         | 8 ->
+            if not ch.has_data_count then failwith "data count section required";
             let i = uint ch in
             let m = uint ch in
             MemoryInit (i, m)
-        | 9 -> DataDrop (uint ch)
+        | 9 ->
+            if not ch.has_data_count then failwith "data count section required";
+            DataDrop (uint ch)
         | 10 ->
             let m_dst = uint ch in
             let m_src = uint ch in
@@ -848,32 +871,68 @@ let expr ch =
 
 let elem ch =
   let mode_byte = uint ch in
-  let typ =
-    match mode_byte with
-    | 0x00 | 0x04 -> { nullable = false; typ = Func } (* funcref *)
-    | _ -> reftype_first_byte ch
-  in
-  let mode =
-    match mode_byte with
-    | 0x00 ->
-        (* Active, table 0, funcref *)
-        let offset_expr = expr ch in
-        Active (0, offset_expr)
-    | 0x01 -> Passive
-    | 0x02 ->
-        (* Active, explicit tableidx *)
-        let table_idx = uint ch in
-        let offset_expr = expr ch in
-        Active (table_idx, offset_expr)
-    | 0x03 -> Declare
-    | 0x04 ->
-        (* Active, legacy vector of funcidx *)
-        let offset_expr = expr ch in
-        Active (0, offset_expr)
-    | _ -> failwith (Printf.sprintf "Unknown elem mode 0x%02X" mode_byte)
-  in
-  let init = Array.to_list (vec expr ch) in
-  { typ; init; mode }
+  let ref_func i = [ Ast.no_loc (RefFunc i) ] in
+  match mode_byte with
+  | 0x00 ->
+      (* Active, table 0, vec(funcidx) *)
+      let offset_expr = expr ch in
+      let init = List.map ref_func (Array.to_list (vec uint ch)) in
+      {
+        typ = { nullable = false; typ = Func };
+        init;
+        mode = Active (0, offset_expr);
+      }
+  | 0x01 ->
+      (* Passive, elemkind=0, vec(funcidx) *)
+      let _elemkind = input_byte ch in
+      (* Must be 0x00 *)
+      let init = List.map ref_func (Array.to_list (vec uint ch)) in
+      { typ = { nullable = false; typ = Func }; init; mode = Passive }
+  | 0x02 ->
+      (* Active, tableidx, offset, elemkind=0, vec(funcidx) *)
+      let table_idx = uint ch in
+      let offset_expr = expr ch in
+      let _elemkind = input_byte ch in
+      (* Must be 0x00 *)
+      let init = List.map ref_func (Array.to_list (vec uint ch)) in
+      {
+        typ = { nullable = false; typ = Func };
+        init;
+        mode = Active (table_idx, offset_expr);
+      }
+  | 0x03 ->
+      (* Declarative, elemkind=0, vec(funcidx) *)
+      let _elemkind = input_byte ch in
+      (* Must be 0x00 *)
+      let init = List.map ref_func (Array.to_list (vec uint ch)) in
+      { typ = { nullable = false; typ = Func }; init; mode = Declare }
+  | 0x04 ->
+      (* Active, table 0, vec(expr) *)
+      let offset_expr = expr ch in
+      let init = Array.to_list (vec expr ch) in
+      {
+        typ = { nullable = true; typ = Func };
+        init;
+        mode = Active (0, offset_expr);
+      }
+  | 0x05 ->
+      (* Passive, reftype, vec(expr) *)
+      let typ = reftype_first_byte ch in
+      let init = Array.to_list (vec expr ch) in
+      { typ; init; mode = Passive }
+  | 0x06 ->
+      (* Active, tableidx, offset, reftype, vec(expr) *)
+      let table_idx = uint ch in
+      let offset_expr = expr ch in
+      let typ = reftype_first_byte ch in
+      let init = Array.to_list (vec expr ch) in
+      { typ; init; mode = Active (table_idx, offset_expr) }
+  | 0x07 ->
+      (* Declarative, reftype, vec(expr) *)
+      let typ = reftype_first_byte ch in
+      let init = Array.to_list (vec expr ch) in
+      { typ; init; mode = Declare }
+  | _ -> failwith (Printf.sprintf "Unknown elem mode 0x%02X" mode_byte)
 
 let table ch =
   let next_byte = peek_byte ch in
@@ -895,9 +954,13 @@ let code ch =
   let size = uint ch in
   let start_pos = pos_in ch in
   let locals =
+    let count = ref 0 in
     let n = uint ch in
     let vec_locals ch =
       let n = uint ch in
+      assert (n <= 65535);
+      count := !count + n;
+      assert (n <= 65535);
       let t = valtype_first_byte ch in
       List.init n (fun _ -> t)
     in
@@ -968,30 +1031,49 @@ let indirect_name_map ch =
 
 let module_ buf =
   check_header "input" buf;
-  let ch = { buf; pos = 8; limit = String.length buf } in
+  let ch =
+    { buf; pos = 8; limit = String.length buf; has_data_count = false }
+  in
+  let data_count = ref None in
   ch.pos <- 8;
   (* Reset position after index scan *)
-  let rec loop m =
+  let rec loop m last_section_order =
     match next_section ch with
     | None -> m
     | Some sect -> (
+        let current_order =
+          match sect.id with 12 -> 10 | 10 -> 11 | 11 -> 12 | i -> i
+        in
+        if sect.id <> 0 && current_order <= last_section_order then
+          failwith "section out of order";
+        let next_section_order =
+          if sect.id = 0 then last_section_order else current_order
+        in
         match sect.id with
         | 1 ->
             (* Type section *)
-            loop { m with types = Array.to_list (type_section ch) }
+            loop
+              { m with types = Array.to_list (type_section ch) }
+              next_section_order
         | 2 ->
             (* Import section *)
-            loop { m with imports = Array.to_list (vec import ch) }
+            loop
+              { m with imports = Array.to_list (vec import ch) }
+              next_section_order
         | 3 ->
             (* Function section *)
-            loop { m with functions = Array.to_list (vec typeidx ch) }
+            loop
+              { m with functions = Array.to_list (vec typeidx ch) }
+              next_section_order
         | 4 ->
             (* Table section *)
             let tables = Array.to_list (vec table ch) in
-            loop { m with tables }
+            loop { m with tables } next_section_order
         | 5 ->
             (* Memory section *)
-            loop { m with memories = Array.to_list (vec limits ch) }
+            loop
+              { m with memories = Array.to_list (vec limits ch) }
+              next_section_order
         | 6 ->
             (* Global section *)
             let globals =
@@ -1002,30 +1084,39 @@ let module_ buf =
                      { typ; init = expr ch })
                    ch)
             in
-            loop { m with globals }
+            loop { m with globals } next_section_order
         | 7 ->
             (* Export section *)
-            loop { m with exports = Array.to_list (vec export ch) }
+            loop
+              { m with exports = Array.to_list (vec export ch) }
+              next_section_order
         | 8 ->
             (* Start section *)
-            loop { m with start = Some (uint ch) }
+            loop { m with start = Some (uint ch) } next_section_order
         | 9 ->
             (* Element section *)
-            loop { m with elem = Array.to_list (vec elem ch) }
+            loop
+              { m with elem = Array.to_list (vec elem ch) }
+              next_section_order
         | 10 ->
             (* Code section *)
-            loop { m with code = Array.to_list (vec code ch) }
+            loop
+              { m with code = Array.to_list (vec code ch) }
+              next_section_order
         | 11 ->
             (* Data section *)
-            loop { m with data = Array.to_list (vec data ch) }
+            loop
+              { m with data = Array.to_list (vec data ch) }
+              next_section_order
         | 12 ->
             (* DataCount section *)
-            let _ = uint ch in
-            loop m
+            data_count := Some (uint ch);
+            ch.has_data_count <- true;
+            loop m next_section_order
         | 13 ->
             (* Tag section *)
             let tags = Array.to_list (vec tag ch) in
-            loop { m with Ast.Binary.tags }
+            loop { m with Ast.Binary.tags } next_section_order
         | 0 -> (
             (* Custom section *)
             let custom_name = name ch in
@@ -1086,28 +1177,36 @@ let module_ buf =
                     parse_name_subsections updated_names
                 in
                 let names = parse_name_subsections m.names in
-                loop { m with Ast.Binary.names }
+                loop { m with Ast.Binary.names } next_section_order
             | _ ->
                 (* Skip other custom sections *)
                 skip_section ch sect;
-                loop m)
-        | _ ->
-            skip_section ch sect;
-            loop m)
+                loop m next_section_order)
+        | _ -> assert false
+        (*            skip_section ch sect;
+            loop m*))
   in
-  loop
-    {
-      Ast.Binary.types = [];
-      imports = [];
-      functions = [];
-      tables = [];
-      memories = [];
-      tags = [];
-      globals = [];
-      exports = [];
-      start = None;
-      elem = [];
-      code = [];
-      data = [];
-      names = empty_names;
-    }
+  let res =
+    loop
+      {
+        Ast.Binary.types = [];
+        imports = [];
+        functions = [];
+        tables = [];
+        memories = [];
+        tags = [];
+        globals = [];
+        exports = [];
+        start = None;
+        elem = [];
+        code = [];
+        data = [];
+        names = empty_names;
+      }
+      0
+  in
+  assert (
+    match !data_count with None -> true | Some n -> n = List.length res.data);
+  assert (ch.pos = ch.limit);
+  assert (List.length res.functions = List.length res.code);
+  res
