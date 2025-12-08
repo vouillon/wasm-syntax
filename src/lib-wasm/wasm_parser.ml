@@ -334,7 +334,7 @@ let rec instructions ch acc =
   if pos_in ch = ch.limit then List.rev acc
   else
     match peek_byte ch with
-    | 0x0B | 0x05 -> List.rev acc
+    | 0x0B | 0x05 | 0x07 | 0x18 | 0x19 -> List.rev acc
     | _ -> instructions ch (instruction ch :: acc)
 
 and instruction ch =
@@ -365,6 +365,27 @@ and instruction ch =
           else []
         in
         If { label = (); typ; if_block; else_block }
+    | 0x06 ->
+        let typ = blocktype ch in
+        let block = instructions ch [] in
+        let rec loop_catches catches =
+          match input_byte ch with
+          | 0x0B -> (List.rev catches, None)
+          | 0x07 ->
+              let tag = uint ch in
+              let body = instructions ch [] in
+              loop_catches ((tag, body) :: catches)
+          | 0x19 ->
+              let body = instructions ch [] in
+              assert (input_byte ch = 0x0B);
+              (List.rev catches, Some body)
+          | 0x18 -> failwith "Delegate not supported"
+          | c -> failwith (Printf.sprintf "Unexpected token in Try: 0x%02X" c)
+        in
+        let catches, catch_all = loop_catches [] in
+        Try { label = (); typ; block; catches; catch_all }
+    | 0x08 -> Throw (uint ch)
+    | 0x0A -> ThrowRef
     | 0x0C -> Br (uint ch)
     | 0x0D -> Br_if (uint ch)
     | 0x0E ->
@@ -377,9 +398,43 @@ and instruction ch =
         let y = uint ch in
         let x = uint ch in
         CallIndirect (x, y)
+    | 0x12 -> ReturnCall (uint ch)
+    | 0x13 ->
+        let y = uint ch in
+        let x = uint ch in
+        ReturnCallIndirect (x, y)
+    | 0x14 -> CallRef (uint ch)
+    | 0x15 -> ReturnCallRef (uint ch)
     | 0x1A -> Drop
     | 0x1B -> Select None
     | 0x1C -> Select (Some (Array.to_list (vec valtype_first_byte ch)))
+    | 0x1F ->
+        let typ = blocktype ch in
+        let n = uint ch in
+        let catches =
+          List.init n (fun _ ->
+              match input_byte ch with
+              | 0 ->
+                  let t = uint ch in
+                  let l = uint ch in
+                  Catch (t, l)
+              | 1 ->
+                  let t = uint ch in
+                  let l = uint ch in
+                  CatchRef (t, l)
+              | 2 ->
+                  let l = uint ch in
+                  CatchAll l
+              | 3 ->
+                  let l = uint ch in
+                  CatchAllRef l
+              | _ -> failwith "Invalid catch tag")
+        in
+        let block = instructions ch [] in
+        let c = input_byte ch in
+        if c <> 0x0B then Format.eprintf "%x@." c;
+        assert (c = 0x0B);
+        TryTable { label = (); typ; catches; block }
     | 0x20 -> LocalGet (uint ch)
     | 0x21 -> LocalSet (uint ch)
     | 0x22 -> LocalTee (uint ch)
@@ -593,6 +648,10 @@ and instruction ch =
     | 0xD0 -> RefNull (heaptype ch)
     | 0xD1 -> RefIsNull
     | 0xD2 -> RefFunc (uint ch)
+    | 0xD3 -> RefEq
+    | 0xD4 -> RefAsNonNull
+    | 0xD5 -> Br_on_null (uint ch)
+    | 0xD6 -> Br_on_non_null (uint ch)
     | 0xFB -> (
         match uint ch with
         | 0 -> StructNew (uint ch)
@@ -698,8 +757,8 @@ and instruction ch =
         | 17 -> TableFill (uint ch)
         | c -> failwith (Printf.sprintf "Unknown 0xFC op %d" c))
     | 0x05 -> failwith "Unexpected Else instruction"
-    | 0x06 -> failwith "Unknown 0x06 instruction"
-    | 0x07 | 0x08 | 0x09 | 0x0A -> failwith "Unknown opcode"
+    | 0x07 -> failwith "Unexpected Catch instruction"
+    | 0x09 -> failwith "Unknown opcode 0x09"
     | 0x0B -> failwith "Unexpected End instruction"
     | 0xFD -> (
         match uint ch with
@@ -764,11 +823,52 @@ and instruction ch =
         | 34 -> VecReplace (F64x2, uint ch)
         | 35 -> VecBinOp (VecEq I8x16)
         | 36 -> VecBinOp (VecNe I8x16)
+        | 37 -> VecBinOp (VecLt (Some Signed, I8x16))
+        | 38 -> VecBinOp (VecLt (Some Unsigned, I8x16))
+        | 39 -> VecBinOp (VecGt (Some Signed, I8x16))
+        | 40 -> VecBinOp (VecGt (Some Unsigned, I8x16))
+        | 41 -> VecBinOp (VecLe (Some Signed, I8x16))
+        | 42 -> VecBinOp (VecLe (Some Unsigned, I8x16))
+        | 43 -> VecBinOp (VecGe (Some Signed, I8x16))
+        | 44 -> VecBinOp (VecGe (Some Unsigned, I8x16))
+        | 45 -> VecBinOp (VecEq I16x8)
+        | 46 -> VecBinOp (VecNe I16x8)
+        | 47 -> VecBinOp (VecLt (Some Signed, I16x8))
+        | 48 -> VecBinOp (VecLt (Some Unsigned, I16x8))
+        | 49 -> VecBinOp (VecGt (Some Signed, I16x8))
+        | 50 -> VecBinOp (VecGt (Some Unsigned, I16x8))
+        | 51 -> VecBinOp (VecLe (Some Signed, I16x8))
+        | 52 -> VecBinOp (VecLe (Some Unsigned, I16x8))
+        | 53 -> VecBinOp (VecGe (Some Signed, I16x8))
+        | 54 -> VecBinOp (VecGe (Some Unsigned, I16x8))
+        | 55 -> VecBinOp (VecEq I32x4)
+        | 56 -> VecBinOp (VecNe I32x4)
+        | 57 -> VecBinOp (VecLt (Some Signed, I32x4))
+        | 58 -> VecBinOp (VecLt (Some Unsigned, I32x4))
+        | 59 -> VecBinOp (VecGt (Some Signed, I32x4))
+        | 60 -> VecBinOp (VecGt (Some Unsigned, I32x4))
+        | 61 -> VecBinOp (VecLe (Some Signed, I32x4))
+        | 62 -> VecBinOp (VecLe (Some Unsigned, I32x4))
+        | 63 -> VecBinOp (VecGe (Some Signed, I32x4))
+        | 64 -> VecBinOp (VecGe (Some Unsigned, I32x4))
+        | 65 -> VecBinOp (VecEq F32x4)
+        | 66 -> VecBinOp (VecNe F32x4)
+        | 67 -> VecBinOp (VecLt (None, F32x4))
+        | 68 -> VecBinOp (VecGt (None, F32x4))
+        | 69 -> VecBinOp (VecLe (None, F32x4))
+        | 70 -> VecBinOp (VecGe (None, F32x4))
+        | 71 -> VecBinOp (VecEq F64x2)
+        | 72 -> VecBinOp (VecNe F64x2)
+        | 73 -> VecBinOp (VecLt (None, F64x2))
+        | 74 -> VecBinOp (VecGt (None, F64x2))
+        | 75 -> VecBinOp (VecLe (None, F64x2))
+        | 76 -> VecBinOp (VecGe (None, F64x2))
         | 77 -> VecUnOp VecNot
         | 78 -> VecBinOp VecAnd
         | 79 -> VecBinOp VecAndNot
         | 80 -> VecBinOp VecOr
         | 81 -> VecBinOp VecXor
+        | 82 -> VecBitselect
         | 84 ->
             let m_idx, m = memarg ch in
             let l = input_byte ch in
@@ -803,16 +903,10 @@ and instruction ch =
             VecStoreLane (m_idx, `I64, m, l)
         | 92 ->
             let m, arg = memarg ch in
-            VecLoadSplat (m, `I8, arg)
+            VecLoad (m, Load32Zero, arg)
         | 93 ->
             let m, arg = memarg ch in
-            VecLoadSplat (m, `I16, arg)
-        | 94 ->
-            let m, arg = memarg ch in
-            VecLoadSplat (m, `I32, arg)
-        | 95 ->
-            let m, arg = memarg ch in
-            VecLoadSplat (m, `I64, arg)
+            VecLoad (m, Load64Zero, arg)
         | 96 -> VecUnOp (VecAbs I8x16)
         | 97 -> VecUnOp (VecNeg I8x16)
         | 98 -> VecTest (AnyTrue I8x16)
@@ -1155,7 +1249,13 @@ let module_ ?filename buf =
     | None -> m
     | Some sect -> (
         let current_order =
-          match sect.id with 12 -> 10 | 10 -> 11 | 11 -> 12 | i -> i
+          match sect.id with
+          | 12 -> 11
+          | 10 -> 12
+          | 11 -> 13
+          | 13 -> 6
+          | i when i >= 6 && i <= 9 -> i + 1
+          | i -> i
         in
         if sect.id <> 0 && current_order <= last_section_order then
           failwith "section out of order";

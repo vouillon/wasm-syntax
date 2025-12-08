@@ -161,10 +161,10 @@ module Encoder = struct
   let memarg b (m : memarg) idx =
     if idx = 0 then (
       uint b (Utils.Uint64.to_int m.align);
-      uint b (Utils.Uint64.to_int m.offset))
+      uint64 b m.offset)
     else (
       uint b (Utils.Uint64.to_int m.align lor 64);
-      uint b (Utils.Uint64.to_int m.offset);
+      uint64 b m.offset;
       uint b idx)
 
   let blocktype b (t : blocktype) =
@@ -691,25 +691,24 @@ module Encoder = struct
         byte b 0x1E
     | Pop _ | TupleMake _ -> ()
     | TupleExtract _ -> failwith "unsupported binaryen extension"
-    | VecLoadLane (_, op, m, lane) ->
+    | VecLoadLane (idx, op, m, lane) ->
         byte b 0xFD;
         uint b
           (match op with `I8 -> 84 | `I16 -> 85 | `I32 -> 86 | `I64 -> 87);
-        memarg b m 0;
+        memarg b m idx;
         uint b lane
-    | VecStoreLane (_, op, m, lane) ->
+    | VecStoreLane (idx, op, m, lane) ->
         byte b 0xFD;
         uint b
           (match op with `I8 -> 88 | `I16 -> 89 | `I32 -> 90 | `I64 -> 91);
-        memarg b m 0;
+        memarg b m idx;
         uint b lane
-    | VecLoadSplat (_, op, m) ->
+    | VecLoadSplat (idx, op, m) ->
         byte b 0xFD;
-        uint b
-          (match op with `I8 -> 92 | `I16 -> 93 | `I32 -> 94 | `I64 -> 95);
+        uint b (match op with `I8 -> 7 | `I16 -> 8 | `I32 -> 9 | `I64 -> 10);
 
-        memarg b m 0
-    | VecLoad (_, op, m) ->
+        memarg b m idx
+    | VecLoad (idx, op, m) ->
         byte b 0xFD;
         uint b
           (match op with
@@ -722,11 +721,11 @@ module Encoder = struct
           | Load32x2U -> 6
           | Load32Zero -> 0x5C
           | Load64Zero -> 0x5D);
-        memarg b m 0
-    | VecStore (_, m) ->
+        memarg b m idx
+    | VecStore (idx, m) ->
         byte b 0xFD;
         uint b 11;
-        memarg b m 0
+        memarg b m idx
     | VecLoadExtend (idx, op, m) ->
         byte b 0xFD;
         uint b

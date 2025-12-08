@@ -342,6 +342,29 @@ let datamode (names : B.names) local_names (d : _ B.datamode) : _ T.datamode =
 let id map idx = B.IntMap.find_opt idx map
 
 let module_ (m : _ B.module_) : _ T.module_ =
+  let all_subtypes = Array.concat m.types in
+  let expand_functype func_idx type_idx =
+    let local_names =
+      match B.IntMap.find_opt func_idx m.names.locals with
+      | Some map -> map
+      | None -> B.IntMap.empty
+    in
+    match all_subtypes.(type_idx).typ with
+    | Func ft ->
+        let params =
+          Array.mapi
+            (fun i t ->
+              let name = B.IntMap.find_opt i local_names in
+              (name, valtype m.names.types t))
+            ft.params
+          |> Array.to_list
+        in
+        let results =
+          Array.map (valtype m.names.types) ft.results |> Array.to_list
+        in
+        Some (params, results)
+    | _ -> None
+  in
   let types = List.map (rectype m.names.types) m.types in
   let (func_cnt, table_cnt, mem_cnt, global_cnt, tag_cnt), imports =
     List.fold_left
@@ -362,7 +385,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
               id;
               desc =
                 (match imp.desc with
-                | Func i -> T.Func (Some (index ~map:m.names.types i), None)
+                | Func i -> T.Func (None, expand_functype f_i i)
                 | Memory l -> T.Memory l
                 | Table t -> T.Table (tabletype m.names.types t)
                 | Global gt -> T.Global (globaltype m.names.types gt)
@@ -393,7 +416,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
         T.Func
           {
             id = id m.names.functions global_idx;
-            typ = (Some (index ~map:m.names.types func_type_idx), None);
+            typ = (None, expand_functype global_idx func_type_idx);
             locals =
               List.map (fun v -> (None, valtype m.names.types v)) code.locals;
             instrs =

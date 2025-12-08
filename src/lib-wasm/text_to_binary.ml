@@ -163,6 +163,8 @@ let resolve_field_idx ctx type_idx (field_idx_text : T.idx) : B.idx =
           failwith
             (Printf.sprintf "No field map found for type index %d" type_idx))
 
+let int_conv conv s = try conv s with Failure _ -> conv ("0u" ^ s)
+
 let rec instr ~resolve_type ctx (i : 'info T.instr) =
   let desc : _ B.instr_desc =
     match i.desc with
@@ -251,8 +253,8 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | TableInit (i1, i2) ->
         TableInit (resolve_idx ctx.tables i1, resolve_idx ctx.elems i2)
     | ElemDrop i -> ElemDrop (resolve_idx ctx.elems i)
-    | Const (I32 x) -> Const (I32 (Int32.of_string x))
-    | Const (I64 x) -> Const (I64 (Int64.of_string x))
+    | Const (I32 x) -> Const (I32 (int_conv Int32.of_string x))
+    | Const (I64 x) -> Const (I64 (int_conv Int64.of_string x))
     | Const (F32 x) -> Const (F32 (float_of_string x))
     | Const (F64 x) -> Const (F64 (float_of_string x))
     | UnOp op -> UnOp op
@@ -294,8 +296,8 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | Br_on_cast_fail (i, r1, r2) ->
         Br_on_cast_fail
           (resolve_label ctx.labels i, reftype ctx r1, reftype ctx r2)
-    | CallRef i -> CallRef (resolve_idx ctx.funcs i)
-    | ReturnCallRef i -> ReturnCallRef (resolve_idx ctx.funcs i)
+    | CallRef i -> CallRef (resolve_idx ctx.types i)
+    | ReturnCallRef i -> ReturnCallRef (resolve_idx ctx.types i)
     | RefAsNonNull -> RefAsNonNull
     | RefEq -> RefEq
     | RefTest r -> RefTest (reftype ctx r)
