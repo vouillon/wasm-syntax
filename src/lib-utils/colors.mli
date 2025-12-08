@@ -12,8 +12,10 @@ module Ansi : sig
   val reset : string
   val bold : string
   val red : string
+  val high_red : string
   val green : string
   val yellow : string
+  val high_yellow : string
   val blue : string
   val magenta : string
   val cyan : string

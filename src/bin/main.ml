@@ -40,7 +40,8 @@ let wat_to_wat ~input_file ~output_file ~validate ~color
       text
   in
   if validate then
-    Utils.Diagnostic.run ~source:(Some text) (fun d -> Wasm.Validation.f d ast);
+    Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
+        Wasm.Validation.f d ast);
   with_open_out output_file (fun oc ->
       let print_wat f m =
         Utils.Printer.run f (fun p ->
@@ -60,11 +61,12 @@ let wat_to_wax ~input_file ~output_file ~validate ~color
       text
   in
   if validate then
-    Utils.Diagnostic.run ~source:(Some text) (fun d -> Wasm.Validation.f d ast);
+    Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
+        Wasm.Validation.f d ast);
   let wax_ast = Conversion.From_wasm.module_ ast in
   if validate then
     ignore
-      (Utils.Diagnostic.run ~source:(Some text) (fun d ->
+      (Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
            Wax.Typing.f d wax_ast));
   with_open_out output_file (fun oc ->
       let print_wax f m =
@@ -85,11 +87,12 @@ let wax_to_wat ~input_file ~output_file ~validate ~color
       text
   in
   let ast =
-    Utils.Diagnostic.run ~source:(Some text) (fun d -> Wax.Typing.f d ast)
+    Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
+        Wax.Typing.f d ast)
   in
   let wasm_ast = Conversion.To_wasm.module_ ast in
   if validate then
-    Utils.Diagnostic.run ~source:(Some text) (fun d ->
+    Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wasm.Validation.f d wasm_ast);
   with_open_out output_file (fun oc ->
       let print_wat f m =
@@ -111,7 +114,8 @@ let wax_to_wax ~input_file ~output_file ~validate ~color
   in
   if validate then
     ignore
-      (Utils.Diagnostic.run ~source:(Some text) (fun d -> Wax.Typing.f d ast));
+      (Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
+           Wax.Typing.f d ast));
   with_open_out output_file (fun oc ->
       let print_wax f m =
         Utils.Printer.run f (fun p ->
@@ -129,11 +133,12 @@ let wax_to_wasm ~input_file ~output_file ~validate ~color
       text
   in
   let ast =
-    Utils.Diagnostic.run ~source:(Some text) (fun d -> Wax.Typing.f d ast)
+    Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
+        Wax.Typing.f d ast)
   in
   let wasm_ast_text = Conversion.To_wasm.module_ ast in
   if validate then
-    Utils.Diagnostic.run ~source:(Some text) (fun d ->
+    Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wasm.Validation.f d wasm_ast_text);
   let wasm_ast_binary = Wasm.Text_to_binary.module_ wasm_ast_text in
   with_open_out output_file (fun oc ->
@@ -149,7 +154,8 @@ let wat_to_wasm ~input_file ~output_file ~validate ~color
       text
   in
   if validate then
-    Utils.Diagnostic.run ~source:(Some text) (fun d -> Wasm.Validation.f d ast);
+    Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
+        Wasm.Validation.f d ast);
   let wasm_ast_binary = Wasm.Text_to_binary.module_ ast in
   with_open_out output_file (fun oc ->
       Wasm.Wasm_output.module_ ~color ~out_channel:oc ?opt_source_map_file
@@ -170,7 +176,8 @@ let wasm_to_wat ~input_file ~output_file ~validate ~color
   let binary_ast = Wasm.Wasm_parser.module_ text in
   let text_ast = Wasm.Binary_to_text.module_ binary_ast in
   if validate then
-    Utils.Diagnostic.run ~source:None (fun d -> Wasm.Validation.f d text_ast);
+    Utils.Diagnostic.run ~color ~source:None (fun d ->
+        Wasm.Validation.f d text_ast);
   with_open_out output_file (fun oc ->
       let print_wat f m =
         Utils.Printer.run f (fun p ->
@@ -186,10 +193,13 @@ let wasm_to_wax ~input_file ~output_file ~validate ~color
   let binary_ast = Wasm.Wasm_parser.module_ text in
   let text_ast = Wasm.Binary_to_text.module_ binary_ast in
   if validate then
-    Utils.Diagnostic.run ~source:None (fun d -> Wasm.Validation.f d text_ast);
+    Utils.Diagnostic.run ~color ~source:None (fun d ->
+        Wasm.Validation.f d text_ast);
   let wax_ast = Conversion.From_wasm.module_ text_ast in
   if validate then
-    ignore (Utils.Diagnostic.run ~source:None (fun d -> Wax.Typing.f d wax_ast));
+    ignore
+      (Utils.Diagnostic.run ~color ~source:None (fun d ->
+           Wax.Typing.f d wax_ast));
   with_open_out output_file (fun oc ->
       let print_wax f m =
         Utils.Printer.run f (fun p ->

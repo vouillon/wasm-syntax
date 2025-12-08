@@ -210,7 +210,8 @@ let runtest filename path =
             Some (status, ModuleParser.parse_from_string ~filename txt, Some txt)
         | ((`Valid | `Invalid _) as status), `Binary txt ->
             let m =
-              Wasm.Binary_to_text.module_ (Wasm.Wasm_parser.module_ txt)
+              Wasm.Binary_to_text.module_
+                (Wasm.Wasm_parser.module_ ~filename txt)
             in
             (*
             Format.eprintf "%a@." (print_module ~color:!color) m;
@@ -221,7 +222,8 @@ let runtest filename path =
             let ok =
               in_child_process ~quiet (fun () ->
                   let ast = ModuleParser.parse_from_string ~filename txt in
-                  Utils.Diagnostic.run ~source:(Some txt) (fun d ->
+                  Utils.Diagnostic.run ~color:!color ~source:(Some txt)
+                    (fun d ->
                       Wasm.Validation.check_syntax d ast;
                       Wasm.Validation.f d ast);
                   if false then
@@ -236,9 +238,11 @@ let runtest filename path =
             let ok =
               in_child_process ~quiet (fun () ->
                   let ast =
-                    Wasm.Binary_to_text.module_ (Wasm.Wasm_parser.module_ txt)
+                    Wasm.Binary_to_text.module_
+                      (Wasm.Wasm_parser.module_ ~filename txt)
                   in
-                  Utils.Diagnostic.run ~source:(Some txt) (fun d ->
+                  Utils.Diagnostic.run ~color:!color ~source:(Some txt)
+                    (fun d ->
                       Wasm.Validation.check_syntax d ast;
                       Wasm.Validation.f d ast);
                   if false then
@@ -267,12 +271,14 @@ let runtest filename path =
       (fun (status, m, source) ->
         match (status, m) with
         | `Valid, m ->
-            Utils.Diagnostic.run ~source (fun d -> Wasm.Validation.f d m);
+            Utils.Diagnostic.run ~color:!color ~source (fun d ->
+                Wasm.Validation.f d m);
             true
         | `Invalid reason, m ->
             let ok =
               in_child_process ~quiet (fun () ->
-                  Utils.Diagnostic.run ~source (fun d -> Wasm.Validation.f d m);
+                  Utils.Diagnostic.run ~color:!color ~source (fun d ->
+                      Wasm.Validation.f d m);
                   if false then
                     Format.printf "@[<2>Result:@ %a@]@."
                       (print_module ~color:!color)
@@ -302,12 +308,13 @@ let runtest filename path =
             let ok =
               in_child_process (fun () ->
                   let m =
-                    Utils.Diagnostic.run ~source (fun d -> Wax.Typing.f d m)
+                    Utils.Diagnostic.run ~color:!color ~source (fun d ->
+                        Wax.Typing.f d m)
                   in
                   let m' = Conversion.To_wasm.module_ m in
                   let ok =
                     in_child_process (fun () ->
-                        Utils.Diagnostic.run ~source (fun d ->
+                        Utils.Diagnostic.run ~color:!color ~source (fun d ->
                             Wasm.Validation.f d m'))
                   in
                   if false && not ok then (
@@ -324,8 +331,8 @@ let runtest filename path =
                     let ok =
                       in_child_process (fun () ->
                           ignore
-                            (Utils.Diagnostic.run ~source (fun d ->
-                                 Wax.Typing.f d m')))
+                            (Utils.Diagnostic.run ~color:!color ~source
+                               (fun d -> Wax.Typing.f d m')))
                     in
                     if not ok then
                       if true then prerr_endline "(after parsing)"

@@ -1,1 +1,1 @@
-val module_ : string -> Ast.location Ast.Binary.module_
+val module_ : ?filename:string -> string -> Ast.location Ast.Binary.module_

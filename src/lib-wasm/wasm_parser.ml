@@ -9,6 +9,7 @@ let check_header file contents =
   then failwith (file ^ " is not a Wasm binary file (bad magic)")
 
 type ch = {
+  filename : string option;
   buf : string;
   mutable pos : int;
   limit : int;
@@ -314,6 +315,20 @@ let memarg ch =
   let o = uint64 ch in
   { align = Utils.Uint64.of_int a; offset = o }
 
+let position ch pos =
+  {
+    Lexing.pos_fname = Option.value ~default:"-" ch.filename;
+    pos_lnum = 1;
+    pos_bol = 0;
+    pos_cnum = pos;
+  }
+
+let with_loc ch pos desc =
+  {
+    Ast.desc;
+    info = { Ast.loc_start = position ch pos; loc_end = position ch ch.pos };
+  }
+
 let rec instructions ch acc =
   if pos_in ch = ch.limit then List.rev acc
   else
@@ -322,6 +337,7 @@ let rec instructions ch acc =
     | _ -> instructions ch (instruction ch :: acc)
 
 and instruction ch =
+  let pos = ch.pos in
   let op = input_byte ch in
   let desc =
     match op with
@@ -866,7 +882,7 @@ and instruction ch =
         | c -> failwith (Printf.sprintf "Unknown SIMD opcode 0x%02X" c))
     | c -> failwith (Printf.sprintf "Unknown opcode 0x%02X" c)
   in
-  Ast.no_loc desc
+  with_loc ch pos desc
 
 let expr ch =
   let instrs = instructions ch [] in
@@ -1033,10 +1049,16 @@ let indirect_name_map ch =
       (i, name_map ch))
     ch
 
-let module_ buf =
+let module_ ?filename buf =
   check_header "input" buf;
   let ch =
-    { buf; pos = 8; limit = String.length buf; has_data_count = false }
+    {
+      filename;
+      buf;
+      pos = 8;
+      limit = String.length buf;
+      has_data_count = false;
+    }
   in
   let data_count = ref None in
   ch.pos <- 8;

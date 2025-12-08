@@ -43,6 +43,7 @@ struct
     | Some (Element (_, _, pos1, pos2)) -> show text (pos1, pos2)
     | None -> (* should not happen *) "???"
 
+  (*
   let fail text buffer checkpoint =
     (* Indicate where in the input file the error occurred. *)
     let location = L.range (E.last buffer) in
@@ -66,7 +67,31 @@ struct
     (* Show these three components. *)
     Format.eprintf "%s%s%s%!" location indication message;
     exit 1
+*)
 
+  let report_syntax_error source (loc_start, loc_end) msg =
+    let theme = Utils.Diagnostic.get_theme () in
+    Utils.Diagnostic.output_error_with_source ~theme ~source ~severity:Error
+      ~location:{ loc_start; loc_end } (fun f () -> Format.fprintf f "%s" msg);
+    exit 123
+
+  let fail text buffer checkpoint =
+    let location = E.last buffer in
+    let message =
+      try Parser_messages.message (state checkpoint)
+      with Not_found ->
+        Printf.sprintf "Syntax error (%d)\n" (state checkpoint)
+    in
+    let message =
+      if message = "<YOUR SYNTAX ERROR MESSAGE HERE>\n" then
+        Printf.sprintf "Syntax error (%d)\n" (state checkpoint)
+      else message
+    in
+    (* Expand away the $i keywords that might appear in the message. *)
+    let message = E.expand (get text checkpoint) message in
+    report_syntax_error text location message
+
+  (*
   let visual_width s =
     let len = String.length s in
     let rec loop i width =
@@ -157,11 +182,6 @@ struct
        done;
        print_newline ());
     exit 123
-  (*
-  let report_syntax_error loc msg =
-    let location = MenhirLib.LexerUtil.range loc in
-    Format.eprintf "%s%s%!" location msg;
-    exit 1
 *)
 
   let read filename = In_channel.with_open_bin filename In_channel.input_all
