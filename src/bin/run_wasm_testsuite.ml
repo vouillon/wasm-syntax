@@ -324,8 +324,8 @@ let runtest filename path =
                     let ok =
                       in_child_process (fun () ->
                           ignore
-                            (let d = Utils.Diagnostic.make ~source in
-                             Wax.Typing.f d m'))
+                            (Utils.Diagnostic.run ~source (fun d ->
+                                 Wax.Typing.f d m')))
                     in
                     if not ok then
                       if true then prerr_endline "(after parsing)"
