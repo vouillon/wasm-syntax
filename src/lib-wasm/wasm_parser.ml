@@ -891,12 +891,16 @@ let expr ch =
 
 let elem ch =
   let mode_byte = uint ch in
-  let ref_func i = [ Ast.no_loc (RefFunc i) ] in
+  let func (ch : ch) =
+    let pos = ch.pos in
+    let desc = RefFunc (uint ch) in
+    [ with_loc ch pos desc ]
+  in
   match mode_byte with
   | 0x00 ->
       (* Active, table 0, vec(funcidx) *)
       let offset_expr = expr ch in
-      let init = List.map ref_func (Array.to_list (vec uint ch)) in
+      let init = Array.to_list (vec func ch) in
       {
         typ = { nullable = false; typ = Func };
         init;
@@ -906,7 +910,7 @@ let elem ch =
       (* Passive, elemkind=0, vec(funcidx) *)
       let _elemkind = input_byte ch in
       (* Must be 0x00 *)
-      let init = List.map ref_func (Array.to_list (vec uint ch)) in
+      let init = Array.to_list (vec func ch) in
       { typ = { nullable = false; typ = Func }; init; mode = Passive }
   | 0x02 ->
       (* Active, tableidx, offset, elemkind=0, vec(funcidx) *)
@@ -914,7 +918,7 @@ let elem ch =
       let offset_expr = expr ch in
       let _elemkind = input_byte ch in
       (* Must be 0x00 *)
-      let init = List.map ref_func (Array.to_list (vec uint ch)) in
+      let init = Array.to_list (vec func ch) in
       {
         typ = { nullable = false; typ = Func };
         init;
@@ -924,7 +928,7 @@ let elem ch =
       (* Declarative, elemkind=0, vec(funcidx) *)
       let _elemkind = input_byte ch in
       (* Must be 0x00 *)
-      let init = List.map ref_func (Array.to_list (vec uint ch)) in
+      let init = Array.to_list (vec func ch) in
       { typ = { nullable = false; typ = Func }; init; mode = Declare }
   | 0x04 ->
       (* Active, table 0, vec(expr) *)
