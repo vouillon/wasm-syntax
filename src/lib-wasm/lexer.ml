@@ -256,8 +256,8 @@ let rec token lexbuf =
   | "v128.load16_splat" -> VEC_LOAD_SPLAT `I16
   | "v128.load32_splat" -> VEC_LOAD_SPLAT `I32
   | "v128.load64_splat" -> VEC_LOAD_SPLAT `I64
-  | "v128.load32_zero" -> VEC_LOAD_EXTEND Load32Zero
-  | "v128.load64_zero" -> VEC_LOAD_EXTEND Load64Zero
+  | "v128.load32_zero" -> VEC_LOAD Load32Zero
+  | "v128.load64_zero" -> VEC_LOAD Load64Zero
   | "i32.load8_u" -> LOADS (`I32, `I8, Unsigned)
   | "i32.load8_s" -> LOADS (`I32, `I8, Signed)
   | "i64.load8_u" -> LOADS (`I64, `I8, Unsigned)

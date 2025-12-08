@@ -821,20 +821,6 @@ let rec instr i =
               | `I32 -> "32"
               | `I64 -> "64"))
         :: (memidx i @ memarg (Uint64.of_int (vec_lane_op_nat_align op)) m))
-  | VecLoadExtend (i, op, m) ->
-      block ~loc
-        (instruction
-           (match op with
-           | Load8x8S -> "v128.load8x8_s"
-           | Load8x8U -> "v128.load8x8_u"
-           | Load16x4S -> "v128.load16x4_s"
-           | Load16x4U -> "v128.load16x4_u"
-           | Load32x2S -> "v128.load32x2_s"
-           | Load32x2U -> "v128.load32x2_u"
-           | Load32Zero -> "v128.load32_zero"
-           | Load64Zero -> "v128.load64_zero"
-           | Load128 -> assert false)
-        :: (memidx i @ memarg (Uint64.of_int (vec_load_op_nat_align op)) m))
   | Load (i, m, sz) ->
       block ~loc
         (instruction

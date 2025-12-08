@@ -345,8 +345,6 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | VecStoreLane (o, op, m, lane) ->
         VecStoreLane (resolve_idx ctx.memories o, op, m, lane)
     | VecLoadSplat (o, op, m) -> VecLoadSplat (resolve_idx ctx.memories o, op, m)
-    | VecLoadExtend (o, op, m) ->
-        VecLoadExtend (resolve_idx ctx.memories o, op, m)
     | VecConst v -> VecConst (Utils.V128.to_string v)
     | VecUnOp op -> VecUnOp op
     | VecBinOp op -> VecBinOp op

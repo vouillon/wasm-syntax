@@ -1154,22 +1154,6 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         mem;
       let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
       push (Some loc) V128
-  | VecLoadExtend (idx, op, memarg) ->
-      let*! limits =
-        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
-      in
-      let sz =
-        match op with
-        | Load8x8S | Load8x8U -> `I64
-        | Load32x2S | Load32x2U -> `I64
-        | Load32Zero -> `I32
-        | Load64Zero -> `I64
-        | Load16x4S | Load16x4U -> `I64
-        | Load128 -> assert false
-      in
-      check_memarg ctx loc limits sz memarg;
-      let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
-      push (Some loc) V128
   | VecExtract (shape, _, lane) ->
       check_shape_lanes ctx loc shape lane;
       let* () = pop ctx loc V128 in
@@ -1575,8 +1559,8 @@ let rec check_constant_instruction ctx (i : _ Ast.Text.instr) =
       Error.constant_expression_required ctx.diagnostics ~location:i.info
   | VecBitselect | VecUnOp _ | VecBinOp _ | VecTest _ | VecShift _
   | VecBitmask _ | VecLoad _ | VecStore _ | VecLoadLane _ | VecStoreLane _
-  | VecLoadSplat _ | VecLoadExtend _ | VecExtract _ | VecReplace _ | VecSplat _
-  | VecShuffle _ | VecTernOp _ ->
+  | VecLoadSplat _ | VecExtract _ | VecReplace _ | VecSplat _ | VecShuffle _
+  | VecTernOp _ ->
       Error.constant_expression_required ctx.diagnostics ~location:i.info
 
 and check_constant_instructions ctx l =
@@ -1704,8 +1688,8 @@ and register_typeuses' d ctx (i : _ Ast.Text.instr) =
   | F32DemoteF64 | F64PromoteF32 | ExternConvertAny | AnyConvertExtern | Pop _
   | TupleMake _ | TupleExtract _ | VecBitselect | VecConst _ | VecUnOp _
   | VecBinOp _ | VecTest _ | VecShift _ | VecBitmask _ | VecLoad _ | VecStore _
-  | VecLoadLane _ | VecStoreLane _ | VecLoadSplat _ | VecLoadExtend _
-  | VecExtract _ | VecReplace _ | VecSplat _ | VecShuffle _ | VecTernOp _ ->
+  | VecLoadLane _ | VecStoreLane _ | VecLoadSplat _ | VecExtract _
+  | VecReplace _ | VecSplat _ | VecShuffle _ | VecTernOp _ ->
       ()
 
 let build_initial_env ctx fields =

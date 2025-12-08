@@ -542,7 +542,6 @@ struct
     | VecLoadLane of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg * int
     | VecStoreLane of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg * int
     | VecLoadSplat of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg
-    | VecLoadExtend of X.idx * vec_load_op * memarg
     | VecExtract of vec_shape * signage option * int
     | VecReplace of vec_shape * int
     | VecSplat of vec_splat_op

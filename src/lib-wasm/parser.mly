@@ -100,7 +100,6 @@ ZZZ
 %token <Ast.vec_shape> VEC_REPLACE
 %token <[ `I8 | `I16 | `I32 | `I64 ]> VEC_LOAD_LANE VEC_STORE_LANE VEC_LOAD_SPLAT
 %token VEC_SHUFFLE
-%token <Ast.vec_load_op> VEC_LOAD_EXTEND
 %token <[`I32|`I64] * [`I8 | `I16 | `I32] * Ast.Text.signage> LOADS
 %token MEMORY_SIZE
 %token MEMORY_GROW
@@ -202,14 +201,6 @@ let lane_width : [ `I8 | `I16 | `I32 | `I64 ] -> Uint64.t = function
   | `I16 -> Uint64.of_int 2
   | `I32 -> Uint64.of_int 4
   | `I64 -> Uint64.of_int 8
-
-let load_extend_width = function
-  | Ast.Load8x8S | Ast.Load8x8U -> Uint64.of_int 8
-  | Ast.Load16x4S | Ast.Load16x4U -> Uint64.of_int 8
-  | Ast.Load32x2S | Ast.Load32x2U -> Uint64.of_int 8
-  | Ast.Load32Zero -> Uint64.of_int 4
-  | Ast.Load64Zero -> Uint64.of_int 8
-  | Ast.Load128 -> Uint64.of_int 16
 
 let with_loc (loc_start, loc_end) desc =
   {Ast.desc; info = { Ast.loc_start; loc_end }}
@@ -590,8 +581,6 @@ plaininstr:
       (VecStoreLane (i, op, m (lane_width op), int_of_string l)) }
 | op = VEC_LOAD_SPLAT i = memidx m = memarg
   { with_loc $sloc (VecLoadSplat (i, op, m (lane_width op))) }
-| op = VEC_LOAD_EXTEND i = memidx m = memarg
-  { with_loc $sloc (VecLoadExtend (i, op, m (load_extend_width op))) }
 | TUPLE_MAKE l = u32 { with_loc $sloc (TupleMake l) }
 | TUPLE_EXTRACT l = u32 i = u32
   { with_loc $sloc (TupleExtract (l, i)) }

@@ -303,8 +303,6 @@ let rec instr (names : B.names) local_names label_names label_counter stack
         VecStoreLane (index ~map:names.memories o, op, m, lane)
     | VecLoadSplat (o, op, m) ->
         VecLoadSplat (index ~map:names.memories o, op, m)
-    | VecLoadExtend (o, op, m) ->
-        VecLoadExtend (index ~map:names.memories o, op, m)
     | VecConst v -> VecConst (Utils.V128.of_string v)
     | VecUnOp op -> VecUnOp op
     | VecBinOp op -> VecBinOp op

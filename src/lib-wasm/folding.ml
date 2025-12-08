@@ -315,7 +315,6 @@ let arity env i =
   | VecLoadLane _ -> (2, 1)
   | VecStoreLane _ -> (3, 0)
   | VecLoadSplat _ -> (1, 1)
-  | VecLoadExtend _ -> (1, 1)
   | VecExtract _ -> (1, 1)
   | VecReplace _ -> (2, 1)
   | VecSplat _ -> (1, 1)
