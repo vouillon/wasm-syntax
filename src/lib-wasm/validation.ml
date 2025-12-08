@@ -463,7 +463,7 @@ let ( let*! ) e f = match e with Some v -> f v | None -> unreachable
 let ( let*? ) e f = match e with Some v -> f v | None -> ()
 
 let get_local ctx ?(initialize = false) i =
-  let l = Sequence.get ctx.modul.diagnostics ctx.locals i in
+  let+@ l = Sequence.get ctx.modul.diagnostics ctx.locals i in
   let idx = Sequence.get_index ctx.locals i in
   if initialize then
     ctx.initialized_locals <- IntSet.add idx ctx.initialized_locals

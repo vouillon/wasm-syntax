@@ -313,7 +313,8 @@ let export ch =
 let memarg ch =
   let a = uint ch in
   let o = uint64 ch in
-  { align = Utils.Uint64.of_int a; offset = o }
+  let m, a = if a land 0x40 <> 0 then (uint ch, a lxor 0x40) else (0, a) in
+  (m, { align = Utils.Uint64.of_int a; offset = o })
 
 let position ch pos =
   {
@@ -386,35 +387,77 @@ and instruction ch =
     | 0x24 -> GlobalSet (uint ch)
     | 0x25 -> TableGet (uint ch)
     | 0x26 -> TableSet (uint ch)
-    | 0x28 -> Load (0, memarg ch, NumI32)
-    | 0x29 -> Load (0, memarg ch, NumI64)
-    | 0x2A -> Load (0, memarg ch, NumF32)
-    | 0x2B -> Load (0, memarg ch, NumF64)
-    | 0x2C -> LoadS (0, memarg ch, `I32, `I8, Signed)
-    | 0x2D -> LoadS (0, memarg ch, `I32, `I8, Unsigned)
-    | 0x2E -> LoadS (0, memarg ch, `I32, `I16, Signed)
-    | 0x2F -> LoadS (0, memarg ch, `I32, `I16, Unsigned)
-    | 0x30 -> LoadS (0, memarg ch, `I64, `I8, Signed)
-    | 0x31 -> LoadS (0, memarg ch, `I64, `I8, Unsigned)
-    | 0x32 -> LoadS (0, memarg ch, `I64, `I16, Signed)
-    | 0x33 -> LoadS (0, memarg ch, `I64, `I16, Unsigned)
-    | 0x34 -> LoadS (0, memarg ch, `I64, `I32, Signed)
-    | 0x35 -> LoadS (0, memarg ch, `I64, `I32, Unsigned)
-    | 0x36 -> Store (0, memarg ch, NumI32)
-    | 0x37 -> Store (0, memarg ch, NumI64)
-    | 0x38 -> Store (0, memarg ch, NumF32)
-    | 0x39 -> Store (0, memarg ch, NumF64)
-    | 0x3A -> StoreS (0, memarg ch, `I32, `I8)
-    | 0x3B -> StoreS (0, memarg ch, `I32, `I16)
-    | 0x3C -> StoreS (0, memarg ch, `I64, `I8)
-    | 0x3D -> StoreS (0, memarg ch, `I64, `I16)
-    | 0x3E -> StoreS (0, memarg ch, `I64, `I32)
-    | 0x3F ->
-        assert (input_byte ch = 0);
-        MemorySize 0
-    | 0x40 ->
-        assert (input_byte ch = 0);
-        MemoryGrow 0
+    | 0x28 ->
+        let m, arg = memarg ch in
+        Load (m, arg, NumI32)
+    | 0x29 ->
+        let m, arg = memarg ch in
+        Load (m, arg, NumI64)
+    | 0x2A ->
+        let m, arg = memarg ch in
+        Load (m, arg, NumF32)
+    | 0x2B ->
+        let m, arg = memarg ch in
+        Load (m, arg, NumF64)
+    | 0x2C ->
+        let m, arg = memarg ch in
+        LoadS (m, arg, `I32, `I8, Signed)
+    | 0x2D ->
+        let m, arg = memarg ch in
+        LoadS (m, arg, `I32, `I8, Unsigned)
+    | 0x2E ->
+        let m, arg = memarg ch in
+        LoadS (m, arg, `I32, `I16, Signed)
+    | 0x2F ->
+        let m, arg = memarg ch in
+        LoadS (m, arg, `I32, `I16, Unsigned)
+    | 0x30 ->
+        let m, arg = memarg ch in
+        LoadS (m, arg, `I64, `I8, Signed)
+    | 0x31 ->
+        let m, arg = memarg ch in
+        LoadS (m, arg, `I64, `I8, Unsigned)
+    | 0x32 ->
+        let m, arg = memarg ch in
+        LoadS (m, arg, `I64, `I16, Signed)
+    | 0x33 ->
+        let m, arg = memarg ch in
+        LoadS (m, arg, `I64, `I16, Unsigned)
+    | 0x34 ->
+        let m, arg = memarg ch in
+        LoadS (m, arg, `I64, `I32, Signed)
+    | 0x35 ->
+        let m, arg = memarg ch in
+        LoadS (m, arg, `I64, `I32, Unsigned)
+    | 0x36 ->
+        let m, arg = memarg ch in
+        Store (m, arg, NumI32)
+    | 0x37 ->
+        let m, arg = memarg ch in
+        Store (m, arg, NumI64)
+    | 0x38 ->
+        let m, arg = memarg ch in
+        Store (m, arg, NumF32)
+    | 0x39 ->
+        let m, arg = memarg ch in
+        Store (m, arg, NumF64)
+    | 0x3A ->
+        let m, arg = memarg ch in
+        StoreS (m, arg, `I32, `I8)
+    | 0x3B ->
+        let m, arg = memarg ch in
+        StoreS (m, arg, `I32, `I16)
+    | 0x3C ->
+        let m, arg = memarg ch in
+        StoreS (m, arg, `I64, `I8)
+    | 0x3D ->
+        let m, arg = memarg ch in
+        StoreS (m, arg, `I64, `I16)
+    | 0x3E ->
+        let m, arg = memarg ch in
+        StoreS (m, arg, `I64, `I32)
+    | 0x3F -> MemorySize (uint ch)
+    | 0x40 -> MemoryGrow (uint ch)
     | 0x41 -> Const (I32 (sint32 ch))
     | 0x42 -> Const (I64 (sint64 ch))
     | 0x43 -> Const (F32 (float32 ch))
@@ -660,18 +703,42 @@ and instruction ch =
     | 0x0B -> failwith "Unexpected End instruction"
     | 0xFD -> (
         match uint ch with
-        | 0 -> VecLoad (0, Load128, memarg ch)
-        | 1 -> VecLoad (0, Load8x8S, memarg ch)
-        | 2 -> VecLoad (0, Load8x8U, memarg ch)
-        | 3 -> VecLoad (0, Load16x4S, memarg ch)
-        | 4 -> VecLoad (0, Load16x4U, memarg ch)
-        | 5 -> VecLoad (0, Load32x2S, memarg ch)
-        | 6 -> VecLoad (0, Load32x2U, memarg ch)
-        | 7 -> VecLoadSplat (0, `I8, memarg ch)
-        | 8 -> VecLoadSplat (0, `I16, memarg ch)
-        | 9 -> VecLoadSplat (0, `I32, memarg ch)
-        | 10 -> VecLoadSplat (0, `I64, memarg ch)
-        | 11 -> VecStore (0, memarg ch)
+        | 0 ->
+            let m, arg = memarg ch in
+            VecLoad (m, Load128, arg)
+        | 1 ->
+            let m, arg = memarg ch in
+            VecLoad (m, Load8x8S, arg)
+        | 2 ->
+            let m, arg = memarg ch in
+            VecLoad (m, Load8x8U, arg)
+        | 3 ->
+            let m, arg = memarg ch in
+            VecLoad (m, Load16x4S, arg)
+        | 4 ->
+            let m, arg = memarg ch in
+            VecLoad (m, Load16x4U, arg)
+        | 5 ->
+            let m, arg = memarg ch in
+            VecLoad (m, Load32x2S, arg)
+        | 6 ->
+            let m, arg = memarg ch in
+            VecLoad (m, Load32x2U, arg)
+        | 7 ->
+            let m, arg = memarg ch in
+            VecLoadSplat (m, `I8, arg)
+        | 8 ->
+            let m, arg = memarg ch in
+            VecLoadSplat (m, `I16, arg)
+        | 9 ->
+            let m, arg = memarg ch in
+            VecLoadSplat (m, `I32, arg)
+        | 10 ->
+            let m, arg = memarg ch in
+            VecLoadSplat (m, `I64, arg)
+        | 11 ->
+            let m, arg = memarg ch in
+            VecStore (m, arg)
         | 12 -> VecConst (v128 ch)
         | 13 -> VecShuffle (Shuffle, v128 ch)
         | 14 -> VecBinOp VecSwizzle
@@ -703,41 +770,49 @@ and instruction ch =
         | 80 -> VecBinOp VecOr
         | 81 -> VecBinOp VecXor
         | 84 ->
-            let m = memarg ch in
+            let m_idx, m = memarg ch in
             let l = input_byte ch in
-            VecLoadLane (0, `I8, m, l)
+            VecLoadLane (m_idx, `I8, m, l)
         | 85 ->
-            let m = memarg ch in
+            let m_idx, m = memarg ch in
             let l = input_byte ch in
-            VecLoadLane (0, `I16, m, l)
+            VecLoadLane (m_idx, `I16, m, l)
         | 86 ->
-            let m = memarg ch in
+            let m_idx, m = memarg ch in
             let l = input_byte ch in
-            VecLoadLane (0, `I32, m, l)
+            VecLoadLane (m_idx, `I32, m, l)
         | 87 ->
-            let m = memarg ch in
+            let m_idx, m = memarg ch in
             let l = input_byte ch in
-            VecLoadLane (0, `I64, m, l)
+            VecLoadLane (m_idx, `I64, m, l)
         | 88 ->
-            let m = memarg ch in
+            let m_idx, m = memarg ch in
             let l = input_byte ch in
-            VecStoreLane (0, `I8, m, l)
+            VecStoreLane (m_idx, `I8, m, l)
         | 89 ->
-            let m = memarg ch in
+            let m_idx, m = memarg ch in
             let l = input_byte ch in
-            VecStoreLane (0, `I16, m, l)
+            VecStoreLane (m_idx, `I16, m, l)
         | 90 ->
-            let m = memarg ch in
+            let m_idx, m = memarg ch in
             let l = input_byte ch in
-            VecStoreLane (0, `I32, m, l)
+            VecStoreLane (m_idx, `I32, m, l)
         | 91 ->
-            let m = memarg ch in
+            let m_idx, m = memarg ch in
             let l = input_byte ch in
-            VecStoreLane (0, `I64, m, l)
-        | 92 -> VecLoadSplat (0, `I8, memarg ch)
-        | 93 -> VecLoadSplat (0, `I16, memarg ch)
-        | 94 -> VecLoadSplat (0, `I32, memarg ch)
-        | 95 -> VecLoadSplat (0, `I64, memarg ch)
+            VecStoreLane (m_idx, `I64, m, l)
+        | 92 ->
+            let m, arg = memarg ch in
+            VecLoadSplat (m, `I8, arg)
+        | 93 ->
+            let m, arg = memarg ch in
+            VecLoadSplat (m, `I16, arg)
+        | 94 ->
+            let m, arg = memarg ch in
+            VecLoadSplat (m, `I32, arg)
+        | 95 ->
+            let m, arg = memarg ch in
+            VecLoadSplat (m, `I64, arg)
         | 96 -> VecUnOp (VecAbs I8x16)
         | 97 -> VecUnOp (VecNeg I8x16)
         | 98 -> VecTest (AnyTrue I8x16)
@@ -1036,9 +1111,17 @@ let empty_names =
   }
 
 let name_map' f ch =
-  Array.fold_left
-    (fun acc (idx, n) -> IntMap.add idx n acc)
-    IntMap.empty (vec f ch)
+  let arr = vec f ch in
+  let _ =
+    Array.fold_left
+      (fun last_idx (idx, _) ->
+        (match last_idx with
+        | Some last when idx <= last -> failwith "name map not sorted"
+        | _ -> ());
+        Some idx)
+      None arr
+  in
+  Array.fold_left (fun acc (idx, n) -> IntMap.add idx n acc) IntMap.empty arr
 
 let name_assoc ch =
   let i = uint ch in
@@ -1149,8 +1232,8 @@ let module_ ?filename buf =
             loop { m with Ast.Binary.tags } next_section_order
         | 0 -> (
             (* Custom section *)
-            let custom_name = name ch in
             let start_pos = pos_in ch in
+            let custom_name = name ch in
             match custom_name with
             | "name" ->
                 let rec parse_name_subsections current_names =

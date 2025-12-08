@@ -265,7 +265,7 @@ let runtest filename path =
         (status, ModuleParser.parse_from_string ~filename text, Some text))
       lst
   in
-  (* Serialization and reparsing *)
+  (* Serialization and reparsing (Wasm) *)
   let lst'' =
     List.map
       (fun (status, m, _) ->

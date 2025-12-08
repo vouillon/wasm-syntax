@@ -28,7 +28,7 @@ module Encoder = struct
       if i >= 0L && i < 128L then byte b (Int64.to_int i)
       else (
         byte b (128 + (Int64.to_int i land 127));
-        uint64 b (Int64.shift_right i 7))
+        uint64 b (Int64.shift_right_logical i 7))
     in
     uint64 b (Uint64.to_int64 i)
 
@@ -1063,8 +1063,7 @@ let output_section ch id encoder data =
   output_uint len;
   Buffer.output_buffer ch b
 
-let module_ ?(out_channel = stdout) ?opt_source_map_file
-    (m : Ast.location module_) =
+let module_ ~out_channel ?opt_source_map_file (m : Ast.location module_) =
   Out_channel.output_string out_channel "\x00\x61\x73\x6D\x01\x00\x00\x00";
 
   let source_map_t = Utils.Source_map.create () in

@@ -142,7 +142,7 @@ let wax_to_wasm ~input_file ~output_file ~validate ~color
         Wasm.Validation.f d wasm_ast_text);
   let wasm_ast_binary = Wasm.Text_to_binary.module_ wasm_ast_text in
   with_open_out output_file (fun oc ->
-      Wasm.Wasm_output.module_ ~color ~out_channel:oc ?opt_source_map_file
+      Wasm.Wasm_output.module_ ~out_channel:oc ?opt_source_map_file
         wasm_ast_binary)
 
 let wat_to_wasm ~input_file ~output_file ~validate ~color
@@ -158,16 +158,16 @@ let wat_to_wasm ~input_file ~output_file ~validate ~color
         Wasm.Validation.f d ast);
   let wasm_ast_binary = Wasm.Text_to_binary.module_ ast in
   with_open_out output_file (fun oc ->
-      Wasm.Wasm_output.module_ ~color ~out_channel:oc ?opt_source_map_file
+      Wasm.Wasm_output.module_ ~out_channel:oc ?opt_source_map_file
         wasm_ast_binary)
 
-let wasm_to_wasm ~input_file ~output_file ~validate:_validate ~color
+let wasm_to_wasm ~input_file ~output_file ~validate:_validate ~color:_
     ~source_map_file:opt_source_map_file =
   let text = with_open_in input_file In_channel.input_all in
   let ast = Wasm.Wasm_parser.module_ text in
   (* if validate then Wasm.Validation.f ast; *)
   with_open_out output_file (fun oc ->
-      Wasm.Wasm_output.module_ ~color ~out_channel:oc ?opt_source_map_file ast)
+      Wasm.Wasm_output.module_ ~out_channel:oc ?opt_source_map_file ast)
 
 let wasm_to_wat ~input_file ~output_file ~validate ~color
     ~source_map_file:opt_source_map_file =
