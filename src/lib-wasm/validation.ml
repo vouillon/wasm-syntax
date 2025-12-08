@@ -55,7 +55,7 @@ module Error = struct
 
   let unbound_label context ~location id =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "The label %s is not bound." id)
+        Format.fprintf f "The label %a is not bound." print_index id)
 
   let unbound_index context ~location kind id =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
@@ -199,7 +199,6 @@ type type_context = {
   label_mapping : (string, int * (string * int) list) Hashtbl.t;
 }
 
-(*ZZZ unbound?*)
 let get_type_info d ctx (idx : Ast.Text.idx) =
   try
     match idx.desc with
@@ -287,7 +286,6 @@ let comptype d ctx (ty : Ast.Text.comptype) =
       let+@ ty = functype d ctx ty in
       Func ty
   | Struct fields ->
-      (*ZZZ Check unique names*)
       let+@ fields = array_map_opt (fun (_, ty) -> fieldtype d ctx ty) fields in
       Struct fields
   | Array field ->
@@ -318,9 +316,7 @@ let signature d ctx (params, results) =
 
 let typeuse d ctx (idx, sign) =
   match (idx, sign) with
-  | Some idx, _ ->
-      (*ZZZ Validate signature *)
-      resolve_type_index d ctx idx
+  | Some idx, _ -> resolve_type_index d ctx idx
   | _, Some sign ->
       let+@ ty = signature d ctx sign in
       Types.add_rectype ctx.types
@@ -329,9 +325,7 @@ let typeuse d ctx (idx, sign) =
 
 let typeuse' d ctx (idx, sign) =
   match (idx, sign) with
-  | Some idx, _ ->
-      (*ZZZ Validate signature *)
-      resolve_type_index d ctx idx
+  | Some idx, _ -> resolve_type_index d ctx idx
   | _, Some sign ->
       let+@ ty = functype d ctx sign in
       Types.add_rectype ctx.types
@@ -524,16 +518,19 @@ let with_empty_stack ctx location f =
 
 let branch_target ctx (idx : Ast.Text.idx) =
   match idx.desc with
-  | Num i -> Some (snd (List.nth ctx.control_types (Uint32.to_int i)) (*ZZZ*))
+  | Num i -> (
+      try Some (snd (List.nth ctx.control_types (Uint32.to_int i)))
+      with Failure _ ->
+        Error.unbound_label ctx.modul.diagnostics ~location:idx.Ast.info idx;
+        None)
   | Id id ->
       let rec find l id =
         match l with
         | [] ->
-            Error.unbound_label ctx.modul.diagnostics ~location:idx.Ast.info id;
+            Error.unbound_label ctx.modul.diagnostics ~location:idx.Ast.info idx;
             None
         | (Some id', res) :: _ when id = id' -> Some res
         | _ :: rem -> find rem id
-        (* ZZZ *)
       in
       find ctx.control_types id
 
