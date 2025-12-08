@@ -56,7 +56,7 @@ let rec comment lexbuf =
   | _ ->
       raise
         (Parsing.Syntax_error
-           ( Sedlexing.lexing_positions lexbuf,
+           ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Malformed comment.\n" ))
 
 let string_buffer = Buffer.create 256
@@ -70,7 +70,7 @@ let rec string lexbuf =
   | '"', ('"' | reserved) ->
       raise
         (Parsing.Syntax_error
-           ( Sedlexing.lexing_positions lexbuf,
+           ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Unknown operator '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))
   | Plus (Sub (any, (0 .. 31 | 0x7f | '"' | '\\'))) ->
@@ -108,7 +108,7 @@ let rec string lexbuf =
   | _ ->
       raise
         (Parsing.Syntax_error
-           ( Sedlexing.lexing_positions lexbuf,
+           ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Malformed string.\n" ))
 
 let rec token lexbuf =
@@ -120,6 +120,19 @@ let rec token lexbuf =
   | sN -> INT (Sedlexing.Utf8.lexeme lexbuf)
   | fN -> FLOAT (Sedlexing.Utf8.lexeme lexbuf)
   | '"' -> STRING (string lexbuf)
+  | "$\"" ->
+      let s = string lexbuf in
+      if not (String.is_valid_utf_8 s) then
+        raise
+          (Parsing.Syntax_error
+             ( Sedlexing.lexing_bytes_positions lexbuf,
+               "Identifier contains malformed UTF-8 byte sequences" ));
+      if s = "" then
+        raise
+          (Parsing.Syntax_error
+             ( Sedlexing.lexing_bytes_positions lexbuf,
+               "An identifier cannot be the empty string" ));
+      ID (string lexbuf)
   | newline | linecomment -> token lexbuf
   | Plus (' ' | '\t') -> token lexbuf
   | "(;" ->
@@ -806,16 +819,17 @@ let rec token lexbuf =
   | keyword ->
       raise
         (Parsing.Syntax_error
-           ( Sedlexing.lexing_positions lexbuf,
+           ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Unknown keyword '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))
   | reserved, Opt '"' ->
       raise
         (Parsing.Syntax_error
-           ( Sedlexing.lexing_positions lexbuf,
+           ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Unknown operator '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))
   | _ ->
       raise
         (Parsing.Syntax_error
-           (Sedlexing.lexing_positions lexbuf, Printf.sprintf "Syntax error.\n"))
+           ( Sedlexing.lexing_bytes_positions lexbuf,
+             Printf.sprintf "Syntax error.\n" ))

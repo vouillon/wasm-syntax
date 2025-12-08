@@ -67,6 +67,18 @@ module Output = struct
   let instr f i = Utils.Printer.run f (fun pp -> Output.instr pp i)
 end
 
+module Error = struct
+  open Utils
+
+  let empty_stack context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The stack is empty.")
+
+  let non_empty_stack context ~location output_stack =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "Some values remain on the stack:%a" output_stack ())
+end
+
 exception Type_error of location * string
 
 module Namespace = struct
@@ -198,6 +210,7 @@ type inferred_type =
 module StringMap = Map.Make (String)
 
 type module_context = {
+  diagnostics : Utils.Diagnostic.context;
   type_context : type_context;
   subtyping_info : Wasm.Types.subtyping_info;
   types : (int * comptype) Tbl.t;
@@ -507,13 +520,17 @@ let ( let* ) e f st =
   let st, v = e st in
   f v st
 
-let pop_any _i st =
-  assert st.available;
-  (*ZZZ*)
-  match st.stack with
-  | Unreachable -> ({ st with stack = Unreachable }, UnionFind.make Any)
-  | Cons (_, ty, r) -> ({ st with stack = r }, ty)
-  | Empty -> assert false (*ZZZ*)
+let pop_any ctx i st =
+  if not st.available then (
+    Error.empty_stack ctx.diagnostics ~location:i.info;
+    (st, UnionFind.make Any))
+  else
+    match st.stack with
+    | Unreachable -> (st, UnionFind.make Any)
+    | Cons (_, ty, r) -> ({ st with stack = r }, ty)
+    | Empty ->
+        Error.empty_stack ctx.diagnostics ~location:i.info;
+        (st, UnionFind.make Any)
 
 let pop ctx ty st =
   match st.stack with
@@ -545,15 +562,19 @@ let rec push_results results =
       let* () = push loc ty in
       push_results rem
 
-let with_empty_stack f =
+type empty_stack_context = Expression | Block | Function
+
+let with_empty_stack ctx ~kind:_ ~location f =
+  (*ZZZ*)
   if false then prerr_endline "START";
   let st, res = f { stack = Empty; available = true } in
   if false then prerr_endline "DONE";
-  match st.stack with
+  (match st.stack with
   | Cons _ ->
-      Format.eprintf "@[<2>Stack:%a@]@." output_stack st.stack;
-      assert false
-  | Empty | Unreachable -> res
+      Error.non_empty_stack ctx.diagnostics ~location (fun f () ->
+          Format.fprintf f "@[%a@]" output_stack st.stack)
+  | Empty | Unreachable -> ());
+  res
 
 let fieldtype ctx (f : fieldtype) =
   match f.typ with
@@ -714,7 +735,7 @@ let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
       (* ZZZ Only at top_level *)
       return_statement i Nop []
   | Pop ->
-      let* ty = pop_any i in
+      let* ty = pop_any ctx i in
       return_expression ~pop:true i Pop ty
   | Null -> return_expression i Null (UnionFind.make Null)
   | Get idx as desc ->
@@ -1704,7 +1725,7 @@ and block_contents ctx l =
       return (i' :: r')
 
 and block ctx loc label params results br_params block =
-  with_empty_stack
+  with_empty_stack ctx ~location:loc ~kind:Block
     (let* () = push_results (List.map (fun ty -> (loc, ty)) params) in
      let* block' =
        block_contents
@@ -1773,7 +1794,10 @@ let globals type_context ctx fields =
       | Global ({ name; mut; typ = Some typ; def; _ } as g) ->
           (*ZZZ check constant instructions *)
           (*ZZZ handle typ= None *)
-          let def' = with_empty_stack (instruction ctx def) in
+          let def' =
+            with_empty_stack ctx ~location:def.info ~kind:Expression
+              (instruction ctx def)
+          in
           let internal = valtype type_context typ in
           let typ = { typ; internal } in
           Tbl.add ctx.globals name (mut, typ);
@@ -1825,7 +1849,8 @@ let functions ctx fields =
             }
           in
           let body =
-            with_empty_stack
+            with_empty_stack ctx ~location:(Ast.no_loc ()).info (*ZZZ*)
+              ~kind:Function
               (let* body = block_contents ctx body in
                let* () =
                  pop_args ctx
@@ -1866,7 +1891,7 @@ let fundecl ctx name typ sign =
             name.desc )
       | None -> assert false (*ZZZ*))
 
-let f fields =
+let f diagnostics fields =
   let type_context =
     {
       internal_types = Wasm.Types.create ();
@@ -1882,6 +1907,7 @@ let f fields =
   let ctx =
     let namespace = Namespace.make () in
     {
+      diagnostics;
       type_context;
       subtyping_info = Wasm.Types.subtyping_info type_context.internal_types;
       types = type_context.types;

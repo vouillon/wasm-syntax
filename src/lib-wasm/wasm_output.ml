@@ -178,7 +178,7 @@ module Encoder = struct
        && i.info.Utils.Ast.loc_start.Lexing.pos_cnum <> -1
      then
        let generated_offset = Buffer.length b in
-       Source_map.add_mapping source_map_t ~generated_offset
+       Utils.Source_map.add_mapping source_map_t ~generated_offset
          ~original_location:i.info);
 
     match i.desc with
@@ -1068,7 +1068,7 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
   let _ = color in
   Out_channel.output_string out_channel "\x00\x61\x73\x6D\x01\x00\x00\x00";
 
-  let source_map_t = Source_map.create () in
+  let source_map_t = Utils.Source_map.create () in
 
   (* 1. Type Section *)
   if m.types <> [] then
@@ -1359,7 +1359,7 @@ let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
   match opt_source_map_file with
   | Some map_file_name ->
       let json_content =
-        Source_map.to_json source_map_t ~file_name:map_file_name
+        Utils.Source_map.to_json source_map_t ~file_name:map_file_name
       in
       Out_channel.with_open_text map_file_name (fun oc ->
           Out_channel.output_string oc json_content)

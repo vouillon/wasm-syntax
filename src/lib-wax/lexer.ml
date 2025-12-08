@@ -40,7 +40,7 @@ let rec comment lexbuf =
   | _ ->
       raise
         (Wasm.Parsing.Syntax_error
-           ( Sedlexing.lexing_positions lexbuf,
+           ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Malformed comment.\n" ))
 
 let string_buffer = Buffer.create 256
@@ -86,7 +86,7 @@ let rec string lexbuf =
   | _ ->
       raise
         (Wasm.Parsing.Syntax_error
-           ( Sedlexing.lexing_positions lexbuf,
+           ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Malformed string.\n" ))
 
 let rec token lexbuf =
@@ -179,13 +179,14 @@ let rec token lexbuf =
   | Compl 'x' ->
       raise
         (Wasm.Parsing.Syntax_error
-           ( Sedlexing.lexing_positions lexbuf,
+           ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Unexpected character '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))
   | _ ->
       raise
         (Wasm.Parsing.Syntax_error
-           (Sedlexing.lexing_positions lexbuf, Printf.sprintf "Syntax error.\n"))
+           ( Sedlexing.lexing_bytes_positions lexbuf,
+             Printf.sprintf "Syntax error.\n" ))
 
 let is_valid_identifier s =
   let buf = Sedlexing.Utf8.from_string s in

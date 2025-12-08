@@ -4,9 +4,10 @@ val validate_refs : bool ref
 (** Configuration flag: if true, checks that ref.func uses function indices that
     occur in the module. Default is true. *)
 
-val f : Ast.location Ast.Text.module_ -> unit
+val f : Utils.Diagnostic.context -> Ast.location Ast.Text.module_ -> unit
 (** [f modul] validates the given Wasm Text module. Raises exceptions on
     validation errors. *)
 
-val check_syntax : _ * _ Ast.Text.modulefield list -> unit
+val check_syntax :
+  Utils.Diagnostic.context -> Ast.location Ast.Text.module_ -> unit
 (** Additional syntactic checks *)

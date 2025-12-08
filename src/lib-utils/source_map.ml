@@ -24,17 +24,17 @@ let register_file t filename =
 
 let add_mapping t ~generated_offset ~original_location =
   let file_idx =
-    register_file t original_location.Utils.Ast.loc_start.Lexing.pos_fname
+    register_file t original_location.Ast.loc_start.Lexing.pos_fname
   in
   let new_mapping =
     {
       generated_offset;
       original_file_idx = file_idx;
-      original_line = original_location.Utils.Ast.loc_start.Lexing.pos_lnum - 1;
+      original_line = original_location.Ast.loc_start.Lexing.pos_lnum - 1;
       (* 0-indexed *)
       original_column =
-        original_location.Utils.Ast.loc_start.Lexing.pos_cnum
-        - original_location.Utils.Ast.loc_start.Lexing.pos_bol;
+        original_location.Ast.loc_start.Lexing.pos_cnum
+        - original_location.Ast.loc_start.Lexing.pos_bol;
       (* 0-indexed *)
     }
   in

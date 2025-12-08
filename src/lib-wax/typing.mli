@@ -6,6 +6,7 @@ exception Type_error of Ast.location * string
 type typed_module_annotation = Ast.storagetype list * Ast.location
 
 val f :
+  Utils.Diagnostic.context ->
   Ast.location Ast.modulefield list ->
   typed_module_annotation Ast.modulefield list
 (** [f fields] performs type checking on the given list of Wax module fields. It

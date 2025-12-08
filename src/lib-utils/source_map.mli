@@ -11,6 +11,6 @@ val create : unit -> t
 val register_file : t -> string -> int
 
 val add_mapping :
-  t -> generated_offset:int -> original_location:Utils.Ast.location -> unit
+  t -> generated_offset:int -> original_location:Ast.location -> unit
 
 val to_json : t -> file_name:string -> string

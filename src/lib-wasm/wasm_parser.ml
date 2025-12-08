@@ -66,7 +66,11 @@ let rec sint32 ?(n = 5) ch =
 
 let rec sint64 ?(n = 10) ch =
   let i = Int64.of_int (input_byte ch) in
-  if n = 1 then assert (Int64.compare i 128L < 0);
+  if n = 1 then (
+    assert (Int64.compare i 128L < 0);
+    let sign_bit = Int64.logand i 1L <> 0L in
+    let unused_bits = Int64.logand i 0x7EL in
+    if sign_bit then assert (unused_bits = 0x7EL) else assert (unused_bits = 0L));
   if Int64.compare i 64L < 0 then i
   else if Int64.compare i 128L < 0 then Int64.sub i 128L
   else Int64.add (Int64.sub i 128L) (Int64.shift_left (sint64 ~n:(n - 1) ch) 7)
@@ -1207,6 +1211,5 @@ let module_ buf =
   in
   assert (
     match !data_count with None -> true | Some n -> n = List.length res.data);
-  assert (ch.pos = ch.limit);
   assert (List.length res.functions = List.length res.code);
   res

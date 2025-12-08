@@ -2,8 +2,6 @@
 ZZZ
 - tag validation
 - resolve all type uses
-- uninitialized locals
-- name parameters in function types
 *)
 
 (* Check that all occurences of instructions ref.func uses a function
@@ -12,191 +10,11 @@ let validate_refs = ref true
 
 module Uint32 = Utils.Uint32
 module Uint64 = Utils.Uint64
-
-let print_instr f i = Utils.Printer.run f (fun p -> Output.instr p i)
-
 open Ast.Binary.Types
 
-module Sequence = struct
-  type 'a t = {
-    name : string;
-    index_mapping : (int, 'a) Hashtbl.t;
-    label_mapping : (string, int) Hashtbl.t;
-    mutable last_index : int;
-  }
-
-  let make name =
-    {
-      name;
-      index_mapping = Hashtbl.create 16;
-      label_mapping = Hashtbl.create 16;
-      last_index = 0;
-    }
-
-  let register seq id v =
-    let idx = seq.last_index in
-    seq.last_index <- seq.last_index + 1;
-    Hashtbl.add seq.index_mapping idx v;
-    Option.iter (fun id -> Hashtbl.add seq.label_mapping id idx) id
-
-  let get seq (idx : Ast.Text.idx) =
-    match idx.desc with
-    | Num n -> (
-        try Hashtbl.find seq.index_mapping (Uint32.to_int n)
-        with Not_found ->
-          Format.eprintf "Unbound %s %s@." seq.name (Uint32.to_string n);
-          exit 1)
-    | Id id -> (
-        try Hashtbl.find seq.index_mapping (Hashtbl.find seq.label_mapping id)
-        with Not_found ->
-          Format.eprintf "Unbound %s $%s@." seq.name id;
-          exit 1)
-
-  let get_index seq (idx : Ast.Text.idx) =
-    match idx.desc with
-    | Num n -> Uint32.to_int n
-    | Id id -> (
-        try Hashtbl.find seq.label_mapping id
-        with Not_found ->
-          Format.eprintf "Unbound %s $%s@." seq.name id;
-          exit 1)
-end
-
-type type_context = {
-  types : Types.t;
-  mutable last_index : int;
-  index_mapping : (Uint32.t, int * (string * int) list) Hashtbl.t;
-  label_mapping : (string, int * (string * int) list) Hashtbl.t;
-}
-
-(*ZZZ unbound?*)
-let get_type_info ctx (idx : Ast.Text.idx) =
-  match idx.desc with
-  | Num x -> (
-      try Hashtbl.find ctx.index_mapping x
-      with Not_found -> failwith ("Unbound type " ^ Uint32.to_string x))
-  | Id id -> (
-      try Hashtbl.find ctx.label_mapping id
-      with Not_found -> failwith ("Unbound type " ^ id))
-
-let resolve_type_index ctx idx = fst (get_type_info ctx idx)
-
-let heaptype ctx (h : Ast.Text.heaptype) : heaptype =
-  match h with
-  | Func -> Func
-  | NoFunc -> NoFunc
-  | Exn -> Exn
-  | NoExn -> NoExn
-  | Extern -> Extern
-  | NoExtern -> NoExtern
-  | Any -> Any
-  | Eq -> Eq
-  | I31 -> I31
-  | Struct -> Struct
-  | Array -> Array
-  | None_ -> None_
-  | Type idx -> Type (resolve_type_index ctx idx)
-
-let reftype ctx { Ast.Text.nullable; typ } =
-  { nullable; typ = heaptype ctx typ }
-
-let rec valtype ctx (ty : Ast.Text.valtype) =
-  match ty with
-  | I32 -> I32
-  | I64 -> I64
-  | F32 -> F32
-  | F64 -> F64
-  | V128 -> V128
-  | Ref r -> Ref (reftype ctx r)
-  | Tuple l -> Tuple (List.map (valtype ctx) l)
-
-let functype ctx { Ast.Text.params; results } =
-  {
-    params = Array.map (fun (_, ty) -> valtype ctx ty) params;
-    results = Array.map (fun ty -> valtype ctx ty) results;
-  }
-
-let storagetype ctx (ty : Ast.Text.storagetype) =
-  match ty with Value ty -> Value (valtype ctx ty) | Packed ty -> Packed ty
-
-let muttype f ctx { mut; typ } = { mut; typ = f ctx typ }
-let fieldtype ctx ty = muttype storagetype ctx ty
-
-let tabletype ctx ({ limits; reftype = typ } : Ast.Text.tabletype) =
-  { limits; reftype = reftype ctx typ }
-
-let globaltype ctx ty = muttype valtype ctx ty
-
-let comptype ctx (ty : Ast.Text.comptype) =
-  match ty with
-  | Func ty -> Func (functype ctx ty)
-  | Struct fields ->
-      (*ZZZ Check unique names*)
-      Struct (Array.map (fun (_, ty) -> fieldtype ctx ty) fields)
-  | Array field -> Array (fieldtype ctx field)
-
-let subtype ctx { Ast.Text.typ; supertype; final } =
-  {
-    typ = comptype ctx typ;
-    supertype = Option.map (fun ty -> resolve_type_index ctx ty) supertype;
-    final;
-  }
-
-let rectype ctx ty = Array.map (fun (_, ty) -> subtype ctx ty) ty
-
-let signature ctx (params, results) =
-  {
-    params = Array.of_list (List.map (fun (_, ty) -> valtype ctx ty) params);
-    results = Array.of_list (List.map (valtype ctx) results);
-  }
-
-let typeuse ctx (idx, sign) =
-  match (idx, sign) with
-  | Some idx, _ ->
-      (*ZZZ Validate signature *)
-      resolve_type_index ctx idx
-  | _, Some sign ->
-      Types.add_rectype ctx.types
-        [|
-          { typ = Func (signature ctx sign); supertype = None; final = true };
-        |]
-  | None, None -> assert false
-
-let typeuse' ctx (idx, sign) =
-  match (idx, sign) with
-  | Some idx, _ ->
-      (*ZZZ Validate signature *)
-      resolve_type_index ctx idx
-  | _, Some sign ->
-      Types.add_rectype ctx.types
-        [| { typ = Func (functype ctx sign); supertype = None; final = true } |]
-  | None, None -> assert false
-
-type module_context = {
-  types : type_context;
-  subtyping_info : Types.subtyping_info;
-  functions : int Sequence.t;
-  memories : limits Sequence.t;
-  tables : tabletype Sequence.t;
-  globals : globaltype Sequence.t;
-  tags : int Sequence.t;
-  data : unit Sequence.t;
-  elem : reftype Sequence.t;
-  exports : (string, unit) Hashtbl.t;
-  refs : (int, unit) Hashtbl.t;
-}
-
-module IntSet = Set.Make (Int)
-
-type ctx = {
-  locals : valtype Sequence.t;
-  control_types : (string option * valtype list) list;
-  return_types : valtype list;
-  modul : module_context;
-  mutable initialized_locals : IntSet.t;
-}
-
-type stack = Unreachable | Empty | Cons of valtype option * stack
+let ( let*@ ) = Option.bind
+let ( let+@ ) o f = Option.map f o
+let ( let>@ ) o f = Option.iter f o
 
 let print_heaptype f (ty : heaptype) =
   match ty with
@@ -227,26 +45,357 @@ let print_valtype f ty =
       else Format.fprintf f "@[<1>(ref@ %a)@]" print_heaptype typ
   | Tuple _ -> assert false
 
-let pop_any st =
+let print_index f (idx : Ast.Text.idx) =
+  match idx.desc with
+  | Num n -> Format.fprintf f "%s" (Uint32.to_string n)
+  | Id id -> Format.fprintf f "$%s" id (*ZZZ print $"..." *)
+
+module Error = struct
+  open Utils
+
+  let unbound_label context ~location id =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The label %s is not bound." id)
+
+  let unbound_index context ~location kind id =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The %s index %a is not bound." kind print_index id)
+
+  let instruction_type_mismatch context ~location ty' ty =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "This instruction has type@ @[<2>%a@]@ but is expected to have type@ \
+           @[<2>%a@]."
+          print_valtype ty' print_valtype ty)
+
+  let type_mismatch context ~location ty' ty =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "Expecting type@ @[<2>%a@]@ but got type@ @[<2>%a@]."
+          print_valtype ty' print_valtype ty)
+
+  let select_type_mismatch context ~location ty1 ty2 =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "Both branch of a select should have the same type.@ Here, they have \
+           type@ @[<2>%a@]@ and@ @[<2>%a@]."
+          print_valtype ty1 print_valtype ty2)
+
+  let empty_stack context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The stack is empty.")
+
+  let non_empty_stack context ~location output_stack =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "Some values remain on the stack:%a" output_stack ())
+
+  let branch_parameter_count_mismatch context ~location label len label' len' =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "The default branch target@ %a@ expects@ %d@ parameters, while \
+           branch target@ %a@ expects@ %d@ parameters."
+          print_index label len print_index label' len')
+
+  let memory_offset_too_large context ~location max_offset =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The memory offset should be less than 0x%Lx."
+          (Uint64.to_int64 max_offset))
+
+  let memory_align_too_large context ~location natural =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "The memory alignment is larger than the natural alignment %d."
+          natural)
+
+  let bad_memory_align context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The memory alignment should be a power of two.")
+
+  let invalid_lane_index context ~location max_lane =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The lane index should be less than %d." max_lane)
+
+  let inline_function_type_mismatch context ~location _ =
+    (*ZZZ print expected type *)
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "The inline function type does not match the type definition.")
+
+  let constant_expression_required context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "Only constant expressions are allowed here.")
+
+  let limit_too_large context ~location kind max =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "The %s size it too large. It should be less than 0x%Lx." kind
+          (Uint64.to_int64 max))
+
+  let limit_mismatch context ~location kind =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "The %s maximum size should be larger than the minimal size." kind)
+
+  let duplicated_export context ~location name =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "There is already an export of name \"%s\"." name)
+
+  let import_after_definition context ~location kind =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "This imports is after a %s definition." kind)
+
+  let index_already_bound context ~location kind index =
+    (*ZZZ print $"..." *)
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The %s index $%s is already bound." kind index)
+end
+
+let print_instr f i = Utils.Printer.run f (fun p -> Output.instr p i)
+
+module Sequence = struct
+  type 'a t = {
+    name : string;
+    index_mapping : (int, 'a) Hashtbl.t;
+    label_mapping : (string, int) Hashtbl.t;
+    mutable last_index : int;
+  }
+
+  let make name =
+    {
+      name;
+      index_mapping = Hashtbl.create 16;
+      label_mapping = Hashtbl.create 16;
+      last_index = 0;
+    }
+
+  let register seq id v =
+    let idx = seq.last_index in
+    seq.last_index <- seq.last_index + 1;
+    Hashtbl.add seq.index_mapping idx v;
+    Option.iter (fun id -> Hashtbl.add seq.label_mapping id idx) id
+
+  let get d seq (idx : Ast.Text.idx) =
+    try
+      match idx.desc with
+      | Num n -> Some (Hashtbl.find seq.index_mapping (Uint32.to_int n))
+      | Id id ->
+          Some
+            (Hashtbl.find seq.index_mapping (Hashtbl.find seq.label_mapping id))
+    with Not_found ->
+      Error.unbound_index d ~location:idx.info seq.name idx;
+      None
+
+  let get_index seq (idx : Ast.Text.idx) =
+    match idx.desc with
+    | Num n -> Uint32.to_int n
+    | Id id -> (
+        try Hashtbl.find seq.label_mapping id
+        with Not_found -> assert false (* Should not happen *))
+end
+
+type type_context = {
+  types : Types.t;
+  mutable last_index : int;
+  index_mapping : (Uint32.t, int * (string * int) list) Hashtbl.t;
+  label_mapping : (string, int * (string * int) list) Hashtbl.t;
+}
+
+(*ZZZ unbound?*)
+let get_type_info d ctx (idx : Ast.Text.idx) =
+  try
+    match idx.desc with
+    | Num x -> Some (Hashtbl.find ctx.index_mapping x)
+    | Id id -> Some (Hashtbl.find ctx.label_mapping id)
+  with Not_found ->
+    Error.unbound_index d ~location:idx.info "type" idx;
+    None
+
+let resolve_type_index d ctx idx =
+  let+@ ty = get_type_info d ctx idx in
+  fst ty
+
+let heaptype d ctx (h : Ast.Text.heaptype) : heaptype option =
+  match h with
+  | Func -> Some Func
+  | NoFunc -> Some NoFunc
+  | Exn -> Some Exn
+  | NoExn -> Some NoExn
+  | Extern -> Some Extern
+  | NoExtern -> Some NoExtern
+  | Any -> Some Any
+  | Eq -> Some Eq
+  | I31 -> Some I31
+  | Struct -> Some Struct
+  | Array -> Some Array
+  | None_ -> Some None_
+  | Type idx ->
+      let+@ ty = resolve_type_index d ctx idx in
+      Type ty
+
+let reftype d ctx { Ast.Text.nullable; typ } =
+  let+@ typ = heaptype d ctx typ in
+  { nullable; typ }
+
+let valtype d ctx (ty : Ast.Text.valtype) =
+  match ty with
+  | I32 -> Some I32
+  | I64 -> Some I64
+  | F32 -> Some F32
+  | F64 -> Some F64
+  | V128 -> Some V128
+  | Ref r ->
+      let+@ ty = reftype d ctx r in
+      Ref ty
+  | Tuple _ -> assert false
+
+let array_map_opt f arr =
+  let exception Short_circuit in
+  try
+    let result =
+      Array.init (Array.length arr) (fun i ->
+          match f arr.(i) with Some v -> v | None -> raise Short_circuit)
+    in
+    Some result
+  with Short_circuit -> None
+
+let functype d ctx { Ast.Text.params; results } =
+  let*@ params = array_map_opt (fun (_, ty) -> valtype d ctx ty) params in
+  let+@ results = array_map_opt (fun ty -> valtype d ctx ty) results in
+  { params; results }
+
+let storagetype d ctx (ty : Ast.Text.storagetype) =
+  match ty with
+  | Value ty ->
+      let+@ ty = valtype d ctx ty in
+      Value ty
+  | Packed ty -> Some (Packed ty)
+
+let muttype f d ctx { mut; typ } =
+  let+@ typ = f d ctx typ in
+  { mut; typ }
+
+let fieldtype d ctx ty = muttype storagetype d ctx ty
+
+let tabletype d ctx ({ limits; reftype = typ } : Ast.Text.tabletype) =
+  let+@ reftype = reftype d ctx typ in
+  { limits; reftype }
+
+let globaltype d ctx ty = muttype valtype d ctx ty
+
+let comptype d ctx (ty : Ast.Text.comptype) =
+  match ty with
+  | Func ty ->
+      let+@ ty = functype d ctx ty in
+      Func ty
+  | Struct fields ->
+      (*ZZZ Check unique names*)
+      let+@ fields = array_map_opt (fun (_, ty) -> fieldtype d ctx ty) fields in
+      Struct fields
+  | Array field ->
+      let+@ field = fieldtype d ctx field in
+      Array field
+
+let subtype d ctx { Ast.Text.typ; supertype; final } =
+  let*@ typ = comptype d ctx typ in
+  let+@ supertype =
+    match supertype with
+    | None -> Some None
+    | Some ty ->
+        let+@ ty = resolve_type_index d ctx ty in
+        Some ty
+  in
+  { typ; supertype; final }
+
+let rectype d ctx ty = array_map_opt (fun (_, ty) -> subtype d ctx ty) ty
+
+let signature d ctx (params, results) =
+  let*@ params =
+    array_map_opt (fun (_, ty) -> valtype d ctx ty) (Array.of_list params)
+  in
+  let+@ results =
+    array_map_opt (fun ty -> valtype d ctx ty) (Array.of_list results)
+  in
+  { params; results }
+
+let typeuse d ctx (idx, sign) =
+  match (idx, sign) with
+  | Some idx, _ ->
+      (*ZZZ Validate signature *)
+      resolve_type_index d ctx idx
+  | _, Some sign ->
+      let+@ ty = signature d ctx sign in
+      Types.add_rectype ctx.types
+        [| { typ = Func ty; supertype = None; final = true } |]
+  | None, None -> assert false
+
+let typeuse' d ctx (idx, sign) =
+  match (idx, sign) with
+  | Some idx, _ ->
+      (*ZZZ Validate signature *)
+      resolve_type_index d ctx idx
+  | _, Some sign ->
+      let+@ ty = functype d ctx sign in
+      Types.add_rectype ctx.types
+        [| { typ = Func ty; supertype = None; final = true } |]
+  | None, None -> assert false
+
+type module_context = {
+  diagnostics : Utils.Diagnostic.context;
+  types : type_context;
+  subtyping_info : Types.subtyping_info;
+  functions : int Sequence.t;
+  memories : limits Sequence.t;
+  tables : tabletype Sequence.t;
+  globals : globaltype Sequence.t;
+  tags : int Sequence.t;
+  data : unit Sequence.t;
+  elem : reftype Sequence.t;
+  exports : (string, unit) Hashtbl.t;
+  refs : (int, unit) Hashtbl.t;
+}
+
+module IntSet = Set.Make (Int)
+
+type ctx = {
+  locals : valtype Sequence.t;
+  control_types : (string option * valtype list) list;
+  return_types : valtype list;
+  modul : module_context;
+  mutable initialized_locals : IntSet.t;
+}
+
+type stack =
+  | Unreachable
+  | Empty
+  | Cons of Ast.location option * valtype option * stack
+
+let pop_any ctx loc st =
   match st with
   | Unreachable -> (Unreachable, None)
-  | Cons (ty, r) -> (r, ty)
-  | Empty -> assert false
+  | Cons (_, ty, r) -> (r, ty)
+  | Empty ->
+      Error.empty_stack ctx.modul.diagnostics ~location:loc;
+      (st, None)
 
-let pop ctx ty st =
+let pop ctx loc ty st =
   match st with
   | Unreachable -> (Unreachable, ())
-  | Cons (None, r) -> (r, ())
-  | Cons (Some ty', r) ->
+  | Cons (_, None, r) -> (r, ())
+  | Cons (location, Some ty', r) ->
       let ok = Types.val_subtype ctx.modul.subtyping_info ty' ty in
-      if not ok then (
-        Format.eprintf "%a <: %a@." print_valtype ty' print_valtype ty;
-        failwith "type mismatch");
+      (if not ok then
+         match location with
+         | Some location ->
+             Error.instruction_type_mismatch ctx.modul.diagnostics ~location ty'
+               ty
+         | None ->
+             Error.type_mismatch ctx.modul.diagnostics ~location:loc ty' ty);
       (r, ())
-  | Empty -> assert false
+  | Empty ->
+      Error.empty_stack ctx.modul.diagnostics ~location:loc;
+      (Unreachable, ())
 
-let push_poly ty st = (Cons (ty, st), ())
-let push ty st = (Cons (Some ty, st), ())
+let push_poly loc ty st = (Cons (Some loc, ty, st), ())
+let push loc ty st = (Cons (loc, Some ty, st), ())
 let unreachable _ = (Unreachable, ())
 let return v st = (st, v)
 
@@ -254,10 +403,17 @@ let ( let* ) e f st =
   let st, v = e st in
   f v st
 
+let ( let*! ) e f = match e with Some v -> f v | None -> unreachable
+let ( let*? ) e f = match e with Some v -> f v | None -> ()
+
 let get_local ctx ?(initialize = false) i =
-  ignore initialize;
-  (*ZZZ Check in bound + initialized*)
-  Sequence.get ctx.locals i
+  let l = Sequence.get ctx.modul.diagnostics ctx.locals i in
+  let idx = Sequence.get_index ctx.locals i in
+  if initialize then
+    ctx.initialized_locals <- IntSet.add idx ctx.initialized_locals
+  else if not (IntSet.mem idx ctx.initialized_locals) then
+    failwith "uninitialized local";
+  l
 
 let is_nullable ty =
   match ty with
@@ -306,37 +462,46 @@ let float_bin_op_type ty (op : Ast.Text.float_bin_op) =
 
 let blocktype ctx (ty : Ast.Text.blocktype option) =
   match ty with
-  | None -> ([], [])
+  | None -> Some ([], [])
   | Some (Typeuse (_, Some { params; results })) ->
-      ( Array.to_list (Array.map (fun (_, ty) -> valtype ctx.types ty) params),
-        Array.to_list (Array.map (valtype ctx.types) results) )
+      let*@ params =
+        array_map_opt
+          (fun (_, ty) -> valtype ctx.diagnostics ctx.types ty)
+          params
+      in
+      let+@ results =
+        array_map_opt (valtype ctx.diagnostics ctx.types) results
+      in
+      (Array.to_list params, Array.to_list results)
   | Some (Typeuse (Some idx, None)) -> (
-      let ty = resolve_type_index ctx.types idx in
+      let+@ ty = resolve_type_index ctx.diagnostics ctx.types idx in
       match (Types.get_subtype ctx.subtyping_info ty).typ with
       | Func { params; results } -> (Array.to_list params, Array.to_list results)
       | _ -> assert false)
   | Some (Typeuse (None, None)) -> assert false
-  | Some (Valtype ty) -> ([], [ valtype ctx.types ty ])
+  | Some (Valtype ty) ->
+      let+@ ty = valtype ctx.diagnostics ctx.types ty in
+      ([], [ ty ])
 
-let rec pop_args ctx args =
+let rec pop_args ctx loc args =
   match args with
   | [] -> return ()
   | ty :: rem ->
-      let* () = pop_args ctx rem in
-      pop ctx ty
+      let* () = pop_args ctx loc rem in
+      pop ctx loc ty
 
 let rec push_results results =
   match results with
   | [] -> return ()
   | ty :: rem ->
-      let* () = push ty in
+      let* () = push None ty in
       push_results rem
 
 let rec output_stack f st =
   match st with
   | Empty -> ()
   | Unreachable -> Format.fprintf f "@ unreachable"
-  | Cons (ty, st) ->
+  | Cons (_, ty, st) ->
       Format.fprintf f "@ %a%a"
         (Format.pp_print_option
            ~none:(fun f _ -> Format.fprintf f "bot")
@@ -349,24 +514,24 @@ let print_stack st =
 
 let _ = print_stack
 
-let with_empty_stack f =
+let with_empty_stack ctx location f =
   let st, () = f Empty in
   match st with
   | Cons _ ->
-      Format.eprintf "@[<2>Stack:%a@]@." output_stack st;
-      assert false
+      Error.non_empty_stack ctx.diagnostics ~location (fun f () ->
+          Format.fprintf f "@[%a@]" output_stack st)
   | Empty | Unreachable -> ()
 
 let branch_target ctx (idx : Ast.Text.idx) =
   match idx.desc with
-  | Num i -> snd (List.nth ctx.control_types (Uint32.to_int i))
+  | Num i -> Some (snd (List.nth ctx.control_types (Uint32.to_int i)) (*ZZZ*))
   | Id id ->
       let rec find l id =
         match l with
         | [] ->
-            prerr_endline id;
-            assert false
-        | (Some id', res) :: _ when id = id' -> res
+            Error.unbound_label ctx.modul.diagnostics ~location:idx.Ast.info id;
+            None
+        | (Some id', res) :: _ when id = id' -> Some res
         | _ :: rem -> find rem id
         (* ZZZ *)
       in
@@ -419,22 +584,29 @@ let address_type_to_valtype = function `I32 -> I32 | `I64 -> I64
 let max_offset_i32_exclusive = Uint64.of_string "0x1_0000_0000" (* 2^32 *)
 let max_align = Uint64.of_int 16
 
-let check_memarg limits sz { Ast.Text.offset; align } =
+let check_memarg ctx location limits sz { Ast.Text.offset; align } =
   if limits.address_type = `I32 then
-    assert (Uint64.compare offset max_offset_i32_exclusive < 0);
-  assert (Uint64.compare align max_align <= 8);
-
-  assert (
-    match (Uint64.to_int align, sz) with
-    | 1, (`I8 | `I16 | `I32 | `I64 | `V128) -> true
-    | 2, (`I16 | `I32 | `I64 | `V128) -> true
-    | 4, (`I32 | `I64 | `V128) -> true
-    | 8, (`I64 | `V128) -> true
-    | 16, `V128 -> true
-    | _ -> false);
-
-  if Uint64.compare align max_align > 0 then
-    failwith "alignment must not be larger than natural alignment"
+    if Uint64.compare offset max_offset_i32_exclusive >= 0 then
+      Error.memory_offset_too_large ctx.modul.diagnostics ~location
+        max_offset_i32_exclusive;
+  let natural_alignment =
+    match sz with
+    | `I8 -> 1
+    | `I16 -> 2
+    | `I32 | `F32 -> 4
+    | `I64 | `F64 -> 8
+    | `V128 -> 16
+  in
+  if
+    Uint64.compare align max_align > 0
+    || Uint64.to_int align > natural_alignment
+  then
+    Error.memory_align_too_large ctx.modul.diagnostics ~location
+      natural_alignment
+  else
+    match Uint64.to_int align with
+    | 1 | 2 | 4 | 8 | 16 -> ()
+    | _ -> Error.bad_memory_align ctx.modul.diagnostics ~location
 
 let memory_instruction_type_and_size ty =
   match (ty : Ast.Text.num_type) with
@@ -459,7 +631,7 @@ let shape_type (shape : Ast.vec_shape) =
   | F32x4 -> F32
   | F64x2 -> F64
 
-let check_shape_lanes (shape : Ast.vec_shape) lane =
+let check_shape_lanes ctx location (shape : Ast.vec_shape) lane =
   let max_lane =
     match shape with
     | I8x16 -> 16
@@ -467,37 +639,41 @@ let check_shape_lanes (shape : Ast.vec_shape) lane =
     | I32x4 | F32x4 -> 4
     | I64x2 | F64x2 -> 2
   in
-  assert (lane < max_lane)
+  if lane >= max_lane then
+    Error.invalid_lane_index ctx.modul.diagnostics ~location max_lane
 
 let rec instruction ctx (i : _ Ast.Text.instr) =
   if false then Format.eprintf "%a@." print_instr i;
+  let loc = i.info in
   match i.desc with
   | Block { label; typ; block = b } ->
-      let params, results = blocktype ctx.modul typ in
-      let* () = pop_args ctx params in
-      block ctx label params results results b;
+      let*! params, results = blocktype ctx.modul typ in
+      let* () = pop_args ctx loc params in
+      block ctx loc label params results results b;
       push_results results
   | Loop { label; typ; block = b } ->
-      let params, results = blocktype ctx.modul typ in
-      let* () = pop_args ctx params in
-      block ctx label params results params b;
+      let*! params, results = blocktype ctx.modul typ in
+      let* () = pop_args ctx loc params in
+      block ctx loc label params results params b;
       push_results results
   | If { label; typ; if_block; else_block } ->
-      let params, results = blocktype ctx.modul typ in
-      let* () = pop ctx I32 in
-      let* () = pop_args ctx params in
-      block ctx label params results results if_block;
-      block ctx label params results results else_block;
+      let*! params, results = blocktype ctx.modul typ in
+      let* () = pop ctx loc I32 in
+      let* () = pop_args ctx loc params in
+      block ctx loc label params results results if_block;
+      block ctx loc label params results results else_block;
       push_results results
   | TryTable { label; typ; block = b; catches } ->
-      let params, results = blocktype ctx.modul typ in
-      let* () = pop_args ctx params in
-      block ctx label params results results b;
+      let*! params, results = blocktype ctx.modul typ in
+      let* () = pop_args ctx loc params in
+      block ctx loc label params results results b;
       List.iter
         (fun (catch : Ast.Text.catch) ->
           match catch with
           | Catch (tag, label) ->
-              let ty = Sequence.get ctx.modul.tags tag in
+              let*? ty =
+                Sequence.get ctx.modul.diagnostics ctx.modul.tags tag
+              in
               let args =
                 match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
                 | Struct _ | Array _ -> assert false (*ZZZ*)
@@ -505,12 +681,14 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
                     assert (results = [||]);
                     params
               in
-              let params = branch_target ctx label in
-              with_empty_stack
+              let*? params = branch_target ctx label in
+              with_empty_stack ctx.modul loc (*ZZZ*)
                 (let* () = push_results (Array.to_list args) in
-                 pop_args ctx params)
+                 pop_args ctx loc params)
           | CatchRef (tag, label) ->
-              let ty = Sequence.get ctx.modul.tags tag in
+              let*? ty =
+                Sequence.get ctx.modul.diagnostics ctx.modul.tags tag
+              in
               let args =
                 match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
                 | Struct _ | Array _ -> assert false (*ZZZ*)
@@ -518,28 +696,35 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
                     assert (results = [||]);
                     params
               in
-              let params = branch_target ctx label in
-              with_empty_stack
+              let*? params = branch_target ctx label in
+              with_empty_stack ctx.modul loc (*ZZZ*)
                 (let* () = push_results (Array.to_list args) in
-                 let* () = push (Ref { nullable = false; typ = Exn }) in
-                 pop_args ctx params)
+                 let* () = push None (Ref { nullable = false; typ = Exn }) in
+                 pop_args ctx loc params)
           | CatchAll label ->
-              let params = branch_target ctx label in
-              with_empty_stack (pop_args ctx params)
+              Option.iter
+                (fun params ->
+                  with_empty_stack ctx.modul loc
+                    (*ZZZ*) (pop_args ctx loc params))
+                (branch_target ctx label)
           | CatchAllRef label ->
-              let params = branch_target ctx label in
-              with_empty_stack
-                (let* () = push (Ref { nullable = false; typ = Exn }) in
-                 pop_args ctx params))
+              Option.iter
+                (fun params ->
+                  with_empty_stack ctx.modul loc (*ZZZ*)
+                    (let* () =
+                       push None (Ref { nullable = false; typ = Exn })
+                     in
+                     pop_args ctx loc params))
+                (branch_target ctx label))
         catches;
       push_results results
   | Try { label; typ; block = b; catches; catch_all } ->
-      let params, results = blocktype ctx.modul typ in
-      let* () = pop_args ctx params in
-      block ctx label params results results b;
+      let*! params, results = blocktype ctx.modul typ in
+      let* () = pop_args ctx loc params in
+      block ctx loc label params results results b;
       List.iter
         (fun (tag, b) ->
-          let ty = Sequence.get ctx.modul.tags tag in
+          let*? ty = Sequence.get ctx.modul.diagnostics ctx.modul.tags tag in
           let params' =
             match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
             | Struct _ | Array _ -> assert false (*ZZZ*)
@@ -547,110 +732,118 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
                 assert (results = [||]);
                 params
           in
-          block ctx label (Array.to_list params') results results b)
+          block ctx loc label (Array.to_list params') results results b)
         catches;
-      Option.iter (fun b -> block ctx label params results results b) catch_all;
+      Option.iter
+        (fun b -> block ctx loc label params results results b)
+        catch_all;
       push_results results
   | Unreachable -> unreachable
   | Nop -> return ()
-  | Throw idx -> (
-      let ty = Sequence.get ctx.modul.tags idx in
-      match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
-      | Struct _ | Array _ -> assert false (*ZZZ*)
-      | Func { params; results } ->
-          assert (results = [||]);
-          let* () = pop_args ctx (Array.to_list params) in
-          unreachable)
+  | Throw idx ->
+      let*! ty = Sequence.get ctx.modul.diagnostics ctx.modul.tags idx in
+      let* () =
+        match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
+        | Struct _ | Array _ -> assert false (*ZZZ*)
+        | Func { params; results } ->
+            assert (results = [||]);
+            pop_args ctx loc (Array.to_list params)
+      in
+      unreachable
   | ThrowRef ->
-      let* () = pop ctx (Ref { nullable = true; typ = Exn }) in
+      let* () = pop ctx loc (Ref { nullable = true; typ = Exn }) in
       unreachable
   | Br idx ->
-      let params = branch_target ctx idx in
-      let* () = pop_args ctx params in
+      let*! params = branch_target ctx idx in
+      let* () = pop_args ctx loc params in
       unreachable
   | Br_if idx ->
-      let* () = pop ctx I32 in
-      let params = branch_target ctx idx in
-      let* () = pop_args ctx params in
+      let* () = pop ctx loc I32 in
+      let*! params = branch_target ctx idx in
+      let* () = pop_args ctx loc params in
       push_results params
   | Br_table (lst, idx) ->
-      let* () = pop ctx I32 in
-      let len = List.length (branch_target ctx idx) in
+      let* () = pop ctx loc I32 in
+      let*! params = branch_target ctx idx in
+      let len = List.length params in
       let* () =
         with_current_stack (fun st ->
             List.iter
-              (fun idx ->
-                let params = branch_target ctx idx in
-                assert (List.length params = len);
-                ignore (pop_args ctx params st))
+              (fun idx' ->
+                let*? params = branch_target ctx idx' in
+                let len' = List.length params in
+                if len <> len' then
+                  Error.branch_parameter_count_mismatch ctx.modul.diagnostics
+                    ~location:loc idx len idx' len'
+                else ignore (pop_args ctx loc params st))
               (idx :: lst))
       in
       unreachable
   | Br_on_null idx -> (
-      let* ty = pop_any in
+      let* ty = pop_any ctx loc in
       match ty with
       | None -> return ()
       | Some (Ref { nullable = _; typ }) ->
-          let params = branch_target ctx idx in
-          let* () = pop_args ctx params in
+          let*! params = branch_target ctx idx in
+          let* () = pop_args ctx loc params in
           let* () = push_results params in
-          push (Ref { nullable = false; typ })
+          push (Some loc) (Ref { nullable = false; typ })
       | Some _ -> assert false (*ZZZ*))
   | Br_on_non_null idx -> (
-      let* ty = pop_any in
+      let* ty = pop_any ctx loc in
       match ty with
       | None -> return ()
       | Some (Ref { nullable = _; typ }) ->
-          let* () = push (Ref { nullable = false; typ }) in
-          let params = branch_target ctx idx in
-          let* () = pop_args ctx params in
+          let* () = push None (Ref { nullable = false; typ }) in
+          let*! params = branch_target ctx idx in
+          let* () = pop_args ctx loc params in
           let* () = push_results params in
-          let* _ = pop_any in
+          let* _ = pop_any ctx loc in
           return ()
       | Some _ -> assert false (*ZZZ*))
   | Br_on_cast (idx, ty1, ty2) ->
-      let ty1 = reftype ctx.modul.types ty1 in
-      let ty2 = reftype ctx.modul.types ty2 in
+      let*! ty1 = reftype ctx.modul.diagnostics ctx.modul.types ty1 in
+      let*! ty2 = reftype ctx.modul.diagnostics ctx.modul.types ty2 in
       assert (Types.val_subtype ctx.modul.subtyping_info (Ref ty2) (Ref ty1));
-      let* () = pop ctx (Ref ty1) in
-      let* () = push (Ref ty2) in
-      let params = branch_target ctx idx in
-      let* () = pop_args ctx params in
+      let* () = pop ctx loc (Ref ty1) in
+      let* () = push None (Ref ty2) in
+      let*! params = branch_target ctx idx in
+      let* () = pop_args ctx loc params in
       let* () = push_results params in
-      let* _ = pop_any in
-      push (Ref (diff_ref_type ty1 ty2))
+      let* _ = pop_any ctx loc in
+      push (Some loc) (Ref (diff_ref_type ty1 ty2))
   | Br_on_cast_fail (idx, ty1, ty2) ->
-      let ty1 = reftype ctx.modul.types ty1 in
-      let ty2 = reftype ctx.modul.types ty2 in
+      let*! ty1 = reftype ctx.modul.diagnostics ctx.modul.types ty1 in
+      let*! ty2 = reftype ctx.modul.diagnostics ctx.modul.types ty2 in
       assert (Types.val_subtype ctx.modul.subtyping_info (Ref ty2) (Ref ty1));
-      let* () = pop ctx (Ref ty1) in
-      let* () = push (Ref (diff_ref_type ty1 ty2)) in
-      let params = branch_target ctx idx in
-      let* () = pop_args ctx params in
+      let* () = pop ctx loc (Ref ty1) in
+      let* () = push None (Ref (diff_ref_type ty1 ty2)) in
+      let*! params = branch_target ctx idx in
+      let* () = pop_args ctx loc params in
       let* () = push_results params in
-      let* _ = pop_any in
-      push (Ref ty2)
+      let* _ = pop_any ctx loc in
+      push (Some loc) (Ref ty2)
   | Return ->
-      let* () = pop_args ctx ctx.return_types in
+      let* () = pop_args ctx loc ctx.return_types in
       unreachable
   | Call idx -> (
-      let ty = Sequence.get ctx.modul.functions idx in
+      let*! ty = Sequence.get ctx.modul.diagnostics ctx.modul.functions idx in
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct _ | Array _ -> assert false (*ZZZ*)
       | Func { params; results } ->
-          let* () = pop_args ctx (Array.to_list params) in
+          let* () = pop_args ctx loc (Array.to_list params) in
           push_results (Array.to_list results))
   | CallRef idx -> (
-      let ty = resolve_type_index ctx.modul.types idx in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct _ | Array _ -> assert false (*ZZZ*)
       | Func { params; results } ->
-          let* () = pop ctx (Ref { nullable = true; typ = Type ty }) in
-          let* () = pop_args ctx (Array.to_list params) in
+          let* () = pop ctx loc (Ref { nullable = true; typ = Type ty }) in
+          let* () = pop_args ctx loc (Array.to_list params) in
           push_results (Array.to_list results))
   | CallIndirect (idx, tu) -> (
-      let typ = Sequence.get ctx.modul.tables idx in
-      let ty = typeuse' ctx.modul.types tu in
+      let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
+      let*! ty = typeuse' ctx.modul.diagnostics ctx.modul.types tu in
       assert (
         Types.val_subtype ctx.modul.subtyping_info (Ref typ.reftype)
           (Ref { nullable = true; typ = Func }));
@@ -658,36 +851,34 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       | Struct _ | Array _ -> assert false (*ZZZ*)
       | Func { params; results } ->
           let* () =
-            pop ctx
-              (address_type_to_valtype
-                 (Sequence.get ctx.modul.tables idx).limits.address_type)
+            pop ctx loc (address_type_to_valtype typ.limits.address_type)
           in
-          let* () = pop_args ctx (Array.to_list params) in
+          let* () = pop_args ctx loc (Array.to_list params) in
           push_results (Array.to_list results))
   | ReturnCall idx -> (
-      let ty = Sequence.get ctx.modul.functions idx in
+      let*! ty = Sequence.get ctx.modul.diagnostics ctx.modul.functions idx in
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct _ | Array _ -> assert false (*ZZZ*)
       | Func { params; results } ->
-          let* () = pop_args ctx (Array.to_list params) in
-          with_empty_stack
+          let* () = pop_args ctx loc (Array.to_list params) in
+          with_empty_stack ctx.modul loc (*ZZZ*)
             (let* () = push_results (Array.to_list results) in
-             pop_args ctx ctx.return_types);
+             pop_args ctx loc ctx.return_types);
           unreachable)
   | ReturnCallRef idx -> (
-      let ty = resolve_type_index ctx.modul.types idx in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct _ | Array _ -> assert false (*ZZZ*)
       | Func { params; results } ->
-          let* () = pop ctx (Ref { nullable = true; typ = Type ty }) in
-          let* () = pop_args ctx (Array.to_list params) in
-          with_empty_stack
+          let* () = pop ctx loc (Ref { nullable = true; typ = Type ty }) in
+          let* () = pop_args ctx loc (Array.to_list params) in
+          with_empty_stack ctx.modul loc (*ZZZ*)
             (let* () = push_results (Array.to_list results) in
-             pop_args ctx ctx.return_types);
+             pop_args ctx loc ctx.return_types);
           unreachable)
   | ReturnCallIndirect (idx, tu) -> (
-      let typ = Sequence.get ctx.modul.tables idx in
-      let ty = typeuse' ctx.modul.types tu in
+      let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
+      let*! ty = typeuse' ctx.modul.diagnostics ctx.modul.types tu in
       assert (
         Types.val_subtype ctx.modul.subtyping_info (Ref typ.reftype)
           (Ref { nullable = true; typ = Func }));
@@ -695,24 +886,22 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       | Struct _ | Array _ -> assert false (*ZZZ*)
       | Func { params; results } ->
           let* () =
-            pop ctx
-              (address_type_to_valtype
-                 (Sequence.get ctx.modul.tables idx).limits.address_type)
+            pop ctx loc (address_type_to_valtype typ.limits.address_type)
           in
-          let* () = pop_args ctx (Array.to_list params) in
-          with_empty_stack
+          let* () = pop_args ctx loc (Array.to_list params) in
+          with_empty_stack ctx.modul loc (*ZZZ*)
             (let* () = push_results (Array.to_list results) in
-             pop_args ctx ctx.return_types);
+             pop_args ctx loc ctx.return_types);
           unreachable)
   | Drop ->
-      let* _ = pop_any in
+      let* _ = pop_any ctx loc in
       return ()
   | Select None -> (
-      let* () = pop ctx I32 in
-      let* ty1 = pop_any in
-      let* ty2 = pop_any in
+      let* () = pop ctx loc I32 in
+      let* ty1 = pop_any ctx loc in
+      let* ty2 = pop_any ctx loc in
       match (ty1, ty2) with
-      | None, None -> push_poly None
+      | None, None -> push_poly loc None
       | Some ty1, Some ty2 ->
           (*ZZZ*)
           if not (number_or_vec ty1) then
@@ -721,87 +910,105 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
             Format.eprintf "%a@." print_valtype ty2;
           assert (number_or_vec ty1);
           assert (number_or_vec ty2);
-          assert (ty1 = ty2);
-          push ty1
+          if ty1 <> ty2 then
+            Error.select_type_mismatch ctx.modul.diagnostics ~location:loc ty1
+              ty2;
+          push (Some loc) ty1
       | Some ty, None | None, Some ty ->
           assert (number_or_vec ty);
           (*ZZZ*)
-          push ty)
+          push (Some loc) ty)
   | Select (Some lst) -> (
       match lst with
       | [ typ ] ->
-          let typ = valtype ctx.modul.types typ in
-          let* () = pop ctx I32 in
-          let* () = pop ctx typ in
-          let* () = pop ctx typ in
-          push typ
+          let*! typ = valtype ctx.modul.diagnostics ctx.modul.types typ in
+          let* () = pop ctx loc I32 in
+          let* () = pop ctx loc typ in
+          let* () = pop ctx loc typ in
+          push (Some loc) typ
       | _ -> assert false)
   | LocalGet i ->
-      let ty = get_local ctx i in
-      let idx = Sequence.get_index ctx.locals i in
-      if not (IntSet.mem idx ctx.initialized_locals) then
-        failwith "uninitialized local";
-      push ty
+      let*! ty = get_local ctx i in
+      push (Some loc) ty
   | LocalSet i ->
-      let idx = Sequence.get_index ctx.locals i in
-      ctx.initialized_locals <- IntSet.add idx ctx.initialized_locals;
-      pop ctx (get_local ~initialize:true ctx i)
+      let*! ty = get_local ~initialize:true ctx i in
+      pop ctx loc ty
   | LocalTee i ->
-      let idx = Sequence.get_index ctx.locals i in
-      ctx.initialized_locals <- IntSet.add idx ctx.initialized_locals;
-      let ty = get_local ~initialize:true ctx i in
-      let* () = pop ctx ty in
-      push ty
+      let*! ty = get_local ~initialize:true ctx i in
+      let* () = pop ctx loc ty in
+      push (Some loc) ty
   | GlobalGet idx ->
-      let ty = Sequence.get ctx.modul.globals idx in
-      push ty.typ
+      let*! ty = Sequence.get ctx.modul.diagnostics ctx.modul.globals idx in
+      push (Some loc) ty.typ
   | GlobalSet idx ->
-      let ty = Sequence.get ctx.modul.globals idx in
+      let*! ty = Sequence.get ctx.modul.diagnostics ctx.modul.globals idx in
       assert ty.mut;
       (*ZZZ*)
-      pop ctx ty.typ
+      pop ctx loc ty.typ
   | Load (idx, memarg, ty) ->
-      let limits = Sequence.get ctx.modul.memories idx in
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
       let ty, sz = memory_instruction_type_and_size ty in
-      check_memarg limits sz memarg;
-      let* () = pop ctx (address_type_to_valtype limits.address_type) in
-      push ty
+      check_memarg ctx loc limits sz memarg;
+      let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
+      push (Some loc) ty
   | LoadS (idx, memarg, ty, sz, _) ->
-      let limits = Sequence.get ctx.modul.memories idx in
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
       let ty = match ty with `I32 -> I32 | `I64 -> I64 in
-      check_memarg limits (sz :> [ `I8 | `I16 | `I32 | `I64 | `V128 ]) memarg;
-      let* () = pop ctx (address_type_to_valtype limits.address_type) in
-      push ty
+      check_memarg ctx loc limits
+        (sz :> [ `I8 | `I16 | `I32 | `I64 | `V128 ])
+        memarg;
+      let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
+      push (Some loc) ty
   | Store (idx, memarg, ty) ->
-      let limits = Sequence.get ctx.modul.memories idx in
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
       let ty, sz = memory_instruction_type_and_size ty in
-      check_memarg limits sz memarg;
-      let* () = pop ctx ty in
-      let* () = pop ctx (address_type_to_valtype limits.address_type) in
+      check_memarg ctx loc limits sz memarg;
+      let* () = pop ctx loc ty in
+      let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
       return ()
   | StoreS (idx, memarg, ty, sz) ->
-      let limits = Sequence.get ctx.modul.memories idx in
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
       let ty = match ty with `I32 -> I32 | `I64 -> I64 in
-      check_memarg limits (sz :> [ `I8 | `I16 | `I32 | `I64 | `V128 ]) memarg;
-      let* () = pop ctx ty in
-      pop ctx (address_type_to_valtype limits.address_type)
+      check_memarg ctx loc limits
+        (sz :> [ `I8 | `I16 | `I32 | `I64 | `V128 ])
+        memarg;
+      let* () = pop ctx loc ty in
+      pop ctx loc (address_type_to_valtype limits.address_type)
   | MemorySize idx ->
-      let limits = Sequence.get ctx.modul.memories idx in
-      push (address_type_to_valtype limits.address_type)
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
+      push (Some loc) (address_type_to_valtype limits.address_type)
   | MemoryGrow idx ->
-      let limits = Sequence.get ctx.modul.memories idx in
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
       let addr_ty = address_type_to_valtype limits.address_type in
-      let* () = pop ctx addr_ty in
-      push addr_ty
+      let* () = pop ctx loc addr_ty in
+      push (Some loc) addr_ty
   | MemoryFill idx ->
-      let limits = Sequence.get ctx.modul.memories idx in
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
       let addr_ty = address_type_to_valtype limits.address_type in
-      let* () = pop ctx addr_ty in
-      let* () = pop ctx I32 in
-      pop ctx addr_ty
+      let* () = pop ctx loc addr_ty in
+      let* () = pop ctx loc I32 in
+      pop ctx loc addr_ty
   | MemoryCopy (idx, idx') ->
-      let limits = Sequence.get ctx.modul.memories idx in
-      let limits' = Sequence.get ctx.modul.memories idx' in
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
+      let*! limits' =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx'
+      in
       let address_type =
         match (limits.address_type, limits'.address_type) with
         | `I32, _ | _, `I32 -> `I32
@@ -810,53 +1017,57 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let addr_ty = address_type_to_valtype limits.address_type in
       let addr_ty' = address_type_to_valtype limits.address_type in
       let addr_ty'' = address_type_to_valtype address_type in
-      let* () = pop ctx addr_ty'' in
-      let* () = pop ctx addr_ty' in
-      pop ctx addr_ty
+      let* () = pop ctx loc addr_ty'' in
+      let* () = pop ctx loc addr_ty' in
+      pop ctx loc addr_ty
   | MemoryInit (idx, idx') ->
-      let limits = Sequence.get ctx.modul.memories idx in
-      ignore (Sequence.get ctx.modul.data idx');
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
+      ignore (Sequence.get ctx.modul.diagnostics ctx.modul.data idx');
       let addr_ty = address_type_to_valtype limits.address_type in
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      pop ctx addr_ty
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc I32 in
+      pop ctx loc addr_ty
   | DataDrop idx ->
-      ignore (Sequence.get ctx.modul.data idx);
+      ignore (Sequence.get ctx.modul.diagnostics ctx.modul.data idx);
       return ()
   | VecBinOp _ ->
-      let* () = pop ctx V128 in
-      let* () = pop ctx V128 in
-      push V128
-  | VecConst _ -> push V128
+      let* () = pop ctx loc V128 in
+      let* () = pop ctx loc V128 in
+      push (Some loc) V128
+  | VecConst _ -> push (Some loc) V128
   | VecUnOp _ ->
-      let* () = pop ctx V128 in
-      push V128
+      let* () = pop ctx loc V128 in
+      push (Some loc) V128
   | VecTest _ ->
-      let* () = pop ctx V128 in
-      push I32
+      let* () = pop ctx loc V128 in
+      push (Some loc) I32
   | VecShift _ ->
-      let* () = pop ctx I32 in
-      let* () = pop ctx V128 in
-      push V128
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc V128 in
+      push (Some loc) V128
   | VecBitmask _ ->
-      let* () = pop ctx V128 in
-      push I32
+      let* () = pop ctx loc V128 in
+      push (Some loc) I32
   | VecTernOp _ ->
-      let* () = pop ctx V128 in
-      let* () = pop ctx V128 in
-      let* () = pop ctx V128 in
-      push V128
+      let* () = pop ctx loc V128 in
+      let* () = pop ctx loc V128 in
+      let* () = pop ctx loc V128 in
+      push (Some loc) V128
   | VecBitselect ->
-      let* () = pop ctx V128 in
-      let* () = pop ctx V128 in
-      let* () = pop ctx V128 in
-      push V128
+      let* () = pop ctx loc V128 in
+      let* () = pop ctx loc V128 in
+      let* () = pop ctx loc V128 in
+      push (Some loc) V128
   | VecSplat (Splat shape) ->
-      let* () = pop ctx (shape_type shape) in
-      push V128
+      let* () = pop ctx loc (shape_type shape) in
+      push (Some loc) V128
   | VecLoad (idx, sz, memarg) ->
-      let limits = Sequence.get ctx.modul.memories idx in
-      check_memarg limits
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
+      check_memarg ctx loc limits
         (match sz with
         | Load128 -> `V128
         | Load8x8S | Load8x8U | Load16x4S | Load16x4U | Load32x2S | Load32x2U
@@ -864,43 +1075,53 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
             `I64
         | Load32Zero -> `I32)
         memarg;
-      let* () = pop ctx (address_type_to_valtype limits.address_type) in
-      push V128
+      let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
+      push (Some loc) V128
   | VecStore (idx, memarg) ->
-      let limits = Sequence.get ctx.modul.memories idx in
-      check_memarg limits `V128 memarg;
-      let* () = pop ctx V128 in
-      let* () = pop ctx (address_type_to_valtype limits.address_type) in
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
+      check_memarg ctx loc limits `V128 memarg;
+      let* () = pop ctx loc V128 in
+      let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
       return ()
   | VecLoadLane (idx, op, mem, lane) ->
-      let limits = Sequence.get ctx.modul.memories idx in
-      check_memarg limits
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
+      check_memarg ctx loc limits
         (op :> [ `I8 | `I16 | `I32 | `I64 | `F32 | `F64 | `V128 ])
         mem;
       let sz = match op with `I8 -> 1 | `I16 -> 2 | `I32 -> 4 | `I64 -> 8 in
       if lane >= 16 / sz then assert false (*ZZZ*);
-      let* () = pop ctx V128 in
-      let* () = pop ctx (address_type_to_valtype limits.address_type) in
-      push V128
+      let* () = pop ctx loc V128 in
+      let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
+      push (Some loc) V128
   | VecStoreLane (idx, op, mem, lane) ->
-      let limits = Sequence.get ctx.modul.memories idx in
-      check_memarg limits
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
+      check_memarg ctx loc limits
         (op :> [ `I8 | `I16 | `I32 | `I64 | `F32 | `F64 | `V128 ])
         mem;
       let sz = match op with `I8 -> 1 | `I16 -> 2 | `I32 -> 4 | `I64 -> 8 in
       if lane >= 16 / sz then assert false (*ZZZ*);
-      let* () = pop ctx V128 in
-      let* () = pop ctx (address_type_to_valtype limits.address_type) in
+      let* () = pop ctx loc V128 in
+      let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
       return ()
   | VecLoadSplat (idx, op, mem) ->
-      let limits = Sequence.get ctx.modul.memories idx in
-      check_memarg limits
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
+      check_memarg ctx loc limits
         (op :> [ `I8 | `I16 | `I32 | `I64 | `F32 | `F64 | `V128 ])
         mem;
-      let* () = pop ctx (address_type_to_valtype limits.address_type) in
-      push V128
+      let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
+      push (Some loc) V128
   | VecLoadExtend (idx, op, memarg) ->
-      let limits = Sequence.get ctx.modul.memories idx in
+      let*! limits =
+        Sequence.get ctx.modul.diagnostics ctx.modul.memories idx
+      in
       let sz =
         match op with
         | Load8x8S | Load8x8U -> `I64
@@ -910,51 +1131,51 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         | Load16x4S | Load16x4U -> `I64
         | Load128 -> assert false
       in
-      check_memarg limits sz memarg;
-      let* () = pop ctx (address_type_to_valtype limits.address_type) in
-      push V128
+      check_memarg ctx loc limits sz memarg;
+      let* () = pop ctx loc (address_type_to_valtype limits.address_type) in
+      push (Some loc) V128
   | VecExtract (shape, _, lane) ->
-      check_shape_lanes shape lane;
-      let* () = pop ctx V128 in
-      push (shape_type shape)
+      check_shape_lanes ctx loc shape lane;
+      let* () = pop ctx loc V128 in
+      push (Some loc) (shape_type shape)
   | VecReplace (shape, lane) ->
-      check_shape_lanes shape lane;
-      let* () = pop ctx (shape_type shape) in
-      let* () = pop ctx V128 in
-      push V128
+      check_shape_lanes ctx loc shape lane;
+      let* () = pop ctx loc (shape_type shape) in
+      let* () = pop ctx loc V128 in
+      push (Some loc) V128
   | VecShuffle (_, lanes) ->
       assert (String.for_all (fun l -> Char.code l < 32) lanes);
-      let* () = pop ctx V128 in
-      let* () = pop ctx V128 in
-      push V128
+      let* () = pop ctx loc V128 in
+      let* () = pop ctx loc V128 in
+      push (Some loc) V128
   | TableGet idx ->
-      let typ = Sequence.get ctx.modul.tables idx in
+      let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
       let addr_ty = address_type_to_valtype typ.limits.address_type in
-      let* () = pop ctx addr_ty in
-      push (Ref typ.reftype)
+      let* () = pop ctx loc addr_ty in
+      push (Some loc) (Ref typ.reftype)
   | TableSet idx ->
-      let typ = Sequence.get ctx.modul.tables idx in
+      let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
       let addr_ty = address_type_to_valtype typ.limits.address_type in
-      let* () = pop ctx (Ref typ.reftype) in
-      pop ctx addr_ty
+      let* () = pop ctx loc (Ref typ.reftype) in
+      pop ctx loc addr_ty
   | TableSize idx ->
-      let typ = Sequence.get ctx.modul.tables idx in
-      push (address_type_to_valtype typ.limits.address_type)
+      let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
+      push (Some loc) (address_type_to_valtype typ.limits.address_type)
   | TableGrow idx ->
-      let typ = Sequence.get ctx.modul.tables idx in
+      let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
       let addr_ty = address_type_to_valtype typ.limits.address_type in
-      let* () = pop ctx addr_ty in
-      let* () = pop ctx (Ref typ.reftype) in
-      push addr_ty
+      let* () = pop ctx loc addr_ty in
+      let* () = pop ctx loc (Ref typ.reftype) in
+      push (Some loc) addr_ty
   | TableFill idx ->
-      let typ = Sequence.get ctx.modul.tables idx in
+      let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
       let addr_ty = address_type_to_valtype typ.limits.address_type in
-      let* () = pop ctx addr_ty in
-      let* () = pop ctx (Ref typ.reftype) in
-      pop ctx addr_ty
+      let* () = pop ctx loc addr_ty in
+      let* () = pop ctx loc (Ref typ.reftype) in
+      pop ctx loc addr_ty
   | TableCopy (idx, idx') ->
-      let ty = Sequence.get ctx.modul.tables idx in
-      let ty' = Sequence.get ctx.modul.tables idx' in
+      let*! ty = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
+      let*! ty' = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx' in
       assert (
         Types.val_subtype ctx.modul.subtyping_info (Ref ty'.reftype)
           (Ref ty.reftype));
@@ -966,63 +1187,65 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let addr_ty = address_type_to_valtype ty.limits.address_type in
       let addr_ty' = address_type_to_valtype ty'.limits.address_type in
       let addr_ty'' = address_type_to_valtype address_type in
-      let* () = pop ctx addr_ty'' in
-      let* () = pop ctx addr_ty' in
-      pop ctx addr_ty
+      let* () = pop ctx loc addr_ty'' in
+      let* () = pop ctx loc addr_ty' in
+      pop ctx loc addr_ty
   | TableInit (idx, idx') ->
-      let tabletype = Sequence.get ctx.modul.tables idx in
-      let typ = Sequence.get ctx.modul.elem idx' in
+      let*! tabletype =
+        Sequence.get ctx.modul.diagnostics ctx.modul.tables idx
+      in
+      let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.elem idx' in
       assert (
         Types.val_subtype ctx.modul.subtyping_info (Ref typ)
           (Ref tabletype.reftype));
       let addr_ty = address_type_to_valtype tabletype.limits.address_type in
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      pop ctx addr_ty
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc I32 in
+      pop ctx loc addr_ty
   | ElemDrop idx ->
-      ignore (Sequence.get ctx.modul.elem idx);
+      let*! _ = Sequence.get ctx.modul.diagnostics ctx.modul.elem idx in
       return ()
   | RefNull typ ->
-      let typ = heaptype ctx.modul.types typ in
-      push (Ref { nullable = true; typ })
+      let*! typ = heaptype ctx.modul.diagnostics ctx.modul.types typ in
+      push (Some loc) (Ref { nullable = true; typ })
   | RefFunc idx ->
-      let i = Sequence.get ctx.modul.functions idx in
+      let*! i = Sequence.get ctx.modul.diagnostics ctx.modul.functions idx in
       assert ((not !validate_refs) || Hashtbl.mem ctx.modul.refs i);
-      push (Ref { nullable = false; typ = Type i })
+      push (Some loc) (Ref { nullable = false; typ = Type i })
   | RefIsNull -> (
-      let* ty = pop_any in
+      let* ty = pop_any ctx loc in
       match ty with
       | None -> return ()
-      | Some (Ref _) -> push I32
+      | Some (Ref _) -> push (Some loc) I32
       | Some _ -> assert false (*ZZZ*))
   | RefAsNonNull -> (
-      let* ty = pop_any in
+      let* ty = pop_any ctx loc in
       match ty with
       | None -> return ()
-      | Some (Ref ty) -> push (Ref { ty with nullable = false })
+      | Some (Ref ty) -> push (Some loc) (Ref { ty with nullable = false })
       | Some _ -> assert false (*ZZZ*))
   | RefEq ->
-      let* () = pop ctx (Ref { nullable = true; typ = Eq }) in
-      let* () = pop ctx (Ref { nullable = true; typ = Eq }) in
-      push I32
+      let* () = pop ctx loc (Ref { nullable = true; typ = Eq }) in
+      let* () = pop ctx loc (Ref { nullable = true; typ = Eq }) in
+      push (Some loc) I32
   | RefTest ty ->
-      let ty = reftype ctx.modul.types ty in
+      let*! ty = reftype ctx.modul.diagnostics ctx.modul.types ty in
       let* () =
-        pop ctx (Ref { nullable = true; typ = top_heap_type ctx ty.typ })
+        pop ctx loc (Ref { nullable = true; typ = top_heap_type ctx ty.typ })
       in
-      push I32
+      push (Some loc) I32
   | RefCast ty ->
-      let ty = reftype ctx.modul.types ty in
+      let*! ty = reftype ctx.modul.diagnostics ctx.modul.types ty in
       let* () =
-        pop ctx (Ref { nullable = true; typ = top_heap_type ctx ty.typ })
+        pop ctx loc (Ref { nullable = true; typ = top_heap_type ctx ty.typ })
       in
-      push (Ref ty)
+      push (Some loc) (Ref ty)
   | StructNew idx ->
-      let ty = resolve_type_index ctx.modul.types idx in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
       let* () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
         | Struct fields ->
-            pop_args ctx
+            pop_args ctx loc
               (Array.to_list
                  (Array.map
                     (fun (f : fieldtype) ->
@@ -1030,16 +1253,18 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
                     fields))
         | _ -> (*ZZZ *) assert false
       in
-      push (Ref { nullable = false; typ = Type ty })
+      push (Some loc) (Ref { nullable = false; typ = Type ty })
   | StructNewDefault idx ->
-      let ty = resolve_type_index ctx.modul.types idx in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
       (match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct fields -> assert (Array.for_all field_has_default fields)
       | _ -> (*ZZZ *) assert false);
-      push (Ref { nullable = false; typ = Type ty })
+      push (Some loc) (Ref { nullable = false; typ = Type ty })
   | StructGet (signage, idx, idx') -> (
-      let ty, fields = get_type_info ctx.modul.types idx in
-      let* () = pop ctx (Ref { nullable = true; typ = Type ty }) in
+      let*! ty, fields =
+        get_type_info ctx.modul.diagnostics ctx.modul.types idx
+      in
+      let* () = pop ctx loc (Ref { nullable = true; typ = Type ty }) in
       let n =
         match idx'.desc with
         | Id id -> List.assoc id fields
@@ -1049,10 +1274,12 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       | Struct fields ->
           (*ZZZ*)
           ignore signage;
-          push (unpack_type fields.(n))
+          push (Some loc) (unpack_type fields.(n))
       | Array _ | Func _ -> assert false (*ZZZ*))
   | StructSet (idx, idx') ->
-      let ty, fields = get_type_info ctx.modul.types idx in
+      let*! ty, fields =
+        get_type_info ctx.modul.diagnostics ctx.modul.types idx
+      in
       let n =
         match idx'.desc with
         | Id id -> List.assoc id fields
@@ -1063,37 +1290,38 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         | Struct fields ->
             (*ZZZ*)
             assert fields.(n).mut;
-            pop ctx (unpack_type fields.(n))
+            pop ctx loc (unpack_type fields.(n))
         | Array _ | Func _ -> assert false (*ZZZ*)
       in
-      pop ctx (Ref { nullable = true; typ = Type ty })
+      pop ctx loc (Ref { nullable = true; typ = Type ty })
   | ArrayNew idx ->
-      let ty = resolve_type_index ctx.modul.types idx in
-      let* () = pop ctx I32 in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
+      let* () = pop ctx loc I32 in
       let* () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
-        | Array field -> pop ctx (unpack_type field)
+        | Array field -> pop ctx loc (unpack_type field)
         | _ -> (*ZZZ *) assert false
       in
-      push (Ref { nullable = false; typ = Type ty })
+      push (Some loc) (Ref { nullable = false; typ = Type ty })
   | ArrayNewDefault idx ->
-      let ty = resolve_type_index ctx.modul.types idx in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
       (match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Array field -> assert (field_has_default field)
       | _ -> (*ZZZ *) assert false);
-      let* () = pop ctx I32 in
-      push (Ref { nullable = false; typ = Type ty })
+      let* () = pop ctx loc I32 in
+      push (Some loc) (Ref { nullable = false; typ = Type ty })
   | ArrayNewFixed (idx, n) ->
-      let ty = resolve_type_index ctx.modul.types idx in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
       let* () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
-        | Array field -> repeat (Uint32.to_int n) (pop ctx (unpack_type field))
+        | Array field ->
+            repeat (Uint32.to_int n) (pop ctx loc (unpack_type field))
         | _ -> (*ZZZ *) assert false
       in
-      push (Ref { nullable = false; typ = Type ty })
+      push (Some loc) (Ref { nullable = false; typ = Type ty })
   | ArrayNewData (idx, idx') ->
-      let ty = resolve_type_index ctx.modul.types idx in
-      ignore (Sequence.get ctx.modul.data idx');
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
+      ignore (Sequence.get ctx.modul.diagnostics ctx.modul.data idx');
       let () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
         | Array field ->
@@ -1103,12 +1331,12 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
               | Value (Ref _ | Tuple _) -> false)
         | _ -> (*ZZZ *) assert false
       in
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      push (Ref { nullable = false; typ = Type ty })
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc I32 in
+      push (Some loc) (Ref { nullable = false; typ = Type ty })
   | ArrayNewElem (idx, idx') ->
-      let ty = resolve_type_index ctx.modul.types idx in
-      let ty' = Sequence.get ctx.modul.elem idx' in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
+      let*! ty' = Sequence.get ctx.modul.diagnostics ctx.modul.elem idx' in
       let () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
         | Array field ->
@@ -1119,46 +1347,50 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
                   Types.val_subtype ctx.modul.subtyping_info (Ref ty') ty)
         | _ -> (*ZZZ *) assert false
       in
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      push (Ref { nullable = false; typ = Type ty })
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc I32 in
+      push (Some loc) (Ref { nullable = false; typ = Type ty })
   | ArrayGet (_signage, idx) -> (
       (*ZZZ signage *)
-      let ty = resolve_type_index ctx.modul.types idx in
-      let* () = pop ctx I32 in
-      let* () = pop ctx (Ref { nullable = true; typ = Type ty }) in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc (Ref { nullable = true; typ = Type ty }) in
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
-      | Array field -> push (unpack_type field)
+      | Array field -> push (Some loc) (unpack_type field)
       | _ -> (*ZZZ *) assert false)
   | ArraySet idx ->
-      let ty = resolve_type_index ctx.modul.types idx in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
       let* () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
         | Array field ->
             assert field.mut;
-            pop ctx (unpack_type field)
+            pop ctx loc (unpack_type field)
         | _ -> (*ZZZ *) assert false
       in
-      let* () = pop ctx I32 in
-      pop ctx (Ref { nullable = true; typ = Type ty })
+      let* () = pop ctx loc I32 in
+      pop ctx loc (Ref { nullable = true; typ = Type ty })
   | ArrayLen ->
-      let* () = pop ctx (Ref { nullable = true; typ = Array }) in
-      push I32
+      let* () = pop ctx loc (Ref { nullable = true; typ = Array }) in
+      push (Some loc) I32
   | ArrayFill idx ->
-      let ty = resolve_type_index ctx.modul.types idx in
-      let* () = pop ctx I32 in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
+      let* () = pop ctx loc I32 in
       let* () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
         | Array field ->
             assert field.mut;
-            pop ctx (unpack_type field)
+            pop ctx loc (unpack_type field)
         | _ -> (*ZZZ *) assert false
       in
-      let* () = pop ctx I32 in
-      pop ctx (Ref { nullable = true; typ = Type ty })
+      let* () = pop ctx loc I32 in
+      pop ctx loc (Ref { nullable = true; typ = Type ty })
   | ArrayCopy (idx1, idx2) ->
-      let ty1 = resolve_type_index ctx.modul.types idx1 in
-      let ty2 = resolve_type_index ctx.modul.types idx2 in
+      let*! ty1 =
+        resolve_type_index ctx.modul.diagnostics ctx.modul.types idx1
+      in
+      let*! ty2 =
+        resolve_type_index ctx.modul.diagnostics ctx.modul.types idx2
+      in
       (match
          ( (Types.get_subtype ctx.modul.subtyping_info ty1).typ,
            (Types.get_subtype ctx.modul.subtyping_info ty2).typ )
@@ -1167,14 +1399,14 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           assert field1.mut;
           assert (storage_subtype ctx.modul.subtyping_info field1.typ field2.typ)
       | _ -> (*ZZZ *) assert false);
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      let* () = pop ctx (Ref { nullable = true; typ = Type ty2 }) in
-      let* () = pop ctx I32 in
-      pop ctx (Ref { nullable = true; typ = Type ty1 })
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc (Ref { nullable = true; typ = Type ty2 }) in
+      let* () = pop ctx loc I32 in
+      pop ctx loc (Ref { nullable = true; typ = Type ty1 })
   | ArrayInitData (idx, idx') ->
-      let ty = resolve_type_index ctx.modul.types idx in
-      ignore (Sequence.get ctx.modul.data idx');
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
+      ignore (Sequence.get ctx.modul.diagnostics ctx.modul.data idx');
       let () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
         | Array field ->
@@ -1185,13 +1417,13 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
               | Value (Ref _ | Tuple _) -> false)
         | _ -> (*ZZZ *) assert false
       in
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      pop ctx (Ref { nullable = true; typ = Type ty })
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc I32 in
+      pop ctx loc (Ref { nullable = true; typ = Type ty })
   | ArrayInitElem (idx, idx') ->
-      let ty = resolve_type_index ctx.modul.types idx in
-      let ty' = Sequence.get ctx.modul.elem idx' in
+      let*! ty = resolve_type_index ctx.modul.diagnostics ctx.modul.types idx in
+      let*! ty' = Sequence.get ctx.modul.diagnostics ctx.modul.elem idx' in
       let () =
         match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
         | Array field ->
@@ -1203,66 +1435,66 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
                   Types.val_subtype ctx.modul.subtyping_info (Ref ty') ty)
         | _ -> (*ZZZ *) assert false
       in
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      pop ctx (Ref { nullable = true; typ = Type ty })
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc I32 in
+      pop ctx loc (Ref { nullable = true; typ = Type ty })
   | RefI31 ->
-      let* () = pop ctx I32 in
-      push (Ref { nullable = false; typ = I31 })
+      let* () = pop ctx loc I32 in
+      push (Some loc) (Ref { nullable = false; typ = I31 })
   | I31Get _ ->
-      let* () = pop ctx (Ref { nullable = true; typ = I31 }) in
-      push I32
-  | Const (I32 _) -> push I32
-  | Const (I64 _) -> push I64
-  | Const (F32 _) -> push F32
-  | Const (F64 _) -> push F64
+      let* () = pop ctx loc (Ref { nullable = true; typ = I31 }) in
+      push (Some loc) I32
+  | Const (I32 _) -> push (Some loc) I32
+  | Const (I64 _) -> push (Some loc) I64
+  | Const (F32 _) -> push (Some loc) F32
+  | Const (F64 _) -> push (Some loc) F64
   | UnOp (I32 op) ->
       let expected, returned = int_un_op_type I32 op in
-      let* () = pop ctx expected in
-      push returned
+      let* () = pop ctx loc expected in
+      push (Some loc) returned
   | UnOp (I64 op) ->
       let expected, returned = int_un_op_type I64 op in
-      let* () = pop ctx expected in
-      push returned
+      let* () = pop ctx loc expected in
+      push (Some loc) returned
   | UnOp (F32 op) ->
       let expected = float_un_op_type F32 op in
-      let* () = pop ctx expected in
-      push F32
+      let* () = pop ctx loc expected in
+      push (Some loc) F32
   | UnOp (F64 op) ->
       let expected = float_un_op_type F64 op in
-      let* () = pop ctx expected in
-      push F64
+      let* () = pop ctx loc expected in
+      push (Some loc) F64
   | BinOp (I32 op) ->
-      let* () = pop ctx I32 in
-      let* () = pop ctx I32 in
-      push (int_bin_op_type I32 op)
+      let* () = pop ctx loc I32 in
+      let* () = pop ctx loc I32 in
+      push (Some loc) (int_bin_op_type I32 op)
   | BinOp (I64 op) ->
-      let* () = pop ctx I64 in
-      let* () = pop ctx I64 in
-      push (int_bin_op_type I64 op)
+      let* () = pop ctx loc I64 in
+      let* () = pop ctx loc I64 in
+      push (Some loc) (int_bin_op_type I64 op)
   | BinOp (F32 op) ->
-      let* () = pop ctx F32 in
-      let* () = pop ctx F32 in
-      push (float_bin_op_type F32 op)
+      let* () = pop ctx loc F32 in
+      let* () = pop ctx loc F32 in
+      push (Some loc) (float_bin_op_type F32 op)
   | BinOp (F64 op) ->
-      let* () = pop ctx F64 in
-      let* () = pop ctx F64 in
-      push (float_bin_op_type F64 op)
+      let* () = pop ctx loc F64 in
+      let* () = pop ctx loc F64 in
+      push (Some loc) (float_bin_op_type F64 op)
   | I32WrapI64 ->
-      let* () = pop ctx I64 in
-      push I32
+      let* () = pop ctx loc I64 in
+      push (Some loc) I32
   | I64ExtendI32 _ ->
-      let* () = pop ctx I32 in
-      push I64
+      let* () = pop ctx loc I32 in
+      push (Some loc) I64
   | F32DemoteF64 ->
-      let* () = pop ctx F64 in
-      push F32
+      let* () = pop ctx loc F64 in
+      push (Some loc) F32
   | F64PromoteF32 ->
-      let* () = pop ctx F32 in
-      push F64
+      let* () = pop ctx loc F32 in
+      push (Some loc) F64
   | ExternConvertAny ->
-      let* ty = pop_any in
+      let* ty = pop_any ctx loc in
       Option.iter
         (fun ty ->
           (*ZZZ*)
@@ -1270,9 +1502,9 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
             Types.val_subtype ctx.modul.subtyping_info ty
               (Ref { nullable = true; typ = Any })))
         ty;
-      push (Ref { nullable = is_nullable ty; typ = Extern })
+      push (Some loc) (Ref { nullable = is_nullable ty; typ = Extern })
   | AnyConvertExtern ->
-      let* ty = pop_any in
+      let* ty = pop_any ctx loc in
       Option.iter
         (fun ty ->
           (*ZZZ*)
@@ -1280,15 +1512,15 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
             Types.val_subtype ctx.modul.subtyping_info ty
               (Ref { nullable = true; typ = Extern })))
         ty;
-      push (Ref { nullable = is_nullable ty; typ = Any })
+      push (Some loc) (Ref { nullable = is_nullable ty; typ = Any })
   | Folded (i, l) ->
       let* () = instructions ctx l in
       instruction ctx i
   | TupleMake _ -> return ()
   | Pop ty ->
-      let ty = valtype ctx.modul.types ty in
-      let* () = pop ctx ty in
-      push ty
+      let*! ty = valtype ctx.modul.diagnostics ctx.modul.types ty in
+      let* () = pop ctx loc ty in
+      push (Some loc) ty
   (*
     (* Binaryen extensions *)
     | Pop of X.valtype
@@ -1306,24 +1538,28 @@ and instructions ctx l =
       let* () = instruction ctx i in
       instructions ctx r
 
-and block ctx label params results br_params block =
-  with_empty_stack
+and block ctx loc label params results br_params block =
+  with_empty_stack ctx.modul loc (*ZZZ*)
     (let* () = push_results params in
      let* () =
        instructions
          { ctx with control_types = (label, br_params) :: ctx.control_types }
          block
      in
-     pop_args ctx results)
+     pop_args ctx loc (*ZZZ More precise loc*) results)
 
 let rec check_constant_instruction ctx (i : _ Ast.Text.instr) =
   match i.desc with
-  | GlobalGet idx -> assert (not (Sequence.get ctx.globals idx).mut)
-  | RefFunc i -> Hashtbl.replace ctx.refs (Sequence.get ctx.functions i) ()
+  | GlobalGet idx ->
+      let*? ty = Sequence.get ctx.diagnostics ctx.globals idx in
+      assert (not ty.mut)
+  | RefFunc i ->
+      let*? ty = Sequence.get ctx.diagnostics ctx.functions i in
+      Hashtbl.replace ctx.refs ty ()
   | RefNull _ | StructNew _ | StructNewDefault _ | ArrayNew _
   | ArrayNewDefault _ | ArrayNewFixed _ | RefI31 | Const _
   | BinOp (I32 (Add | Sub | Mul) | I64 (Add | Sub | Mul))
-  | ExternConvertAny | AnyConvertExtern ->
+  | ExternConvertAny | AnyConvertExtern | VecConst _ ->
       ()
   | Folded (i, l) ->
       check_constant_instruction ctx i;
@@ -1350,8 +1586,7 @@ let rec check_constant_instruction ctx (i : _ Ast.Text.instr) =
           | Lt _ | Gt _ | Le _ | Ge _ ) )
   | I32WrapI64 | I64ExtendI32 _ | F32DemoteF64 | F64PromoteF32 | Pop _
   | TupleMake _ | TupleExtract _ ->
-      assert false
-  | VecConst _ -> ()
+      Error.constant_expression_required ctx.diagnostics ~location:i.info
   | VecBitselect | VecUnOp _ | VecBinOp _ | VecTest _ | VecShift _
   | VecBitmask _ | VecLoad _ | VecStore _ | VecLoadLane _ | VecStoreLane _
   | VecLoadSplat _ | VecLoadExtend _ | VecExtract _ | VecReplace _ | VecSplat _
@@ -1363,7 +1598,7 @@ and check_constant_instructions ctx l =
 
 let constant_expression ctx ty expr =
   check_constant_instructions ctx expr;
-  with_empty_stack
+  with_empty_stack ctx (Ast.no_loc ()).info (*ZZZ*)
     (let ctx =
        {
          locals = Sequence.make "local";
@@ -1374,9 +1609,9 @@ let constant_expression ctx ty expr =
        }
      in
      let* () = instructions ctx expr in
-     pop ctx ty)
+     pop ctx (Ast.no_loc ()).info (*ZZZ*) ty)
 
-let add_type ctx ty =
+let add_type d ctx ty =
   Array.iteri
     (fun i (label, _) ->
       (*ZZZ Check unique names*)
@@ -1387,43 +1622,59 @@ let add_type ctx ty =
         (fun label -> Hashtbl.replace ctx.label_mapping label (lnot i, []))
         label)
     ty;
-  let i' = Types.add_rectype ctx.types (rectype ctx ty) in
-  Array.iteri
-    (fun i (label, typ) ->
-      let fields =
-        match (typ : Ast.Text.subtype).typ with
-        | Struct fields ->
-            Array.mapi
-              (fun i (id, _) ->
-                match id with Some id -> Some (id, i) | None -> None)
-              fields
-            |> Array.to_list |> List.filter_map Fun.id
-        | _ -> []
-      in
-      Hashtbl.replace ctx.index_mapping
-        (Uint32.of_int (ctx.last_index + i))
-        (i' + i, fields);
-      Option.iter
-        (fun label -> Hashtbl.replace ctx.label_mapping label (i' + i, fields))
-        label)
-    ty;
-  ctx.last_index <- ctx.last_index + Array.length ty
+  match rectype d ctx ty with
+  | None ->
+      Array.iteri
+        (fun i (label, _) ->
+          Hashtbl.remove ctx.index_mapping (Uint32.of_int (ctx.last_index + i));
+          Option.iter
+            (fun label -> Hashtbl.remove ctx.label_mapping label)
+            label)
+        ty
+  | Some ty' ->
+      let i' = Types.add_rectype ctx.types ty' in
+      Array.iteri
+        (fun i (label, typ) ->
+          let fields =
+            match (typ : Ast.Text.subtype).typ with
+            | Struct fields ->
+                Array.mapi
+                  (fun i (id, _) ->
+                    match id with Some id -> Some (id, i) | None -> None)
+                  fields
+                |> Array.to_list |> List.filter_map Fun.id
+            | _ -> []
+          in
+          Hashtbl.replace ctx.index_mapping
+            (Uint32.of_int (ctx.last_index + i))
+            (i' + i, fields);
+          Option.iter
+            (fun label ->
+              Hashtbl.replace ctx.label_mapping label (i' + i, fields))
+            label)
+        ty;
+      ctx.last_index <- ctx.last_index + Array.length ty
 
 let register_exports ctx lst =
   List.iter
     (fun name ->
-      assert (not (Hashtbl.mem ctx.exports name));
-      (*ZZZ*)
-      Hashtbl.add ctx.exports name ())
+      if Hashtbl.mem ctx.exports name then
+        Error.duplicated_export ctx.diagnostics ~location:(Ast.no_loc ()).info
+          name (*ZZZ*)
+      else Hashtbl.add ctx.exports name ())
     lst
 
-let limits { mi; ma; address_type } max_fn =
+let limits ctx location kind { mi; ma; address_type } max_fn =
   let max = max_fn address_type in
   match ma with
-  | None -> assert (Uint64.compare mi max <= 0)
+  | None ->
+      if Uint64.compare mi max > 0 then
+        Error.limit_too_large ctx.diagnostics ~location kind max
   | Some ma ->
-      assert (Uint64.compare mi ma <= 0);
-      assert (Uint64.compare ma max <= 0)
+      if Uint64.compare mi ma > 0 then
+        Error.limit_mismatch ctx.diagnostics ~location kind;
+      if Uint64.compare ma max > 0 then
+        Error.limit_too_large ctx.diagnostics ~location kind max
 
 let max_memory_size = function
   | `I32 -> Uint64.of_int 65536
@@ -1433,10 +1684,10 @@ let max_table_size = function
   | `I32 -> Uint64.of_string "0xffff_ffff"
   | `I64 -> Uint64.of_string "0xffff_ffff_ffff_ffff"
 
-let rec register_typeuses ctx l =
-  List.iter (fun i -> register_typeuses' ctx i) l
+let rec register_typeuses d ctx l =
+  List.iter (fun i -> register_typeuses' d ctx i) l
 
-and register_typeuses' ctx (i : _ Ast.Text.instr) =
+and register_typeuses' d ctx (i : _ Ast.Text.instr) =
   match i.desc with
   | Block { typ; _ }
   | Loop { typ; _ }
@@ -1444,13 +1695,13 @@ and register_typeuses' ctx (i : _ Ast.Text.instr) =
   | TryTable { typ; _ }
   | Try { typ; _ } -> (
       match typ with
-      | Some (Typeuse use) -> ignore (typeuse' ctx use)
+      | Some (Typeuse use) -> ignore (typeuse' d ctx use)
       | Some (Valtype _) | None -> ())
   | CallIndirect (_, use) | ReturnCallIndirect (_, use) ->
-      ignore (typeuse' ctx use)
+      ignore (typeuse' d ctx use)
   | Folded (i, l) ->
-      register_typeuses' ctx i;
-      register_typeuses ctx l
+      register_typeuses' d ctx i;
+      register_typeuses d ctx l
   | Unreachable | Nop | Throw _ | ThrowRef | Br _ | Br_if _ | Br_table _
   | Br_on_null _ | Br_on_non_null _ | Br_on_cast _ | Br_on_cast_fail _ | Return
   | Call _ | CallRef _ | ReturnCall _ | ReturnCallRef _ | Drop | Select _
@@ -1479,17 +1730,22 @@ let build_initial_env ctx fields =
           (* ZZZ Check for non-import fields *)
           register_exports ctx exports;
           match desc with
-          | Func tu -> Sequence.register ctx.functions id (typeuse ctx.types tu)
+          | Func tu ->
+              ignore
+                (let+@ ty = typeuse ctx.diagnostics ctx.types tu in
+                 Sequence.register ctx.functions id ty)
           | Memory lim ->
-              limits lim max_memory_size;
+              limits ctx (Ast.no_loc ()).info "memory" lim max_memory_size;
               Sequence.register ctx.memories id lim
           | Table typ ->
-              limits typ.limits max_table_size;
-              Sequence.register ctx.tables id (tabletype ctx.types typ)
+              limits ctx (Ast.no_loc ()).info "table" typ.limits max_table_size;
+              let>@ typ = tabletype ctx.diagnostics ctx.types typ in
+              Sequence.register ctx.tables id typ
           | Global ty ->
-              Sequence.register ctx.globals id (globaltype ctx.types ty)
+              let>@ ty = globaltype ctx.diagnostics ctx.types ty in
+              Sequence.register ctx.globals id ty
           | Tag tu ->
-              let ty = typeuse ctx.types tu in
+              let>@ ty = typeuse ctx.diagnostics ctx.types tu in
               (*
               (match (Types.get_subtype ctx.subtyping_info ty).typ with
               | Func { results; _ } -> assert (results = [||])
@@ -1497,10 +1753,11 @@ let build_initial_env ctx fields =
 *)
               Sequence.register ctx.tags id ty)
       | Func { id; typ; instrs; _ } ->
-          Sequence.register ctx.functions id (typeuse ctx.types typ);
-          register_typeuses ctx.types instrs
+          let>@ typ = typeuse ctx.diagnostics ctx.types typ in
+          Sequence.register ctx.functions id typ;
+          register_typeuses ctx.diagnostics ctx.types instrs
       | Tag { id; typ; exports } ->
-          let ty = typeuse ctx.types typ in
+          let>@ ty = typeuse ctx.diagnostics ctx.types typ in
           (*
           (match (Types.get_subtype ctx.subtyping_info ty).typ with
           | Func { results; _ } -> assert (results = [||])
@@ -1513,37 +1770,35 @@ let build_initial_env ctx fields =
 
 let check_type_definitions ctx =
   for i = 0 to ctx.types.last_index - 1 do
-    let i, _ =
-      get_type_info ctx.types (Ast.no_loc (Ast.Text.Num (Uint32.of_int i)))
+    let>@ i, _ =
+      get_type_info ctx.diagnostics ctx.types
+        (Ast.no_loc (Ast.Text.Num (Uint32.of_int i)))
     in
     let ty = Types.get_subtype ctx.subtyping_info i in
-    match ty.supertype with
-    | None -> ()
-    | Some j -> (
-        let ty' = Types.get_subtype ctx.subtyping_info j in
-        assert (not ty'.final);
-        match (ty.typ, ty'.typ) with
-        | ( Func { params; results },
-            Func { params = params'; results = results' } ) ->
-            assert (Array.length params = Array.length params');
-            assert (Array.length results = Array.length results');
-            Array.iter2
-              (fun p p' -> assert (Types.val_subtype ctx.subtyping_info p' p))
-              params params';
-            Array.iter2
-              (fun r r' -> assert (Types.val_subtype ctx.subtyping_info r r'))
-              results results'
-        | Struct fields, Struct fields' ->
-            assert (Array.length fields' <= Array.length fields);
-            for i = 0 to Array.length fields' - 1 do
-              assert (field_subtype ctx.subtyping_info fields.(i) fields'.(i))
-            done
-        | Array field, Array field' ->
-            assert (field_subtype ctx.subtyping_info field field')
-        | Func _, (Struct _ | Array _)
-        | Struct _, (Func _ | Array _)
-        | Array _, (Func _ | Struct _) ->
-            assert false)
+    let*? j = ty.supertype in
+    let ty' = Types.get_subtype ctx.subtyping_info j in
+    assert (not ty'.final);
+    match (ty.typ, ty'.typ) with
+    | Func { params; results }, Func { params = params'; results = results' } ->
+        assert (Array.length params = Array.length params');
+        assert (Array.length results = Array.length results');
+        Array.iter2
+          (fun p p' -> assert (Types.val_subtype ctx.subtyping_info p' p))
+          params params';
+        Array.iter2
+          (fun r r' -> assert (Types.val_subtype ctx.subtyping_info r r'))
+          results results'
+    | Struct fields, Struct fields' ->
+        assert (Array.length fields' <= Array.length fields);
+        for i = 0 to Array.length fields' - 1 do
+          assert (field_subtype ctx.subtyping_info fields.(i) fields'.(i))
+        done
+    | Array field, Array field' ->
+        assert (field_subtype ctx.subtyping_info field field')
+    | Func _, (Struct _ | Array _)
+    | Struct _, (Func _ | Array _)
+    | Array _, (Func _ | Struct _) ->
+        assert false
   done
 
 let tables_and_memories ctx fields =
@@ -1551,12 +1806,13 @@ let tables_and_memories ctx fields =
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
       | Memory { id; limits = lim; init = _; exports } ->
-          limits lim max_memory_size;
+          limits ctx (Ast.no_loc ()).info (*ZZZ*) "memory" lim max_memory_size;
           Sequence.register ctx.memories id lim;
           register_exports ctx exports
       | Table { id; typ; init; exports } ->
-          limits typ.limits max_table_size;
-          let typ = tabletype ctx.types typ in
+          limits ctx (Ast.no_loc ()).info (*ZZZ*) "table" typ.limits
+            max_table_size;
+          let>@ typ = tabletype ctx.diagnostics ctx.types typ in
           (match init with
           | Init_default -> assert typ.reftype.nullable
           | Init_expr e -> constant_expression ctx (Ref typ.reftype) e
@@ -1571,7 +1827,7 @@ let globals ctx fields =
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
       | Global { id; typ; init; exports } ->
-          let typ = globaltype ctx.types typ in
+          let>@ typ = globaltype ctx.diagnostics ctx.types typ in
           constant_expression ctx typ.typ init;
           Sequence.register ctx.globals id typ;
           register_exports ctx exports
@@ -1582,15 +1838,14 @@ let segments ctx fields =
   List.iter
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
-      | Memory { init; _ } -> (
-          match init with
-          | None -> ()
-          | Some _ -> Sequence.register ctx.data None ())
+      | Memory { init; _ } ->
+          let*? _ = init in
+          Sequence.register ctx.data None ()
       | Data { id; init = _; mode } ->
           (match mode with
           | Passive -> ()
           | Active (i, e) ->
-              let limits = Sequence.get ctx.memories i in
+              let*? limits = Sequence.get ctx.diagnostics ctx.memories i in
               constant_expression ctx
                 (address_type_to_valtype limits.address_type)
                 e);
@@ -1599,15 +1854,15 @@ let segments ctx fields =
           match init with
           | Init_default | Init_expr _ -> ()
           | Init_segment lst ->
-              let typ = reftype ctx.types typ.reftype in
+              let>@ typ = reftype ctx.diagnostics ctx.types typ.reftype in
               List.iter (fun e -> constant_expression ctx (Ref typ) e) lst;
               Sequence.register ctx.elem None typ)
       | Elem { id; typ; init; mode } ->
-          let typ = reftype ctx.types typ in
+          let>@ typ = reftype ctx.diagnostics ctx.types typ in
           (match mode with
           | Passive | Declare -> ()
           | Active (i, e) ->
-              let tabletype = Sequence.get ctx.tables i in
+              let*? tabletype = Sequence.get ctx.diagnostics ctx.tables i in
               if
                 not
                   (Types.val_subtype ctx.subtyping_info (Ref typ)
@@ -1626,10 +1881,9 @@ let functions ctx fields =
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
       | Func { id = _; typ; locals = locs; instrs; exports } ->
-          let func_typ =
-            match
-              (Types.get_subtype ctx.subtyping_info (typeuse ctx.types typ)).typ
-            with
+          let>@ func_typ =
+            let+@ typ = typeuse ctx.diagnostics ctx.types typ in
+            match (Types.get_subtype ctx.subtyping_info typ).typ with
             | Func typ -> typ
             | _ -> assert false
           in
@@ -1643,7 +1897,11 @@ let functions ctx fields =
                 (fun (id, typ) ->
                   initialized_locals := IntSet.add !i !initialized_locals;
                   incr i;
-                  Sequence.register locals id (valtype ctx.types typ))
+                  Sequence.register locals id
+                    (match valtype ctx.diagnostics ctx.types typ with
+                    | None ->
+                        (* Dummy value *) Ref { nullable = false; typ = None_ }
+                    | Some typ -> typ))
                 params
           | _ ->
               Array.iter
@@ -1654,13 +1912,17 @@ let functions ctx fields =
                 func_typ.params);
           List.iter
             (fun (id, typ) ->
-              let typ = valtype ctx.types typ in
+              let typ =
+                match valtype ctx.diagnostics ctx.types typ with
+                | None -> (* Dummy value *) Ref { nullable = true; typ = Any }
+                | Some typ -> typ
+              in
               if is_defaultable typ then
                 initialized_locals := IntSet.add !i !initialized_locals;
               incr i;
               Sequence.register locals id typ)
             locs;
-          with_empty_stack
+          with_empty_stack ctx (Ast.no_loc ()).info (*ZZZ*)
             (let ctx =
                {
                  locals;
@@ -1671,7 +1933,7 @@ let functions ctx fields =
                }
              in
              let* () = instructions ctx instrs in
-             pop_args ctx return_types);
+             pop_args ctx (Ast.no_loc ()).info (*ZZZ*) return_types);
           register_exports ctx exports
       | _ -> ())
     fields
@@ -1683,11 +1945,11 @@ let exports ctx fields =
       | Export { name; kind; index } -> (
           register_exports ctx [ name ];
           match kind with
-          | Func -> ignore (Sequence.get ctx.functions index)
-          | Memory -> ignore (Sequence.get ctx.memories index)
-          | Table -> ignore (Sequence.get ctx.tables index)
-          | Tag -> ignore (Sequence.get ctx.tags index)
-          | Global -> ignore (Sequence.get ctx.globals index))
+          | Func -> ignore (Sequence.get ctx.diagnostics ctx.functions index)
+          | Memory -> ignore (Sequence.get ctx.diagnostics ctx.memories index)
+          | Table -> ignore (Sequence.get ctx.diagnostics ctx.tables index)
+          | Tag -> ignore (Sequence.get ctx.diagnostics ctx.tags index)
+          | Global -> ignore (Sequence.get ctx.diagnostics ctx.globals index))
       | _ -> ())
     fields
 
@@ -1699,7 +1961,7 @@ let start ctx fields =
       | Start idx -> (
           assert (!start_count = 0);
           incr start_count;
-          let ty = Sequence.get ctx.functions idx in
+          let*? ty = Sequence.get ctx.diagnostics ctx.functions idx in
           match (Types.get_subtype ctx.subtyping_info ty).typ with
           | Struct _ | Array _ -> assert false
           | Func { params; results } -> assert (params = [||] && results = [||])
@@ -1707,7 +1969,7 @@ let start ctx fields =
       | _ -> ())
     fields
 
-let f (_, fields) =
+let f diagnostics (_, fields) =
   let type_context =
     {
       types = Types.create ();
@@ -1719,11 +1981,12 @@ let f (_, fields) =
   List.iter
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
-      | Types rectype -> add_type type_context rectype
+      | Types rectype -> add_type diagnostics type_context rectype
       | _ -> ())
     fields;
   let ctx =
     {
+      diagnostics;
       types = type_context;
       subtyping_info = Types.subtyping_info type_context.types;
       functions = Sequence.make "function";
@@ -1749,7 +2012,43 @@ let f (_, fields) =
   exports ctx fields;
   start ctx fields
 
-let check_syntax (_, lst) =
+let eq_heaptype h1 h2 =
+  let open Ast.Text in
+  match (h1, h2) with
+  | Type i1, Type i2 -> (
+      match (i1.Ast.desc, i2.Ast.desc) with
+      | Ast.Text.Num n1, Ast.Text.Num n2 -> n1 = n2
+      | Ast.Text.Id s1, Ast.Text.Id s2 -> s1 = s2
+      | _ -> false)
+  | _, _ -> h1 = h2
+
+let eq_reftype r1 r2 =
+  r1.Ast.Text.nullable = r2.Ast.Text.nullable
+  && eq_heaptype r1.Ast.Text.typ r2.Ast.Text.typ
+
+let rec eq_valtype v1 v2 =
+  let open Ast.Text in
+  match (v1, v2) with
+  | Ast.Text.Types.I32, Ast.Text.Types.I32
+  | Ast.Text.Types.I64, Ast.Text.Types.I64
+  | Ast.Text.Types.F32, Ast.Text.Types.F32
+  | Ast.Text.Types.F64, Ast.Text.Types.F64
+  | Ast.Text.Types.V128, Ast.Text.Types.V128 ->
+      true
+  | Ref r1, Ref r2 -> eq_reftype r1 r2
+  | Tuple l1, Tuple l2 ->
+      List.length l1 = List.length l2 && List.for_all2 eq_valtype l1 l2
+  | _ -> false
+
+let eq_functype (f1 : Ast.Text.functype) (f2 : Ast.Text.functype) =
+  let p1 = Array.map snd f1.params in
+  let p2 = Array.map snd f2.params in
+  Array.length p1 = Array.length p2
+  && Array.for_all2 eq_valtype p1 p2
+  && Array.length f1.results = Array.length f2.results
+  && Array.for_all2 eq_valtype f1.results f2.results
+
+let check_syntax diagnostics (_, lst) =
   let types = Hashtbl.create 16 in
   let functions = Hashtbl.create 16 in
   let memories = Hashtbl.create 16 in
@@ -1758,12 +2057,12 @@ let check_syntax (_, lst) =
   let tags = Hashtbl.create 16 in
   let elems = Hashtbl.create 16 in
   let datas = Hashtbl.create 16 in
-  let check_unbound tbl id =
-    Option.iter
-      (fun id ->
-        assert (not (Hashtbl.mem tbl id));
-        Hashtbl.add tbl id ())
-      id
+  let check_unbound tbl kind id =
+    let>@ id = id in
+    if Hashtbl.mem tbl id then
+      Error.index_already_bound diagnostics ~location:(Ast.no_loc ()).info
+        (*ZZZ*) kind id
+    else Hashtbl.add tbl id ()
   in
   let types_ctx =
     {
@@ -1783,21 +2082,19 @@ let check_syntax (_, lst) =
           Array.iter
             (fun (id, subtype) ->
               let idx = types_ctx.last_index in
+              let>@ def = comptype diagnostics types_ctx subtype.Ast.Text.typ in
               let mapping = (idx, []) in
               Hashtbl.add types_ctx.index_mapping (Uint32.of_int idx) mapping;
               Option.iter
                 (fun id ->
-                  check_unbound types (Some id);
+                  check_unbound types "type" (Some id);
                   Hashtbl.replace types_ctx.label_mapping id mapping)
                 id;
-              (try
-                 let def = comptype types_ctx subtype.Ast.Text.typ in
-                 Hashtbl.add type_defs idx def;
-                 match subtype.Ast.Text.typ with
-                 | Ast.Text.Types.Func f ->
-                     Hashtbl.add type_defs_text idx (Ast.Text.Types.Func f)
-                 | _ -> ()
-               with _ -> ());
+              (Hashtbl.add type_defs idx def;
+               match subtype.Ast.Text.typ with
+               | Ast.Text.Types.Func f ->
+                   Hashtbl.add type_defs_text idx (Ast.Text.Types.Func f)
+               | _ -> ());
               types_ctx.last_index <- idx + 1)
             lst
       | _ -> ())
@@ -1826,7 +2123,8 @@ let check_syntax (_, lst) =
           p = params && r = results
       | _ -> false
     in
-    let target = signature types_ctx sign in
+    let*@ target = signature diagnostics types_ctx sign in
+    (*ZZZ Slow*)
     let rec loop i =
       if i >= types_ctx.last_index then None
       else
@@ -1840,10 +2138,11 @@ let check_syntax (_, lst) =
   (* Helper to add implicit type *)
   let add_implicit_type sign =
     match find_existing_type sign with
-    | Some idx -> idx (* Reuse *)
+    | Some _ -> () (* Reuse *)
     | None ->
         let idx = types_ctx.last_index in
-        let def = Ast.Binary.Types.Func (signature types_ctx sign) in
+        let>@ ty = signature diagnostics types_ctx sign in
+        let def = Ast.Binary.Types.Func ty in
         Hashtbl.add type_defs idx def;
         (* Construct Ast.Text.functype from signature for implicit types *)
         let params, results = sign in
@@ -1854,8 +2153,7 @@ let check_syntax (_, lst) =
         Hashtbl.add type_defs_text idx
           (Ast.Text.Types.Func { Ast.Text.params; results });
         Hashtbl.add types_ctx.index_mapping (Uint32.of_int idx) (idx, []);
-        types_ctx.last_index <- idx + 1;
-        idx
+        types_ctx.last_index <- idx + 1
   in
 
   (* Pass 2: Collect Implicit Types *)
@@ -1936,48 +2234,13 @@ let check_syntax (_, lst) =
 
   (* Pass 4: Validation *)
   let check_inline_type idx raw_sign =
-    let idx = resolve_type_index types_ctx idx in
-    let rec eq_heaptype h1 h2 =
-      let open Ast.Text in
-      match (h1, h2) with
-      | Type i1, Type i2 -> (
-          match (i1.Ast.desc, i2.Ast.desc) with
-          | Ast.Text.Num n1, Ast.Text.Num n2 -> n1 = n2
-          | Ast.Text.Id s1, Ast.Text.Id s2 -> s1 = s2
-          | _ -> false)
-      | _, _ -> h1 = h2
-    and eq_reftype r1 r2 =
-      r1.Ast.Text.nullable = r2.Ast.Text.nullable
-      && eq_heaptype r1.Ast.Text.typ r2.Ast.Text.typ
-    and eq_valtype v1 v2 =
-      let open Ast.Text in
-      match (v1, v2) with
-      | Ast.Text.Types.I32, Ast.Text.Types.I32
-      | Ast.Text.Types.I64, Ast.Text.Types.I64
-      | Ast.Text.Types.F32, Ast.Text.Types.F32
-      | Ast.Text.Types.F64, Ast.Text.Types.F64
-      | Ast.Text.Types.V128, Ast.Text.Types.V128 ->
-          true
-      | Ref r1, Ref r2 -> eq_reftype r1 r2
-      | Tuple l1, Tuple l2 ->
-          List.length l1 = List.length l2 && List.for_all2 eq_valtype l1 l2
-      | _ -> false
-    in
-    let eq_functype (f1 : Ast.Text.functype) (f2 : Ast.Text.functype) =
-      let p1 = Array.map snd f1.params in
-      let p2 = Array.map snd f2.params in
-      Array.length p1 = Array.length p2
-      && Array.for_all2 eq_valtype p1 p2
-      && Array.length f1.results = Array.length f2.results
-      && Array.for_all2 eq_valtype f1.results f2.results
-    in
+    let>@ idx' = resolve_type_index diagnostics types_ctx idx in
     let target = to_text_functype raw_sign in
-    match Hashtbl.find_opt type_defs_text idx with
+    match Hashtbl.find_opt type_defs_text idx' with
     | Some (Ast.Text.Types.Func f) ->
-        if not (eq_functype f target) then (
-          Format.eprintf
-            "Parsing should have failed (inline function type): ...@.";
-          failwith "inline function type does not match indexed type")
+        if not (eq_functype f target) then
+          Error.inline_function_type_mismatch diagnostics ~location:idx.Ast.info
+            f
     | _ -> failwith "indexed type is not a function type"
   in
   let check_instr_inline desc =
@@ -2005,14 +2268,11 @@ let check_syntax (_, lst) =
     let seen = Hashtbl.create 16 in
     List.iter
       (fun (id, _) ->
-        match id with
-        | Some id ->
-            if Hashtbl.mem seen id then (
-              Format.eprintf
-                "Parsing should have failed (duplicate local): ...@.";
-              failwith ("duplicate local " ^ id))
-            else Hashtbl.add seen id ()
-        | None -> ())
+        let*? id = id in
+        if Hashtbl.mem seen id then (
+          Format.eprintf "Parsing should have failed (duplicate local): ...@.";
+          failwith ("duplicate local " ^ id))
+        else Hashtbl.add seen id ())
       all_locals
   in
   List.iter
@@ -2025,54 +2285,60 @@ let check_syntax (_, lst) =
               | Ast.Text.Types.Func _ | Array _ -> ()
               | Struct lst ->
                   let fields = Hashtbl.create 16 in
-                  Array.iter (fun (id, _) -> check_unbound fields id) lst)
+                  Array.iter
+                    (fun (id, _) -> check_unbound fields "field" id)
+                    lst)
             lst
       | Import { id; desc; _ } -> (
-          check_unbound
-            (match desc with
-            | Func _ -> functions
-            | Memory _ -> memories
-            | Table _ -> tables
-            | Global _ -> globals
-            | Tag _ -> tags)
-            id;
+          let tbl, kind =
+            match desc with
+            | Func _ -> (functions, "function")
+            | Memory _ -> (memories, "memory")
+            | Table _ -> (tables, "table")
+            | Global _ -> (globals, "global")
+            | Tag _ -> (tags, "tag")
+          in
+          check_unbound tbl kind id;
           match desc with
           | Func (Some idx, Some sign) -> check_inline_type idx (`Sig sign)
           | Tag (Some idx, Some sign) -> check_inline_type idx (`Sig sign)
           | _ -> ())
       | Func { id; typ; locals; instrs; _ } ->
-          check_unbound functions id;
+          check_unbound functions "function" id;
           (match typ with
           | Some idx, Some sign -> check_inline_type idx (`Sig sign)
           | _ -> ());
           check_duplicate_locals typ locals;
           iter_instrs check_instr_inline instrs
-      | Memory { id; _ } -> check_unbound memories id
-      | Table { id; _ } -> check_unbound tables id
+      | Memory { id; _ } -> check_unbound memories "memory" id
+      | Table { id; _ } -> check_unbound tables "table" id
       | Tag { id; typ = Some idx, Some sign; _ } ->
-          check_unbound tags id;
+          check_unbound tags "tag" id;
           check_inline_type idx (`Sig sign)
-      | Tag { id; _ } -> check_unbound tags id
-      | Global { id; _ } -> check_unbound globals id
+      | Tag { id; _ } -> check_unbound tags "tag" id
+      | Global { id; _ } -> check_unbound globals "global" id
       | Export _ | Start _ -> ()
-      | Elem { id; _ } -> check_unbound elems id
-      | Data { id; _ } -> check_unbound datas id)
+      | Elem { id; _ } -> check_unbound elems "elem" id
+      | Data { id; _ } -> check_unbound datas "data" id)
     lst;
   ignore
     (List.fold_left
        (fun can_import (field : _ Ast.Text.modulefield) ->
-         match field with
-         | Types _ -> can_import
-         | Import _ ->
-             assert can_import;
-             (*ZZZ*)
+         match (can_import, field) with
+         | Some previous, Import _ ->
+             Error.import_after_definition diagnostics
+               ~location:(Ast.no_loc ()).info previous;
              can_import
-         | Func _ | Memory _ | Table _ | Tag _ | Global _ -> false
-         | Export _ -> can_import
-         | Start _ -> can_import
-         | Elem _ -> can_import
-         | Data _ -> can_import)
-       true lst);
+         | None, Func _ -> Some "function"
+         | None, Memory _ -> Some "memory"
+         | None, Table _ -> Some "table"
+         | None, Tag _ -> Some "tag"
+         | None, Global _ -> Some "global"
+         | Some _, (Func _ | Memory _ | Table _ | Tag _ | Global _)
+         | None, Import _
+         | _, (Types _ | Export _ | Start _ | Elem _ | Data _) ->
+             can_import)
+       None lst);
   assert (
     List.length
       (List.filter
