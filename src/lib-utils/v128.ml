@@ -1,8 +1,6 @@
 type shape = I8x16 | I16x8 | I32x4 | I64x2 | F32x4 | F64x2
 type t = { shape : shape; components : string list }
 
-let int_conv conv s = try conv s with Failure _ -> conv ("0u" ^ s)
-
 let to_string v =
   let buffer = Bytes.create 16 in
   let components = v.components in
@@ -17,25 +15,23 @@ let to_string v =
         components
   | I32x4 ->
       List.iteri
-        (fun i n ->
-          Bytes.set_int32_le buffer (i * 4) (int_conv Int32.of_string n))
+        (fun i n -> Bytes.set_int32_le buffer (i * 4) (Number_parsing.int32 n))
         components
   | I64x2 ->
       List.iteri
-        (fun i n ->
-          Bytes.set_int64_le buffer (i * 8) (int_conv Int64.of_string n))
+        (fun i n -> Bytes.set_int64_le buffer (i * 8) (Number_parsing.int64 n))
         components
   | F32x4 ->
       List.iteri
         (fun i f ->
           Bytes.set_int32_le buffer (i * 4)
-            (Int32.bits_of_float (float_of_string f)))
+            (Int32.bits_of_float (Number_parsing.float32 f)))
         components
   | F64x2 ->
       List.iteri
         (fun i f ->
           Bytes.set_int64_le buffer (i * 8)
-            (Int64.bits_of_float (float_of_string f)))
+            (Int64.bits_of_float (Number_parsing.float64 f)))
         components);
   Bytes.to_string buffer
 

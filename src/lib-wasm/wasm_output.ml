@@ -766,17 +766,13 @@ module Encoder = struct
         byte b 0xFD;
         uint b
           (match op with
-          | AnyTrue I8x16 -> 98
+          | AnyTrue _ -> 83
           | AllTrue I8x16 -> 99
-          | AnyTrue I16x8 -> 130
           | AllTrue I16x8 -> 131
-          | AnyTrue I32x4 -> 162
           | AllTrue I32x4 -> 163
-          | AnyTrue I64x2 ->
-              failwith "AnyTrue not supported for I64x2" (* Standard? Unused *)
           | AllTrue I64x2 -> 195
-          | AnyTrue F32x4 | AllTrue F32x4 | AnyTrue F64x2 | AllTrue F64x2 ->
-              failwith "VecTest on float not supported")
+          | AllTrue F32x4 | AllTrue F64x2 ->
+              failwith "AllTrue on float not supported")
     | VecShift op ->
         byte b 0xFD;
         uint b
@@ -833,15 +829,19 @@ module Encoder = struct
           (match op with
           | VecAbs I8x16 -> 96
           | VecNeg I8x16 -> 97
-          | VecPopcnt I8x16 -> 124
+          | VecPopcnt I8x16 -> 98
           | VecAbs I16x8 -> 128
           | VecNeg I16x8 -> 129
+          | VecExtAddPairwise (Signed, I16x8) -> 124
+          | VecExtAddPairwise (Unsigned, I16x8) -> 125
           | VecExtend (`Low, `_8, Signed, I16x8) -> 135
           | VecExtend (`High, `_8, Signed, I16x8) -> 136
           | VecExtend (`Low, `_8, Unsigned, I16x8) -> 137
           | VecExtend (`High, `_8, Unsigned, I16x8) -> 138
           | VecAbs I32x4 -> 160
           | VecNeg I32x4 -> 161
+          | VecExtAddPairwise (Signed, I32x4) -> 126
+          | VecExtAddPairwise (Unsigned, I32x4) -> 127
           | VecExtend (`Low, `_16, Signed, I32x4) -> 167
           | VecExtend (`High, `_16, Signed, I32x4) -> 168
           | VecExtend (`Low, `_16, Unsigned, I32x4) -> 169
@@ -866,25 +866,21 @@ module Encoder = struct
           | VecFloor F64x2 -> 253
           | VecTrunc F64x2 -> 254
           | VecNearest F64x2 -> 255
-          | VecTruncSat (`F32, Signed, I32x4) -> 256
-          | VecTruncSat (`F32, Unsigned, I32x4) -> 257
-          | VecTruncSat (`F64, Signed, I32x4) -> 260
-          | VecTruncSat (`F64, Unsigned, I32x4) -> 261
+          | VecTruncSat (`F32, Signed, I32x4) -> 248
+          | VecTruncSat (`F32, Unsigned, I32x4) -> 249
+          | VecTruncSat (`F64, Signed, I32x4) -> 252
+          | VecTruncSat (`F64, Unsigned, I32x4) -> 253
           | VecRelaxedTruncZero (`F64, Unsigned, I32x4) -> 0x104
           | VecRelaxedTruncZero _ -> assert false
           | VecRelaxedTrunc (`F32, Signed, I32x4) -> 0x101
           | VecRelaxedTrunc (`F32, Unsigned, I32x4) -> 0x102
           | VecRelaxedTrunc _ -> assert false
-          | VecConvert (`I32, Signed, F32x4) -> 258
-          | VecConvert (`I32, Unsigned, F32x4) -> 259
-          | VecConvert (`I32, Signed, F64x2) -> 262
-          | VecConvert (`I32, Unsigned, F64x2) -> 263
-          | VecPromote (`F32, F64x2) -> 265
-          | VecDemote (`F64, F32x4) -> 264
-          | VecExtAddPairwise (Signed, I16x8) -> 157
-          | VecExtAddPairwise (Unsigned, I16x8) -> 158
-          | VecExtAddPairwise (Signed, I32x4) -> 187
-          | VecExtAddPairwise (Unsigned, I32x4) -> 188
+          | VecConvert (`I32, Signed, F32x4) -> 250
+          | VecConvert (`I32, Unsigned, F32x4) -> 251
+          | VecConvert (`I32, Signed, F64x2) -> 254
+          | VecConvert (`I32, Unsigned, F64x2) -> 255
+          | VecPromote (`F32, F64x2) -> failwith "VecPromote opcode unknown"
+          | VecDemote (`F64, F32x4) -> 94
           | VecNot -> 77
           | VecExtend _ | VecPopcnt _ | VecExtAddPairwise _ -> assert false
           | VecSqrt _ | VecCeil _ | VecFloor _ | VecTrunc _ | VecNearest _
@@ -986,7 +982,11 @@ module Encoder = struct
           | VecMax (Some Signed, I16x8) -> 152
           | VecMax (Some Unsigned, I16x8) -> 153
           | VecAvgr (Unsigned, I16x8) -> 155
-          | VecQ15MulrSat I16x8 -> 156
+          | VecQ15MulrSat I16x8 -> 99
+          | VecExtMulLow (Signed, I16x8) -> 156
+          | VecExtMulHigh (Signed, I16x8) -> 157
+          | VecExtMulLow (Unsigned, I16x8) -> 158
+          | VecExtMulHigh (Unsigned, I16x8) -> 159
           | VecAdd I32x4 -> 174
           | VecSub I32x4 -> 177
           | VecMul I32x4 -> 181
@@ -995,9 +995,17 @@ module Encoder = struct
           | VecMax (Some Signed, I32x4) -> 184
           | VecMax (Some Unsigned, I32x4) -> 185
           | VecDot I32x4 -> 186
+          | VecExtMulLow (Signed, I32x4) -> 188
+          | VecExtMulHigh (Signed, I32x4) -> 189
+          | VecExtMulLow (Unsigned, I32x4) -> 190
+          | VecExtMulHigh (Unsigned, I32x4) -> 191
           | VecAdd I64x2 -> 206
           | VecSub I64x2 -> 207
           | VecMul I64x2 -> 208
+          | VecExtMulLow (Signed, I64x2) -> 220
+          | VecExtMulHigh (Signed, I64x2) -> 221
+          | VecExtMulLow (Unsigned, I64x2) -> 222
+          | VecExtMulHigh (Unsigned, I64x2) -> 223
           | VecAdd F32x4 -> 228
           | VecSub F32x4 -> 229
           | VecMul F32x4 -> 230
