@@ -553,19 +553,19 @@ let rec push_results results =
       let* () = push None ty in
       push_results rem
 
-let rec output_stack f st =
+let rec output_stack ~full f st =
   match st with
   | Empty -> ()
-  | Unreachable -> Format.fprintf f "@ unreachable"
+  | Unreachable -> if full then Format.fprintf f "@ unreachable"
   | Cons (_, ty, st) ->
       Format.fprintf f "@ %a%a"
         (Format.pp_print_option
            ~none:(fun f _ -> Format.fprintf f "bot")
            print_valtype)
-        ty output_stack st
+        ty (output_stack ~full) st
 
 let print_stack st =
-  Format.eprintf "@[<2>Stack:%a@]@." output_stack st;
+  Format.eprintf "@[<2>Stack:%a@]@." (output_stack ~full:true) st;
   (st, ())
 
 let _ = print_stack
@@ -575,7 +575,7 @@ let with_empty_stack ctx location f =
   match st with
   | Cons _ ->
       Error.non_empty_stack ctx.diagnostics ~location (fun f () ->
-          Format.fprintf f "@[%a@]" output_stack st)
+          Format.fprintf f "@[%a@]" (output_stack ~full:false) st)
   | Empty | Unreachable -> ()
 
 let branch_target ctx (idx : Ast.Text.idx) =
