@@ -1063,9 +1063,8 @@ let output_section ch id encoder data =
   output_uint len;
   Buffer.output_buffer ch b
 
-let module_ ?(color = Utils.Colors.Auto) ?(out_channel = stdout)
-    ?opt_source_map_file (m : Ast.location module_) =
-  let _ = color in
+let module_ ?(out_channel = stdout) ?opt_source_map_file
+    (m : Ast.location module_) =
   Out_channel.output_string out_channel "\x00\x61\x73\x6D\x01\x00\x00\x00";
 
   let source_map_t = Utils.Source_map.create () in

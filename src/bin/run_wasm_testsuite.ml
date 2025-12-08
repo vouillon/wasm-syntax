@@ -265,6 +265,21 @@ let runtest filename path =
         (status, ModuleParser.parse_from_string ~filename text, Some text))
       lst
   in
+  (* Serialization and reparsing *)
+  let lst'' =
+    List.map
+      (fun (status, m, _) ->
+        let temp, out_channel =
+          Filename.open_temp_file ~mode:[ Open_binary ] "temp" ".wasm"
+        in
+        Wasm.Wasm_output.module_ ~out_channel (Wasm.Text_to_binary.module_ m);
+        let text = read_file temp in
+        Sys.remove text;
+        ( status,
+          Wasm.Binary_to_text.module_ (Wasm.Wasm_parser.module_ text),
+          None ))
+      lst
+  in
   (* Validation *)
   let lst =
     List.filter
@@ -290,7 +305,7 @@ let runtest filename path =
                 (print_module ~color:!color)
                 m;
             false)
-      (lst @ lst')
+      (lst @ lst' @ lst'')
   in
   (* Translation to new syntax *)
   let print_wax ~color f m =
