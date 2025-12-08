@@ -2,7 +2,11 @@
 ==== core/align.wast ====
 ==== core/annotations.wast ====
 File "wasm-test-suite/core/annotations.wast", line 2, characters 3-5:
-Unknown operator '@a'.
+Error: Unknown operator '@a'.
+
+    2 |   (@a)
+           ^^
+
 ==== core/binary-leb128.wast ====
 ==== core/binary.wast ====
 ==== core/block.wast ====
@@ -30,7 +34,16 @@ Parsing should have failed (mismatching label): (func block $a end $l)
 ==== core/custom.wast ====
 ==== core/data.wast ====
 ==== core/elem.wast ====
-Fatal error: exception Failure("Unbound type 0")
+File "wasm-test-suite/core/elem.wast", line 1061, characters 25-26:
+Error: The type index 0 is not bound.
+ 1061 |     (call_indirect (type 0) (local.get 0)))
+                                 ^
+
+File "wasm-test-suite/core/elem.wast", line 1061, characters 25-26:
+Error: The type index 0 is not bound.
+ 1061 |     (call_indirect (type 0) (local.get 0)))
+                                 ^
+
 ==== core/endianness.wast ====
 ==== core/exceptions/tag.wast ====
 Validation should have failed (non-empty tag result type):
@@ -58,7 +71,21 @@ Validation should have failed (non-empty tag result type):
 ==== core/float_misc.wast ====
 ==== core/forward.wast ====
 ==== core/func.wast ====
-Fatal error: exception Failure("Unbound type 1")
+File "wasm-test-suite/core/func.wast", line 428, characters 25-26:
+Error: The type index 1 is not bound.
+  428 |   (func $void->f64 (type 1) (f64.const 0))  ;; (result f64)
+                                 ^
+
+File "wasm-test-suite/core/func.wast", line 428, characters 25-26:
+Error: The type index 1 is not bound.
+  428 |   (func $void->f64 (type 1) (f64.const 0))  ;; (result f64)
+                                 ^
+
+File "wasm-test-suite/core/func.wast", line 431, characters 16-26:
+Error: The function index $void->f64 is not bound.
+  431 |     (drop (call $void->f64))
+                        ^^^^^^^^^^
+
 ==== core/func_ptrs.wast ====
 ==== core/gc/array.wast ====
 ==== core/gc/array_copy.wast ====
@@ -81,8 +108,12 @@ Fatal error: exception Failure("Unbound type 1")
 ==== core/i32.wast ====
 ==== core/i64.wast ====
 ==== core/id.wast ====
-File "wasm-test-suite/core/id.wast", line 5, characters 8-10:
-Unknown operator '$"'.
+File "wasm-test-suite/core/id.wast", line 5, characters 48-54:
+Error: Unknown keyword 'random'.
+
+    5 |   (func $" random \t \n stuff ") (func (call $" random \t \n stuff "))
+                                                        ^^^^^^
+
 ==== core/if.wast ====
 Parsing should have failed (mismatching label): (func i32.const 0 if end $l)
 Parsing should have failed (mismatching label): (func i32.const 0 if $a end $l)
