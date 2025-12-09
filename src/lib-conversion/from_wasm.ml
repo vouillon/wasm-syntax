@@ -703,9 +703,19 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
                    Valtype
                      (Ref { nullable = false; typ = Type (idx ctx `Type t) }) ))
         | None -> with_loc (ArrayFixed (Some (idx ctx `Type t), args)))
-  | ArrayGet (s, _t) ->
+  | ArrayGet (s, t) ->
       let* e2 = Stack.pop in
       let* e1 = Stack.pop in
+      let e1 =
+        {
+          e1 with
+          desc =
+            Ast.Cast
+              ( e1,
+                Valtype (Ref { nullable = true; typ = Type (idx ctx `Type t) })
+              );
+        }
+      in
       let e = with_loc (ArrayGet (e1, e2)) in
       Stack.push 1
         (match s with
@@ -713,10 +723,20 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
         | Some signage ->
             with_loc
               (Cast (e, Signedtype { typ = `I32; signage; strict = false })))
-  | ArraySet _t ->
+  | ArraySet t ->
       let* e3 = Stack.pop in
       let* e2 = Stack.pop in
       let* e1 = Stack.pop in
+      let e1 =
+        {
+          e1 with
+          desc =
+            Ast.Cast
+              ( e1,
+                Valtype (Ref { nullable = true; typ = Type (idx ctx `Type t) })
+              );
+        }
+      in
       Stack.push 1 (with_loc (ArraySet (e1, e2, e3)))
   | Call f ->
       let input, output = function_arity ctx f in

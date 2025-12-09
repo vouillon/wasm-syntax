@@ -175,7 +175,15 @@ let typeuse typ sign =
 
 let expr_type i =
   match i.info with
-  | [| t |], _ -> t
+  | [| Some t |], _ -> t
+  | _ ->
+      print_instr i;
+      assert false
+
+let expr_opt_valtype i =
+  match i.info with
+  | [| Some t |], _ -> Some (unpack_type t)
+  | [| None |], _ -> None
   | _ ->
       print_instr i;
       assert false
@@ -278,7 +286,11 @@ let rec instruction ctx i : location Text.instr list =
               | F32 -> folded loc (BinOp (F32 CopySign)) arg_code
               | F64 -> folded loc (BinOp (F64 CopySign)) arg_code
               | _ -> assert false)
-          | _ -> folded loc (Call (index idx)) arg_code)
+          | _ ->
+              if StringMap.mem idx.desc ctx.locals then
+                let code = instruction ctx f in
+                folded loc (CallRef (index (expr_type_name f))) (arg_code @ code)
+              else folded loc (Call (index idx)) arg_code)
       | StructGet (obj, { desc = "fill"; _ }) ->
           let array_code = instruction ctx obj in
           let type_name_idx = expr_type_name obj in
@@ -321,65 +333,72 @@ let rec instruction ctx i : location Text.instr list =
             match cast_ty with
             | Valtype (Ref r) -> folded loc (RefNull (heaptype r.typ)) []
             | _ -> assert false)
-        | _ ->
+        | _ -> (
             let code = instruction ctx expr in
-            let in_ty = expr_valtype expr in
-            let instr : _ Text.instr_desc =
-              match (in_ty, cast_ty) with
-              (* I31 *)
-              | I32, Valtype (Ref { typ = I31; _ }) -> RefI31
-              | Ref _, Signedtype { typ = `I32; signage; _ } -> I31Get signage
-              (* Extern / Any *)
-              | Ref { typ = Any; _ }, Valtype (Ref { typ = Extern; _ }) ->
-                  ExternConvertAny
-              | Ref { typ = Extern; _ }, Valtype (Ref { typ = Any; _ }) ->
-                  AnyConvertExtern
-              (* RefCast *)
-              | Ref _, Valtype (Ref r) -> RefCast (reftype r)
-              (* Numeric conversions *)
-              | I64, Valtype I32 -> I32WrapI64
-              | F64, Valtype F32 -> F32DemoteF64
-              | F32, Valtype F64 -> F64PromoteF32
-              | I32, Signedtype { typ = `I64; signage; _ } ->
-                  I64ExtendI32 signage
-              (* Trunc *)
-              | F32, Signedtype { typ = `I32; signage = s; strict } ->
-                  UnOp
-                    (I32
-                       (if strict then Trunc (`F32, s) else TruncSat (`F32, s)))
-              | F64, Signedtype { typ = `I32; signage = s; strict } ->
-                  UnOp
-                    (I32
-                       (if strict then Trunc (`F64, s) else TruncSat (`F64, s)))
-              | F32, Signedtype { typ = `I64; signage = s; strict } ->
-                  UnOp
-                    (I64
-                       (if strict then Trunc (`F32, s) else TruncSat (`F32, s)))
-              | F64, Signedtype { typ = `I64; signage = s; strict } ->
-                  UnOp
-                    (I64
-                       (if strict then Trunc (`F64, s) else TruncSat (`F64, s)))
-              (* Convert *)
-              | I32, Signedtype { typ = `F32; signage; _ } ->
-                  UnOp (F32 (Convert (`I32, signage)))
-              | I64, Signedtype { typ = `F32; signage; _ } ->
-                  UnOp (F32 (Convert (`I64, signage)))
-              | I32, Signedtype { typ = `F64; signage; _ } ->
-                  UnOp (F64 (Convert (`I32, signage)))
-              | I64, Signedtype { typ = `F64; signage; _ } ->
-                  UnOp (F64 (Convert (`I64, signage)))
-              (* Identity *)
-              | I32, Valtype I32
-              | I64, Valtype I64
-              | F32, Valtype F32
-              | F64, Valtype F64 ->
-                  Nop
-              | _ ->
-                  print_valtype in_ty;
-                  print_instr i;
-                  assert false
-            in
-            folded loc instr code
+            match expr_opt_valtype expr with
+            | None -> code
+            | Some in_ty ->
+                let instr : _ Text.instr_desc =
+                  match (in_ty, cast_ty) with
+                  (* I31 *)
+                  | I32, Valtype (Ref { typ = I31; _ }) -> RefI31
+                  | Ref _, Signedtype { typ = `I32; signage; _ } ->
+                      I31Get signage
+                  (* Extern / Any *)
+                  | Ref { typ = Any; _ }, Valtype (Ref { typ = Extern; _ }) ->
+                      ExternConvertAny
+                  | Ref { typ = Extern; _ }, Valtype (Ref { typ = Any; _ }) ->
+                      AnyConvertExtern
+                  (* RefCast *)
+                  | Ref _, Valtype (Ref r) -> RefCast (reftype r)
+                  (* Numeric conversions *)
+                  | I64, Valtype I32 -> I32WrapI64
+                  | F64, Valtype F32 -> F32DemoteF64
+                  | F32, Valtype F64 -> F64PromoteF32
+                  | I32, Signedtype { typ = `I64; signage; _ } ->
+                      I64ExtendI32 signage
+                  (* Trunc *)
+                  | F32, Signedtype { typ = `I32; signage = s; strict } ->
+                      UnOp
+                        (I32
+                           (if strict then Trunc (`F32, s)
+                            else TruncSat (`F32, s)))
+                  | F64, Signedtype { typ = `I32; signage = s; strict } ->
+                      UnOp
+                        (I32
+                           (if strict then Trunc (`F64, s)
+                            else TruncSat (`F64, s)))
+                  | F32, Signedtype { typ = `I64; signage = s; strict } ->
+                      UnOp
+                        (I64
+                           (if strict then Trunc (`F32, s)
+                            else TruncSat (`F32, s)))
+                  | F64, Signedtype { typ = `I64; signage = s; strict } ->
+                      UnOp
+                        (I64
+                           (if strict then Trunc (`F64, s)
+                            else TruncSat (`F64, s)))
+                  (* Convert *)
+                  | I32, Signedtype { typ = `F32; signage; _ } ->
+                      UnOp (F32 (Convert (`I32, signage)))
+                  | I64, Signedtype { typ = `F32; signage; _ } ->
+                      UnOp (F32 (Convert (`I64, signage)))
+                  | I32, Signedtype { typ = `F64; signage; _ } ->
+                      UnOp (F64 (Convert (`I32, signage)))
+                  | I64, Signedtype { typ = `F64; signage; _ } ->
+                      UnOp (F64 (Convert (`I64, signage)))
+                  (* Identity *)
+                  | I32, Valtype I32
+                  | I64, Valtype I64
+                  | F32, Valtype F32
+                  | F64, Valtype F64 ->
+                      Nop
+                  | _ ->
+                      print_valtype in_ty;
+                      print_instr i;
+                      assert false
+                in
+                folded loc instr code)
       in
       match expr.desc with
       | StructGet (instr_val, field_idx) -> (

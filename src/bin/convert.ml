@@ -18,8 +18,16 @@ let convert ~filename =
   in
   Format.eprintf "%s==== %s ====%s@.@.%a@.@." Utils.Colors.Ansi.grey filename
     Utils.Colors.Ansi.reset print_wax ast';
-  ignore
-    (Utils.Diagnostic.run ~source:(Some source) (fun d -> Wax.Typing.f d ast'))
+  let ast'' =
+    Utils.Diagnostic.run ~source:(Some source) (fun d -> Wax.Typing.f d ast')
+  in
+  let ast''' = Conversion.To_wasm.module_ ast'' in
+  let print_wasm f m =
+    Utils.Printer.run f (fun p -> Wasm.Output.module_ ~out_channel:stdout p m)
+  in
+  if false then Format.eprintf "%a@." print_wasm ast''';
+  Utils.Diagnostic.run ~source:(Some source) (fun d ->
+      Wasm.Validation.f d ast''')
 
 let _ =
   let p = "/home/jerome/wasm_of_ocaml/runtime/wasm" in

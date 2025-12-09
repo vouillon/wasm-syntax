@@ -57,7 +57,7 @@ Explicit types?
 
 open Ast
 
-type typed_module_annotation = Ast.storagetype array * Ast.location
+type typed_module_annotation = Ast.storagetype option array * Ast.location
 
 module Output = struct
   include Output
@@ -1097,8 +1097,8 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
   | Float _ as desc -> return_expression i desc (UnionFind.make Float)
   | Cast (i', typ) ->
       let* i' = instruction ctx i' in
+      let ty' = expression_type i' in
       let*! ty =
-        let ty' = expression_type i' in
         match typ with
         | Valtype typ ->
             let ok = cast ctx ty' typ in
@@ -1128,7 +1128,14 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
             in
             internalize ctx typ
       in
-      return_expression i (Cast (i', typ)) ty
+      (* We skip unnecessary cast:
+         - when converting to Wax, we introduce them to avoid loosing
+           type information
+         - when converting to Wasm, we add precise types, so some
+           casts used to resolve ambiguities become unnecessary.
+      *)
+      if UnionFind.find ty' <> Unknown && subtype ctx ty' ty then return i'
+      else return_expression i (Cast (i', typ)) ty
   | Test (i, ty) ->
       let* i' = instruction ctx i in
       (let>@ typ = top_heap_type ctx ty.typ in
@@ -1318,7 +1325,10 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
                output_inferred_type ty;
            assert ok);
           return_statement i (ArraySet (i1', i2', i3')) [||]
-      | Unknown -> return_statement i (ArraySet (i1', i2', i3')) [||]
+      | Unknown ->
+          Format.eprintf "@[%a@]@." Output.instr i;
+          (*return_statement i (ArraySet (i1', i2', i3')) [||]*)
+          assert false
       | _ -> assert false)
   | BinOp (op, i1, i2) ->
       let* i1' = instruction ctx i1 in
@@ -2063,13 +2073,14 @@ let f diagnostics fields =
           ( Array.map
               (fun ty ->
                 match UnionFind.find ty with
-                | Unknown | Null -> Value (Ref { nullable = true; typ = None_ })
-                | Number -> Value I32
-                | Int8 -> Packed I8
-                | Int16 -> Packed I16
-                | Int -> Value I32
-                | Float -> Value F64
-                | Valtype { typ; _ } -> Value typ)
+                | Unknown -> None
+                | Null -> Some (Value (Ref { nullable = true; typ = None_ }))
+                | Number -> Some (Value I32)
+                | Int8 -> Some (Packed I8)
+                | Int16 -> Some (Packed I16)
+                | Int -> Some (Value I32)
+                | Float -> Some (Value F64)
+                | Valtype { typ; _ } -> Some (Value typ))
               types,
             loc ))
         f)
