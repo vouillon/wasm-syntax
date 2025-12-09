@@ -1099,6 +1099,17 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
       let* i' = instruction ctx i' in
       let ty' = expression_type i' in
       let*! ty =
+        internalize ctx
+          (match typ with
+          | Valtype typ -> typ
+          | Signedtype { typ; _ } -> (
+              match typ with
+              | `I32 -> I32
+              | `I64 -> I64
+              | `F32 -> F32
+              | `F64 -> F64))
+      in
+      let () =
         match typ with
         | Valtype typ ->
             let ok = cast ctx ty' typ in
@@ -1106,8 +1117,7 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
               Format.eprintf "%a@." Output.instr i;
               Format.eprintf "cast %a => %a@." output_inferred_type ty'
                 Output.valtype typ);
-            assert ok;
-            internalize ctx typ
+            assert ok
         | Signedtype { typ; _ } ->
             let ok = signed_cast ctx ty' typ in
             if not ok then (
@@ -1118,15 +1128,7 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
                 | `I64 -> "i64"
                 | `F32 -> "f32"
                 | `F64 -> "f64"));
-            assert ok;
-            let typ =
-              match typ with
-              | `I32 -> I32
-              | `I64 -> I64
-              | `F32 -> F32
-              | `F64 -> F64
-            in
-            internalize ctx typ
+            assert ok
       in
       (* We skip unnecessary cast:
          - when converting to Wax, we introduce them to avoid loosing
@@ -1134,7 +1136,10 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
          - when converting to Wasm, we add precise types, so some
            casts used to resolve ambiguities become unnecessary.
       *)
-      if UnionFind.find ty' <> Unknown && subtype ctx ty' ty then return i'
+      let unnecessary_cast =
+        UnionFind.find ty' <> Unknown && subtype ctx ty' ty
+      in
+      if unnecessary_cast then return i'
       else return_expression i (Cast (i', typ)) ty
   | Test (i, ty) ->
       let* i' = instruction ctx i in
