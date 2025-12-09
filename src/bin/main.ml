@@ -64,10 +64,11 @@ let wat_to_wax ~input_file ~output_file ~validate ~color
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wasm.Validation.f d ast);
   let wax_ast = Conversion.From_wasm.module_ ast in
-  if validate then
-    ignore
-      (Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
-           Wax.Typing.f d wax_ast));
+  let wax_ast =
+    Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
+        Wax.Typing.f d wax_ast)
+    |> Wax.Typing.erase_types
+  in
   with_open_out output_file (fun oc ->
       let print_wax f m =
         Utils.Printer.run f (fun p ->

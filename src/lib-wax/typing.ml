@@ -1175,7 +1175,7 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
           let*! typ =
             internalize ctx (Ref { nullable = false; typ = Type typ })
           in
-          return_expression i (Struct (ty, fields')) typ)
+          return_expression i (Struct (ty, List.rev fields')) typ)
   | StructDefault ty as desc -> (
       match ty with
       | None -> assert false (*ZZZ*)
@@ -1300,7 +1300,7 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
           let*! typ =
             internalize ctx (Ref { nullable = false; typ = Type ty })
           in
-          return_expression i (ArrayFixed (Some ty, instrs')) typ)
+          return_expression i (ArrayFixed (Some ty, List.rev instrs')) typ)
   | ArrayGet (i1, i2) -> (
       let* i1' = instruction ctx i1 in
       let* i2' = instruction ctx i2 in
@@ -2090,3 +2090,5 @@ let f diagnostics fields =
             loc ))
         f)
     fields
+
+let erase_types m = List.map (Ast_utils.map_modulefield snd) m
