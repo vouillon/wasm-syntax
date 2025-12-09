@@ -1371,8 +1371,8 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | ArrayFill idx ->
       let*! ty, field = lookup_array_type ctx idx in
       assert field.mut;
-      let* () = pop ctx loc (unpack_type field) in
       let* () = pop ctx loc I32 in
+      let* () = pop ctx loc (unpack_type field) in
       let* () = pop ctx loc I32 in
       pop ctx loc (Ref { nullable = true; typ = Type ty })
   | ArrayCopy (idx1, idx2) ->
