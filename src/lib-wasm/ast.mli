@@ -151,37 +151,37 @@ type vec_shape = I8x16 | I16x8 | I32x4 | I64x2 | F32x4 | F64x2
 type vec_un_op =
   | VecNeg of vec_shape
   | VecAbs of vec_shape
-  | VecSqrt of vec_shape
+  | VecSqrt of [ `F32 | `F64 ]
   | VecNot
-  | VecTruncSat of [ `F32 | `F64 ] * signage * vec_shape
-  | VecConvert of [ `I32 | `I64 ] * signage * vec_shape
-  | VecExtend of [ `Low | `High ] * [ `_8 | `_16 | `_32 ] * signage * vec_shape
-  | VecPromote of [ `F32 ] * vec_shape
-  | VecDemote of [ `F64 ] * vec_shape
-  | VecCeil of vec_shape
-  | VecFloor of vec_shape
-  | VecTrunc of vec_shape
-  | VecNearest of vec_shape
-  | VecPopcnt of vec_shape
-  | VecExtAddPairwise of signage * vec_shape
+  | VecTruncSat of [ `F32 | `F64 ] * signage
+  | VecConvert of [ `F32 | `F64 ] * signage
+  | VecExtend of [ `Low | `High ] * [ `_8 | `_16 | `_32 ] * signage
+  | VecPromote (* f32x4 => f64x2 *)
+  | VecDemote (* f64x2 => f32x2 *)
+  | VecCeil of [ `F32 | `F64 ]
+  | VecFloor of [ `F32 | `F64 ]
+  | VecTrunc of [ `F32 | `F64 ]
+  | VecNearest of [ `F32 | `F64 ]
+  | VecPopcnt
+  | VecExtAddPairwise of signage * [ `I8 | `I16 ]
   (* Relaxed SIMD *)
-  | VecRelaxedTrunc of [ `F32 | `F64 ] * signage * vec_shape
-  | VecRelaxedTruncZero of [ `F64 ] * signage * vec_shape
+  | VecRelaxedTrunc of signage
+  | VecRelaxedTruncZero of signage
 
 type vec_bin_op =
   | VecAdd of vec_shape
   | VecSub of vec_shape
   | VecMul of vec_shape
-  | VecDiv of vec_shape
+  | VecDiv of [ `F32 | `F64 ]
   | VecMin of signage option * vec_shape
   | VecMax of signage option * vec_shape
-  | VecPMin of vec_shape
-  | VecPMax of vec_shape
-  | VecAvgr of signage * vec_shape
-  | VecQ15MulrSat of vec_shape
-  | VecAddSat of signage * vec_shape
-  | VecSubSat of signage * vec_shape
-  | VecDot of vec_shape
+  | VecPMin of [ `F32 | `F64 ]
+  | VecPMax of [ `F32 | `F64 ]
+  | VecAvgr of [ `I8 | `I16 ]
+  | VecQ15MulrSat
+  | VecAddSat of signage * [ `I8 | `I16 ]
+  | VecSubSat of signage * [ `I8 | `I16 ]
+  | VecDot
   | VecEq of vec_shape
   | VecNe of vec_shape
   | VecLt of signage option * vec_shape
@@ -192,26 +192,26 @@ type vec_bin_op =
   | VecOr
   | VecXor
   | VecAndNot
-  | VecNarrow of signage * vec_shape
+  | VecNarrow of signage * [ `I8 | `I16 ]
   | VecSwizzle
-  | VecExtMulLow of signage * vec_shape
-  | VecExtMulHigh of signage * vec_shape
+  | VecExtMulLow of signage * [ `_8 | `_16 | `_32 ]
+  | VecExtMulHigh of signage * [ `_8 | `_16 | `_32 ]
   (* Relaxed SIMD *)
   | VecRelaxedSwizzle
   | VecRelaxedMin of vec_shape
   | VecRelaxedMax of vec_shape
-  | VecRelaxedQ15Mulr of signage * vec_shape
-  | VecRelaxedDot of vec_shape
+  | VecRelaxedQ15Mulr
+  | VecRelaxedDot
 
-type vec_test_op = AnyTrue of vec_shape | AllTrue of vec_shape
+type vec_test_op = AnyTrue | AllTrue of vec_shape
 type vec_shift_op = Shl of vec_shape | Shr of signage * vec_shape
 type vec_bitmask_op = Bitmask of vec_shape
 
 type vec_tern_op =
-  | VecRelaxedMAdd of vec_shape
-  | VecRelaxedNMAdd of vec_shape
+  | VecRelaxedMAdd of [ `F32 | `F64 ]
+  | VecRelaxedNMAdd of [ `F32 | `F64 ]
   | VecRelaxedLaneSelect of vec_shape
-  | VecRelaxedDotAdd of vec_shape
+  | VecRelaxedDotAdd
 
 type vec_load_op =
   | Load128
@@ -223,13 +223,6 @@ type vec_load_op =
   | Load32x2U
   | Load32Zero
   | Load64Zero
-
-type vec_lane_op =
-  | Load of [ `I8 | `I16 | `I32 | `I64 | `F32 | `F64 ]
-  | Store of [ `I8 | `I16 | `I32 | `I64 ]
-
-type vec_splat_op = Splat of vec_shape
-type vec_shuffle_op = Shuffle
 
 type ('i32, 'i64, 'f32, 'f64) op =
   | I32 of 'i32
@@ -331,38 +324,37 @@ end) : sig
   type nonrec vec_un_op = vec_un_op =
     | VecNeg of vec_shape
     | VecAbs of vec_shape
-    | VecSqrt of vec_shape
+    | VecSqrt of [ `F32 | `F64 ]
     | VecNot
-    | VecTruncSat of [ `F32 | `F64 ] * signage * vec_shape
-    | VecConvert of [ `I32 | `I64 ] * signage * vec_shape
-    | VecExtend of
-        [ `Low | `High ] * [ `_8 | `_16 | `_32 ] * signage * vec_shape
-    | VecPromote of [ `F32 ] * vec_shape
-    | VecDemote of [ `F64 ] * vec_shape
-    | VecCeil of vec_shape
-    | VecFloor of vec_shape
-    | VecTrunc of vec_shape
-    | VecNearest of vec_shape
-    | VecPopcnt of vec_shape
-    | VecExtAddPairwise of signage * vec_shape
+    | VecTruncSat of [ `F32 | `F64 ] * signage
+    | VecConvert of [ `F32 | `F64 ] * signage
+    | VecExtend of [ `Low | `High ] * [ `_8 | `_16 | `_32 ] * signage
+    | VecPromote (* f32x4 => f64x2 *)
+    | VecDemote (* f64x2 => f32x2 *)
+    | VecCeil of [ `F32 | `F64 ]
+    | VecFloor of [ `F32 | `F64 ]
+    | VecTrunc of [ `F32 | `F64 ]
+    | VecNearest of [ `F32 | `F64 ]
+    | VecPopcnt
+    | VecExtAddPairwise of signage * [ `I8 | `I16 ]
     (* Relaxed SIMD *)
-    | VecRelaxedTrunc of [ `F32 | `F64 ] * signage * vec_shape
-    | VecRelaxedTruncZero of [ `F64 ] * signage * vec_shape
+    | VecRelaxedTrunc of signage
+    | VecRelaxedTruncZero of signage
 
   type nonrec vec_bin_op = vec_bin_op =
     | VecAdd of vec_shape
     | VecSub of vec_shape
     | VecMul of vec_shape
-    | VecDiv of vec_shape
+    | VecDiv of [ `F32 | `F64 ]
     | VecMin of signage option * vec_shape
     | VecMax of signage option * vec_shape
-    | VecPMin of vec_shape
-    | VecPMax of vec_shape
-    | VecAvgr of signage * vec_shape
-    | VecQ15MulrSat of vec_shape
-    | VecAddSat of signage * vec_shape
-    | VecSubSat of signage * vec_shape
-    | VecDot of vec_shape
+    | VecPMin of [ `F32 | `F64 ]
+    | VecPMax of [ `F32 | `F64 ]
+    | VecAvgr of [ `I8 | `I16 ]
+    | VecQ15MulrSat
+    | VecAddSat of signage * [ `I8 | `I16 ]
+    | VecSubSat of signage * [ `I8 | `I16 ]
+    | VecDot
     | VecEq of vec_shape
     | VecNe of vec_shape
     | VecLt of signage option * vec_shape
@@ -373,20 +365,18 @@ end) : sig
     | VecOr
     | VecXor
     | VecAndNot
-    | VecNarrow of signage * vec_shape
+    | VecNarrow of signage * [ `I8 | `I16 ]
     | VecSwizzle
-    | VecExtMulLow of signage * vec_shape
-    | VecExtMulHigh of signage * vec_shape
+    | VecExtMulLow of signage * [ `_8 | `_16 | `_32 ]
+    | VecExtMulHigh of signage * [ `_8 | `_16 | `_32 ]
     (* Relaxed SIMD *)
     | VecRelaxedSwizzle
     | VecRelaxedMin of vec_shape
     | VecRelaxedMax of vec_shape
-    | VecRelaxedQ15Mulr of signage * vec_shape
-    | VecRelaxedDot of vec_shape
+    | VecRelaxedQ15Mulr
+    | VecRelaxedDot
 
-  type nonrec vec_test_op = vec_test_op =
-    | AnyTrue of vec_shape
-    | AllTrue of vec_shape
+  type nonrec vec_test_op = vec_test_op = AnyTrue | AllTrue of vec_shape
 
   type nonrec vec_shift_op = vec_shift_op =
     | Shl of vec_shape
@@ -395,10 +385,10 @@ end) : sig
   type nonrec vec_bitmask_op = vec_bitmask_op = Bitmask of vec_shape
 
   type nonrec vec_tern_op = vec_tern_op =
-    | VecRelaxedMAdd of vec_shape
-    | VecRelaxedNMAdd of vec_shape
+    | VecRelaxedMAdd of [ `F32 | `F64 ]
+    | VecRelaxedNMAdd of [ `F32 | `F64 ]
     | VecRelaxedLaneSelect of vec_shape
-    | VecRelaxedDotAdd of vec_shape
+    | VecRelaxedDotAdd
 
   type nonrec vec_load_op = vec_load_op =
     | Load128
@@ -411,8 +401,6 @@ end) : sig
     | Load32Zero
     | Load64Zero
 
-  type nonrec vec_splat_op = vec_splat_op = Splat of vec_shape
-  type nonrec vec_shuffle_op = vec_shuffle_op = Shuffle
   type blocktype = Typeuse of X.typeuse | Valtype of X.valtype
 
   type nonrec memarg = memarg = {
@@ -544,8 +532,8 @@ end) : sig
     | VecLoadSplat of X.idx * [ `I8 | `I16 | `I32 | `I64 ] * memarg
     | VecExtract of vec_shape * signage option * int
     | VecReplace of vec_shape * int
-    | VecSplat of vec_splat_op
-    | VecShuffle of vec_shuffle_op * string
+    | VecSplat of vec_shape
+    | VecShuffle of string
     | I32WrapI64
     | I64ExtendI32 of signage
     | F32DemoteF64

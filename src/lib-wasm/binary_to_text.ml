@@ -313,7 +313,7 @@ let rec instr (names : B.names) local_names label_names label_counter stack
     | VecExtract (op, signage, lane) -> VecExtract (op, signage, lane)
     | VecReplace (op, lane) -> VecReplace (op, lane)
     | VecSplat op -> VecSplat op
-    | VecShuffle (op, v) -> VecShuffle (op, v)
+    | VecShuffle v -> VecShuffle v
     | VecTernOp op -> VecTernOp op
     | Pop v -> Pop (valtype names.types v)
     | TupleMake i -> TupleMake i

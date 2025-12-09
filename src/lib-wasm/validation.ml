@@ -1094,7 +1094,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop ctx loc V128 in
       let* () = pop ctx loc V128 in
       push (Some loc) V128
-  | VecSplat (Splat shape) ->
+  | VecSplat shape ->
       let* () = pop ctx loc (shape_type shape) in
       push (Some loc) V128
   | VecLoad (idx, sz, memarg) ->
@@ -1163,7 +1163,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop ctx loc (shape_type shape) in
       let* () = pop ctx loc V128 in
       push (Some loc) V128
-  | VecShuffle (_, lanes) ->
+  | VecShuffle lanes ->
       assert (String.for_all (fun l -> Char.code l < 32) lanes);
       let* () = pop ctx loc V128 in
       let* () = pop ctx loc V128 in

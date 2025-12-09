@@ -273,7 +273,7 @@ let runtest filename path =
         | `Invalid _ -> None
         | `Valid ->
             if false then (
-              prerr_endline "BEFORE";
+              prerr_endline " BEFORE";
               Format.eprintf "@[%a@]@." (print_module ~color:!color) m
               (*if false then prerr_endline (String.escaped text)*));
             let temp, out_channel =

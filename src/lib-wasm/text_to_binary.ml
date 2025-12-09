@@ -353,7 +353,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | VecExtract (op, signage, lane) -> VecExtract (op, signage, lane)
     | VecReplace (op, lane) -> VecReplace (op, lane)
     | VecSplat op -> VecSplat op
-    | VecShuffle (op, v) -> VecShuffle (op, v)
+    | VecShuffle v -> VecShuffle v
     | VecTernOp op -> VecTernOp op
     | Folded (i, is) ->
         Folded (instr ~resolve_type ctx i, List.map (instr ~resolve_type ctx) is)

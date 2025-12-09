@@ -705,7 +705,13 @@ let check_subtypes ctx types' types =
   assert (List.length types' = List.length types);
   List.iter2 (fun ty' ty -> check_subtype ctx ty' ty) types' types
 
-let check_type ctx i ty = check_subtype ctx (expression_type i) ty
+let check_type ctx i ty =
+  let ty' = expression_type i in
+  let ok = subtype ctx ty' ty in
+  if not ok then
+    Format.eprintf "expr: %a <: %a@." output_inferred_type ty'
+      output_inferred_type ty;
+  assert ok
 
 let rec instruction ctx (i : location instr) : _ -> _ * (_ * location) instr =
   (*

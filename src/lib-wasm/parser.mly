@@ -573,7 +573,7 @@ plaininstr:
            [i0; i1; i2; i3; i4; i5; i6; i7; i8;
             i9; i10; i11; i12; i13; i14; i15])
     in
-    with_loc $sloc (VecShuffle (Shuffle, lanes)) }
+    with_loc $sloc (VecShuffle lanes) }
 | op = VEC_LOAD_LANE i = memidx m = memarg l = u8
   { with_loc $sloc (VecLoadLane (i, op, m (lane_width op), int_of_string l)) }
 | op = VEC_STORE_LANE i = memidx m = memarg l = u8
