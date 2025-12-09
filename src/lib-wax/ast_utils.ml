@@ -13,6 +13,18 @@ let rec map_instr f instr =
             map_instr f cond,
             List.map (map_instr f) then_,
             Option.map (List.map (map_instr f)) else_ )
+    | Try { label; typ; block; catches; catch_all } ->
+        Try
+          {
+            label;
+            typ;
+            block = List.map (map_instr f) block;
+            catches =
+              List.map
+                (fun (tag, block) -> (tag, List.map (map_instr f) block))
+                catches;
+            catch_all = Option.map (List.map (map_instr f)) catch_all;
+          }
     | ( Unreachable | Nop | Pop | Null | Get _ | String _ | Int _ | Float _
       | StructDefault _ ) as x ->
         x

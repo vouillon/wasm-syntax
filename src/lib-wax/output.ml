@@ -324,6 +324,11 @@ let long_block l =
           let n = loop l1 (n - 2) in
           let n = match l2 with None -> n | Some l2 -> loop l2 (n - 1) in
           loop rem n
+      | { desc = Try { block = l; catches; catch_all; _ }; _ } :: rem ->
+          let n = loop l (n - 2) in
+          let n = List.fold_left (fun n (_, l) -> loop l (n - 1)) n catches in
+          let n = match catch_all with None -> n | Some l -> loop l (n - 1) in
+          loop rem n
       | _ :: rem -> loop rem (n - 1)
   in
   loop l 5 <= 0
@@ -454,6 +459,30 @@ let rec instr prec pp (i : _ instr) =
                   block_contents pp l2;
                   punctuation pp "}")
           | None -> punctuation pp "}")
+  | Try { label; typ = bt; block = l; catches; catch_all } ->
+      parentheses prec Block pp @@ fun () ->
+      hvbox pp (fun () ->
+          box pp (fun () ->
+              block_label pp label;
+              keyword pp "try";
+              space pp ();
+              if need_blocktype bt then (
+                blocktype pp bt;
+                space pp ());
+              punctuation pp "{");
+          block_contents pp l;
+          match (catches, catch_all) with
+          | _ :: _, _ | _, Some _ ->
+              hvbox pp (fun () ->
+                  box pp (fun () ->
+                      punctuation pp "}";
+                      space pp ();
+                      keyword pp "catch";
+                      space pp ();
+                      punctuation pp "{");
+                  (* ... *)
+                  punctuation pp "}")
+          | [], None -> punctuation pp "}")
   | Unreachable -> keyword pp "unreachable"
   | Nop -> operator pp "_"
   | Pop -> operator pp "_"
@@ -683,7 +712,7 @@ and block pp label kind bt (l : _ instr list) =
 
 and deliminated_instr pp (i : _ instr) =
   match i.desc with
-  | Block _ | Loop _ | If _ -> instr Instruction pp i
+  | Block _ | Loop _ | If _ | Try _ -> instr Instruction pp i
   | Unreachable | Nop | Pop | Get _ | Set _ | Tee _ | Call _ | TailCall _
   | String _ | Int _ | Float _ | Cast _ | NonNull _ | Test _ | Struct _
   | StructDefault _ | StructGet _ | StructSet _ | Array _ | ArrayDefault _

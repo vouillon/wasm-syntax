@@ -590,6 +590,29 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       let* () = Stack.consume inputs in
       Stack.push outputs
         (with_loc (If (label (), blocktype ctx typ, cond, if_body, else_body)))
+  | Try { label; typ; block; catches; catch_all } ->
+      let label, ctx = push_label ctx ~loop:false label typ in
+      let block = Stack.run (instructions ctx block) in
+      let catches =
+        List.map
+          (fun (t, block) ->
+            (idx ctx `Tag t, Stack.run (instructions ctx block)))
+          catches
+      in
+      let catch_all =
+        Option.map (fun block -> Stack.run (instructions ctx block)) catch_all
+      in
+      let _, outputs = blocktype_arity ctx typ in
+      Stack.push outputs
+        (with_loc
+           (Try
+              {
+                label = label ();
+                typ = blocktype ctx typ;
+                block;
+                catches;
+                catch_all;
+              }))
   | Unreachable -> Stack.push_poly (with_loc Unreachable)
   | Nop -> Stack.push 0 (with_loc Nop)
   | Pop _ ->
@@ -890,8 +913,6 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
         (with_loc
            (Call
               (with_loc (StructGet (a1, Ast.no_loc "copy")), [ i1; a2; i2; n ])))
-  (* ZZZZ To implement now *)
-  | Try _ -> Stack.push_poly (with_loc Unreachable) (* ZZZ *)
   (* Later *)
   | TryTable _ | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _
   | ArrayInitData _ | ArrayNewElem _ | Load _ | LoadS _ | Store _ | StoreS _

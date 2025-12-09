@@ -726,8 +726,8 @@ let rec grab_parameters ctx acc i =
       let* acc = grab_parameters ctx acc e in
       let* acc = grab_parameters ctx acc t in
       grab_parameters ctx acc c
-  | Block _ | Loop _ | StructDefault _ | String _ | Int _ | Float _ | Get _
-  | Null | Unreachable | Nop
+  | Block _ | Loop _ | Try _ | StructDefault _ | String _ | Int _ | Float _
+  | Get _ | Null | Unreachable | Nop
   | Let (_, None)
   | Br _ | Br_table _
   | Return None ->
@@ -896,6 +896,33 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
           else_block
       in
       return_statement i (If (label, bt, i', if_block', else_block')) results
+  | Try { label; typ = bt; block = body; catches; catch_all } ->
+      let { params; results } = bt in
+      assert (params = [||]);
+      let*! results = array_map_opt (internalize ctx) results in
+      let body' = block ctx i.info label [||] results results body in
+      let catches =
+        List.filter_map
+          (fun (tag, body) ->
+            let*@ { params; results = r } =
+              Tbl.find ctx.diagnostics ctx.tags tag
+            in
+            assert (r = [||]);
+            let+@ params =
+              array_map_opt (fun (_, typ) -> internalize ctx typ) params
+            in
+            let body' = block ctx i.info label params results results body in
+            (tag, body'))
+          catches
+      in
+      let catch_all =
+        Option.map
+          (fun body -> block ctx i.info label [||] results results body)
+          catch_all
+      in
+      return_statement i
+        (Try { label; typ = bt; block = body'; catches; catch_all })
+        results
   | Unreachable ->
       (* ZZZ Only at top_level *)
       return_statement i Unreachable [||]
@@ -1769,7 +1796,7 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
         | _ -> (*ZZZ*) assert false
       in
       return_expression i (Select (i1', i2', i3')) ty
-  | _ ->
+  | Let (([] | _ :: _), _) ->
       Format.eprintf "%a@." Output.instr i;
       assert false
 
@@ -1823,6 +1850,36 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
           else_block
       in
       return_statement i (If (label, bt, i', if_block', else_block')) results
+  | Try { label; typ = bt; block = body; catches; catch_all } ->
+      let { params; results } = bt in
+      let*! params =
+        array_map_opt (fun (_, typ) -> internalize ctx typ) params
+      in
+      let*! results = array_map_opt (internalize ctx) results in
+      let* () = pop_args ctx (Array.to_list params) in
+      let body' = block ctx i.info label params results results body in
+      let catches =
+        List.filter_map
+          (fun (tag, body) ->
+            let*@ { params; results = r } =
+              Tbl.find ctx.diagnostics ctx.tags tag
+            in
+            assert (r = [||]);
+            let+@ params =
+              array_map_opt (fun (_, typ) -> internalize ctx typ) params
+            in
+            let body' = block ctx i.info label params results results body in
+            (tag, body'))
+          catches
+      in
+      let catch_all =
+        Option.map
+          (fun body -> block ctx i.info label [||] results results body)
+          catch_all
+      in
+      return_statement i
+        (Try { label; typ = bt; block = body'; catches; catch_all })
+        results
   | Unreachable | TailCall _ | Br _ | Br_table _ | Throw _ | ThrowRef _
   | Return _ ->
       let* args = grab_parameters ctx [] i in

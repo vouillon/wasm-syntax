@@ -231,7 +231,7 @@ let rec instruction ctx i : location Text.instr list =
       folded loc
         (If { label; typ = blocktype typ; if_block; else_block })
         cond_code
-  | Unreachable -> folded loc Unreachable []
+  | Try _ (*ZZZZZZZZZZZZ*) | Unreachable -> folded loc Unreachable []
   | Nop -> folded loc Nop []
   | Pop -> []
   | Null -> folded loc (RefNull (heaptype (expr_reftype i).typ)) []

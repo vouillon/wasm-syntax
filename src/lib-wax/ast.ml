@@ -65,6 +65,13 @@ type 'info instr_desc =
       * 'info instr
       * 'info instr list
       * 'info instr list option
+  | Try of {
+      label : label option;
+      typ : functype;
+      block : 'info instr list;
+      catches : (idx * 'info instr list) list;
+      catch_all : 'info instr list option;
+    }
   | Unreachable
   | Nop
   | Pop
