@@ -71,7 +71,7 @@ module Error = struct
   let type_mismatch context ~location ty' ty =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "Expecting type@ @[<2>%a@]@ but got type@ @[<2>%a@]."
-          print_valtype ty' print_valtype ty)
+          print_valtype ty print_valtype ty')
 
   let select_type_mismatch context ~location ty1 ty2 =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->

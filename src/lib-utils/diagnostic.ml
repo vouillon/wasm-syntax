@@ -172,7 +172,7 @@ type context = {
 
 let make ?color ~source () =
   let theme = get_theme ?color () in
-  { max = 5; queue = Queue.create (); source; theme }
+  { max = 1; queue = Queue.create (); source; theme }
 
 let output_errors context =
   if not (Queue.is_empty context.queue) then (

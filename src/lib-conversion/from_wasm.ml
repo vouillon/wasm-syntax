@@ -308,11 +308,13 @@ module Stack = struct
       | (Some 1, instr) :: rem -> grab_rec (n - 1) rem (instr :: cur)
       | _ -> (stack, complete n cur)
 
-  let consume _ stack =
-    ( (match stack with
-      | (Some 1, instr) :: rem -> (None, instr) :: rem
-      | _ -> stack),
-      () )
+  let consume inputs stack =
+    if inputs = 0 then (stack, ())
+    else
+      ( (match stack with
+        | (Some 1, instr) :: rem -> (None, instr) :: rem
+        | _ -> stack),
+        () )
 
   let grab n stack = grab_rec n stack []
   let push arity i stack = ((Some arity, i) :: stack, ())
