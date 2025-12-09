@@ -57,7 +57,7 @@ Explicit types?
 
 open Ast
 
-type typed_module_annotation = Ast.storagetype list * Ast.location
+type typed_module_annotation = Ast.storagetype array * Ast.location
 
 module Output = struct
   include Output
@@ -126,6 +126,8 @@ let output_inferred_type f ty =
 module Error = struct
   open Utils
 
+  let print_name f x = Format.fprintf f "'%s'" x.desc
+
   let empty_stack context ~location =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "The stack is empty.")
@@ -146,29 +148,56 @@ module Error = struct
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "Expected array type.")
 
+  let _type_mismatch context ~location ty' ty =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "Expecting type@ @[<2>%a@]@ but got type@ @[<2>%a@]."
+          output_inferred_type ty output_inferred_type ty')
+
   let instruction_type_mismatch context ~location ty ty' =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f
           "This instruction has type@ @[<2>%a@]@ but is expected to have type@ \
            @[<2>%a@]."
           output_inferred_type ty output_inferred_type ty')
+
+  let name_already_bound context ~location kind x =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "A %s named %a is already bound" kind print_name x)
+
+  let unbound_name context ~location kind x =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The %s %a is not bound." kind print_name x)
+
+  let unsupported_tuple_type context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "Tuple types are not supported yet.")
+
+  let duplicated_field context ~location x =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "Several fields have the same name %a." print_name x)
+
+  let duplicated_parameter context ~location x =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "Several parameters have the same name %a." print_name
+          x)
 end
 
-exception Type_error of location * string
+module StringSet = Set.Make (String)
+module StringMap = Map.Make (String)
+
+let ( let*@ ) = Option.bind
+let ( let+@ ) o f = Option.map f o
+let ( let>@ ) o f = Option.iter f o
 
 module Namespace = struct
   type t = (string, string * location) Hashtbl.t
 
   let make () = Hashtbl.create 16
 
-  let register ns kind x =
+  let register d ns kind x =
     match Hashtbl.find_opt ns x.desc with
     | None -> Hashtbl.replace ns x.desc (kind, x.info)
-    | Some (kind', _loc') ->
-        raise
-          (Type_error
-             ( x.info,
-               Printf.sprintf "A %s named %s is already bound" kind' x.desc ))
+    | Some (kind', _loc') -> Error.name_already_bound d ~location:x.info kind' x
 end
 
 module Tbl = struct
@@ -180,20 +209,21 @@ module Tbl = struct
 
   let make namespace kind = { kind; namespace; tbl = Hashtbl.create 16 }
 
-  let add env x v =
-    Namespace.register env.namespace env.kind x;
+  let add d env x v =
+    Namespace.register d env.namespace env.kind x;
     Hashtbl.replace env.tbl x.desc v
 
   let override env x v = Hashtbl.replace env.tbl x.desc v
 
-  let find env x =
-    try Hashtbl.find env.tbl x.desc
+  let find d env x =
+    try Some (Hashtbl.find env.tbl x.desc)
     with Not_found ->
-      raise
-        (Type_error (x.info, Printf.sprintf "Unbound %s %s\n" env.kind x.desc))
+      Error.unbound_name d ~location:x.info env.kind x;
+      None
 
   let find_opt env x = Hashtbl.find_opt env.tbl x.desc
   let iter env f = Hashtbl.iter f env.tbl
+  let remove env x = Hashtbl.remove env.tbl x.desc
 end
 
 type type_context = {
@@ -201,80 +231,133 @@ type type_context = {
   types : (int * comptype) Tbl.t;
 }
 
-let resolve_type_name ctx name = fst (Tbl.find ctx.types name)
-let ( let*@ ) = Option.bind
-let ( let+@ ) o f = Option.map f o
-let ( let>@ ) o f = Option.iter f o
+let resolve_type_name d ctx name =
+  let+@ res = Tbl.find d ctx.types name in
+  fst res
 
-let heaptype ctx (h : heaptype) : Internal.heaptype =
+let heaptype d ctx (h : heaptype) : Internal.heaptype option =
   match h with
-  | Func -> Func
-  | NoFunc -> NoFunc
-  | Exn -> Exn
-  | NoExn -> NoExn
-  | Extern -> Extern
-  | NoExtern -> NoExtern
-  | Any -> Any
-  | Eq -> Eq
-  | I31 -> I31
-  | Struct -> Struct
-  | Array -> Array
-  | None_ -> None_
-  | Type idx -> Type (resolve_type_name ctx idx)
+  | Func -> Some Func
+  | NoFunc -> Some NoFunc
+  | Exn -> Some Exn
+  | NoExn -> Some NoExn
+  | Extern -> Some Extern
+  | NoExtern -> Some NoExtern
+  | Any -> Some Any
+  | Eq -> Some Eq
+  | I31 -> Some I31
+  | Struct -> Some Struct
+  | Array -> Some Array
+  | None_ -> Some None_
+  | Type idx ->
+      let+@ ty = resolve_type_name d ctx idx in
+      (Type ty : Internal.heaptype)
 
-let reftype ctx { nullable; typ } : Internal.reftype =
-  { nullable; typ = heaptype ctx typ }
+let reftype d ctx { nullable; typ } =
+  let+@ typ = heaptype d ctx typ in
+  { Internal.nullable; typ }
 
-let rec valtype ctx ty : Internal.valtype =
+let valtype d ctx ty : Internal.valtype option =
   match ty with
-  | I32 -> I32
-  | I64 -> I64
-  | F32 -> F32
-  | F64 -> F64
-  | V128 -> V128
-  | Ref r -> Ref (reftype ctx r)
-  | Tuple l -> Tuple (List.map (valtype ctx) l)
+  | I32 -> Some I32
+  | I64 -> Some I64
+  | F32 -> Some F32
+  | F64 -> Some F64
+  | V128 -> Some V128
+  | Ref r ->
+      let+@ ty = reftype d ctx r in
+      (Ref ty : Internal.valtype)
+  | Tuple _ ->
+      Error.unsupported_tuple_type d ~location:(Ast.no_loc ()).info;
+      None
 
-let functype ctx { params; results } : Internal.functype =
-  {
-    params = Array.map (fun (_, ty) -> valtype ctx ty) params;
-    results = Array.map (fun ty -> valtype ctx ty) results;
-  }
+let array_map_opt f arr =
+  let exception Short_circuit in
+  try
+    let result =
+      Array.init (Array.length arr) (fun i ->
+          match f arr.(i) with Some v -> v | None -> raise Short_circuit)
+    in
+    Some result
+  with Short_circuit -> None
 
-let storagetype ctx ty : Internal.storagetype =
-  match ty with Value ty -> Value (valtype ctx ty) | Packed ty -> Packed ty
+let functype d ctx { params; results } =
+  ignore
+    (Array.fold_left
+       (fun s (name_opt, _) ->
+         match name_opt with
+         | None -> s
+         | Some name ->
+             if StringSet.mem name.desc s then
+               Error.duplicated_parameter d ~location:name.info name;
+             StringSet.add name.desc s)
+       StringSet.empty params);
+  let*@ params = array_map_opt (fun (_, ty) -> valtype d ctx ty) params in
+  let+@ results = array_map_opt (fun ty -> valtype d ctx ty) results in
+  { Internal.params; results }
 
-let muttype f ctx { mut; typ } = { mut; typ = f ctx typ }
-let fieldtype ctx ty = muttype storagetype ctx ty
-
-let comptype ctx (ty : comptype) : Internal.comptype =
+let storagetype d ctx ty =
   match ty with
-  | Func ty -> Func (functype ctx ty)
-  | Struct fields -> Struct (Array.map (fun (_, ty) -> fieldtype ctx ty) fields)
-  | Array field -> Array (fieldtype ctx field)
+  | Value ty ->
+      let+@ ty = valtype d ctx ty in
+      (Value ty : Internal.storagetype)
+  | Packed ty -> Some (Packed ty)
 
-let subtype ctx { typ; supertype; final } : Internal.subtype =
-  {
-    typ = comptype ctx typ;
-    supertype = Option.map (fun ty -> resolve_type_name ctx ty) supertype;
-    final;
-  }
+let muttype f d ctx { mut; typ } =
+  let+@ typ = f d ctx typ in
+  { mut; typ }
 
-let rectype ctx ty = Array.map (fun (_, ty) -> subtype ctx ty) ty
+let fieldtype d ctx ty = muttype storagetype d ctx ty
 
-let add_type ctx ty =
-  (*ZZZ Check unique field names*)
-  Array.iteri
-    (fun i (name, (typ : subtype)) -> Tbl.add ctx.types name (lnot i, typ.typ))
-    ty;
-  let i' = Wasm.Types.add_rectype ctx.internal_types (rectype ctx ty) in
+let comptype d ctx (ty : comptype) =
+  match ty with
+  | Func ty ->
+      let+@ ty = functype d ctx ty in
+      (Func ty : Internal.comptype)
+  | Struct fields ->
+      ignore
+        (Array.fold_left
+           (fun s (name, _) ->
+             if StringSet.mem name.desc s then
+               Error.duplicated_field d ~location:name.info name;
+             StringSet.add name.desc s)
+           StringSet.empty fields);
+      let+@ fields = array_map_opt (fun (_, ty) -> fieldtype d ctx ty) fields in
+      (Struct fields : Internal.comptype)
+  | Array field ->
+      let+@ field = fieldtype d ctx field in
+      (Array field : Internal.comptype)
+
+let subtype d ctx { typ; supertype; final } =
+  let*@ typ = comptype d ctx typ in
+  let+@ supertype =
+    match supertype with
+    | None -> Some None
+    | Some ty ->
+        let+@ ty = resolve_type_name d ctx ty in
+        Some ty
+  in
+  { Internal.typ; supertype; final }
+
+let rectype d ctx ty = array_map_opt (fun (_, ty) -> subtype d ctx ty) ty
+
+let add_type d ctx ty =
   Array.iteri
     (fun i (name, (typ : subtype)) ->
-      Tbl.override ctx.types name (i' + i, typ.typ))
+      Tbl.add d ctx.types name (lnot i, typ.typ))
     ty;
-  i'
-
-module StringMap = Map.Make (String)
+  match rectype d ctx ty with
+  | None ->
+      (* Remove temporary names on failure *)
+      Array.iter (fun (name, _) -> Tbl.remove ctx.types name) ty;
+      None
+  | Some ity ->
+      let i' = Wasm.Types.add_rectype ctx.internal_types ity in
+      Array.iteri
+        (fun i (name, (typ : subtype)) ->
+          Tbl.override ctx.types name (i' + i, typ.typ))
+        ty;
+      Some i'
 
 type module_context = {
   diagnostics : Utils.Diagnostic.context;
@@ -286,8 +369,8 @@ type module_context = {
   tags : functype Tbl.t;
   (*  memories : limits Tbl.t;*)
   mutable locals : inferred_valtype StringMap.t;
-  control_types : (string option * inferred_valtype list) list;
-  return_types : inferred_valtype list;
+  control_types : (string option * inferred_type UnionFind.t array) list;
+  return_types : inferred_type UnionFind.t array;
 }
 
 let lookup_func_type ?location ctx name =
@@ -317,30 +400,27 @@ let lookup_array_type ?location ctx name =
         ~location:(Option.value ~default:name.info location);
       None
 
-let top_heap_type ctx (t : heaptype) : heaptype =
+let top_heap_type ctx (t : heaptype) : heaptype option =
   match t with
-  | Any | Eq | I31 | Struct | Array | None_ -> Any
-  | Func | NoFunc -> Func
-  | Exn | NoExn -> Exn
-  | Extern | NoExtern -> Extern
+  | Any | Eq | I31 | Struct | Array | None_ -> Some Any
+  | Func | NoFunc -> Some Func
+  | Exn | NoExn -> Some Exn
+  | Extern | NoExtern -> Some Extern
   | Type ty -> (
-      match snd (Tbl.find ctx.types ty) with
-      | Struct _ | Array _ -> Any
-      | Func _ -> Func)
+      let+@ ty = Tbl.find ctx.diagnostics ctx.types ty in
+      match snd ty with Struct _ | Array _ -> Any | Func _ -> Func)
 
 let diff_ref_type t1 t2 =
   { nullable = t1.nullable && not t2.nullable; typ = t1.typ }
-
-let diff_ref_type_internal (t1 : Internal.reftype) (t2 : Internal.reftype) =
-  { Internal.nullable = t1.nullable && not t2.nullable; typ = t1.typ }
 
 let storage_subtype ctx ty ty' =
   match (ty, ty') with
   | Packed I8, Packed I8 | Packed I16, Packed I16 -> true
   | Value ty, Value ty' ->
-      Wasm.Types.val_subtype ctx.subtyping_info
-        (valtype ctx.type_context ty)
-        (valtype ctx.type_context ty')
+      Option.value ~default:true (* Do not generate a spurious error *)
+        (let*@ ty = valtype ctx.diagnostics ctx.type_context ty in
+         let+@ ty' = valtype ctx.diagnostics ctx.type_context ty' in
+         Wasm.Types.val_subtype ctx.subtyping_info ty ty')
   | Packed I8, Packed I16
   | Packed I16, Packed I8
   | Packed _, Value _
@@ -414,28 +494,28 @@ let subtype ctx ty ty' =
   | _, Unknown -> assert false
 
 let cast ctx ty ty' =
-  (*ZZZ Cast between Any and Extern *)
   let ity = UnionFind.find ty in
   match (ity, ty') with
   | (Number | Int), Ref { typ = I31; _ } ->
       UnionFind.set ty (Valtype { typ = I32; internal = I32 });
       true
-  | (Number | Int | Unknown), I32 | Int, F32 ->
+  | (Number | Int), I32 | Int, F32 ->
       UnionFind.set ty (Valtype { typ = I32; internal = I32 });
       true
-  | (Number | Int | Unknown), I64 | Int, F64 ->
+  | (Number | Int), I64 | Int, F64 ->
       UnionFind.set ty (Valtype { typ = I64; internal = I64 });
       true
-  | (Number | Float | Unknown), F32 | Float, I32 ->
+  | (Number | Float), F32 | Float, I32 ->
       UnionFind.set ty (Valtype { typ = F32; internal = F32 });
       true
-  | (Number | Float | Unknown), F64 | Float, I64 ->
+  | (Number | Float), F64 | Float, I64 ->
       UnionFind.set ty (Valtype { typ = F64; internal = F64 });
       true
   | Null, Ref { typ = ty'; _ } ->
-      let ty' = Ref { nullable = true; typ = top_heap_type ctx ty' } in
-      let ity' = valtype ctx.type_context ty' in
-      UnionFind.set ty (Valtype { typ = ty'; internal = ity' });
+      (let>@ typ = top_heap_type ctx ty' in
+       let ty' = Ref { nullable = true; typ } in
+       let>@ ity' = valtype ctx.diagnostics ctx.type_context ty' in
+       UnionFind.set ty (Valtype { typ = ty'; internal = ity' }));
       true
   | Valtype { internal = F32 | F64; _ }, (F32 | F64)
   | Valtype { internal = I32 | I64; _ }, I32
@@ -444,19 +524,19 @@ let cast ctx ty ty' =
   | Valtype { internal = I32; _ }, Ref { typ = I31; _ } ->
       true
   | Valtype { internal = Ref _ as ity; _ }, Ref { typ = ty'; nullable } -> (
-      (let ty' = Ref { nullable = true; typ = top_heap_type ctx ty' } in
-       let ity' = valtype ctx.type_context ty' in
-       Wasm.Types.val_subtype ctx.subtyping_info ity ity')
+      Option.value ~default:true
+        (let*@ typ = top_heap_type ctx ty' in
+         let ty' = Ref { nullable = true; typ } in
+         let+@ ity' = valtype ctx.diagnostics ctx.type_context ty' in
+         Wasm.Types.val_subtype ctx.subtyping_info ity ity')
       ||
       match ty' with
       | Extern ->
-          let ty' = Ref { nullable; typ = Any } in
-          let ity' = valtype ctx.type_context ty' in
-          Wasm.Types.val_subtype ctx.subtyping_info ity ity'
+          Wasm.Types.val_subtype ctx.subtyping_info ity
+            (Ref { nullable; typ = Any })
       | Any ->
-          let ty' = Ref { nullable; typ = Extern } in
-          let ity' = valtype ctx.type_context ty' in
-          Wasm.Types.val_subtype ctx.subtyping_info ity ity'
+          Wasm.Types.val_subtype ctx.subtyping_info ity
+            (Ref { nullable; typ = Extern })
       | _ -> false)
   | ( (Number | Int | Float | Valtype { internal = I32 | F32 | I64 | F64; _ }),
       ( Ref
@@ -478,30 +558,15 @@ let cast ctx ty ty' =
   | Valtype { internal = Tuple _; _ }, _
   | (Int8 | Int16), _ ->
       false
-  | Unknown, Ref { typ = ty'; nullable } ->
-      let ty' = Ref { nullable; typ = top_heap_type ctx ty' } in
-      let ity' = valtype ctx.type_context ty' in
-      UnionFind.set ty (Valtype { typ = ty'; internal = ity' });
-      true
-  | Unknown, V128 ->
-      UnionFind.set ty (Valtype { typ = V128; internal = V128 });
-      true
-  | Unknown, Tuple _ -> assert false
+  | Unknown, _ -> true
 
 let signed_cast ctx ty ty' =
   let ity = UnionFind.find ty in
   match (ity, ty') with
-  | Unknown, `I32 ->
-      UnionFind.set ty (Valtype { typ = F32; internal = F32 });
-      true
-  | Unknown, (`F32 | `F64) ->
-      UnionFind.set ty (Valtype { typ = I32; internal = I32 });
-      true
   | (Int8 | Int16), `I32 -> true
   | Valtype { internal = Ref _ as ity; _ }, `I32 ->
-      let ty' = Ref { nullable = true; typ = Any } in
-      let ity' = valtype ctx.type_context ty' in
-      Wasm.Types.val_subtype ctx.subtyping_info ity ity'
+      Wasm.Types.val_subtype ctx.subtyping_info ity
+        (Ref { nullable = true; typ = Any })
   | Null, `I32 ->
       UnionFind.set ty
         (Valtype
@@ -510,7 +575,7 @@ let signed_cast ctx ty ty' =
              internal = Ref { typ = Any; nullable = true };
            });
       true
-  | (Unknown | Number | Int), `I64 ->
+  | (Number | Int), `I64 ->
       UnionFind.set ty (Valtype { typ = I32; internal = I32 });
       true
   | Valtype { internal = I32; _ }, `I64
@@ -540,6 +605,7 @@ let signed_cast ctx ty ty' =
           } ),
       _ ) ->
       false
+  | Unknown, _ -> true
 
 type stack =
   | Unreachable
@@ -576,7 +642,7 @@ let ( let*! ) e f =
       return
         {
           desc = Ast.Unreachable;
-          info = ([ UnionFind.make Unknown ], (Ast.no_loc ()).info);
+          info = ([| UnionFind.make Unknown |], (Ast.no_loc ()).info);
         }
 
 let pop_any ctx i st =
@@ -587,6 +653,12 @@ let pop_any ctx i st =
       Error.empty_stack ctx.diagnostics ~location:i.info;
       (st, UnionFind.make Unknown)
 
+(*ZZZ This is for block parameters and return values:
+  there should be n .. on the stack, but there are ...
+  (with type)
+  The nth argument should have type BLA but has type BLA
+  (unless we have a locationfrom the stack)
+*)
 let pop ctx ty st =
   match st with
   | Unreachable -> (st, ())
@@ -597,7 +669,10 @@ let pop ctx ty st =
           output_inferred_type ty;
       assert ok;
       (r, ())
-  | Empty -> assert false
+  | Empty ->
+      (*ZZZ*)
+      Error.empty_stack ctx.diagnostics ~location:(Ast.no_loc ()).info;
+      (st, ())
 
 let rec pop_args ctx args =
   match args with
@@ -690,11 +765,19 @@ let with_empty_stack ctx ~kind:_ ~location f =
   | Empty | Unreachable -> ());
   res
 
+let internalize_valtype ctx typ =
+  let+@ internal = valtype ctx.diagnostics ctx.type_context typ in
+  { typ; internal }
+
+let internalize ctx typ =
+  let+@ internal = valtype ctx.diagnostics ctx.type_context typ in
+  UnionFind.make (Valtype { typ; internal })
+
 let fieldtype ctx (f : fieldtype) =
   match f.typ with
-  | Value typ -> Valtype { typ; internal = valtype ctx.type_context typ }
-  | Packed I8 -> Int8
-  | Packed I16 -> Int16
+  | Value typ -> internalize ctx typ
+  | Packed I8 -> Some (UnionFind.make Int8)
+  | Packed I16 -> Some (UnionFind.make Int16)
 
 let unpack_type (f : fieldtype) =
   match f.typ with Value v -> v | Packed _ -> I32
@@ -742,13 +825,14 @@ let field_has_default (ty : fieldtype) =
       | Tuple _ -> assert false)
 
 let return_statement (i : location instr)
-    (desc : (inferred_type UnionFind.t list * location) instr_desc) ty st =
-  (st, { desc; info = (ty, i.info) })
+    (desc : (inferred_type UnionFind.t array * location) instr_desc)
+    (ty : _ array) st =
+  (st, { desc; info = ((ty : _ array), i.info) })
 
-let return_expression i desc ty = return_statement i desc [ ty ]
+let return_expression i desc ty = return_statement i desc [| ty |]
 
 let expression_type i =
-  match i.info with [ ty ], _ -> ty | _ -> assert false (*ZZZ*)
+  match i.info with [| ty |], _ -> ty | _ -> assert false (*ZZZ*)
 
 let check_subtype ctx ty' ty =
   let ok = subtype ctx ty' ty in
@@ -757,8 +841,8 @@ let check_subtype ctx ty' ty =
   assert ok
 
 let check_subtypes ctx types' types =
-  assert (List.length types' = List.length types);
-  List.iter2 (fun ty' ty -> check_subtype ctx ty' ty) types' types
+  assert (Array.length types' = Array.length types);
+  Array.iter2 (fun ty' ty -> check_subtype ctx ty' ty) types' types
 
 let check_type ctx i ty =
   let ty' = expression_type i in
@@ -774,66 +858,50 @@ let _print_arg_stack f l =
     ~pp_sep:(fun f () -> Format.fprintf f "@ ")
     output_inferred_type f l
 
-let rec instruction ctx i : 'a list -> 'a list * 'b =
+let split_on_last_type i =
+  let a = fst i.info in
+  let len = Array.length a in
+  assert (len > 0);
+  (a.(len - 1), Array.sub a 0 (len - 1))
+
+let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
   (*
   let* () = print_stack in
 *)
   if false then Format.eprintf "%a@." Output.instr i;
   match i.desc with
   | Block (label, bt, instrs) ->
-      (*ZZZ Blocks take argument from the stack *)
       let { params; results } = bt in
-      let results =
-        Array.to_list
-          (Array.map
-             (fun typ -> { typ; internal = valtype ctx.type_context typ })
-             results)
-      in
-      (*ZZZ*)
+      (*ZZZ Blocks take argument from the stack *)
       assert (params = [||]);
-      let instrs' = block ctx i.info label [] results results instrs in
-      return_statement i
-        (Block (label, bt, instrs'))
-        (List.map (fun typ -> UnionFind.make (Valtype typ)) results)
+      let*! results = array_map_opt (internalize ctx) results in
+      let instrs' = block ctx i.info label [||] results results instrs in
+      return_statement i (Block (label, bt, instrs')) results
   | Loop (label, bt, instrs) ->
       let { params; results } = bt in
-      let results =
-        Array.to_list
-          (Array.map
-             (fun typ -> { typ; internal = valtype ctx.type_context typ })
-             results)
-      in
       assert (params = [||]);
-      let instrs' = block ctx i.info label [] results [] instrs in
-      return_statement i
-        (Loop (label, bt, instrs'))
-        (List.map (fun typ -> UnionFind.make (Valtype typ)) results)
+      let*! results = array_map_opt (internalize ctx) results in
+      let instrs' = block ctx i.info label [||] results [||] instrs in
+      return_statement i (Loop (label, bt, instrs')) results
   | If (label, bt, i', if_block, else_block) ->
       let* i' = instruction ctx i' in
       let { params; results } = bt in
       assert (params = [||]);
       (*ZZZ*)
-      let results =
-        Array.to_list
-          (Array.map
-             (fun typ -> { typ; internal = valtype ctx.type_context typ })
-             results)
-      in
-      let if_block' = block ctx i.info label [] results results if_block in
+      let*! results = array_map_opt (internalize ctx) results in
+      let if_block' = block ctx i.info label [||] results results if_block in
       let else_block' =
         Option.map
-          (fun b -> block ctx i.info label [] results results b)
+          (fun b -> block ctx i.info label [||] results results b)
           else_block
       in
-      return_statement i
-        (If (label, bt, i', if_block', else_block'))
-        (List.map (fun typ -> UnionFind.make (Valtype typ)) results)
+      return_statement i (If (label, bt, i', if_block', else_block')) results
   | Unreachable ->
       (* ZZZ Only at top_level *)
-      return_statement i Unreachable []
+      return_statement i Unreachable [||]
   | Nop ->
       (* ZZZ Only at top_level *)
-      return_statement i Nop []
+      return_statement i Nop [||]
   | Pop ->
       let* ty = pop_parameter in
       return_expression i Pop ty
@@ -860,7 +928,7 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       return_expression i desc (UnionFind.make (Valtype ty))
   | Set (None, i') ->
       let* i' = instruction ctx i' in
-      return_statement i (Set (None, i')) []
+      return_statement i (Set (None, i')) [||]
   | Set (Some idx, i') ->
       let ty =
         match StringMap.find_opt idx.desc ctx.locals with
@@ -878,7 +946,7 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       in
       let* i' = instruction ctx i' in
       check_type ctx i' (UnionFind.make (Valtype ty));
-      return_statement i (Set (Some idx, i')) []
+      return_statement i (Set (Some idx, i')) [||]
   | Tee (idx, i') ->
       let* i' = instruction ctx i' in
       (*ZZZ local *)
@@ -909,12 +977,8 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       | Valtype { typ = Ref { typ = Type ty; _ }; _ } ->
           let>@ typ = lookup_array_type ctx ty in
           assert typ.mut;
-          let typ = unpack_type typ in
+          let>@ ty = internalize ctx (unpack_type typ) in
           let ty' = expression_type v' in
-          let ty =
-            UnionFind.make
-              (Valtype { typ; internal = valtype ctx.type_context typ })
-          in
           let ok = subtype ctx ty' ty in
           if not ok then
             Format.eprintf "%a <: %a@." output_inferred_type ty'
@@ -923,9 +987,12 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       | _ -> assert false (*ZZZ*));
       return_statement i
         (Call
-           ( { desc = StructGet (a', meth); info = ([], func.info) },
+           ( {
+               desc = StructGet (a', meth);
+               info = ([| (*ignored*) |], func.info);
+             },
              [ j'; v'; n' ] ))
-        []
+        [||]
   | Call
       ( ({ desc = StructGet (a1, ({ desc = "copy"; _ } as meth)); _ } as func),
         [ i1; a2; i2; n ] ) ->
@@ -953,9 +1020,12 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       | _ -> assert false (*ZZZ*));
       return_statement i
         (Call
-           ( { desc = StructGet (a1', meth); info = ([], func.info) },
+           ( {
+               desc = StructGet (a1', meth);
+               info = ([| (*unused*) |], func.info);
+             },
              [ i1'; a2'; i2'; n' ] ))
-        []
+        [||]
   | Call
       ( ({ desc = Get ({ desc = "rotl" | "rotr"; _ } as meth); _ } as func),
         [ i1; i2 ] ) ->
@@ -963,7 +1033,9 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       let* i2' = instruction ctx i2 in
       let ty = check_int_bin_op (expression_type i1') (expression_type i2') in
       return_expression i
-        (Call ({ desc = Get meth; info = ([], func.info) }, [ i1'; i2' ]))
+        (Call
+           ( { desc = Get meth; info = ([| (*unused*) |], func.info) },
+             [ i1'; i2' ] ))
         ty
   | Call
       ( ({ desc = Get ({ desc = "copysign" | "min" | "max"; _ } as meth); _ } as
@@ -973,7 +1045,9 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       let* i2' = instruction ctx i2 in
       let ty = check_float_bin_op (expression_type i1') (expression_type i2') in
       return_expression i
-        (Call ({ desc = Get meth; info = ([], func.info) }, [ i1'; i2' ]))
+        (Call
+           ( { desc = Get meth; info = ([| (*unused*) |], func.info) },
+             [ i1'; i2' ] ))
         ty
   | Call (i', l) -> (
       let* l' = instructions ctx l in
@@ -981,24 +1055,15 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       match UnionFind.find (expression_type i') with
       | Valtype { typ = Ref { typ = Type ty; _ }; _ } ->
           let*! typ = lookup_func_type ctx ty in
-          let types =
-            Array.to_list
-              (Array.map
-                 (fun (_, typ) ->
-                   UnionFind.make
-                     (Valtype { typ; internal = valtype ctx.type_context typ }))
-                 typ.params)
-          in
-          assert (List.length types = List.length l');
-          List.iter2 (fun i ty -> check_type ctx i ty) l' types;
-          return_statement i
-            (Call (i', l'))
-            (Array.to_list
-               (Array.map
-                  (fun typ ->
-                    UnionFind.make
-                      (Valtype { typ; internal = valtype ctx.type_context typ }))
-                  typ.results))
+          (let>@ param_types =
+             array_map_opt (fun (_, typ) -> internalize ctx typ) typ.params
+           in
+           assert (Array.length param_types = List.length l');
+           Array.iter2
+             (fun i ty -> check_type ctx i ty)
+             (Array.of_list l') param_types);
+          let*! returned_types = array_map_opt (internalize ctx) typ.results in
+          return_statement i (Call (i', l')) returned_types
       | _ -> assert false (*ZZZ*))
   | TailCall (i', l) -> (
       let* l' = instructions ctx l in
@@ -1006,29 +1071,16 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       match UnionFind.find (expression_type i') with
       | Valtype { typ = Ref { typ = Type ty; _ }; _ } ->
           let*! typ = lookup_func_type ctx ty in
-          let param_types =
-            Array.to_list
-              (Array.map
-                 (fun (_, typ) ->
-                   UnionFind.make
-                     (Valtype { typ; internal = valtype ctx.type_context typ }))
-                 typ.params)
-          in
-          assert (List.length param_types = List.length l');
-          List.iter2 (fun i ty -> check_type ctx i ty) l' param_types;
-          let func_result_types =
-            Array.to_list
-              (Array.map
-                 (fun typ ->
-                   UnionFind.make
-                     (Valtype { typ; internal = valtype ctx.type_context typ }))
-                 typ.results)
-          in
-          let return_types =
-            List.map (fun typ -> UnionFind.make (Valtype typ)) ctx.return_types
-          in
-          check_subtypes ctx func_result_types return_types;
-          return_statement i (TailCall (i', l')) []
+          (let>@ param_types =
+             array_map_opt (fun (_, typ) -> internalize ctx typ) typ.params
+           in
+           assert (Array.length param_types = List.length l');
+           Array.iter2
+             (fun i ty -> check_type ctx i ty)
+             (Array.of_list l') param_types);
+          (let>@ returned_types = array_map_opt (internalize ctx) typ.results in
+           check_subtypes ctx returned_types ctx.return_types);
+          return_statement i (TailCall (i', l')) [||]
       | _ ->
           Format.eprintf "%a@." Output.instr i;
           assert false)
@@ -1037,27 +1089,25 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       | None -> assert false (*ZZZ*)
       | Some ty ->
           ignore (lookup_array_type ctx ty);
-          let typ = Ref { nullable = false; typ = Type ty } in
-          return_expression i desc
-            (UnionFind.make
-               (Valtype { typ; internal = valtype ctx.type_context typ })))
+          let*! typ =
+            internalize ctx (Ref { nullable = false; typ = Type ty })
+          in
+          return_expression i desc typ)
   | Int _ as desc -> return_expression i desc (UnionFind.make Number)
   | Float _ as desc -> return_expression i desc (UnionFind.make Float)
   | Cast (i', typ) ->
       let* i' = instruction ctx i' in
-      let ty =
+      let*! ty =
         let ty' = expression_type i' in
         match typ with
         | Valtype typ ->
-            let ty = valtype ctx.type_context typ in
             let ok = cast ctx ty' typ in
             if not ok then (
               Format.eprintf "%a@." Output.instr i;
               Format.eprintf "cast %a => %a@." output_inferred_type ty'
                 Output.valtype typ);
             assert ok;
-            let ty = UnionFind.make (Valtype { typ; internal = ty }) in
-            ty
+            internalize ctx typ
         | Signedtype { typ; _ } ->
             let ok = signed_cast ctx ty' typ in
             if not ok then (
@@ -1069,22 +1119,21 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
                 | `F32 -> "f32"
                 | `F64 -> "f64"));
             assert ok;
-            let typ, (ty : Internal.valtype) =
+            let typ =
               match typ with
-              | `I32 -> (I32, I32)
-              | `I64 -> (I64, I64)
-              | `F32 -> (F32, F32)
-              | `F64 -> (F64, F64)
+              | `I32 -> I32
+              | `I64 -> I64
+              | `F32 -> F32
+              | `F64 -> F64
             in
-            UnionFind.make (Valtype { typ; internal = ty })
+            internalize ctx typ
       in
       return_expression i (Cast (i', typ)) ty
   | Test (i, ty) ->
       let* i' = instruction ctx i in
-      let typ = Ref { nullable = true; typ = top_heap_type ctx ty.typ } in
-      check_type ctx i'
-        (UnionFind.make
-           (Valtype { typ; internal = valtype ctx.type_context typ }));
+      (let>@ typ = top_heap_type ctx ty.typ in
+       let>@ typ = internalize ctx (Ref { nullable = true; typ }) in
+       check_type ctx i' typ);
       return_expression i
         (Test (i', ty))
         (UnionFind.make (Valtype { typ = I32; internal = I32 }))
@@ -1106,19 +1155,15 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
                 | Some (name, i') ->
                     let* l = prev in
                     let* i' = instruction ctx i' in
-                    let typ = unpack_type f in
-                    check_type ctx i'
-                      (UnionFind.make
-                         (Valtype
-                            { typ; internal = valtype ctx.type_context typ }));
+                    (let>@ typ = internalize ctx (unpack_type f) in
+                     check_type ctx i' typ);
                     return ((name, i') :: l))
               (return []) field_types
           in
-          let typ = Ref { nullable = false; typ = Type typ } in
-          return_expression i
-            (Struct (ty, fields'))
-            (UnionFind.make
-               (Valtype { typ; internal = valtype ctx.type_context typ })))
+          let*! typ =
+            internalize ctx (Ref { nullable = false; typ = Type typ })
+          in
+          return_expression i (Struct (ty, fields')) typ)
   | StructDefault ty as desc -> (
       match ty with
       | None -> assert false (*ZZZ*)
@@ -1126,10 +1171,10 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
           let*! fields = lookup_struct_type ctx ty in
           (*ZZZ*)
           assert (Array.for_all (fun (_, ty) -> field_has_default ty) fields);
-          let typ = Ref { nullable = false; typ = Type ty } in
-          return_expression i desc
-            (UnionFind.make
-               (Valtype { typ; internal = valtype ctx.type_context typ })))
+          let*! typ =
+            internalize ctx (Ref { nullable = false; typ = Type ty })
+          in
+          return_expression i desc typ)
   | StructGet (i', field) ->
       let* i' = instruction ctx i' in
       let*! ty =
@@ -1139,13 +1184,13 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
             let*@ _, def = Tbl.find_opt ctx.type_context.types ty in
             match def with
             | Struct fields ->
-                let+@ typ =
+                let*@ typ =
                   Array.find_map
                     (fun (nm, typ) ->
                       if nm.desc = field.desc then Some typ else None)
                     fields
                 in
-                UnionFind.make (fieldtype ctx typ)
+                fieldtype ctx typ
             | Array _ when field.desc = "length" ->
                 Some (UnionFind.make (Valtype { typ = I32; internal = I32 }))
             | Func _ | Array _ ->
@@ -1192,13 +1237,9 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
               assert false
           | Some typ ->
               assert typ.mut;
-              let typ = unpack_type typ in
-              let ty =
-                UnionFind.make
-                  (Valtype { typ; internal = valtype ctx.type_context typ })
-              in
-              check_type ctx i2' ty;
-              return_statement i (StructSet (i1', field, i2')) [])
+              (let>@ ty = internalize ctx (unpack_type typ) in
+               check_type ctx i2' ty);
+              return_statement i (StructSet (i1', field, i2')) [||])
       | _ -> assert false (*ZZZ*))
   | Array (ty, i1, i2) -> (
       let* i1' = instruction ctx i1 in
@@ -1209,15 +1250,12 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       | None -> assert false (*ZZZ*)
       | Some ty ->
           (let>@ field' = lookup_array_type ctx ty in
-           let typ = unpack_type field' in
-           check_type ctx i1'
-             (UnionFind.make
-                (Valtype { typ; internal = valtype ctx.type_context typ })));
-          let typ = Ref { nullable = false; typ = Type ty } in
-          return_expression i
-            (Array (Some ty, i1', i2'))
-            (UnionFind.make
-               (Valtype { typ; internal = valtype ctx.type_context typ })))
+           let>@ typ = internalize ctx (unpack_type field') in
+           check_type ctx i1' typ);
+          let*! typ =
+            internalize ctx (Ref { nullable = false; typ = Type ty })
+          in
+          return_expression i (Array (Some ty, i1', i2')) typ)
   | ArrayDefault (ty, i) -> (
       let* i' = instruction ctx i in
       match ty with
@@ -1227,33 +1265,30 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
             (UnionFind.make (Valtype { typ = I32; internal = I32 }));
           (let>@ field = lookup_array_type ctx ty in
            assert (field_has_default field));
-          let typ = Ref { nullable = false; typ = Type ty } in
-          return_expression i
-            (ArrayDefault (Some ty, i'))
-            (UnionFind.make
-               (Valtype { typ; internal = valtype ctx.type_context typ })))
+          let*! typ =
+            internalize ctx (Ref { nullable = false; typ = Type ty })
+          in
+          return_expression i (ArrayDefault (Some ty, i')) typ)
   | ArrayFixed (ty, instrs) -> (
       match ty with
       | None -> assert false (*ZZZ*)
       | Some ty ->
           let*! field' = lookup_array_type ctx ty in
-          let typ = unpack_type field' in
-          let typ = { typ; internal = valtype ctx.type_context typ } in
-          let typ = UnionFind.make (Valtype typ) in
+          let typ = internalize ctx (unpack_type field') in
           let* instrs' =
             List.fold_left
               (fun prev i' ->
                 let* l = prev in
                 let* i' = instruction ctx i' in
-                check_type ctx i' typ;
+                (let>@ typ = typ in
+                 check_type ctx i' typ);
                 return (i' :: l))
               (return []) instrs
           in
-          let typ = Ref { nullable = false; typ = Type ty } in
-          return_expression i
-            (ArrayFixed (Some ty, instrs'))
-            (UnionFind.make
-               (Valtype { typ; internal = valtype ctx.type_context typ })))
+          let*! typ =
+            internalize ctx (Ref { nullable = false; typ = Type ty })
+          in
+          return_expression i (ArrayFixed (Some ty, instrs')) typ)
   | ArrayGet (i1, i2) -> (
       let* i1' = instruction ctx i1 in
       let* i2' = instruction ctx i2 in
@@ -1262,9 +1297,8 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       match UnionFind.find (expression_type i1') with
       | Valtype { typ = Ref { typ = Type ty; _ }; _ } ->
           let*! typ = lookup_array_type ~location:i1.info ctx ty in
-          return_expression i
-            (ArrayGet (i1', i2'))
-            (UnionFind.make (fieldtype ctx typ))
+          let*! ty = fieldtype ctx typ in
+          return_expression i (ArrayGet (i1', i2')) ty
       | _ -> assert false (*ZZZ*))
   | ArraySet (i1, i2, i3) -> (
       let* i1' = instruction ctx i1 in
@@ -1274,21 +1308,17 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
         (UnionFind.make (Valtype { typ = I32; internal = I32 }));
       match UnionFind.find (expression_type i1') with
       | Valtype { typ = Ref { typ = Type ty; _ }; _ } ->
-          let*! typ = lookup_array_type ~location:i1.info ctx ty in
-          assert typ.mut;
-          let typ = unpack_type typ in
-          let ty' = expression_type i3' in
-          let ty =
-            UnionFind.make
-              (Valtype { typ; internal = valtype ctx.type_context typ })
-          in
-          let ok = subtype ctx ty' ty in
-          if not ok then
-            Format.eprintf "%a <: %a@." output_inferred_type ty'
-              output_inferred_type ty;
-          assert ok;
-          return_statement i (ArraySet (i1', i2', i3')) []
-      | Unknown -> return_statement i (ArraySet (i1', i2', i3')) []
+          (let>@ typ = lookup_array_type ~location:i1.info ctx ty in
+           assert typ.mut;
+           let>@ ty = internalize ctx (unpack_type typ) in
+           let ty' = expression_type i3' in
+           let ok = subtype ctx ty' ty in
+           if not ok then
+             Format.eprintf "%a <: %a@." output_inferred_type ty'
+               output_inferred_type ty;
+           assert ok);
+          return_statement i (ArraySet (i1', i2', i3')) [||]
+      | Unknown -> return_statement i (ArraySet (i1', i2', i3')) [||]
       | _ -> assert false)
   | BinOp (op, i1, i2) ->
       let* i1' = instruction ctx i1 in
@@ -1503,19 +1533,18 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       in
       return_expression i (UnOp (op, i')) ty
   | Let ([ (Some name, Some typ) ], None) as desc ->
-      let typ = { typ; internal = valtype ctx.type_context typ } in
-      ctx.locals <- StringMap.add name.desc typ ctx.locals;
-      return_statement i desc []
+      (let>@ typ = internalize_valtype ctx typ in
+       ctx.locals <- StringMap.add name.desc typ ctx.locals);
+      return_statement i desc [||]
   | Let ([ (None, None) ], Some i') ->
       let* i' = instruction ctx i' in
-      return_statement i (Let ([ (None, None) ], Some i')) []
+      return_statement i (Let ([ (None, None) ], Some i')) [||]
   (*
   | Let of (idx option * valtype option) list * instr option
 *)
   | Br (label, i') ->
       (* Sequence of instructions *)
       let params = branch_target ctx label in
-      let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
       let* i' =
         match i' with
         | Some i' ->
@@ -1523,49 +1552,35 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
             check_subtypes ctx (fst i'.info) params;
             return (Some i')
         | None ->
-            assert (params = []);
+            assert (params = [||]);
             return None
       in
-      return_statement i (Br (label, i')) []
+      return_statement i (Br (label, i')) [||]
   | Br_if (label, i') ->
       let* i' = instruction ctx i' in
-      let ty, types =
-        match List.rev (fst i'.info) with
-        | t :: r -> (t, r)
-        | [] -> assert false
-      in
+      let ty, types = split_on_last_type i' in
       check_subtype ctx ty
         (UnionFind.make (Valtype { typ = I32; internal = I32 }));
       let params = branch_target ctx label in
-      let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
       check_subtypes ctx types params;
       return_statement i (Br_if (label, i')) params
   | Br_table (labels, i') ->
       let* i' = instruction ctx i' in
-      let ty, types =
-        match List.rev (fst i'.info) with
-        | t :: r -> (t, r)
-        | [] -> assert false
-      in
+      let ty, types = split_on_last_type i' in
       check_subtype ctx ty
         (UnionFind.make (Valtype { typ = I32; internal = I32 }));
-      let len = List.length (branch_target ctx (List.hd labels)) in
+      let len = Array.length (branch_target ctx (List.hd labels)) in
       List.iter
         (fun label ->
           let params = branch_target ctx label in
-          assert (List.length params = len);
+          assert (Array.length params = len);
           (*ZZZ*)
-          check_subtypes ctx types
-            (List.map (fun typ -> UnionFind.make (Valtype typ)) params))
+          check_subtypes ctx types params)
         labels;
-      return_statement i (Br_table (labels, i')) []
+      return_statement i (Br_table (labels, i')) [||]
   | Br_on_null (idx, i') ->
       let* i' = instruction ctx i' in
-      let typ, types =
-        match List.rev (fst i'.info) with
-        | t :: r -> (t, r)
-        | [] -> assert false
-      in
+      let typ, types = split_on_last_type i' in
       let typ = UnionFind.find typ in
       let typ' =
         match typ with
@@ -1584,18 +1599,12 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
         | _ -> assert false (*ZZZ*)
       in
       let params = branch_target ctx idx in
-      let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
       check_subtypes ctx types params;
-      return_statement i (Br_on_null (idx, i')) (params @ [ typ' ])
+      return_statement i (Br_on_null (idx, i')) (Array.append params [| typ' |])
   | Br_on_non_null (idx, i') ->
       let* i' = instruction ctx i' in
       let params = branch_target ctx idx in
-      let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
-      let typ, types =
-        match List.rev (fst i'.info) with
-        | t :: r -> (t, r)
-        | [] -> assert false
-      in
+      let typ, types = split_on_last_type i' in
       let typ = UnionFind.find typ in
       (match typ with
       | Unknown -> ()
@@ -1605,96 +1614,72 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
             internal = Ref { nullable = _; typ = ityp; _ };
           } ->
           check_subtypes ctx
-            (types
-            @ [
-                UnionFind.make
-                  (Valtype
-                     {
-                       typ = Ref { nullable = false; typ };
-                       internal = Ref { nullable = false; typ = ityp };
-                     });
-              ])
+            (Array.append types
+               [|
+                 UnionFind.make
+                   (Valtype
+                      {
+                        typ = Ref { nullable = false; typ };
+                        internal = Ref { nullable = false; typ = ityp };
+                      });
+               |])
             params
       | _ -> assert false (*ZZZ*));
       return_statement i
         (Br_on_non_null (idx, i'))
-        (List.rev (List.tl (List.rev params)))
+        (Array.sub params 0 (Array.length params - 1))
   | Br_on_cast (label, ty, i') ->
       let* i' = instruction ctx i' in
-      let typ', types =
-        match List.rev (fst i'.info) with
-        | t :: r -> (t, r)
-        | [] -> assert false
-      in
-      let ityp = reftype ctx.type_context ty in
-      let typ =
-        UnionFind.make (Valtype { typ = Ref ty; internal = Ref ityp })
-      in
+      let typ', types = split_on_last_type i' in
       let params = branch_target ctx label in
-      let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
-      check_subtypes ctx (types @ [ typ ]) params;
-      let typ =
+      (let>@ ityp = reftype ctx.diagnostics ctx.type_context ty in
+       let typ =
+         UnionFind.make (Valtype { typ = Ref ty; internal = Ref ityp })
+       in
+       check_subtypes ctx (Array.append types [| typ |]) params);
+      let*! typ =
         match UnionFind.find typ' with
-        | Valtype { typ = Ref ty'; internal = Ref ityp' } ->
-            Valtype
-              {
-                typ = Ref (diff_ref_type ty' ty);
-                internal = Ref (diff_ref_type_internal ityp' ityp);
-              }
-        | Unknown -> Unknown
+        | Valtype { typ = Ref ty'; _ } ->
+            internalize ctx (Ref (diff_ref_type ty' ty))
+        | Unknown -> Some (UnionFind.make Unknown)
         | _ -> assert false
       in
       return_statement i
         (Br_on_cast (label, ty, i'))
-        (List.rev (List.tl (List.rev params)) @ [ UnionFind.make typ ])
+        (Array.append (Array.sub params 0 (Array.length params - 1)) [| typ |])
   | Br_on_cast_fail (label, ty, i') ->
       let* i' = instruction ctx i' in
-      let typ', types =
-        match List.rev (fst i'.info) with
-        | t :: r -> (t, r)
-        | [] -> assert false
-      in
-      let ityp = reftype ctx.type_context ty in
-      let typ =
+      let typ', types = split_on_last_type i' in
+      let*! ityp = reftype ctx.diagnostics ctx.type_context ty in
+      let*! typ =
         match UnionFind.find typ' with
-        | Valtype { typ = Ref ty'; internal = Ref ityp' } ->
-            Valtype
-              {
-                typ = Ref (diff_ref_type ty' ty);
-                internal = Ref (diff_ref_type_internal ityp' ityp);
-              }
-        | Unknown -> Unknown
+        | Valtype { typ = Ref ty'; _ } ->
+            internalize ctx (Ref (diff_ref_type ty' ty))
+        | Unknown -> Some (UnionFind.make Unknown)
         | _ -> assert false
       in
       let params = branch_target ctx label in
-      let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params in
-      check_subtypes ctx (types @ [ UnionFind.make typ ]) params;
+      check_subtypes ctx (Array.append types [| typ |]) params;
       let typ =
         UnionFind.make (Valtype { typ = Ref ty; internal = Ref ityp })
       in
       return_statement i
         (Br_on_cast_fail (label, ty, i'))
-        (List.rev (List.tl (List.rev params)) @ [ typ ])
+        (Array.append (Array.sub params 0 (Array.length params - 1)) [| typ |])
   | Throw (tag, lst) ->
       let* lst' = instructions ctx lst in
-      let { params; results } = Tbl.find ctx.tags tag in
-      assert (results = [||]);
-      check_subtypes ctx
-        (List.map expression_type lst')
-        (Array.to_list
-           (Array.map
-              (fun (_, typ) ->
-                UnionFind.make
-                  (Valtype { typ; internal = valtype ctx.type_context typ }))
-              params));
-      return_statement i (Throw (tag, lst')) []
+      (let>@ { params; results } = Tbl.find ctx.diagnostics ctx.tags tag in
+       assert (results = [||]);
+       let>@ types =
+         array_map_opt (fun (_, typ) -> internalize ctx typ) params
+       in
+       check_subtypes ctx (Array.of_list (List.map expression_type lst')) types);
+      return_statement i (Throw (tag, lst')) [||]
   | ThrowRef i' ->
       let* i' = instruction ctx i' in
-      let typ = Ref { nullable = true; typ = Exn } in
-      check_type ctx i'
-        (UnionFind.make
-           (Valtype { typ; internal = valtype ctx.type_context typ }));
-      return_statement i (ThrowRef i') []
+      (let>@ typ = internalize ctx (Ref { nullable = true; typ = Exn }) in
+       check_type ctx i' typ);
+      return_statement i (ThrowRef i') [||]
   | NonNull i' -> (
       let* i' = instruction ctx i' in
       match UnionFind.find (expression_type i') with
@@ -1718,19 +1703,17 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
         match i' with
         | Some i' ->
             let* i' = instruction ctx i' in
-            check_subtypes ctx (fst i'.info)
-              (List.map
-                 (fun typ -> UnionFind.make (Valtype typ))
-                 ctx.return_types);
+            check_subtypes ctx (fst i'.info) ctx.return_types;
             return (Some i')
         | None ->
-            assert (ctx.return_types = []);
+            assert (ctx.return_types = [||]);
             return None
       in
-      return_statement i (Return i') []
+      return_statement i (Return i') [||]
   | Sequence l ->
       let* l' = instructions ctx l in
-      return_statement i (Sequence l') (List.map expression_type l')
+      return_statement i (Sequence l')
+        (Array.map expression_type (Array.of_list l'))
   | Select (i1, i2, i3) ->
       let* i2' = instruction ctx i2 in
       let* i3' = instruction ctx i3 in
@@ -1775,7 +1758,7 @@ let rec instruction ctx i : 'a list -> 'a list * 'b =
       Format.eprintf "%a@." Output.instr i;
       assert false
 
-and instructions ctx l =
+and instructions ctx l : _ -> _ * _ list =
   match l with
   | [] -> return []
   | i :: r ->
@@ -1792,72 +1775,39 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
   | Block (label, bt, instrs) ->
       (*ZZZ Blocks take argument from the stack *)
       let { params; results } = bt in
-      let params =
-        Array.to_list
-          (Array.map
-             (fun (_, typ) ->
-               UnionFind.make
-                 (Valtype { typ; internal = valtype ctx.type_context typ }))
-             params)
+      (*ZZZ Grab the arguments from the stack before internalizing the types;
+       push the right number of values in case of failure *)
+      let*! params =
+        array_map_opt (fun (_, typ) -> internalize ctx typ) params
       in
-      let results =
-        Array.to_list
-          (Array.map
-             (fun typ -> { typ; internal = valtype ctx.type_context typ })
-             results)
-      in
-      let* () = pop_args ctx params in
+      let*! results = array_map_opt (internalize ctx) results in
+      let* () = pop_args ctx (Array.to_list params) in
       let instrs' = block ctx i.info label params results results instrs in
-      return_statement i
-        (Block (label, bt, instrs'))
-        (List.map (fun typ -> UnionFind.make (Valtype typ)) results)
+      return_statement i (Block (label, bt, instrs')) results
   | Loop (label, bt, instrs) ->
       let { params; results } = bt in
-      let params0 =
-        Array.to_list
-          (Array.map
-             (fun (_, typ) -> { typ; internal = valtype ctx.type_context typ })
-             params)
+      let*! params =
+        array_map_opt (fun (_, typ) -> internalize ctx typ) params
       in
-      let params = List.map (fun typ -> UnionFind.make (Valtype typ)) params0 in
-      let results =
-        Array.to_list
-          (Array.map
-             (fun typ -> { typ; internal = valtype ctx.type_context typ })
-             results)
-      in
-      let* () = pop_args ctx params in
-      let instrs' = block ctx i.info label params results params0 instrs in
-      return_statement i
-        (Loop (label, bt, instrs'))
-        (List.map (fun typ -> UnionFind.make (Valtype typ)) results)
+      let*! results = array_map_opt (internalize ctx) results in
+      let* () = pop_args ctx (Array.to_list params) in
+      let instrs' = block ctx i.info label params results params instrs in
+      return_statement i (Loop (label, bt, instrs')) results
   | If (label, bt, i', if_block, else_block) ->
       let* i' = toplevel_instruction ctx i' in
       let { params; results } = bt in
-      let params =
-        Array.to_list
-          (Array.map
-             (fun (_, typ) ->
-               UnionFind.make
-                 (Valtype { typ; internal = valtype ctx.type_context typ }))
-             params)
+      let*! params =
+        array_map_opt (fun (_, typ) -> internalize ctx typ) params
       in
-      let results =
-        Array.to_list
-          (Array.map
-             (fun typ -> { typ; internal = valtype ctx.type_context typ })
-             results)
-      in
-      let* () = pop_args ctx params in
+      let*! results = array_map_opt (internalize ctx) results in
+      let* () = pop_args ctx (Array.to_list params) in
       let if_block' = block ctx i.info label params results results if_block in
       let else_block' =
         Option.map
           (fun b -> block ctx i.info label params results results b)
           else_block
       in
-      return_statement i
-        (If (label, bt, i', if_block', else_block'))
-        (List.map (fun typ -> UnionFind.make (Valtype typ)) results)
+      return_statement i (If (label, bt, i', if_block', else_block')) results
   | Unreachable | TailCall _ | Br _ | Br_table _ | Throw _ | ThrowRef _
   | Return _ ->
       let* args = grab_parameters ctx [] i in
@@ -1876,22 +1826,23 @@ and block_contents ctx l =
   | i :: r ->
       let* i' = toplevel_instruction ctx i in
       let* () =
-        push_results (List.map (fun ty -> (i.info, ty)) (fst i'.info))
+        push_results
+          (Array.to_list (Array.map (fun ty -> (i.info, ty)) (fst i'.info)))
       in
       let* r' = block_contents ctx r in
       return (i' :: r')
 
 and block ctx loc label params results br_params block =
   with_empty_stack ctx ~location:loc ~kind:Block
-    (let* () = push_results (List.map (fun ty -> (loc, ty)) params) in
+    (let* () =
+       push_results (Array.to_list (Array.map (fun ty -> (loc, ty)) params))
+     in
      let* block' =
        block_contents
          { ctx with control_types = (label, br_params) :: ctx.control_types }
          block
      in
-     let* () =
-       pop_args ctx (List.map (fun typ -> UnionFind.make (Valtype typ)) results)
-     in
+     let* () = pop_args ctx (Array.to_list results) in
      return block')
 
 (*ZZZ
@@ -1944,7 +1895,7 @@ let check_type_definitions ctx =
 
 type ('before, 'after) phased = Before of 'before | After of 'after
 
-let globals type_context ctx fields =
+let globals ctx fields =
   List.map
     (fun field ->
       match field with
@@ -1955,32 +1906,28 @@ let globals type_context ctx fields =
             with_empty_stack ctx ~location:def.info ~kind:Expression
               (toplevel_instruction ctx def)
           in
-          let internal = valtype type_context typ in
-          let typ = { typ; internal } in
-          Tbl.add ctx.globals name (mut, typ);
-          check_type ctx def' (UnionFind.make (Valtype typ));
+          (let>@ typ = internalize_valtype ctx typ in
+           Tbl.add ctx.diagnostics ctx.globals name (mut, typ);
+           check_type ctx def' (UnionFind.make (Valtype typ)));
           After (Global { g with def = def' })
       | f -> Before f)
     fields
 
 let functions ctx fields =
-  List.map
+  List.filter_map
     (fun field ->
       match field with
       | Before (Func { name; sign; body = label, body; typ; attributes }) ->
-          let func_typ =
-            match
-              let func_typ = Tbl.find ctx.functions name in
-              Tbl.find ctx.types { name with desc = snd func_typ }
-            with
-            | _, Func typ -> typ
-            | _ -> assert false
+          let*@ func_typ =
+            let+@ ty =
+              let*@ func_typ = Tbl.find ctx.diagnostics ctx.functions name in
+              Tbl.find ctx.diagnostics ctx.types
+                { name with desc = snd func_typ }
+            in
+            match ty with _, Func typ -> typ | _ -> assert false
           in
-          let return_types =
-            Array.to_list
-              (Array.map
-                 (fun typ -> { typ; internal = valtype ctx.type_context typ })
-                 func_typ.results)
+          let*@ return_types =
+            array_map_opt (fun typ -> internalize ctx typ) func_typ.results
           in
           let locals = ref StringMap.empty in
           (match sign with
@@ -1989,10 +1936,8 @@ let functions ctx fields =
                 (fun (id, typ) ->
                   match id with
                   | Some id ->
-                      locals :=
-                        StringMap.add id.desc
-                          { typ; internal = valtype ctx.type_context typ }
-                          !locals
+                      let>@ typ = internalize_valtype ctx typ in
+                      locals := StringMap.add id.desc typ !locals
                   | None -> ())
                 named_params
           | _ -> ());
@@ -2009,17 +1954,13 @@ let functions ctx fields =
             with_empty_stack ctx ~location:(Ast.no_loc ()).info (*ZZZ*)
               ~kind:Function
               (let* body = block_contents ctx body in
-               let* () =
-                 pop_args ctx
-                   (List.map
-                      (fun typ -> UnionFind.make (Valtype typ))
-                      return_types)
-               in
+               let* () = pop_args ctx (Array.to_list return_types) in
                return body)
           in
-          Func { name; sign; body = (label, body); typ; attributes }
+          Some (Func { name; sign; body = (label, body); typ; attributes })
       | Before (Global _) -> assert false
-      | After f | Before ((Type _ | Fundecl _ | GlobalDecl _ | Tag _) as f) -> f)
+      | After f | Before ((Type _ | Fundecl _ | GlobalDecl _ | Tag _) as f) ->
+          Some f)
     fields
 
 let funsig _ctx sign =
@@ -2031,12 +1972,16 @@ let funsig _ctx sign =
 
 let fundecl ctx name typ sign =
   match typ with
-  | Some typ -> (*ZZZ Check signature*) (fst (Tbl.find ctx.types typ), typ.desc)
+  | Some typ ->
+      let+@ info = Tbl.find ctx.diagnostics ctx.types typ in
+      (*ZZZ Check signature*)
+      (fst info, typ.desc)
   | None -> (
       match sign with
       | Some sign ->
           let name = { name with desc = "func:" ^ name.desc } in
-          ( add_type ctx.type_context
+          let+@ i =
+            add_type ctx.diagnostics ctx.type_context
               [|
                 ( name,
                   {
@@ -2044,8 +1989,9 @@ let fundecl ctx name typ sign =
                     typ = Func (funsig ctx sign);
                     final = true;
                   } );
-              |],
-            name.desc )
+              |]
+          in
+          (i, name.desc)
       | None -> assert false (*ZZZ*))
 
 let f diagnostics fields =
@@ -2058,7 +2004,7 @@ let f diagnostics fields =
   List.iter
     (fun (field : _ modulefield) ->
       match field with
-      | Type rectype -> ignore (add_type type_context rectype)
+      | Type rectype -> ignore (add_type diagnostics type_context rectype)
       | _ -> ())
     fields;
   let ctx =
@@ -2074,7 +2020,7 @@ let f diagnostics fields =
       tags = Tbl.make (Namespace.make ()) "tag";
       locals = StringMap.empty;
       control_types = [];
-      return_types = [];
+      return_types = [||];
     }
   in
   check_type_definitions ctx;
@@ -2082,25 +2028,24 @@ let f diagnostics fields =
     (fun field ->
       match field with
       | Fundecl { name; typ; sign; _ } ->
-          (*ZZZ Check existing*)
-          Tbl.add ctx.functions name (fundecl ctx name typ sign)
+          let>@ decl = fundecl ctx name typ sign in
+          Tbl.add diagnostics ctx.functions name decl
       | GlobalDecl { name; mut; typ; _ } ->
-          Tbl.add ctx.globals name
-            (mut, { internal = valtype type_context typ; typ })
+          let>@ typ = internalize_valtype ctx typ in
+          Tbl.add diagnostics ctx.globals name (mut, typ)
       | Func { name; typ; sign; _ } ->
-          (*ZZZ Check existing*)
-          Tbl.add ctx.functions name (fundecl ctx name typ sign)
+          let>@ decl = fundecl ctx name typ sign in
+          Tbl.add diagnostics ctx.functions name decl
       | Tag { name; typ; sign; _ } ->
-          let typ =
+          let>@ typ =
             match (typ, sign) with
             | Some typ, _ -> (
-                match snd (Tbl.find ctx.types typ) with
-                | Func typ -> typ
-                | _ -> assert false)
-            | None, Some sign -> funsig ctx sign
+                let+@ info = Tbl.find ctx.diagnostics ctx.types typ in
+                match snd info with Func typ -> typ | _ -> assert false)
+            | None, Some sign -> Some (funsig ctx sign)
             | None, None -> assert false (*ZZZ*)
           in
-          Tbl.add ctx.tags name typ
+          Tbl.add diagnostics ctx.tags name typ
       | _ -> ())
     fields;
   let ctx =
@@ -2109,13 +2054,13 @@ let f diagnostics fields =
       subtyping_info = Wasm.Types.subtyping_info type_context.internal_types;
     }
   in
-  let fields = globals type_context ctx fields in
+  let fields = globals ctx fields in
   let fields = functions ctx fields in
   List.map
     (fun f ->
       Ast_utils.map_modulefield
         (fun (types, loc) ->
-          ( List.map
+          ( Array.map
               (fun ty ->
                 match UnionFind.find ty with
                 | Unknown | Null -> Value (Ref { nullable = true; typ = None_ })

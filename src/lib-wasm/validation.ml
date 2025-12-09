@@ -1584,7 +1584,6 @@ let constant_expression ctx ty expr =
 let add_type d ctx ty =
   Array.iteri
     (fun i (label, _) ->
-      (*ZZZ Check unique names*)
       Hashtbl.replace ctx.index_mapping
         (Uint32.of_int (ctx.last_index + i))
         (lnot i, []);

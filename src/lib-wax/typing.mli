@@ -1,9 +1,6 @@
 (** Type checking and validation for Wax modules. *)
 
-exception Type_error of Ast.location * string
-(** Exception raised when a type error is encountered. *)
-
-type typed_module_annotation = Ast.storagetype list * Ast.location
+type typed_module_annotation = Ast.storagetype array * Ast.location
 
 val f :
   Utils.Diagnostic.context ->

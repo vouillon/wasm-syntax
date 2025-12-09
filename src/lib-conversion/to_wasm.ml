@@ -175,7 +175,7 @@ let typeuse typ sign =
 
 let expr_type i =
   match i.info with
-  | [ t ], _ -> t
+  | [| t |], _ -> t
   | _ ->
       print_instr i;
       assert false
