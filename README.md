@@ -23,7 +23,7 @@ Wax is a compiler toolchain for a Rust-like syntax targeting WebAssembly.
 *   `-o`, `--output`: Output file (Default: `stdout`).
 *   `-v`, `--validate`: Perform validation (type checking for Wax, well-formedness for Wasm Text). Validation is disabled by default.
 *   `-s`, `--strict-validate`: Perform strict reference validation (for Wasm Text). This overrides the default relaxed reference validation behavior.
-*   `--color`: Color output: 'always', 'never', or 'auto' (default). 'auto' colors only if output is a TTY.
+*   `--color`: Color output: `always`, `never`, or `auto` (default). `auto` colors only if output is a TTY.
 
 ## Example
 
