@@ -1,3 +1,5 @@
+(*ZZZ Fix string/ident location*)
+
 let sign = [%sedlex.regexp? Opt ('+' | '-')]
 let digit = [%sedlex.regexp? '0' .. '9']
 let hexdigit = [%sedlex.regexp? '0' .. '9' | 'a' .. 'f' | 'A' .. 'F']
@@ -132,7 +134,7 @@ let rec token lexbuf =
           (Parsing.Syntax_error
              ( Sedlexing.lexing_bytes_positions lexbuf,
                "An identifier cannot be the empty string" ));
-      ID (string lexbuf)
+      ID s
   | newline | linecomment -> token lexbuf
   | Plus (' ' | '\t') -> token lexbuf
   | "(;" ->
@@ -806,3 +808,7 @@ let rec token lexbuf =
         (Parsing.Syntax_error
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Syntax error.\n" ))
+
+let is_valid_identifier s =
+  let buf = Sedlexing.Utf8.from_string s in
+  match%sedlex buf with Plus idchar, eof -> true | _ -> false

@@ -202,10 +202,60 @@ let list ?loc l = List (loc, l)
 let block ?loc ?(transparent = false) l = Block { loc; l; transparent }
 let structured_block ?loc l = Structured_block (loc, l)
 let option f x = match x with None -> [] | Some x -> f x
-let id ?loc x = atom ~style:Identifier ?loc (Printf.sprintf "$%s" x)
-let opt_id = option (fun i -> [ id i ])
 let u32 ~style ?loc i = atom ~style ?loc (Uint32.to_string i)
 let u64 ?loc i = atom ?loc (Uint64.to_string i)
+
+let utf8_length s =
+  let segmenter = Uuseg.create `Grapheme_cluster in
+  let has_grapheme = ref false in
+  let flush_segment acc =
+    let acc = if !has_grapheme then acc + 1 else acc in
+    has_grapheme := false;
+    acc
+  in
+  let rec add acc v =
+    match Uuseg.add segmenter v with
+    | `Uchar _ ->
+        has_grapheme := true;
+        add acc `Await
+    | `Boundary -> add (flush_segment acc) `Await
+    | `Await | `End -> acc
+  in
+  let rec loop acc i len =
+    if i >= len then flush_segment (add acc `End)
+    else
+      let dec = String.get_utf_8_uchar s i in
+      let acc = add acc (`Uchar (Uchar.utf_decode_uchar dec)) in
+      loop acc (i + Uchar.utf_decode_length dec) len
+  in
+  loop 0 0 (String.length s)
+
+let escape_string s =
+  let b = Buffer.create (String.length s + 2) in
+  for i = 0 to String.length s - 1 do
+    let c = s.[i] in
+    if c >= ' ' && c < '\x7f' && c <> '"' && c <> '\\' then Buffer.add_char b c
+    else
+      match c with
+      | '\t' -> Buffer.add_string b "\\t"
+      | '\n' -> Buffer.add_string b "\\n"
+      | '\r' -> Buffer.add_string b "\\r"
+      | '"' -> Buffer.add_string b "\\\""
+      | '\\' -> Buffer.add_string b "\\\\"
+      | _ -> Printf.bprintf b "\\%02x" (Char.code c)
+  done;
+  let s = Buffer.contents b in
+  (utf8_length s, s)
+
+let id ?loc x =
+  if Lexer.is_valid_identifier x then
+    Atom
+      { loc; style = Identifier; len = Some (utf8_length x + 1); s = "$" ^ x }
+  else
+    let i, s = escape_string x in
+    Atom { loc; style = Identifier; len = Some (i + 3); s = "$\"" ^ s ^ "\"" }
+
+let opt_id = option (fun i -> [ id i ])
 
 let index x =
   match x.Ast.desc with
@@ -311,48 +361,6 @@ let limits { mi; ma; address_type = at } =
   @ (u64 ~style:Constant mi :: option (fun i -> [ u64 ~style:Constant i ]) ma)
 
 let tabletype { limits = l; reftype = typ } = limits l @ [ reftype typ ]
-
-let utf8_length s =
-  let segmenter = Uuseg.create `Grapheme_cluster in
-  let has_grapheme = ref false in
-  let flush_segment acc =
-    let acc = if !has_grapheme then acc + 1 else acc in
-    has_grapheme := false;
-    acc
-  in
-  let rec add acc v =
-    match Uuseg.add segmenter v with
-    | `Uchar _ ->
-        has_grapheme := true;
-        add acc `Await
-    | `Boundary -> add (flush_segment acc) `Await
-    | `Await | `End -> acc
-  in
-  let rec loop acc i len =
-    if i >= len then flush_segment (add acc `End)
-    else
-      let dec = String.get_utf_8_uchar s i in
-      let acc = add acc (`Uchar (Uchar.utf_decode_uchar dec)) in
-      loop acc (i + Uchar.utf_decode_length dec) len
-  in
-  loop 0 0 (String.length s)
-
-let escape_string s =
-  let b = Buffer.create (String.length s + 2) in
-  for i = 0 to String.length s - 1 do
-    let c = s.[i] in
-    if c >= ' ' && c < '\x7f' && c <> '"' && c <> '\\' then Buffer.add_char b c
-    else
-      match c with
-      | '\t' -> Buffer.add_string b "\\t"
-      | '\n' -> Buffer.add_string b "\\n"
-      | '\r' -> Buffer.add_string b "\\r"
-      | '"' -> Buffer.add_string b "\\\""
-      | '\\' -> Buffer.add_string b "\\\\"
-      | _ -> Printf.bprintf b "\\%02x" (Char.code c)
-  done;
-  let s = Buffer.contents b in
-  (utf8_length s, s)
 
 let quoted_string s =
   let i, s = escape_string s in

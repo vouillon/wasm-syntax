@@ -115,7 +115,7 @@ type custom = open { f: &custom_operations }
 #[export = "bigarray_ops"]
 const bigarray_ops: &custom_operations =
     {custom_operations|
-        id: string#"_bigarr02" as &string,
+        id: string#"_bigarr02",
         compare: caml_ba_compare,
         compare_ext: null as &?compare,
         hash: bigarray_hash,
@@ -408,7 +408,7 @@ fn bigarray_serialize(s: &eq, v: &eq) -> (i32, i32) {
             'loop_2: loop {
                 if i <u len {
                     caml_serialize_int_4
-                        (s, (ta_get_f32(data, i) as f32 as f32).to_bits);
+                        (s, (ta_get_f32(data, i) as f32).to_bits);
                     i = i + 1;
                     br 'loop_2;
                 }
@@ -417,7 +417,7 @@ fn bigarray_serialize(s: &eq, v: &eq) -> (i32, i32) {
         } /* 'float64 */
         'loop_2: loop {
             if i <u len {
-                caml_serialize_int_8(s, (ta_get_f64(data, i) as f64).to_bits);
+                caml_serialize_int_8(s, (ta_get_f64(data, i)).to_bits);
                 i = i + 1;
                 br 'loop_2;
             }
@@ -553,7 +553,7 @@ fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
                 if i <u len {
                     ta_set_f32
                         (data, i,
-                         (caml_deserialize_int_4(s) as i32).from_bits as f64);
+                         (caml_deserialize_int_4(s)).from_bits as f64);
                     i = i + 1;
                     br 'loop_2;
                 }
@@ -562,8 +562,7 @@ fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
         } /* 'float64 */
         'loop_2: loop {
             if i <u len {
-                ta_set_f64
-                    (data, i, (caml_deserialize_int_8(s) as i64).from_bits);
+                ta_set_f64(data, i, (caml_deserialize_int_8(s)).from_bits);
                 i = i + 1;
                 br 'loop_2;
             }

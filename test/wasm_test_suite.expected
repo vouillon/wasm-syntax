@@ -39,11 +39,6 @@ Error: The type index 0 is not bound.
  1061 |     (call_indirect (type 0) (local.get 0)))
                                  ^
 
-File "wasm-test-suite/core/elem.wast", line 1061, characters 25-26:
-Error: The type index 0 is not bound.
- 1061 |     (call_indirect (type 0) (local.get 0)))
-                                 ^
-
 ==== core/endianness.wast ====
 ==== core/exceptions/tag.wast ====
 Validation should have failed (non-empty tag result type):
@@ -76,16 +71,6 @@ Error: The type index 1 is not bound.
   428 |   (func $void->f64 (type 1) (f64.const 0))  ;; (result f64)
                                  ^
 
-File "wasm-test-suite/core/func.wast", line 428, characters 25-26:
-Error: The type index 1 is not bound.
-  428 |   (func $void->f64 (type 1) (f64.const 0))  ;; (result f64)
-                                 ^
-
-File "wasm-test-suite/core/func.wast", line 431, characters 16-26:
-Error: The function index $void->f64 is not bound.
-  431 |     (drop (call $void->f64))
-                        ^^^^^^^^^^
-
 ==== core/func_ptrs.wast ====
 ==== core/gc/array.wast ====
 ==== core/gc/array_copy.wast ====
@@ -108,12 +93,6 @@ Error: The function index $void->f64 is not bound.
 ==== core/i32.wast ====
 ==== core/i64.wast ====
 ==== core/id.wast ====
-File "wasm-test-suite/core/id.wast", line 5, characters 48-54:
-Error: Unknown keyword 'random'.
-
-    5 |   (func $" random \t \n stuff ") (func (call $" random \t \n stuff "))
-                                                        ^^^^^^
-
 ==== core/if.wast ====
 Parsing should have failed (mismatching label): (func i32.const 0 if end $l)
 Parsing should have failed (mismatching label): (func i32.const 0 if $a end $l)

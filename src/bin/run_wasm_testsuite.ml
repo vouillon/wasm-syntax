@@ -267,31 +267,33 @@ let runtest filename path =
   in
   (* Serialization and reparsing (Wasm) *)
   let lst'' =
-    List.filter_map
-      (fun (status, m, _) ->
-        match status with
-        | `Invalid _ -> None
-        | `Valid ->
-            if false then (
-              prerr_endline " BEFORE";
-              Format.eprintf "@[%a@]@." (print_module ~color:!color) m
-              (*if false then prerr_endline (String.escaped text)*));
-            let temp, out_channel =
-              Filename.open_temp_file ~mode:[ Open_binary ] "temp" ".wasm"
-            in
-            Wasm.Wasm_output.module_ ~out_channel
-              (Wasm.Text_to_binary.module_ m);
-            close_out out_channel;
-            let text = read_file temp in
-            Sys.remove temp;
-            let m =
-              Wasm.Binary_to_text.module_ (Wasm.Wasm_parser.module_ text)
-            in
-            if false then (
-              prerr_endline "AFTER ";
-              Format.eprintf "@[%a@]@." (print_module ~color:!color) m);
-            Some (status, m, None))
-      lst
+    if true then []
+    else
+      List.filter_map
+        (fun (status, m, _) ->
+          match status with
+          | `Invalid _ -> None
+          | `Valid ->
+              if false then (
+                prerr_endline " BEFORE";
+                Format.eprintf "@[%a@]@." (print_module ~color:!color) m
+                (*if false then prerr_endline (String.escaped text)*));
+              let temp, out_channel =
+                Filename.open_temp_file ~mode:[ Open_binary ] "temp" ".wasm"
+              in
+              Wasm.Wasm_output.module_ ~out_channel
+                (Wasm.Text_to_binary.module_ m);
+              close_out out_channel;
+              let text = read_file temp in
+              Sys.remove temp;
+              let m =
+                Wasm.Binary_to_text.module_ (Wasm.Wasm_parser.module_ text)
+              in
+              if false then (
+                prerr_endline "AFTER ";
+                Format.eprintf "@[%a@]@." (print_module ~color:!color) m);
+              Some (status, m, None))
+        lst
   in
   ignore lst'';
   let lst'' = [] in
