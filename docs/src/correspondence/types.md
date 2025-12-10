@@ -1,0 +1,88 @@
+# Types
+
+Wax types map directly to WebAssembly types.
+
+## Value Types
+
+| Wasm | Wax | Notes |
+|------|-----|-------|
+| `i32` | `i32` | 32-bit integer |
+| `i64` | `i64` | 64-bit integer |
+| `f32` | `f32` | 32-bit float |
+| `f64` | `f64` | 64-bit float |
+| `v128` | `v128` | 128-bit vector |
+| `(ref null <ht>)` | `&?<ht>` | Nullable reference to heap type `<ht>` |
+| `(ref <ht>)` | `&<ht>` | Non-nullable reference to heap type `<ht>` |
+
+## Storage Types
+
+Storage types are used in fields of structs and arrays to define packed data.
+
+| Wasm | Wax | Notes |
+|------|-----|-------|
+| `i8` | `i8` | 8-bit integer (packed) |
+| `i16` | `i16` | 16-bit integer (packed) |
+| `valtype` | `valtype` | Any value type |
+
+
+## Heap Types
+
+| Wasm | Wax |
+|------|-----|
+| `func` | `func` |
+| `extern` | `extern` |
+| `any` | `any` |
+| `eq` | `eq` |
+| `struct` | `struct` |
+| `array` | `array` |
+| `i31` | `i31` |
+| `exn` | `exn` |
+| `noextern` | `noextern` |
+| `nofunc` | `nofunc` |
+| `noexn` | `noexn` |
+| `none` | `none` |
+| `<typeidx>` | `<identifier>` | 
+
+## Composite Types
+
+### Recursive Types
+
+Wax allows defining recursive reference types using `rec { ... }`.
+
+```wax
+rec {
+    type list = { head: i32, tail: node }
+    type node = [list]
+}
+```
+
+### Structs
+```wax
+type point = { x: i32, y: i32 }
+type mutable_point = { mut x: i32, mut y: i32 }
+```
+Maps to Wasm `(type $point (struct (field i32) (field i32)))`.
+
+### Arrays
+```wax
+type bytes = [i8]
+type mutable_bytes = [mut i8]
+```
+Maps to Wasm `(type $bytes (array i8))`.
+
+### Functions
+```wax
+type binop = fn(_: i32, _: i32) -> i32
+```
+Maps to Wasm `(type $binop (func (param i32 i32) (result i32)))`.
+### Supertypes and Finality
+
+Types are final by default. To make a type open (extensible), use the `open` keyword.
+To specify a supertype, use `: supertype` before the assignment.
+
+```wax
+type point = { x: i32, y: i32 }
+type point3d : point = { z: i32 }        ;; extend point (if point was open)
+type open_point = open { x: i32 }        ;; non-final type
+type sub_point : open_point = { y: i32 } ;; ok
+```
