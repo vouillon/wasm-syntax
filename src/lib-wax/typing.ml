@@ -1,12 +1,10 @@
 (*
 TODO:
 - Fix grab order in struct
-- Check the _ make sense
-- To_wasm: branch to return
+- Check the _ make sense (check that underscores are properly placed)
 - Typing: implement LUB (for select)
 - we need to decide on an order to visit subexpression in structs
 - fix typeuse validation (add a type if not already present)
-- check that underscores are properly placed
 - error messages
 - locations on the heap when push several values?
 - more methods rather than global functions (no ambiguity)?
@@ -180,6 +178,14 @@ module Error = struct
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "Several parameters have the same name %a." print_name
           x)
+
+  let constant_expression_required context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "Only constant expressions are allowed here.")
+
+  let constant_global_required context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "Only accessing a constant global is allowed here.")
 end
 
 module StringSet = Set.Make (String)
@@ -530,6 +536,7 @@ let cast ctx ty ty' =
          let+@ ity' = valtype ctx.diagnostics ctx.type_context ty' in
          Wasm.Types.val_subtype ctx.subtyping_info ity ity')
       ||
+      (*ZZZ Replace nullable by non nullable if possible *)
       match ty' with
       | Extern ->
           Wasm.Types.val_subtype ctx.subtyping_info ity
@@ -728,8 +735,8 @@ let rec grab_parameters ctx acc i =
       let* acc = grab_parameters ctx acc e in
       let* acc = grab_parameters ctx acc t in
       grab_parameters ctx acc c
-  | Block _ | Loop _ | Try _ | StructDefault _ | String _ | Int _ | Float _
-  | Get _ | Null | Unreachable | Nop
+  | Block _ | Loop _ | TryTable _ | Try _ | StructDefault _ | String _ | Int _
+  | Float _ | Get _ | Null | Unreachable | Nop
   | Let (_, None)
   | Br (_, None)
   | Return None ->
@@ -898,6 +905,49 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
           else_block
       in
       return_statement i (If (label, bt, i', if_block', else_block')) results
+  | TryTable { label; typ = bt; block = body; catches } ->
+      let { params; results } = bt in
+      assert (params = [||]);
+      let*! results = array_map_opt (internalize ctx) results in
+      let body' = block ctx i.info label [||] results results body in
+      let check_catch types label =
+        let params = branch_target ctx label in
+        check_subtypes ctx types params
+      in
+      List.iter
+        (fun catch ->
+          match catch with
+          | Catch (tag, label) ->
+              let>@ { params; results = r } =
+                Tbl.find ctx.diagnostics ctx.tags tag
+              in
+              assert (r = [||]);
+              let>@ params =
+                array_map_opt (fun (_, typ) -> internalize ctx typ) params
+              in
+              check_catch params label
+          | CatchRef (tag, label) ->
+              let>@ { params; results = r } =
+                Tbl.find ctx.diagnostics ctx.tags tag
+              in
+              assert (r = [||]);
+              let>@ params =
+                array_map_opt (fun (_, typ) -> internalize ctx typ) params
+              in
+              let>@ ref_exn =
+                internalize ctx (Ref { nullable = false; typ = Exn })
+              in
+              check_catch (Array.append params [| ref_exn |]) label
+          | CatchAll label -> check_catch [||] label
+          | CatchAllRef label ->
+              let>@ ref_exn =
+                internalize ctx (Ref { nullable = false; typ = Exn })
+              in
+              check_catch [| ref_exn |] label)
+        catches;
+      return_statement i
+        (TryTable { label; typ = bt; block = body'; catches })
+        results
   | Try { label; typ = bt; block = body; catches; catch_all } ->
       let { params; results } = bt in
       assert (params = [||]);
@@ -1853,6 +1903,51 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
           else_block
       in
       return_statement i (If (label, bt, i', if_block', else_block')) results
+  | TryTable { label; typ = bt; block = body; catches } ->
+      let { params; results } = bt in
+      let*! params =
+        array_map_opt (fun (_, typ) -> internalize ctx typ) params
+      in
+      let*! results = array_map_opt (internalize ctx) results in
+      let body' = block ctx i.info label params results results body in
+      let check_catch types label =
+        let params = branch_target ctx label in
+        check_subtypes ctx types params
+      in
+      List.iter
+        (fun catch ->
+          match catch with
+          | Catch (tag, label) ->
+              let>@ { params; results = r } =
+                Tbl.find ctx.diagnostics ctx.tags tag
+              in
+              assert (r = [||]);
+              let>@ params =
+                array_map_opt (fun (_, typ) -> internalize ctx typ) params
+              in
+              check_catch params label
+          | CatchRef (tag, label) ->
+              let>@ { params; results = r } =
+                Tbl.find ctx.diagnostics ctx.tags tag
+              in
+              assert (r = [||]);
+              let>@ params =
+                array_map_opt (fun (_, typ) -> internalize ctx typ) params
+              in
+              let>@ ref_exn =
+                internalize ctx (Ref { nullable = false; typ = Exn })
+              in
+              check_catch (Array.append params [| ref_exn |]) label
+          | CatchAll label -> check_catch [||] label
+          | CatchAllRef label ->
+              let>@ ref_exn =
+                internalize ctx (Ref { nullable = false; typ = Exn })
+              in
+              check_catch [| ref_exn |] label)
+        catches;
+      return_statement i
+        (TryTable { label; typ = bt; block = body'; catches })
+        results
   | Try { label; typ = bt; block = body; catches; catch_all } ->
       let { params; results } = bt in
       let*! params =
@@ -1968,6 +2063,71 @@ let check_type_definitions ctx =
           | Array _, (Func _ | Struct _) ->
               assert false))
 
+let rec check_constant_instruction ctx i =
+  let location = snd i.info in
+  match i.desc with
+  | Get idx -> (
+      match Tbl.find_opt ctx.globals idx with
+      | Some (mut, _) ->
+          if mut then Error.constant_global_required ctx.diagnostics ~location
+      | None -> (* ref.func *) ())
+  | Null | StructDefault _ | ArrayDefault _ | Int _ | Float _ | String _ -> ()
+  | Struct (_, l) ->
+      List.iter (fun (_, i) -> check_constant_instruction ctx i) l
+  | ArrayFixed (_, l) -> List.iter (check_constant_instruction ctx) l
+  | Array (_, i1, i2) ->
+      check_constant_instruction ctx i1;
+      check_constant_instruction ctx i2
+  | BinOp ((Add | Sub | Mul), i1, i2) -> (
+      check_constant_instruction ctx i1;
+      check_constant_instruction ctx i2;
+      match UnionFind.find (expression_type i) with
+      | Int | Valtype { internal = I32 | I64; _ } -> ()
+      | _ -> Error.constant_expression_required ctx.diagnostics ~location)
+  | Cast ({ desc = Null; _ }, Valtype (Ref { nullable = true; _ })) ->
+      (* ref.null *)
+      ()
+  | Cast (i', Valtype (Ref { typ = I31; _ })) -> (
+      (* ref.i31 *)
+      check_constant_instruction ctx i';
+      match UnionFind.find (expression_type i') with
+      | Valtype { internal = I32; _ } -> ()
+      | _ -> Error.constant_expression_required ctx.diagnostics ~location)
+  | Cast (i', Valtype (Ref { typ = Extern; nullable })) ->
+      (* extern.convert_any *)
+      check_constant_instruction ctx i';
+      if
+        match (UnionFind.find (expression_type i') : inferred_type) with
+        | Valtype { internal; _ } ->
+            not
+              (Wasm.Types.val_subtype ctx.subtyping_info internal
+                 (Ref { nullable; typ = Any }))
+        | _ -> true
+      then Error.constant_expression_required ctx.diagnostics ~location
+  | Cast (i', Valtype (Ref { typ = Any; nullable })) ->
+      (* any.convert_extern *)
+      check_constant_instruction ctx i';
+      if
+        match (UnionFind.find (expression_type i') : inferred_type) with
+        | Valtype { internal; _ } ->
+            not
+              (Wasm.Types.val_subtype ctx.subtyping_info internal
+                 (Ref { nullable; typ = Extern }))
+        | _ -> true
+      then Error.constant_expression_required ctx.diagnostics ~location
+  | BinOp
+      ( ( Div _ | Rem _ | And | Or | Xor | Shl | Shr _ | Eq | Ne | Lt _ | Gt _
+        | Le _ | Ge _ ),
+        _,
+        _ )
+  | Block _ | Loop _ | If _ | TryTable _ | Try _ | Unreachable | Nop | Pop
+  | Set _ | Tee _ | Call _ | TailCall _ | Cast _ | Test _ | NonNull _
+  | StructGet _ | StructSet _ | ArrayGet _ | ArraySet _ | UnOp _ | Let _ | Br _
+  | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | Br_on_cast_fail _ | Throw _ | ThrowRef _ | Return _ | Sequence _ | Select _
+    ->
+      Error.constant_expression_required ctx.diagnostics ~location
+
 type ('before, 'after) phased = Before of 'before | After of 'after
 
 let globals ctx fields =
@@ -1975,7 +2135,6 @@ let globals ctx fields =
     (fun field ->
       match field with
       | Global ({ name; mut; typ = Some typ; def; _ } as g) ->
-          (*ZZZ check constant instructions *)
           (*ZZZ handle typ= None *)
           let def' =
             with_empty_stack ctx ~location:def.info ~kind:Expression
@@ -1984,6 +2143,7 @@ let globals ctx fields =
           (let>@ typ = internalize_valtype ctx typ in
            Tbl.add ctx.diagnostics ctx.globals name (mut, typ);
            check_type ctx def' (UnionFind.make (Valtype typ)));
+          check_constant_instruction ctx def';
           After (Global { g with def = def' })
       | f -> Before f)
     fields

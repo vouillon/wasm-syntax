@@ -471,45 +471,106 @@ let rec instr prec pp (i : _ instr) =
                 space pp ());
               punctuation pp "{");
           block_contents pp l;
-          match (catches, catch_all) with
-          | _ :: _, _ | _, Some _ ->
-              hvbox pp (fun () ->
-                  box pp (fun () ->
-                      punctuation pp "}";
+          hvbox pp (fun () ->
+              box pp (fun () ->
+                  punctuation pp "}";
+                  space pp ();
+                  keyword pp "catch";
+                  space pp ();
+                  punctuation pp "{");
+              indent pp indent_level (fun () ->
+                  List.iter
+                    (fun (tag, block) ->
                       space pp ();
-                      keyword pp "catch";
+                      hvbox pp (fun () ->
+                          box pp (fun () ->
+                              identifier pp tag.desc;
+                              space pp ();
+                              punctuation pp "=>";
+                              space pp ();
+                              punctuation pp "{");
+                          block_contents pp block;
+                          punctuation pp "}"))
+                    catches;
+                  Option.iter
+                    (fun block ->
                       space pp ();
-                      punctuation pp "{");
-                  indent pp indent_level (fun () ->
-                      List.iter
-                        (fun (tag, block) ->
-                          space pp ();
-                          hvbox pp (fun () ->
-                              box pp (fun () ->
-                                  identifier pp tag.desc;
-                                  space pp ();
-                                  punctuation pp "=>";
-                                  space pp ();
-                                  punctuation pp "{");
-                              block_contents pp block;
-                              punctuation pp "}"))
-                        catches;
-                      Option.iter
-                        (fun block ->
-                          space pp ();
-                          hvbox pp (fun () ->
-                              box pp (fun () ->
-                                  operator pp "_";
-                                  space pp ();
-                                  punctuation pp "=>";
-                                  space pp ();
-                                  punctuation pp "{");
-                              block_contents pp block;
-                              punctuation pp "}"))
-                        catch_all;
-                      space pp ());
-                  punctuation pp "}")
-          | [], None -> punctuation pp "}")
+                      hvbox pp (fun () ->
+                          box pp (fun () ->
+                              operator pp "_";
+                              space pp ();
+                              punctuation pp "=>";
+                              space pp ();
+                              punctuation pp "{");
+                          block_contents pp block;
+                          punctuation pp "}"))
+                    catch_all;
+                  space pp ());
+              punctuation pp "}"))
+  | TryTable { label; typ = bt; block = l; catches } ->
+      parentheses prec Block pp @@ fun () ->
+      hvbox pp (fun () ->
+          box pp (fun () ->
+              block_label pp label;
+              keyword pp "try";
+              space pp ();
+              if need_blocktype bt then (
+                blocktype pp bt;
+                space pp ());
+              punctuation pp "{");
+          block_contents pp l;
+          hvbox pp (fun () ->
+              box pp (fun () ->
+                  punctuation pp "}";
+                  space pp ();
+                  keyword pp "catch";
+                  space pp ();
+                  punctuation pp "[");
+              indent pp indent_level (fun () ->
+                  let last = List.length catches - 1 in
+                  List.iteri
+                    (fun i catch ->
+                      space pp ();
+                      box pp (fun () ->
+                          match catch with
+                          | Catch (tag, label) ->
+                              identifier pp tag.desc;
+                              space pp ();
+                              punctuation pp "->";
+                              space pp ();
+                              identifier pp "'";
+                              identifier pp label;
+                              if i < last then punctuation pp ","
+                          | CatchRef (tag, label) ->
+                              identifier pp tag.desc;
+                              space pp ();
+                              operator pp "&";
+                              space pp ();
+                              punctuation pp "->";
+                              space pp ();
+                              identifier pp "'";
+                              identifier pp label;
+                              if i < last then punctuation pp ","
+                          | CatchAll label ->
+                              operator pp "_";
+                              space pp ();
+                              punctuation pp "->";
+                              space pp ();
+                              identifier pp "'";
+                              identifier pp label;
+                              if i < last then punctuation pp ","
+                          | CatchAllRef label ->
+                              operator pp "_";
+                              space pp ();
+                              operator pp "&";
+                              space pp ();
+                              punctuation pp "->";
+                              space pp ();
+                              identifier pp "'";
+                              identifier pp label;
+                              if i < last then punctuation pp ","))
+                    catches);
+              punctuation pp "]"))
   | Unreachable -> keyword pp "unreachable"
   | Nop -> operator pp "_"
   | Pop -> operator pp "_"
@@ -739,7 +800,7 @@ and block pp label kind bt (l : _ instr list) =
 
 and deliminated_instr pp (i : _ instr) =
   match i.desc with
-  | Block _ | Loop _ | If _ | Try _ -> instr Instruction pp i
+  | Block _ | Loop _ | If _ | TryTable _ | Try _ -> instr Instruction pp i
   | Unreachable | Nop | Pop | Get _ | Set _ | Tee _ | Call _ | TailCall _
   | String _ | Int _ | Float _ | Cast _ | NonNull _ | Test _ | Struct _
   | StructDefault _ | StructGet _ | StructSet _ | Array _ | ArrayDefault _

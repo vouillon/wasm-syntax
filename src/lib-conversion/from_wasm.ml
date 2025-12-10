@@ -591,6 +591,26 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       Stack.push
         (if inputs > 0 then 0 else outputs)
         (with_loc (If (label (), blocktype ctx typ, cond, if_body, else_body)))
+  | TryTable { label = labl; typ; block; catches } ->
+      let labl, block_ctx = push_label ctx ~loop:false labl typ in
+      let block = Stack.run (instructions block_ctx block) in
+      let catches =
+        List.map
+          (fun (catch : Src.catch) : Ast.catch ->
+            match catch with
+            | Catch (t, l) -> Catch (idx ctx `Tag t, label ctx l)
+            | CatchRef (t, l) -> CatchRef (idx ctx `Tag t, label ctx l)
+            | CatchAll l -> CatchAll (label ctx l)
+            | CatchAllRef l -> CatchAllRef (label ctx l))
+          catches
+      in
+      let inputs, outputs = blocktype_arity ctx typ in
+      let* () = Stack.consume inputs in
+      Stack.push
+        (if inputs > 0 then 0 else outputs)
+        (with_loc
+           (TryTable
+              { label = labl (); typ = blocktype ctx typ; block; catches }))
   | Try { label; typ; block; catches; catch_all } ->
       let label, ctx = push_label ctx ~loop:false label typ in
       let block = Stack.run (instructions ctx block) in
@@ -917,11 +937,11 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
            (Call
               (with_loc (StructGet (a1, Ast.no_loc "copy")), [ i1; a2; i2; n ])))
   (* Later *)
-  | TryTable _ | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _
-  | ArrayInitData _ | ArrayNewElem _ | Load _ | LoadS _ | Store _ | StoreS _
-  | MemorySize _ | MemoryGrow _ | MemoryFill _ | MemoryCopy _ | MemoryInit _
-  | DataDrop _ | TableGet _ | TableSet _ | TableSize _ | TableGrow _
-  | TableFill _ | TableCopy _ | TableInit _ | ElemDrop _ | TupleExtract _ ->
+  | ReturnCallIndirect _ | CallIndirect _ | ArrayInitElem _ | ArrayInitData _
+  | ArrayNewElem _ | Load _ | LoadS _ | Store _ | StoreS _ | MemorySize _
+  | MemoryGrow _ | MemoryFill _ | MemoryCopy _ | MemoryInit _ | DataDrop _
+  | TableGet _ | TableSet _ | TableSize _ | TableGrow _ | TableFill _
+  | TableCopy _ | TableInit _ | ElemDrop _ | TupleExtract _ ->
       Stack.push_poly (with_loc Unreachable)
   | VecConst _ | VecUnOp _ | VecBinOp _ | VecTest _ | VecShift _ | VecBitmask _
   | VecLoad _ | VecStore _ | VecLoadLane _ | VecStoreLane _ | VecLoadSplat _

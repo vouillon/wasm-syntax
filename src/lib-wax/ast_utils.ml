@@ -13,6 +13,8 @@ let rec map_instr f instr =
             map_instr f cond,
             List.map (map_instr f) then_,
             Option.map (List.map (map_instr f)) else_ )
+    | TryTable { label; typ; block; catches } ->
+        TryTable { label; typ; block = List.map (map_instr f) block; catches }
     | Try { label; typ; block; catches; catch_all } ->
         Try
           {

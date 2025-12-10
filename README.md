@@ -25,12 +25,6 @@ Wax is a compiler toolchain for a Rust-like syntax targeting WebAssembly.
 *   `-s`, `--strict-validate`: Perform strict reference validation (for Wasm Text). This overrides the default relaxed reference validation behavior.
 *   `--color`: Color output: 'always', 'never', or 'auto' (default). 'auto' colors only if output is a TTY.
 
-## Current Supported Pipelines
+## Example
 
-The CLI currently supports the following conversion flows:
-
-1.  `wat` → `wat` (Formatting)
-2.  `wat` → `wax` (Decompilation)
-3.  `wax` → `wax` (Formatting)
-
-**Note:** `wasm` (binary) input/output is not yet implemented.
+![Example](/assets/example.png)

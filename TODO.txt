@@ -1,4 +1,4 @@
-- Try_table
+- Syntax: Try/Try_table
 - Properly handle typeuse
 
 - Fix syntactic type checks

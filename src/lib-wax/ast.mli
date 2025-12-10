@@ -52,6 +52,12 @@ val format_signed_type :
   [ `F32 | `F64 | `I32 | `I64 ] -> signage -> bool -> string
 (** Helper to format signed types (e.g., "i32_s_strict"). *)
 
+type catch =
+  | Catch of idx * label
+  | CatchRef of idx * label
+  | CatchAll of label
+  | CatchAllRef of label
+
 type 'info instr_desc =
   | Block of label option * functype * 'info instr list
   | Loop of label option * functype * 'info instr list
@@ -61,6 +67,12 @@ type 'info instr_desc =
       * 'info instr
       * 'info instr list
       * 'info instr list option
+  | TryTable of {
+      label : label option;
+      typ : functype;
+      catches : catch list;
+      block : 'info instr list;
+    }
   | Try of {
       label : label option;
       typ : functype;
