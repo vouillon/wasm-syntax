@@ -8,7 +8,12 @@ Wax is a compiler toolchain for a Rust-like syntax targeting WebAssembly.
 *   **Type Checking:** Verifies the semantic correctness of Wax code.
 *   **Syntax Conversion:** Supports conversion between Wax, WebAssembly Text (WAT), and eventually WebAssembly Binary.
 
+## Documentation
+Full documentation is available at [wax-lang.github.io/wax/](https://wax-lang.github.io/wax/).
+You can also build the documentation locally using `mdbook build docs`.
+
 ## CLI Interface
+
 
 **Usage:** `wax [OPTION]… [INPUT]
 
