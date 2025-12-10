@@ -23,17 +23,23 @@ Binary and unary operations use standard mathematical operators. Signedness is o
 | `i32.shr_u` / `i64.shr_u` | `>>u` |
 | `i32.eqz` / `i64.eqz` | `!x` (logical not) |
 
-Floating point operations:
+### Floating Point Operations
+
 | Wasm | Wax |
-|------|-----|
+|---|---|
 | `f32.add` / `f64.add` | `+` |
 | `f32.sub` / `f64.sub` | `-` |
 | `f32.mul` / `f64.mul` | `*` |
 | `f32.div` / `f64.div` | `/` |
-| `i32.clz` ... `i64.popcnt` | `val.clz`, `val.ctz`, `val.popcnt` |
 | `f32.abs` ... `f64.sqrt` | `val.abs`, `val.neg`, `val.ceil`, `val.floor`, `val.trunc`, `val.nearest`, `val.sqrt` |
-| `i32.rotl` ... `i64.rotr` | `rotl(v1, v2)`, `rotr(v1, v2)` |
 | `f32.min` ... `f64.copysign` | `min(v1, v2)`, `max(v1, v2)`, `copysign(v1, v2)` |
+
+### Advanced Integer Operations
+
+| Wasm | Wax |
+|---|---|
+| `i32.clz` ... `i64.popcnt` | `val.clz`, `val.ctz`, `val.popcnt` |
+| `i32.rotl` ... `i64.rotr` | `rotl(v1, v2)`, `rotr(v1, v2)` |
 
 
 
