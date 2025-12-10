@@ -75,6 +75,7 @@ Floating point operations:
 | `local.tee $x` | `x := val` |
 | `global.get $g` | `g` |
 | `global.set $g` | `g = val` |
+| `(local $x t)` | `let x : t` |
 
 ## Control Instructions
 
@@ -136,13 +137,13 @@ if cond => (i32) -> i32 { ... } else { ... }
 
 | Wasm | Wax |
 |------|-----|
-| `struct.new $t` | `{t| field: val, ... }` |
-| `struct.new_default $t` | `{t| .. }` |
+| `struct.new $t` | `{t\| field: val, ... }` |
+| `struct.new_default $t` | `{t\| .. }` |
 | `struct.get $t $f` | `val.field` |
 | `struct.set $t $f` | `val.field = new_val` |
-| `array.new $t` | `[t| val; len]` |
-| `array.new_default $t` | `[t| ..; len]` |
-| `array.new_fixed $t` | `[t| val, ...]` |
+| `array.new $t` | `[t\| val; len]` |
+| `array.new_default $t` | `[t\| ..; len]` |
+| `array.new_fixed $t` | `[t\| val, ...]` |
 | `array.get $t` | `arr[idx]` |
 | `array.get_s $t` | `arr[idx] as i32_s` |
 | `array.get_u $t` | `arr[idx] as i32_u` |
@@ -165,3 +166,11 @@ if cond => (i32) -> i32 { ... } else { ... }
 | `try ... catch_all ...` | `try { ... } catch { _ => { ... } }` |
 
 *(Note: `try` corresponds to the older instruction, `try_table` to the newer one. Wax supports both syntaxes (in AST/Output).)*
+
+## Unsupported Features
+
+The following Wasm features are currently not supported in Wax or map to `unreachable`:
+*   **Linear Memory**: `memory.size`, `memory.grow`, `load`, `store` (all variants).
+*   **Tables**: `table.get`, `table.set`, `call_indirect` (and related instructions).
+*   **SIMD**: All vector instructions.
+*   **Tuples**: `return_call_indirect`, etc.
