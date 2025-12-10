@@ -1,12 +1,6 @@
 ==== core/address.wast ====
 ==== core/align.wast ====
 ==== core/annotations.wast ====
-File "wasm-test-suite/core/annotations.wast", line 2, characters 3-5:
-Error: Unknown operator '@a'.
-
-    2 |   (@a)
-           ^^
-
 ==== core/binary-leb128.wast ====
 ==== core/binary.wast ====
 ==== core/block.wast ====

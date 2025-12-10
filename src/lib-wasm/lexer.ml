@@ -113,6 +113,36 @@ let rec string lexbuf =
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Malformed string.\n" ))
 
+let rec scan_string lexbuf =
+  match%sedlex lexbuf with
+  | '"' -> ()
+  | '\\', any -> scan_string lexbuf
+  | any -> scan_string lexbuf
+  | _ ->
+      raise
+        (Parsing.Syntax_error
+           ( Sedlexing.lexing_bytes_positions lexbuf,
+             Printf.sprintf "Unclosed string in annotation.\n" ))
+
+let rec skip_annotation depth lexbuf =
+  match%sedlex lexbuf with
+  | '(' -> skip_annotation (depth + 1) lexbuf
+  | ')' -> if depth > 1 then skip_annotation (depth - 1) lexbuf
+  | '"' ->
+      scan_string lexbuf;
+      skip_annotation depth lexbuf
+  | "(;" ->
+      comment lexbuf;
+      skip_annotation depth lexbuf
+  | linecomment -> skip_annotation depth lexbuf
+  | Plus (' ' | '\t' | '\n' | '\r') -> skip_annotation depth lexbuf
+  | reserved | ';' -> skip_annotation depth lexbuf
+  | _ ->
+      raise
+        (Parsing.Syntax_error
+           ( Sedlexing.lexing_bytes_positions lexbuf,
+             Printf.sprintf "Illegal character.\n" ))
+
 let rec token lexbuf =
   let open Parser in
   match%sedlex lexbuf with
@@ -139,6 +169,23 @@ let rec token lexbuf =
   | Plus (' ' | '\t') -> token lexbuf
   | "(;" ->
       comment lexbuf;
+      token lexbuf
+  | "(@", Plus idchar ->
+      skip_annotation 1 lexbuf;
+      token lexbuf
+  | "(@\"" ->
+      let s = string lexbuf in
+      if not (String.is_valid_utf_8 s) then
+        raise
+          (Parsing.Syntax_error
+             ( Sedlexing.lexing_bytes_positions lexbuf,
+               "The annotation id contains malformed UTF-8 byte sequences." ));
+      if s = "" then
+        raise
+          (Parsing.Syntax_error
+             ( Sedlexing.lexing_bytes_positions lexbuf,
+               "An annotation id cannot be the empty string." ));
+      skip_annotation 1 lexbuf;
       token lexbuf
   | id ->
       ID
