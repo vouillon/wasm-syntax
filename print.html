@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-11de6311.js";
+            window.path_to_searchindex_js = "searchindex-44265359.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-dee6d562.js"></script>
@@ -304,7 +304,7 @@ type sub_point : open_point = { y: i32 } ;; ok
 </tbody>
 </table>
 </div>
-<p>Floating point operations:</p>
+<h3 id="floating-point-operations"><a class="header" href="#floating-point-operations">Floating Point Operations</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -315,10 +315,20 @@ type sub_point : open_point = { y: i32 } ;; ok
 <tr><td><code>f32.sub</code> / <code>f64.sub</code></td><td><code>-</code></td></tr>
 <tr><td><code>f32.mul</code> / <code>f64.mul</code></td><td><code>*</code></td></tr>
 <tr><td><code>f32.div</code> / <code>f64.div</code></td><td><code>/</code></td></tr>
-<tr><td><code>i32.clz</code> … <code>i64.popcnt</code></td><td><code>val.clz</code>, <code>val.ctz</code>, <code>val.popcnt</code></td></tr>
 <tr><td><code>f32.abs</code> … <code>f64.sqrt</code></td><td><code>val.abs</code>, <code>val.neg</code>, <code>val.ceil</code>, <code>val.floor</code>, <code>val.trunc</code>, <code>val.nearest</code>, <code>val.sqrt</code></td></tr>
-<tr><td><code>i32.rotl</code> … <code>i64.rotr</code></td><td><code>rotl(v1, v2)</code>, <code>rotr(v1, v2)</code></td></tr>
 <tr><td><code>f32.min</code> … <code>f64.copysign</code></td><td><code>min(v1, v2)</code>, <code>max(v1, v2)</code>, <code>copysign(v1, v2)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="advanced-integer-operations"><a class="header" href="#advanced-integer-operations">Advanced Integer Operations</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Wasm</th><th>Wax</th></tr>
+</thead>
+<tbody>
+<tr><td><code>i32.clz</code> … <code>i64.popcnt</code></td><td><code>val.clz</code>, <code>val.ctz</code>, <code>val.popcnt</code></td></tr>
+<tr><td><code>i32.rotl</code> … <code>i64.rotr</code></td><td><code>rotl(v1, v2)</code>, <code>rotr(v1, v2)</code></td></tr>
 </tbody>
 </table>
 </div>
