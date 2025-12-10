@@ -480,7 +480,36 @@ let rec instr prec pp (i : _ instr) =
                       keyword pp "catch";
                       space pp ();
                       punctuation pp "{");
-                  (* ... *)
+                  indent pp indent_level (fun () ->
+                      List.iter
+                        (fun (tag, block) ->
+                          space pp ();
+                          hvbox pp (fun () ->
+                              box pp (fun () ->
+                                  identifier pp tag.desc;
+                                  space pp ();
+                                  punctuation pp "=>";
+                                  space pp ();
+                                  punctuation pp "{");
+                              space pp ();
+                              block_contents pp block;
+                              punctuation pp "}"))
+                        catches;
+                      Option.iter
+                        (fun block ->
+                          space pp ();
+                          hvbox pp (fun () ->
+                              box pp (fun () ->
+                                  operator pp "_";
+                                  space pp ();
+                                  punctuation pp "=>";
+                                  space pp ();
+                                  punctuation pp "{");
+                              space pp ();
+                              block_contents pp block;
+                              punctuation pp "}"))
+                        catch_all;
+                      space pp ());
                   punctuation pp "}")
           | [], None -> punctuation pp "}")
   | Unreachable -> keyword pp "unreachable"

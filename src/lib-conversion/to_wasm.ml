@@ -231,7 +231,27 @@ let rec instruction ctx i : location Text.instr list =
       folded loc
         (If { label; typ = blocktype typ; if_block; else_block })
         cond_code
-  | Try _ (*ZZZZZZZZZZZZ*) | Unreachable -> folded loc Unreachable []
+  | Try { label; typ; block; catches; catch_all } ->
+      let inner_ctx = { ctx with locals = ctx.locals } in
+      let block = List.concat_map (instruction inner_ctx) block in
+      let catches =
+        List.map
+          (fun (tag, block) ->
+            let inner_ctx = { ctx with locals = ctx.locals } in
+            (index tag, List.concat_map (instruction inner_ctx) block))
+          catches
+      in
+      let catch_all =
+        Option.map
+          (fun block ->
+            let inner_ctx = { ctx with locals = ctx.locals } in
+            List.concat_map (instruction inner_ctx) block)
+          catch_all
+      in
+      folded loc
+        (Try { label; typ = blocktype typ; block; catches; catch_all })
+        []
+  | Unreachable -> folded loc Unreachable []
   | Nop -> folded loc Nop []
   | Pop -> []
   | Null -> folded loc (RefNull (heaptype (expr_reftype i).typ)) []
