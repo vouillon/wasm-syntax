@@ -2,6 +2,24 @@
 
 Wax is a compiler toolchain for a Rust-like syntax targeting WebAssembly.
 
+## Installation
+
+**Requirements:** [Opam](https://opam.ocaml.org/) (2.1+) and OCaml 5.0+.
+
+```sh
+# Install dependencies
+opam install . --deps-only
+
+# Build
+dune build
+
+# Run tests
+dune runtest
+
+# Install
+opam install .
+```
+
 ## Capabilities
 
 *   **Formatting:** Ensures consistent code style.
