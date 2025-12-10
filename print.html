@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-38ff172e.js";
+            window.path_to_searchindex_js = "searchindex-11de6311.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-dee6d562.js"></script>
@@ -528,6 +528,85 @@ tag error(code: i32)
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="cli-reference"><a class="header" href="#cli-reference">CLI Reference</a></h1>
+<p>The <code>wax</code> binary is the primary interface for the Wax toolchain. It supports conversion between Wax, WebAssembly Text (WAT), and WebAssembly Binary (Wasm) formats.</p>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<pre><code class="language-sh">wax [OPTIONS] [INPUT]
+</code></pre>
+<h2 id="positional-arguments"><a class="header" href="#positional-arguments">Positional Arguments</a></h2>
+<ul>
+<li><code>[INPUT]</code>: Source file to convert/format. Supported extensions: <code>.wax</code>, <code>.wat</code>, <code>.wasm</code>.
+<ul>
+<li>If omitted, <code>wax</code> reads from <code>stdin</code>.</li>
+</ul>
+</li>
+</ul>
+<h2 id="options"><a class="header" href="#options">Options</a></h2>
+<ul>
+<li>
+<p><strong><code>-o</code></strong>, <strong><code>--output</code></strong> <em>FILE</em></p>
+<ul>
+<li>Output file. Writes to <code>stdout</code> if not specified.</li>
+</ul>
+</li>
+<li>
+<p><strong><code>-f</code></strong>, <strong><code>--format</code></strong>, <strong><code>--output-format</code></strong> <em>FORMAT</em></p>
+<ul>
+<li>Specify the output format.</li>
+<li>Values: <code>wax</code>, <code>wat</code>, <code>wasm</code>.</li>
+<li>Default: <code>wasm</code> (if not auto-detected from output filename).</li>
+</ul>
+</li>
+<li>
+<p><strong><code>-i</code></strong>, <strong><code>--input-format</code></strong> <em>FORMAT</em></p>
+<ul>
+<li>Specify the input format.</li>
+<li>Values: <code>wax</code>, <code>wat</code>, <code>wasm</code>.</li>
+<li>Default: Auto-detected from input filename, or <code>wax</code> if reading from stdin.</li>
+</ul>
+</li>
+<li>
+<p><strong><code>-v</code></strong>, <strong><code>--validate</code></strong></p>
+<ul>
+<li>Perform validation during conversion.</li>
+<li>For Wax: Runs type checking.</li>
+<li>For Wasm Text: Runs well-formedness checks.</li>
+<li>Disabled by default.</li>
+</ul>
+</li>
+<li>
+<p><strong><code>-s</code></strong>, <strong><code>--strict-validate</code></strong></p>
+<ul>
+<li>Perform strict reference validation (for Wasm Text). Overrides default relaxed validation.</li>
+</ul>
+</li>
+<li>
+<p><strong><code>--color</code></strong> <em>WHEN</em></p>
+<ul>
+<li>Colorize output.</li>
+<li>Values: <code>always</code>, <code>never</code>, <code>auto</code>.</li>
+<li>Default: <code>auto</code> (colors enabled only if output is a TTY).</li>
+</ul>
+</li>
+<li>
+<p><strong><code>--source-map-file</code></strong> <em>FILE</em></p>
+<ul>
+<li>Generate a source map file.</li>
+</ul>
+</li>
+</ul>
+<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<p><strong>Convert a Wax file to Wasm binary:</strong></p>
+<pre><code class="language-sh">wax input.wax -o output.wasm
+</code></pre>
+<p><strong>Convert a Wasm Text file to Wax (decompilation):</strong></p>
+<pre><code class="language-sh">wax input.wat -o output.wax
+</code></pre>
+<p><strong>Format a Wax file (round-trip):</strong></p>
+<pre><code class="language-sh">wax input.wax -f wax
+</code></pre>
+<p><strong>Read from stdin and write to stdout:</strong></p>
+<pre><code class="language-sh">cat input.wax | wax -f wasm &gt; output.wasm
+</code></pre>
 
                     </main>
 
