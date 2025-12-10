@@ -15,6 +15,8 @@ end) (Fast_parser : sig
   exception Error
 
   val parse : (Lexing.lexbuf -> Parser.token) -> Lexing.lexbuf -> Output.t
+end) (Parser_messages : sig
+  val message : int -> string
 end) (Lexer : sig
   val token : Sedlexing.lexbuf -> Parser.token
 end) =
@@ -63,6 +65,7 @@ struct
     in
     (* Expand away the $i keywords that might appear in the message. *)
     let message = E.expand (get text checkpoint) message in
+    let message = Printf.sprintf "%s (%d)" message (state checkpoint) in
     report_syntax_error ~color text location message
 
   let read filename = In_channel.with_open_bin filename In_channel.input_all

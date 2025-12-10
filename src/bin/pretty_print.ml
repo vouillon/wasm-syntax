@@ -5,6 +5,7 @@ module P =
     end)
     (Wasm.Parser)
     (Wasm.Fast_parser)
+    (Wasm.Parser_messages)
     (Wasm.Lexer)
 
 let print_module f m =

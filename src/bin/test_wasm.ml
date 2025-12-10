@@ -7,6 +7,7 @@ module P =
     end)
     (Parser)
     (Fast_parser)
+    (Parser_messages)
     (Lexer)
 
 let _ =

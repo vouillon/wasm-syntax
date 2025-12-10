@@ -1,7 +1,7 @@
-- typing
-- output wasm code
-- validation of wasm code
-- parse wasm code and output to this format
+- Try_table
+- Properly handle typeuse
+
+- Fix syntactic type checks
 
 ============
 

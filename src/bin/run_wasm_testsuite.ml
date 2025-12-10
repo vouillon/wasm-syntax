@@ -166,6 +166,7 @@ module ModuleParser =
     end)
     (Wasm.Parser)
     (Wasm.Fast_parser)
+    (Wasm.Parser_messages)
     (Wasm.Lexer)
 
 module ScriptParser =
@@ -175,6 +176,7 @@ module ScriptParser =
     end)
     (Script_parser)
     (Fast_script_parser)
+    (Wasm.Parser_messages)
     (Wasm.Lexer)
 
 module WaxParser =
@@ -184,6 +186,7 @@ module WaxParser =
     end)
     (Wax.Parser)
     (Wax.Fast_parser)
+    (Wax.Parser_messages)
     (Wax.Lexer)
 
 let print_module ~color f m =

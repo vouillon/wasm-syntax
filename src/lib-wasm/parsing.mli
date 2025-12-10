@@ -21,6 +21,8 @@ end) (_ : sig
 
   val parse : (Lexing.lexbuf -> Parser.token) -> Lexing.lexbuf -> Output.t
 end) (_ : sig
+  val message : int -> string
+end) (_ : sig
   val token : Sedlexing.lexbuf -> Parser.token
 end) : sig
   val parse : ?color:Utils.Colors.flag -> filename:string -> unit -> Output.t

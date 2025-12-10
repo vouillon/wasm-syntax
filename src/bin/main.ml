@@ -8,6 +8,7 @@ module Wat_parser =
     end)
     (Wasm.Parser)
     (Wasm.Fast_parser)
+    (Wasm.Parser_messages)
     (Wasm.Lexer)
 
 module Wax_parser =
@@ -17,6 +18,7 @@ module Wax_parser =
     end)
     (Wax.Parser)
     (Wax.Fast_parser)
+    (Wax.Parser_messages)
     (Wax.Lexer)
 
 let with_open_in file f =
