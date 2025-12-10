@@ -1,4 +1,4 @@
 (library
  (name utils)
  (public_name wax.utils)
- (libraries unix))
+ (libraries unix uucp))

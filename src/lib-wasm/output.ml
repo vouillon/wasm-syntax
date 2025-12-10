@@ -205,31 +205,6 @@ let option f x = match x with None -> [] | Some x -> f x
 let u32 ~style ?loc i = atom ~style ?loc (Uint32.to_string i)
 let u64 ?loc i = atom ?loc (Uint64.to_string i)
 
-let utf8_length s =
-  let segmenter = Uuseg.create `Grapheme_cluster in
-  let has_grapheme = ref false in
-  let flush_segment acc =
-    let acc = if !has_grapheme then acc + 1 else acc in
-    has_grapheme := false;
-    acc
-  in
-  let rec add acc v =
-    match Uuseg.add segmenter v with
-    | `Uchar _ ->
-        has_grapheme := true;
-        add acc `Await
-    | `Boundary -> add (flush_segment acc) `Await
-    | `Await | `End -> acc
-  in
-  let rec loop acc i len =
-    if i >= len then flush_segment (add acc `End)
-    else
-      let dec = String.get_utf_8_uchar s i in
-      let acc = add acc (`Uchar (Uchar.utf_decode_uchar dec)) in
-      loop acc (i + Uchar.utf_decode_length dec) len
-  in
-  loop 0 0 (String.length s)
-
 let escape_string s =
   let b = Buffer.create (String.length s + 2) in
   for i = 0 to String.length s - 1 do
@@ -245,12 +220,17 @@ let escape_string s =
       | _ -> Printf.bprintf b "\\%02x" (Char.code c)
   done;
   let s = Buffer.contents b in
-  (utf8_length s, s)
+  (Utils.Unicode.terminal_width s, s)
 
 let id ?loc x =
   if Lexer.is_valid_identifier x then
     Atom
-      { loc; style = Identifier; len = Some (utf8_length x + 1); s = "$" ^ x }
+      {
+        loc;
+        style = Identifier;
+        len = Some (Utils.Unicode.terminal_width x + 1);
+        s = "$" ^ x;
+      }
   else
     let i, s = escape_string x in
     Atom { loc; style = Identifier; len = Some (i + 3); s = "$\"" ^ s ^ "\"" }

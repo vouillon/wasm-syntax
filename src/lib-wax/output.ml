@@ -49,7 +49,7 @@ let punctuation pp s = print_styled pp Punctuation s
 let operator pp s = print_styled pp Operator s
 
 let identifier pp s =
-  print_styled pp Identifier ~len:(Some (Wasm.Output.utf8_length s)) s
+  print_styled pp Identifier ~len:(Some (Utils.Unicode.terminal_width s)) s
 
 let constant pp s = print_styled pp Constant s
 let keyword pp s = print_styled pp Keyword s
