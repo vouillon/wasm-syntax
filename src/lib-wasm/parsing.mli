@@ -23,10 +23,11 @@ end) (_ : sig
 end) (_ : sig
   val token : Sedlexing.lexbuf -> Parser.token
 end) : sig
-  val parse : filename:string -> Output.t
+  val parse : ?color:Utils.Colors.flag -> filename:string -> unit -> Output.t
   (** Parse a file from a filename (reads from stdin if filename is empty or
       "-"). *)
 
-  val parse_from_string : filename:string -> string -> Output.t
+  val parse_from_string :
+    ?color:Utils.Colors.flag -> filename:string -> string -> Output.t
   (** Parse from a string. *)
 end

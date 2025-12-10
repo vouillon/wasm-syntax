@@ -284,19 +284,8 @@ Step 2: use this info to generate using names without reusing existing names
 *)
 
 module Stack = struct
-  type stack = (int option * Ast.location Ast.instr) list
+  type stack = (bool * Ast.location Ast.instr) list
   type 'a t = stack -> stack * 'a
-
-  (* 
-  let rec consume n stack =
-    if n = 0 then stack
-    else
-      match stack with
-      | [] | (None, _) :: _ -> stack
-      | (Some n', i) :: rem ->
-          if n >= n' then (Some 0, i) :: consume (n - n') stack
-          else (Some (n' - n), i) :: rem
-*)
 
   let rec complete n cur =
     if n = 0 then cur else complete (n - 1) (Ast.no_loc Ast.Pop :: cur)
@@ -305,28 +294,28 @@ module Stack = struct
     if n = 0 then (stack, cur)
     else
       match stack with
-      | (Some 1, instr) :: rem -> grab_rec (n - 1) rem (instr :: cur)
+      | (true, instr) :: rem -> grab_rec (n - 1) rem (instr :: cur)
       | _ -> (stack, complete n cur)
 
   let consume inputs stack =
     if inputs = 0 then (stack, ())
     else
       ( (match stack with
-        | (Some 1, instr) :: rem -> (None, instr) :: rem
+        | (true, instr) :: rem -> (false, instr) :: rem
         | _ -> stack),
         () )
 
   let grab n stack = grab_rec n stack []
-  let push arity i stack = ((Some arity, i) :: stack, ())
-  let push_poly i stack = ((None, i) :: stack, ())
+  let push arity i stack = ((arity = 1, i) :: stack, ())
+  let push_poly i stack = ((false, i) :: stack, ())
 
   let pop stack =
     match stack with
-    | (Some 1, i) :: rem -> (rem, i)
+    | (true, i) :: rem -> (rem, i)
     | _ -> (stack, Ast.no_loc Ast.Pop)
 
   let try_pop stack =
-    match stack with (Some 1, i) :: rem -> (rem, Some i) | _ -> (stack, None)
+    match stack with (true, i) :: rem -> (rem, Some i) | _ -> (stack, None)
 
   let run f =
     let st, () = f [] in
@@ -544,17 +533,24 @@ let blocktype ctx (typ : Src.blocktype option) =
   match typ with
   | None -> { Ast.params = [||]; results = [||] }
   | Some (Valtype ty) -> { Ast.params = [||]; results = [| valtype ctx ty |] }
-  | Some (Typeuse (ty_idx, sign)) -> (
-      match (ty_idx, sign) with
-      | _, Some { Src.params; results } ->
-          {
-            Ast.params =
-              Array.map
-                (fun (id, t) -> (Option.map Ast.no_loc id, valtype ctx t))
-                params;
-            results = Array.map (fun t -> valtype ctx t) results;
-          }
-      | _, None -> assert false (*ZZZ*))
+  | Some (Typeuse (ty_idx, sign)) ->
+      let { Src.params; results } =
+        match (ty_idx, sign) with
+        | _, Some sign -> sign
+        | Some idx, _ -> (
+            let ty = lookup_type ctx Type idx in
+            match ty.typ with
+            | Struct _ | Array _ -> assert false
+            | Func sign -> sign)
+        | None, None -> assert false
+      in
+      {
+        Ast.params =
+          Array.map
+            (fun (id, t) -> (Option.map Ast.no_loc id, valtype ctx t))
+            params;
+        results = Array.map (fun t -> valtype ctx t) results;
+      }
 
 let push_label ctx ~loop label typ =
   let arity = blocktype_arity ctx typ in
@@ -571,13 +567,17 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       let body = Stack.run (instructions ctx block) in
       let inputs, outputs = blocktype_arity ctx typ in
       let* () = Stack.consume inputs in
-      Stack.push outputs (with_loc (Block (label (), blocktype ctx typ, body)))
+      Stack.push
+        (if inputs > 0 then 0 else outputs)
+        (with_loc (Block (label (), blocktype ctx typ, body)))
   | Loop { label; typ; block } ->
       let label, ctx = push_label ctx ~loop:true label typ in
       let body = Stack.run (instructions ctx block) in
       let inputs, outputs = blocktype_arity ctx typ in
       let* () = Stack.consume inputs in
-      Stack.push outputs (with_loc (Loop (label (), blocktype ctx typ, body)))
+      Stack.push
+        (if inputs > 0 then 0 else outputs)
+        (with_loc (Loop (label (), blocktype ctx typ, body)))
   | If { label; typ; if_block; else_block } ->
       let label, ctx = push_label ctx ~loop:false label typ in
       let if_body = Stack.run (instructions ctx if_block) in
@@ -588,7 +588,8 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       let inputs, outputs = blocktype_arity ctx typ in
       let* cond = Stack.pop in
       let* () = Stack.consume inputs in
-      Stack.push outputs
+      Stack.push
+        (if inputs > 0 then 0 else outputs)
         (with_loc (If (label (), blocktype ctx typ, cond, if_body, else_body)))
   | Try { label; typ; block; catches; catch_all } ->
       let label, ctx = push_label ctx ~loop:false label typ in
@@ -602,8 +603,10 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       let catch_all =
         Option.map (fun block -> Stack.run (instructions ctx block)) catch_all
       in
-      let _, outputs = blocktype_arity ctx typ in
-      Stack.push outputs
+      let inputs, outputs = blocktype_arity ctx typ in
+      let* () = Stack.consume inputs in
+      Stack.push
+        (if inputs > 0 then 0 else outputs)
         (with_loc
            (Try
               {

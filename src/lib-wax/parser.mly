@@ -261,8 +261,10 @@ tag:
 %inline label: l = ioption("'" l = IDENT ":" { l }) { l }
 
 blocktype:
-| "(" params = separated_list(",", valtype) ")" "->" result = resulttype
-  { {params = Array.of_list (List.map (fun t -> (None, t)) params); results = Array.of_list result} }
+| "(" params = separated_list(",", valtype) ")"
+  result = option("->" result = resulttype {result})
+  { {params = Array.of_list (List.map (fun t -> (None, t)) params);
+     results = Array.of_list (Option.value ~default:[] result)} }
 | t = valtype { {params = [||]; results = [|t|] } }
 
 %inline block:

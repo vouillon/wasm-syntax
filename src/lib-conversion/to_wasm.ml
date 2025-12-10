@@ -191,6 +191,12 @@ let expr_opt_valtype i =
 let expr_valtype i = unpack_type (expr_type i)
 let expr_reftype i = match expr_valtype i with Ref r -> r | _ -> assert false
 
+let expr_opt_reftype i =
+  match expr_opt_valtype i with
+  | Some (Ref r) -> Some r
+  | None -> None
+  | _ -> assert false
+
 let expr_type_name i =
   match expr_reftype i with
   | { typ = Type idx; _ } -> idx
@@ -307,10 +313,14 @@ let rec instruction ctx i : location Text.instr list =
               | F64 -> folded loc (BinOp (F64 CopySign)) arg_code
               | _ -> assert false)
           | _ ->
-              if StringMap.mem idx.desc ctx.locals then
+              if
+                Hashtbl.mem ctx.functions idx.desc
+                && not (StringMap.mem idx.desc ctx.locals)
+              then folded loc (Call (index idx)) arg_code
+              else
                 let code = instruction ctx f in
                 folded loc (CallRef (index (expr_type_name f))) (arg_code @ code)
-              else folded loc (Call (index idx)) arg_code)
+          )
       | StructGet (obj, { desc = "fill"; _ }) ->
           let array_code = instruction ctx obj in
           let type_name_idx = expr_type_name obj in
@@ -365,7 +375,9 @@ let rec instruction ctx i : location Text.instr list =
                   | Ref _, Signedtype { typ = `I32; signage; _ } ->
                       I31Get signage
                   (* Extern / Any *)
-                  | Ref { typ = Any; _ }, Valtype (Ref { typ = Extern; _ }) ->
+                  | ( Ref
+                        { typ = Any | I31 | Struct | Array | Type _ | None_; _ },
+                      Valtype (Ref { typ = Extern; _ }) ) ->
                       ExternConvertAny
                   | Ref { typ = Extern; _ }, Valtype (Ref { typ = Any; _ }) ->
                       AnyConvertExtern
@@ -556,25 +568,26 @@ let rec instruction ctx i : location Text.instr list =
           let opcode = binop i op operand_type in
           folded loc opcode (code_a @ code_b))
   | UnOp (op, a) -> (
-      let operand_type = expr_valtype a in
+      let operand_type = expr_opt_valtype a in
       match (op, operand_type) with
-      | Neg, I32 ->
+      | Neg, (Some I32 | None) ->
           (* 0 - a *)
           let zero = folded loc (Const (I32 "0")) [] in
           let sub = Text.BinOp (I32 Sub) in
           folded loc sub (zero @ instruction ctx a)
-      | Neg, I64 ->
+      | Neg, Some I64 ->
           let zero = folded loc (Const (I64 "0")) [] in
           let sub = Text.BinOp (I64 Sub) in
           folded loc sub (zero @ instruction ctx a)
-      | Neg, F32 -> folded loc (UnOp (F32 Neg)) (instruction ctx a)
-      | Neg, F64 -> folded loc (UnOp (F64 Neg)) (instruction ctx a)
-      | Not, I32 -> folded loc (UnOp (I32 Eqz)) (instruction ctx a)
-      | Not, I64 -> folded loc (UnOp (I64 Eqz)) (instruction ctx a)
+      | Neg, Some F32 -> folded loc (UnOp (F32 Neg)) (instruction ctx a)
+      | Neg, Some F64 -> folded loc (UnOp (F64 Neg)) (instruction ctx a)
+      | Not, (Some I32 | None) ->
+          folded loc (UnOp (I32 Eqz)) (instruction ctx a)
+      | Not, Some I64 -> folded loc (UnOp (I64 Eqz)) (instruction ctx a)
       (* Ref IsNull *)
-      | Not, Ref _ -> folded loc RefIsNull (instruction ctx a)
+      | Not, Some (Ref _) -> folded loc RefIsNull (instruction ctx a)
       | Pos, _ -> instruction ctx a
-      | _ -> assert false)
+      | _, Some _ -> assert false)
   | Let (decls, None) ->
       let binding (id, ty) =
         match id with
@@ -624,12 +637,18 @@ let rec instruction ctx i : location Text.instr list =
       (*ZZZ LUB for now *)
       folded loc
         (Br_on_cast
-           (label i l, reftype (expr_reftype expr), reftype target_reftype))
+           ( label i l,
+             reftype
+               (Option.value ~default:target_reftype (expr_opt_reftype expr)),
+             reftype target_reftype ))
         (instruction ctx expr)
   | Br_on_cast_fail (l, target_reftype, expr) ->
       folded loc
         (Br_on_cast_fail
-           (label i l, reftype (expr_reftype expr), reftype target_reftype))
+           ( label i l,
+             reftype
+               (Option.value ~default:target_reftype (expr_opt_reftype expr)),
+             reftype target_reftype ))
         (instruction ctx expr)
   | Throw (tag_idx, args) ->
       folded loc
@@ -644,9 +663,9 @@ let rec instruction ctx i : location Text.instr list =
       let code_else = instruction ctx else_ in
       let code_cond = instruction ctx cond in
       let typ =
-        match expr_valtype i with
-        | I32 | I64 | F32 | F64 | V128 -> None
-        | typ -> Some [ valtype typ ]
+        match expr_opt_valtype i with
+        | None | Some (I32 | I64 | F32 | F64 | V128) -> None
+        | Some typ -> Some [ valtype typ ]
       in
       folded loc (Select typ) (code_then @ code_else @ code_cond)
   | String (Some idx, _) ->

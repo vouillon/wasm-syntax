@@ -15,11 +15,12 @@ let _ =
   Array.iter
     (fun nm ->
       if Filename.check_suffix nm ".wat" then
-        ignore (P.parse ~filename:(Filename.concat p nm)))
+        ignore (P.parse ~filename:(Filename.concat p nm) ()))
     l;
   ignore
     (P.parse
        ~filename:
-         "/home/jerome/tmp/jane-street/_build/default/lib/bonsai/ppx_bonsai/test/inline/.ppx_bonsai_test.inline-tests/inline_test_runner_ppx_bonsai_test.bc.wasm.wat")
+         "/home/jerome/tmp/jane-street/_build/default/lib/bonsai/ppx_bonsai/test/inline/.ppx_bonsai_test.inline-tests/inline_test_runner_ppx_bonsai_test.bc.wasm.wat"
+       ())
 
 let _ = Types.create

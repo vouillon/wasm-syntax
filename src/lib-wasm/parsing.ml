@@ -43,13 +43,13 @@ struct
     | Some (Element (_, _, pos1, pos2)) -> show text (pos1, pos2)
     | None -> (* should not happen *) "???"
 
-  let report_syntax_error source (loc_start, loc_end) msg =
-    let theme = Utils.Diagnostic.get_theme () in
+  let report_syntax_error ~color source (loc_start, loc_end) msg =
+    let theme = Utils.Diagnostic.get_theme ?color () in
     Utils.Diagnostic.output_error_with_source ~theme ~source ~severity:Error
       ~location:{ loc_start; loc_end } (fun f () -> Format.fprintf f "%s" msg);
     exit 123
 
-  let fail text buffer checkpoint =
+  let fail ~color text buffer checkpoint =
     let location = E.last buffer in
     let message =
       try Parser_messages.message (state checkpoint)
@@ -63,7 +63,7 @@ struct
     in
     (* Expand away the $i keywords that might appear in the message. *)
     let message = E.expand (get text checkpoint) message in
-    report_syntax_error text location message
+    report_syntax_error ~color text location message
 
   let read filename = In_channel.with_open_bin filename In_channel.input_all
 
@@ -77,7 +77,7 @@ struct
     let startp, endp = Sedlexing.lexing_bytes_positions lexbuf in
     (token, startp, endp)
 
-  let parse_with_errors filename text =
+  let parse_with_errors ~color filename text =
     let lexbuf = initialize_lexing filename text in
     let supplier = lexer_lexbuf_to_supplier Lexer.token lexbuf in
     let buffer, supplier = E.wrap_supplier supplier in
@@ -85,11 +85,11 @@ struct
       Parser.Incremental.parse (snd (Sedlexing.lexing_bytes_positions lexbuf))
     in
     try
-      Parser.MenhirInterpreter.loop_handle succeed (fail text buffer) supplier
-        checkpoint
-    with Syntax_error (loc, msg) -> report_syntax_error text loc msg
+      Parser.MenhirInterpreter.loop_handle succeed (fail ~color text buffer)
+        supplier checkpoint
+    with Syntax_error (loc, msg) -> report_syntax_error ~color text loc msg
 
-  let parse_from_string ~filename text =
+  let parse_from_string ?color ~filename text =
     let lexbuf = initialize_lexing filename text in
     try
       let supplier = lexer_lexbuf_to_supplier Lexer.token lexbuf in
@@ -98,12 +98,13 @@ struct
       in
       revised_parser supplier
     with
-    | Fast_parser.Error -> parse_with_errors filename text
-    | Syntax_error (loc, msg) -> report_syntax_error text loc msg
+    | Fast_parser.Error -> parse_with_errors ~color filename text
+    | Syntax_error (loc, msg) -> report_syntax_error ~color text loc msg
     | Sedlexing.InvalidCodepoint _ | Sedlexing.MalFormed ->
-        report_syntax_error text
+        report_syntax_error text ~color
           (Sedlexing.lexing_bytes_positions lexbuf)
           "Input file contains malformed UTF-8 byte sequences\n"
 
-  let parse ~filename = parse_from_string ~filename (read filename)
+  let parse ?color ~filename () =
+    parse_from_string ?color ~filename (read filename)
 end

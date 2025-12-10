@@ -704,7 +704,9 @@ let rec grab_parameters ctx acc i =
   | Cast (i, _)
   | Test (i, _)
   | NonNull i
+  | Br (_, Some i)
   | Br_if (_, i)
+  | Br_table (_, i)
   | Br_on_null (_, i)
   | Br_on_non_null (_, i)
   | Br_on_cast (_, _, i)
@@ -729,7 +731,7 @@ let rec grab_parameters ctx acc i =
   | Block _ | Loop _ | Try _ | StructDefault _ | String _ | Int _ | Float _
   | Get _ | Null | Unreachable | Nop
   | Let (_, None)
-  | Br _ | Br_table _
+  | Br (_, None)
   | Return None ->
       return acc
 
@@ -1162,11 +1164,12 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
            type information
          - when converting to Wasm, we add precise types, so some
            casts used to resolve ambiguities become unnecessary.
+         ZZZ Handle select instruction better
       *)
       let unnecessary_cast =
         UnionFind.find ty' <> Unknown && subtype ctx ty' ty
       in
-      if unnecessary_cast then return i'
+      if unnecessary_cast then return { i' with info = ([| ty |], snd i'.info) }
       else return_expression i (Cast (i', typ)) ty
   | Test (i, ty) ->
       let* i' = instruction ctx i in

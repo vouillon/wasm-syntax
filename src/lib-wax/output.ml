@@ -491,7 +491,6 @@ let rec instr prec pp (i : _ instr) =
                                   punctuation pp "=>";
                                   space pp ();
                                   punctuation pp "{");
-                              space pp ();
                               block_contents pp block;
                               punctuation pp "}"))
                         catches;
@@ -505,7 +504,6 @@ let rec instr prec pp (i : _ instr) =
                                   punctuation pp "=>";
                                   space pp ();
                                   punctuation pp "{");
-                              space pp ();
                               block_contents pp block;
                               punctuation pp "}"))
                         catch_all;

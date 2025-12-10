@@ -191,13 +191,14 @@ let print_module ~color f m =
 
 let runtest filename path =
   let quiet = not !all_errors in
+  let color = !color in
   if true then
     Format.eprintf "%s==== %s ====%s@."
-      (match !color with Always -> Utils.Colors.Ansi.grey | _ -> "")
+      (match color with Always -> Utils.Colors.Ansi.grey | _ -> "")
       path
-      (match !color with Always -> Utils.Colors.Ansi.reset | _ -> "");
+      (match color with Always -> Utils.Colors.Ansi.reset | _ -> "");
   let source = In_channel.with_open_bin filename In_channel.input_all in
-  let lst = ScriptParser.parse_from_string ~filename source in
+  let lst = ScriptParser.parse_from_string ~color ~filename source in
   let lst = List.map (fun (status, m) -> (status, m, Some source)) lst in
   (* Parsing *)
   let lst =
@@ -207,7 +208,10 @@ let runtest filename path =
         | ((`Valid | `Invalid _) as status), `Parsed m ->
             Some (status, m, source)
         | ((`Valid | `Invalid _) as status), `Text txt ->
-            Some (status, ModuleParser.parse_from_string ~filename txt, Some txt)
+            Some
+              ( status,
+                ModuleParser.parse_from_string ~color ~filename txt,
+                Some txt )
         | ((`Valid | `Invalid _) as status), `Binary txt ->
             let m =
               Wasm.Binary_to_text.module_
@@ -221,14 +225,14 @@ let runtest filename path =
         | `Malformed reason, `Text txt ->
             let ok =
               in_child_process ~quiet (fun () ->
-                  let ast = ModuleParser.parse_from_string ~filename txt in
-                  Utils.Diagnostic.run ~color:!color ~source:(Some txt)
-                    (fun d ->
+                  let ast =
+                    ModuleParser.parse_from_string ~color ~filename txt
+                  in
+                  Utils.Diagnostic.run ~color ~source:(Some txt) (fun d ->
                       Wasm.Validation.check_syntax d ast;
                       Wasm.Validation.f d ast);
                   if false then
-                    Format.printf "@[<2>Result:@ %a@]@."
-                      (print_module ~color:!color)
+                    Format.printf "@[<2>Result:@ %a@]@." (print_module ~color)
                       ast)
             in
             if ok then
@@ -241,13 +245,11 @@ let runtest filename path =
                     Wasm.Binary_to_text.module_
                       (Wasm.Wasm_parser.module_ ~filename txt)
                   in
-                  Utils.Diagnostic.run ~color:!color ~source:(Some txt)
-                    (fun d ->
+                  Utils.Diagnostic.run ~color ~source:(Some txt) (fun d ->
                       Wasm.Validation.check_syntax d ast;
                       Wasm.Validation.f d ast);
                   if false then
-                    Format.printf "@[<2>Result:@ %a@]@."
-                      (print_module ~color:!color)
+                    Format.printf "@[<2>Result:@ %a@]@." (print_module ~color)
                       ast)
             in
             if ok then
@@ -262,7 +264,7 @@ let runtest filename path =
       (fun (status, m, _) ->
         let text = Format.asprintf "%a@." (print_module ~color:Never) m in
         if false then print_flushed text;
-        (status, ModuleParser.parse_from_string ~filename text, Some text))
+        (status, ModuleParser.parse_from_string ~color ~filename text, Some text))
       lst
   in
   (* Serialization and reparsing (Wasm) *)
@@ -276,7 +278,7 @@ let runtest filename path =
           | `Valid ->
               if false then (
                 prerr_endline " BEFORE";
-                Format.eprintf "@[%a@]@." (print_module ~color:!color) m
+                Format.eprintf "@[%a@]@." (print_module ~color) m
                 (*if false then prerr_endline (String.escaped text)*));
               let temp, out_channel =
                 Filename.open_temp_file ~mode:[ Open_binary ] "temp" ".wasm"
@@ -291,7 +293,7 @@ let runtest filename path =
               in
               if false then (
                 prerr_endline "AFTER ";
-                Format.eprintf "@[%a@]@." (print_module ~color:!color) m);
+                Format.eprintf "@[%a@]@." (print_module ~color) m);
               Some (status, m, None))
         lst
   in
@@ -303,24 +305,19 @@ let runtest filename path =
       (fun (status, m, source) ->
         match (status, m) with
         | `Valid, m ->
-            Utils.Diagnostic.run ~color:!color ~source (fun d ->
-                Wasm.Validation.f d m);
+            Utils.Diagnostic.run ~color ~source (fun d -> Wasm.Validation.f d m);
             true
         | `Invalid reason, m ->
             let ok =
               in_child_process ~quiet (fun () ->
-                  Utils.Diagnostic.run ~color:!color ~source (fun d ->
+                  Utils.Diagnostic.run ~color ~source (fun d ->
                       Wasm.Validation.f d m);
                   if false then
-                    Format.printf "@[<2>Result:@ %a@]@."
-                      (print_module ~color:!color)
-                      m)
+                    Format.printf "@[<2>Result:@ %a@]@." (print_module ~color) m)
             in
             if ok then
               Format.eprintf "@[<2>Validation should have failed (%s):@ %a@]@."
-                reason
-                (print_module ~color:!color)
-                m;
+                reason (print_module ~color) m;
             false)
       (lst @ lst' @ lst'')
   in
@@ -334,44 +331,42 @@ let runtest filename path =
         match Conversion.From_wasm.module_ m with
         | exception e ->
             prerr_endline (Printexc.to_string e);
-            if false then
-              Format.eprintf "@[%a@]@." (print_module ~color:!color) m
+            if false then Format.eprintf "@[%a@]@." (print_module ~color) m
         | m ->
             let ok =
               in_child_process (fun () ->
                   let m =
-                    Utils.Diagnostic.run ~color:!color ~source (fun d ->
+                    Utils.Diagnostic.run ~color ~source (fun d ->
                         Wax.Typing.f d m)
                   in
                   let m' = Conversion.To_wasm.module_ m in
                   let ok =
                     in_child_process (fun () ->
-                        Utils.Diagnostic.run ~color:!color ~source (fun d ->
+                        Utils.Diagnostic.run ~color ~source (fun d ->
                             Wasm.Validation.f d m'))
                   in
-                  if false && not ok then (
-                    Format.eprintf "@[%a@]@." (print_module ~color:!color) m';
-                    Format.eprintf "@[%a@]@." (print_wax ~color:!color) m))
+                  if not ok then (
+                    Format.eprintf "@[%a@]@." (print_module ~color) m';
+                    Format.eprintf "@[%a@]@." (print_wax ~color) m))
             in
-            if false && not ok then
-              Format.eprintf "@[%a@]@." (print_wax ~color:!color) m;
+            if not ok then Format.eprintf "@[%a@]@." (print_wax ~color) m;
             let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
             let ok =
               in_child_process (fun () ->
-                  let m' = WaxParser.parse_from_string ~filename text in
+                  let m' = WaxParser.parse_from_string ~color ~filename text in
                   if false (*XXX*) then
                     let ok =
                       in_child_process (fun () ->
                           ignore
-                            (Utils.Diagnostic.run ~color:!color ~source
-                               (fun d -> Wax.Typing.f d m')))
+                            (Utils.Diagnostic.run ~color ~source (fun d ->
+                                 Wax.Typing.f d m')))
                     in
                     if not ok then
                       if true then prerr_endline "(after parsing)"
                       else (
-                        Format.eprintf "@[%a@]@." (print_wax ~color:!color) m';
+                        Format.eprintf "@[%a@]@." (print_wax ~color) m';
                         prerr_endline "===";
-                        Format.eprintf "@[%a@]@." (print_wax ~color:!color) m))
+                        Format.eprintf "@[%a@]@." (print_wax ~color) m))
             in
             if not ok then
               if true then prerr_endline "(parsing)" else print_flushed text)
