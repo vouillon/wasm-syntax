@@ -210,28 +210,44 @@ let expr_type_kind ctx i =
   | { typ = Array; _ } -> `Array
   | _ -> Hashtbl.find ctx.type_kinds (expr_type_name i).desc
 
-let label i l = with_loc (snd i.info) (Text.Id l)
+let label i ret lab =
+  match ret with
+  | Some (lab', depth) when lab = lab' ->
+      with_loc (snd i.info) (Text.Num (Uint32.of_int depth))
+  | _ -> with_loc (snd i.info) (Text.Id lab)
 
-let rec instruction ctx i : location Text.instr list =
+let push ret label =
+  match (ret, label) with
+  | Some (label, _), Some label' when label = label' -> None
+  | Some (label, i), _ -> Some (label, i + 1)
+  | None, _ -> None
+
+let rec instruction ret ctx i : location Text.instr list =
   let _, loc = i.info in
   match i.desc with
   | Block (label, typ, body) ->
       let inner_ctx = { ctx with locals = ctx.locals } in
-      let block = List.concat_map (instruction inner_ctx) body in
+      let block =
+        List.concat_map (instruction (push ret label) inner_ctx) body
+      in
       folded loc (Block { label; typ = blocktype typ; block }) []
   | Loop (label, typ, body) ->
       let inner_ctx = { ctx with locals = ctx.locals } in
-      let block = List.concat_map (instruction inner_ctx) body in
+      let block =
+        List.concat_map (instruction (push ret label) inner_ctx) body
+      in
       folded loc (Loop { label; typ = blocktype typ; block }) []
   | If (label, typ, cond, then_, else_) ->
-      let cond_code = instruction ctx cond in
+      let cond_code = instruction ret ctx cond in
       let then_ctx = { ctx with locals = ctx.locals } in
-      let if_block = List.concat_map (instruction then_ctx) then_ in
+      let if_block =
+        List.concat_map (instruction (push ret label) then_ctx) then_
+      in
       let else_block =
         match else_ with
         | Some e ->
             let else_ctx = { ctx with locals = ctx.locals } in
-            List.concat_map (instruction else_ctx) e
+            List.concat_map (instruction (push ret label) else_ctx) e
         | None -> []
       in
       folded loc
@@ -239,19 +255,22 @@ let rec instruction ctx i : location Text.instr list =
         cond_code
   | Try { label; typ; block; catches; catch_all } ->
       let inner_ctx = { ctx with locals = ctx.locals } in
-      let block = List.concat_map (instruction inner_ctx) block in
+      let block =
+        List.concat_map (instruction (push ret label) inner_ctx) block
+      in
       let catches =
         List.map
           (fun (tag, block) ->
             let inner_ctx = { ctx with locals = ctx.locals } in
-            (index tag, List.concat_map (instruction inner_ctx) block))
+            ( index tag,
+              List.concat_map (instruction (push ret label) inner_ctx) block ))
           catches
       in
       let catch_all =
         Option.map
           (fun block ->
             let inner_ctx = { ctx with locals = ctx.locals } in
-            List.concat_map (instruction inner_ctx) block)
+            List.concat_map (instruction (push ret label) inner_ctx) block)
           catch_all
       in
       folded loc
@@ -270,19 +289,19 @@ let rec instruction ctx i : location Text.instr list =
          folded loc (Text.RefFunc (index idx)))
           []
       else folded loc (Text.GlobalGet (index idx)) []
-  | Set (None, expr) -> folded loc Drop (instruction ctx expr)
+  | Set (None, expr) -> folded loc Drop (instruction ret ctx expr)
   | Set (Some idx, expr) ->
-      let code = instruction ctx expr in
+      let code = instruction ret ctx expr in
       if StringMap.mem idx.desc ctx.locals then
         let wasm_name = StringMap.find idx.desc ctx.locals in
         folded loc (LocalSet (with_loc idx.info (Text.Id wasm_name))) code
       else folded loc (GlobalSet (index idx)) code
   | Tee (idx, expr) ->
-      let code = instruction ctx expr in
+      let code = instruction ret ctx expr in
       let wasm_name = StringMap.find idx.desc ctx.locals in
       folded loc (LocalTee (with_loc idx.info (Text.Id wasm_name))) code
   | Call (f, args) -> (
-      let arg_code = List.concat_map (instruction ctx) args in
+      let arg_code = List.concat_map (instruction ret ctx) args in
       match f.desc with
       (* Check for intrinsics calls *)
       | Get idx -> (
@@ -318,15 +337,15 @@ let rec instruction ctx i : location Text.instr list =
                 && not (StringMap.mem idx.desc ctx.locals)
               then folded loc (Call (index idx)) arg_code
               else
-                let code = instruction ctx f in
+                let code = instruction ret ctx f in
                 folded loc (CallRef (index (expr_type_name f))) (arg_code @ code)
           )
       | StructGet (obj, { desc = "fill"; _ }) ->
-          let array_code = instruction ctx obj in
+          let array_code = instruction ret ctx obj in
           let type_name_idx = expr_type_name obj in
           folded loc (ArrayFill (index type_name_idx)) (array_code @ arg_code)
       | StructGet (obj, { desc = "copy"; _ }) ->
-          let a1_code = instruction ctx obj in
+          let a1_code = instruction ret ctx obj in
           let type_a1 = expr_type_name obj in
           let a2_code = List.nth args 1 in
           let type_a2 = expr_type_name a2_code in
@@ -334,16 +353,16 @@ let rec instruction ctx i : location Text.instr list =
             (ArrayCopy (index type_a1, index type_a2))
             (a1_code @ arg_code)
       | _ ->
-          let code = instruction ctx f in
+          let code = instruction ret ctx f in
           folded loc (CallRef (index (expr_type_name f))) (arg_code @ code))
   | TailCall (f, args) -> (
       (*ZZZ handle intrinsics as well? (Or reject while typing?) *)
-      let arg_code = List.concat_map (instruction ctx) args in
+      let arg_code = List.concat_map (instruction ret ctx) args in
       match f.desc with
       | Get idx when Hashtbl.mem ctx.functions idx.desc ->
           folded loc (ReturnCall (index idx)) arg_code
       | _ ->
-          let code = instruction ctx f in
+          let code = instruction ret ctx f in
           folded loc (ReturnCallRef (index (expr_type_name f))) (arg_code @ code)
       )
   | Int s -> (
@@ -364,7 +383,7 @@ let rec instruction ctx i : location Text.instr list =
             | Valtype (Ref r) -> folded loc (RefNull (heaptype r.typ)) []
             | _ -> assert false)
         | _ -> (
-            let code = instruction ctx expr in
+            let code = instruction ret ctx expr in
             match expr_opt_valtype expr with
             | None -> code
             | Some in_ty ->
@@ -439,7 +458,7 @@ let rec instruction ctx i : location Text.instr list =
               let type_name_idx = expr_type_name instr_val in
               folded loc
                 (StructGet (Some signage, index type_name_idx, index field_idx))
-                (instruction ctx instr_val)
+                (instruction ret ctx instr_val)
           | _ -> default_cast ())
       | ArrayGet (arr_instr, idx_instr) -> (
           match (expr_type expr, cast_ty) with
@@ -447,12 +466,12 @@ let rec instruction ctx i : location Text.instr list =
               let type_name_idx = expr_type_name arr_instr in
               folded loc
                 (ArrayGet (Some signage, index type_name_idx))
-                (instruction ctx arr_instr @ instruction ctx idx_instr)
+                (instruction ret ctx arr_instr @ instruction ret ctx idx_instr)
           | _ -> default_cast ())
       | _ -> default_cast ())
   | Test (expr, typ) ->
-      folded loc (RefTest (reftype typ)) (instruction ctx expr)
-  | NonNull expr -> folded loc RefAsNonNull (instruction ctx expr)
+      folded loc (RefTest (reftype typ)) (instruction ret ctx expr)
+  | NonNull expr -> folded loc RefAsNonNull (instruction ret ctx expr)
   | Struct (opt_idx, fields) ->
       let idx = Option.value ~default:(expr_type_name i) opt_idx in
       let field_names = Hashtbl.find ctx.struct_fields idx.desc in
@@ -464,7 +483,7 @@ let rec instruction ctx i : location Text.instr list =
       let instrs =
         List.map (fun name -> StringMap.find name field_map) field_names
       in
-      let args_code = List.concat_map (instruction ctx) instrs in
+      let args_code = List.concat_map (instruction ret ctx) instrs in
       folded loc (StructNew (index idx)) args_code
   | StructDefault opt_idx ->
       let idx = Option.value ~default:(expr_type_name i) opt_idx in
@@ -472,62 +491,68 @@ let rec instruction ctx i : location Text.instr list =
   | StructGet (instr_val, field) -> (
       if field.desc = "length" then
         match expr_type_kind ctx instr_val with
-        | `Array -> folded loc ArrayLen (instruction ctx instr_val)
+        | `Array -> folded loc ArrayLen (instruction ret ctx instr_val)
         | _ ->
             folded loc
               (StructGet (None, index (expr_type_name instr_val), index field))
-              (instruction ctx instr_val)
+              (instruction ret ctx instr_val)
       else
         match (field.desc, expr_valtype instr_val) with
         (* Int Unary *)
-        | "clz", I32 -> folded loc (UnOp (I32 Clz)) (instruction ctx instr_val)
-        | "ctz", I32 -> folded loc (UnOp (I32 Ctz)) (instruction ctx instr_val)
+        | "clz", I32 ->
+            folded loc (UnOp (I32 Clz)) (instruction ret ctx instr_val)
+        | "ctz", I32 ->
+            folded loc (UnOp (I32 Ctz)) (instruction ret ctx instr_val)
         | "popcnt", I32 ->
-            folded loc (UnOp (I32 Popcnt)) (instruction ctx instr_val)
-        | "clz", I64 -> folded loc (UnOp (I64 Clz)) (instruction ctx instr_val)
-        | "ctz", I64 -> folded loc (UnOp (I64 Ctz)) (instruction ctx instr_val)
+            folded loc (UnOp (I32 Popcnt)) (instruction ret ctx instr_val)
+        | "clz", I64 ->
+            folded loc (UnOp (I64 Clz)) (instruction ret ctx instr_val)
+        | "ctz", I64 ->
+            folded loc (UnOp (I64 Ctz)) (instruction ret ctx instr_val)
         | "popcnt", I64 ->
-            folded loc (UnOp (I64 Popcnt)) (instruction ctx instr_val)
+            folded loc (UnOp (I64 Popcnt)) (instruction ret ctx instr_val)
         (* Float Unary *)
-        | "abs", F32 -> folded loc (UnOp (F32 Abs)) (instruction ctx instr_val)
+        | "abs", F32 ->
+            folded loc (UnOp (F32 Abs)) (instruction ret ctx instr_val)
         | "ceil", F32 ->
-            folded loc (UnOp (F32 Ceil)) (instruction ctx instr_val)
+            folded loc (UnOp (F32 Ceil)) (instruction ret ctx instr_val)
         | "floor", F32 ->
-            folded loc (UnOp (F32 Floor)) (instruction ctx instr_val)
+            folded loc (UnOp (F32 Floor)) (instruction ret ctx instr_val)
         | "trunc", F32 ->
-            folded loc (UnOp (F32 Trunc)) (instruction ctx instr_val)
+            folded loc (UnOp (F32 Trunc)) (instruction ret ctx instr_val)
         | "nearest", F32 ->
-            folded loc (UnOp (F32 Nearest)) (instruction ctx instr_val)
+            folded loc (UnOp (F32 Nearest)) (instruction ret ctx instr_val)
         | "sqrt", F32 ->
-            folded loc (UnOp (F32 Sqrt)) (instruction ctx instr_val)
-        | "abs", F64 -> folded loc (UnOp (F64 Abs)) (instruction ctx instr_val)
+            folded loc (UnOp (F32 Sqrt)) (instruction ret ctx instr_val)
+        | "abs", F64 ->
+            folded loc (UnOp (F64 Abs)) (instruction ret ctx instr_val)
         | "ceil", F64 ->
-            folded loc (UnOp (F64 Ceil)) (instruction ctx instr_val)
+            folded loc (UnOp (F64 Ceil)) (instruction ret ctx instr_val)
         | "floor", F64 ->
-            folded loc (UnOp (F64 Floor)) (instruction ctx instr_val)
+            folded loc (UnOp (F64 Floor)) (instruction ret ctx instr_val)
         | "trunc", F64 ->
-            folded loc (UnOp (F64 Trunc)) (instruction ctx instr_val)
+            folded loc (UnOp (F64 Trunc)) (instruction ret ctx instr_val)
         | "nearest", F64 ->
-            folded loc (UnOp (F64 Nearest)) (instruction ctx instr_val)
+            folded loc (UnOp (F64 Nearest)) (instruction ret ctx instr_val)
         | "sqrt", F64 ->
-            folded loc (UnOp (F64 Sqrt)) (instruction ctx instr_val)
+            folded loc (UnOp (F64 Sqrt)) (instruction ret ctx instr_val)
         (* Reinterpret *)
         | "to_bits", F32 ->
-            folded loc (UnOp (I32 Reinterpret)) (instruction ctx instr_val)
+            folded loc (UnOp (I32 Reinterpret)) (instruction ret ctx instr_val)
         | "from_bits", I32 ->
-            folded loc (UnOp (F32 Reinterpret)) (instruction ctx instr_val)
+            folded loc (UnOp (F32 Reinterpret)) (instruction ret ctx instr_val)
         | "to_bits", F64 ->
-            folded loc (UnOp (I64 Reinterpret)) (instruction ctx instr_val)
+            folded loc (UnOp (I64 Reinterpret)) (instruction ret ctx instr_val)
         | "from_bits", I64 ->
-            folded loc (UnOp (F64 Reinterpret)) (instruction ctx instr_val)
+            folded loc (UnOp (F64 Reinterpret)) (instruction ret ctx instr_val)
         | _ ->
             (* Signed accesses are under a cast *)
             folded loc
               (StructGet (None, index (expr_type_name instr_val), index field))
-              (instruction ctx instr_val))
+              (instruction ret ctx instr_val))
   | StructSet (instr_val, field_idx, new_val) ->
-      let code_val = instruction ctx instr_val in
-      let code_new = instruction ctx new_val in
+      let code_val = instruction ret ctx instr_val in
+      let code_new = instruction ret ctx new_val in
       folded loc
         (StructSet (index (expr_type_name instr_val), index field_idx))
         (code_val @ code_new)
@@ -535,28 +560,29 @@ let rec instruction ctx i : location Text.instr list =
       let idx = Option.value ~default:(expr_type_name i) opt_idx in
       folded loc
         (ArrayNew (index idx))
-        (instruction ctx val_instr @ instruction ctx len_instr)
+        (instruction ret ctx val_instr @ instruction ret ctx len_instr)
   | ArrayDefault (opt_idx, len_instr) ->
       let idx = Option.value ~default:(expr_type_name i) opt_idx in
-      folded loc (ArrayNewDefault (index idx)) (instruction ctx len_instr)
+      folded loc (ArrayNewDefault (index idx)) (instruction ret ctx len_instr)
   | ArrayFixed (opt_idx, instrs) ->
       let idx = Option.value ~default:(expr_type_name i) opt_idx in
-      let args_code = List.concat_map (instruction ctx) instrs in
+      let args_code = List.concat_map (instruction ret ctx) instrs in
       let len = Uint32.of_int (List.length instrs) in
       folded loc (ArrayNewFixed (index idx, len)) args_code
   | ArrayGet (arr_instr, idx_instr) ->
       (* Signed accesses are under a cast *)
       folded loc
         (ArrayGet (None, index (expr_type_name arr_instr)))
-        (instruction ctx arr_instr @ instruction ctx idx_instr)
+        (instruction ret ctx arr_instr @ instruction ret ctx idx_instr)
   | ArraySet (arr_instr, idx_instr, val_instr) ->
       folded loc
         (ArraySet (index (expr_type_name arr_instr)))
-        (instruction ctx arr_instr @ instruction ctx idx_instr
-       @ instruction ctx val_instr)
+        (instruction ret ctx arr_instr
+        @ instruction ret ctx idx_instr
+        @ instruction ret ctx val_instr)
   | BinOp (op, a, b) -> (
-      let code_a = instruction ctx a in
-      let code_b = instruction ctx b in
+      let code_a = instruction ret ctx a in
+      let code_b = instruction ret ctx b in
       let operand_type = expr_valtype a in
       match (op, operand_type) with
       | Eq, Ref _ -> folded loc RefEq (code_a @ code_b)
@@ -574,19 +600,19 @@ let rec instruction ctx i : location Text.instr list =
           (* 0 - a *)
           let zero = folded loc (Const (I32 "0")) [] in
           let sub = Text.BinOp (I32 Sub) in
-          folded loc sub (zero @ instruction ctx a)
+          folded loc sub (zero @ instruction ret ctx a)
       | Neg, Some I64 ->
           let zero = folded loc (Const (I64 "0")) [] in
           let sub = Text.BinOp (I64 Sub) in
-          folded loc sub (zero @ instruction ctx a)
-      | Neg, Some F32 -> folded loc (UnOp (F32 Neg)) (instruction ctx a)
-      | Neg, Some F64 -> folded loc (UnOp (F64 Neg)) (instruction ctx a)
+          folded loc sub (zero @ instruction ret ctx a)
+      | Neg, Some F32 -> folded loc (UnOp (F32 Neg)) (instruction ret ctx a)
+      | Neg, Some F64 -> folded loc (UnOp (F64 Neg)) (instruction ret ctx a)
       | Not, (Some I32 | None) ->
-          folded loc (UnOp (I32 Eqz)) (instruction ctx a)
-      | Not, Some I64 -> folded loc (UnOp (I64 Eqz)) (instruction ctx a)
+          folded loc (UnOp (I32 Eqz)) (instruction ret ctx a)
+      | Not, Some I64 -> folded loc (UnOp (I64 Eqz)) (instruction ret ctx a)
       (* Ref IsNull *)
-      | Not, Some (Ref _) -> folded loc RefIsNull (instruction ctx a)
-      | Pos, _ -> instruction ctx a
+      | Not, Some (Ref _) -> folded loc RefIsNull (instruction ret ctx a)
+      | Pos, _ -> instruction ret ctx a
       | _, Some _ -> assert false)
   | Let (decls, None) ->
       let binding (id, ty) =
@@ -612,56 +638,60 @@ let rec instruction ctx i : location Text.instr list =
               (Some wasm_name, valtype ty) :: !(ctx.allocated_locals);
             folded loc
               (Text.LocalSet (with_loc name.info (Text.Id wasm_name)))
-              (instruction ctx e)
-        | None -> folded loc Text.Drop (instruction ctx e)
+              (instruction ret ctx e)
+        | None -> folded loc Text.Drop (instruction ret ctx e)
       in
       List.concat (List.map2 binding decls [ body ])
   | Br (l, None) ->
       (*ZZZ label should be located*)
-      folded loc (Br (label i l)) []
-  | Br (l, Some expr) -> folded loc (Br (label i l)) (instruction ctx expr)
-  | Br_if (l, expr) -> folded loc (Br_if (label i l)) (instruction ctx expr)
+      folded loc (Br (label i ret l)) []
+  | Br (l, Some expr) ->
+      folded loc (Br (label i ret l)) (instruction ret ctx expr)
+  | Br_if (l, expr) ->
+      folded loc (Br_if (label i ret l)) (instruction ret ctx expr)
   | Br_table (labels, expr) -> (
-      let code = instruction ctx expr in
+      let code = instruction ret ctx expr in
       match List.rev labels with
       | default_label_name :: other_labels_rev ->
-          let default_idx = label i default_label_name in
-          let other_idx = List.rev_map (fun l -> label i l) other_labels_rev in
+          let default_idx = label i ret default_label_name in
+          let other_idx =
+            List.rev_map (fun l -> label i ret l) other_labels_rev
+          in
           folded loc (Br_table (other_idx, default_idx)) code
       | _ -> assert false)
   | Br_on_null (l, expr) ->
-      folded loc (Br_on_null (label i l)) (instruction ctx expr)
+      folded loc (Br_on_null (label i ret l)) (instruction ret ctx expr)
   | Br_on_non_null (l, expr) ->
-      folded loc (Br_on_non_null (label i l)) (instruction ctx expr)
+      folded loc (Br_on_non_null (label i ret l)) (instruction ret ctx expr)
   | Br_on_cast (l, target_reftype, expr) ->
       (*ZZZ LUB for now *)
       folded loc
         (Br_on_cast
-           ( label i l,
+           ( label i ret l,
              reftype
                (Option.value ~default:target_reftype (expr_opt_reftype expr)),
              reftype target_reftype ))
-        (instruction ctx expr)
+        (instruction ret ctx expr)
   | Br_on_cast_fail (l, target_reftype, expr) ->
       folded loc
         (Br_on_cast_fail
-           ( label i l,
+           ( label i ret l,
              reftype
                (Option.value ~default:target_reftype (expr_opt_reftype expr)),
              reftype target_reftype ))
-        (instruction ctx expr)
+        (instruction ret ctx expr)
   | Throw (tag_idx, args) ->
       folded loc
         (Throw (index tag_idx))
-        (List.concat_map (instruction ctx) args)
-  | ThrowRef expr -> folded loc ThrowRef (instruction ctx expr)
+        (List.concat_map (instruction ret ctx) args)
+  | ThrowRef expr -> folded loc ThrowRef (instruction ret ctx expr)
   | Return None -> folded loc Return []
-  | Return (Some expr) -> folded loc Return (instruction ctx expr)
-  | Sequence body -> List.concat_map (instruction ctx) body
+  | Return (Some expr) -> folded loc Return (instruction ret ctx expr)
+  | Sequence body -> List.concat_map (instruction ret ctx) body
   | Select (cond, then_, else_) ->
-      let code_then = instruction ctx then_ in
-      let code_else = instruction ctx else_ in
-      let code_cond = instruction ctx cond in
+      let code_then = instruction ret ctx then_ in
+      let code_else = instruction ret ctx else_ in
+      let code_cond = instruction ret ctx cond in
       let typ =
         match expr_opt_valtype i with
         | None | Some (I32 | I64 | F32 | F64 | V128) -> None
@@ -782,7 +812,7 @@ let module_ fields =
               {
                 id = Some name.desc;
                 typ = globaltype mut typ;
-                init = instruction ctx def;
+                init = instruction None ctx def;
                 exports = exports attributes;
               }
         | GlobalDecl { name; mut; typ; attributes } ->
@@ -820,7 +850,7 @@ let module_ fields =
             | None ->
                 Text.Tag
                   { id = Some name.desc; typ = typeuse typ sign; exports })
-        | Func { name; sign; typ; body = _, instrs; attributes } ->
+        | Func { name; sign; typ; body = label, instrs; attributes } ->
             let namespace = Namespace.make () in
             let allocated_locals = ref [] in
             let locals =
@@ -843,7 +873,11 @@ let module_ fields =
                 referenced_functions = func_refs_in_func;
               }
             in
-            let instrs = List.concat_map (instruction ctx) instrs in
+            let instrs =
+              List.concat_map
+                (instruction (Option.map (fun label -> (label, 0)) label) ctx)
+                instrs
+            in
             let func_locals = List.rev !allocated_locals in
             Text.Func
               {
