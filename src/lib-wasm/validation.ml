@@ -76,6 +76,11 @@ module Error = struct
         Format.fprintf f "Expecting type@ @[<2>%a@]@ but got type@ @[<2>%a@]."
           print_valtype ty print_valtype ty')
 
+  let br_cast_type_mismatch context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "The first type must be a supertype of the seconde one.")
+
   let select_type_mismatch context ~location ty1 ty2 =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f
@@ -146,6 +151,15 @@ module Error = struct
   let import_after_definition context ~location kind =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "This imports is after a %s definition." kind)
+
+  let supertype_mismatch context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The supertype is not of the same kind as this type.")
+
+  let non_nullable_table_type context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "The type of the elements of this table must be nullable.")
 
   let index_already_bound context ~location kind index =
     (*ZZZ print $"..." *)
@@ -861,7 +875,8 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let*! ty1 = reftype ctx.modul.diagnostics ctx.modul.types ty1 in
       let*! ty2 = reftype ctx.modul.diagnostics ctx.modul.types ty2 in
       (* ZZZ Relaxed condition *)
-      assert (Types.val_subtype ctx.modul.subtyping_info (Ref ty2) (Ref ty1));
+      if not (Types.val_subtype ctx.modul.subtyping_info (Ref ty2) (Ref ty1))
+      then Error.br_cast_type_mismatch ctx.modul.diagnostics ~location:loc;
       let* () = pop ctx loc (Ref ty1) in
       let* () = push None (Ref ty2) in
       let*! params = branch_target ctx idx in
@@ -872,7 +887,8 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | Br_on_cast_fail (idx, ty1, ty2) ->
       let*! ty1 = reftype ctx.modul.diagnostics ctx.modul.types ty1 in
       let*! ty2 = reftype ctx.modul.diagnostics ctx.modul.types ty2 in
-      assert (Types.val_subtype ctx.modul.subtyping_info (Ref ty2) (Ref ty1));
+      if not (Types.val_subtype ctx.modul.subtyping_info (Ref ty2) (Ref ty1))
+      then Error.br_cast_type_mismatch ctx.modul.diagnostics ~location:loc;
       let* () = pop ctx loc (Ref ty1) in
       let* () = push None (Ref (diff_ref_type ty1 ty2)) in
       let*! params = branch_target ctx idx in
@@ -1800,7 +1816,8 @@ let check_type_definitions ctx =
     | Func _, (Struct _ | Array _)
     | Struct _, (Func _ | Array _)
     | Array _, (Func _ | Struct _) ->
-        assert false
+        Error.supertype_mismatch ctx.diagnostics
+          ~location:(Ast.no_loc ()).info (*ZZZ*)
   done
 
 let tables_and_memories ctx fields =
@@ -1815,7 +1832,10 @@ let tables_and_memories ctx fields =
           limits ctx "table" typ.limits max_table_size;
           let>@ typ = tabletype ctx.diagnostics ctx.types typ in
           (match init with
-          | Init_default -> assert typ.reftype.nullable
+          | Init_default ->
+              if not typ.reftype.nullable then
+                Error.non_nullable_table_type ctx.diagnostics
+                  ~location:field.info (*ZZZ*)
           | Init_expr e -> constant_expression ctx (Ref typ.reftype) e
           | Init_segment _ -> ());
           Sequence.register ctx.tables id typ;
