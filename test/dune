@@ -19,7 +19,9 @@
   (diff output.wat.expected output.wat)))
 
 (rule
- (deps (glob_files_rec wasm-test-suite/*.wast))
+ (deps
+  (glob_files_rec wasm-test-suite/*.wast)
+  (glob_files_rec additional-tests/*.wast))
  (action
   (with-stdout-to wasm_test_suite.output
    (run ../src/bin/run_wasm_testsuite.exe --wasm-only --no-color))))

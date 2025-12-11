@@ -284,6 +284,16 @@ let array_map_opt f arr =
     Some result
   with Short_circuit -> None
 
+let array_mapi_opt f arr =
+  let exception Short_circuit in
+  try
+    let result =
+      Array.init (Array.length arr) (fun i ->
+          match f i arr.(i) with Some v -> v | None -> raise Short_circuit)
+    in
+    Some result
+  with Short_circuit -> None
+
 let functype d ctx { Ast.Text.params; results } =
   let*@ params = array_map_opt (fun (_, ty) -> valtype d ctx ty) params in
   let+@ results = array_map_opt (fun ty -> valtype d ctx ty) results in
@@ -320,18 +330,19 @@ let comptype d ctx (ty : Ast.Text.comptype) =
       let+@ field = fieldtype d ctx field in
       Array field
 
-let subtype d ctx { Ast.Text.typ; supertype; final } =
+let subtype d ctx current { Ast.Text.typ; supertype; final } =
   let*@ typ = comptype d ctx typ in
   let+@ supertype =
     match supertype with
     | None -> Some None
     | Some ty ->
         let+@ ty = resolve_type_index d ctx ty in
+        assert (ty > lnot current);
         Some ty
   in
   { typ; supertype; final }
 
-let rectype d ctx ty = array_map_opt (fun (_, ty) -> subtype d ctx ty) ty
+let rectype d ctx ty = array_mapi_opt (fun i (_, ty) -> subtype d ctx i ty) ty
 
 let signature d ctx (params, results) =
   let*@ params =

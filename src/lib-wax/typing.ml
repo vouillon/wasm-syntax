@@ -288,6 +288,16 @@ let array_map_opt f arr =
     Some result
   with Short_circuit -> None
 
+let array_mapi_opt f arr =
+  let exception Short_circuit in
+  try
+    let result =
+      Array.init (Array.length arr) (fun i ->
+          match f i arr.(i) with Some v -> v | None -> raise Short_circuit)
+    in
+    Some result
+  with Short_circuit -> None
+
 let functype d ctx { params; results } =
   ignore
     (Array.fold_left
@@ -335,18 +345,19 @@ let comptype d ctx (ty : comptype) =
       let+@ field = fieldtype d ctx field in
       (Array field : Internal.comptype)
 
-let subtype d ctx { typ; supertype; final } =
+let subtype d ctx current { typ; supertype; final } =
   let*@ typ = comptype d ctx typ in
   let+@ supertype =
     match supertype with
     | None -> Some None
     | Some ty ->
         let+@ ty = resolve_type_name d ctx ty in
+        assert (ty > lnot current);
         Some ty
   in
   { Internal.typ; supertype; final }
 
-let rectype d ctx ty = array_map_opt (fun (_, ty) -> subtype d ctx ty) ty
+let rectype d ctx ty = array_mapi_opt (fun i (_, ty) -> subtype d ctx i ty) ty
 
 let add_type d ctx ty =
   Array.iteri

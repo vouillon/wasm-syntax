@@ -374,7 +374,7 @@ let runtest filename path =
               if true then prerr_endline "(parsing)" else print_flushed text)
     lst
 
-let dirs = [ "wasm-test-suite" ]
+let dirs = [ "wasm-test-suite"; "additional-tests" ]
 
 let () =
   iter_files dirs
