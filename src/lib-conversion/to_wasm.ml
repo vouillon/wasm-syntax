@@ -9,7 +9,7 @@ type ctx = {
   globals : (string, unit) Hashtbl.t;
   functions : (string, unit) Hashtbl.t;
   mutable locals : string StringMap.t;
-  allocated_locals : (string option * Text.valtype) list ref;
+  allocated_locals : (Text.name option * Text.valtype) list ref;
   namespace : Namespace.t;
   type_kinds : (string, [ `Struct | `Array | `Func ]) Hashtbl.t;
   struct_fields : (string, string list) Hashtbl.t;
@@ -49,11 +49,7 @@ let reftype r : Text.reftype = { nullable = r.nullable; typ = heaptype r.typ }
 let unpack_type f = match f with Value v -> v | Packed _ -> I32
 
 let functype typ : Text.functype =
-  let params =
-    Array.map
-      (fun (id, t) -> (Option.map (fun id -> id.desc) id, valtype t))
-      typ.params
-  in
+  let params = Array.map (fun (id, t) -> (id, valtype t)) typ.params in
   let results = Array.map valtype typ.results in
   { params; results }
 
@@ -159,11 +155,7 @@ let typeuse typ sign =
   let type_info =
     Option.map
       (fun (s : funsig) ->
-        let params =
-          List.map
-            (fun (id, t) -> (Option.map (fun x -> x.desc) id, valtype t))
-            s.named_params
-        in
+        let params = List.map (fun (id, t) -> (id, valtype t)) s.named_params in
         let results = List.map valtype s.results in
         (params, results))
       sign
@@ -207,15 +199,15 @@ let expr_type_kind ctx i =
   | { typ = Array; _ } -> `Array
   | _ -> Hashtbl.find ctx.type_kinds (expr_type_name i).desc
 
-let label i ret lab =
+let label ret (lab : ident) =
   match ret with
-  | Some (lab', depth) when lab = lab' ->
-      with_loc (snd i.info) (Text.Num (Uint32.of_int depth))
-  | _ -> with_loc (snd i.info) (Text.Id lab)
+  | Some (lab', depth) when lab.desc = lab' ->
+      { lab with desc = Text.Num (Uint32.of_int depth) }
+  | _ -> { lab with desc = Text.Id lab.desc }
 
 let push ret label =
   match (ret, label) with
-  | Some (label, _), Some label' when label = label' -> None
+  | Some (label, _), Some label' when label = label'.desc -> None
   | Some (label, i), _ -> Some (label, i + 1)
   | None, _ -> None
 
@@ -259,10 +251,10 @@ let rec instruction ret ctx i : location Text.instr list =
         List.map
           (fun catch : Text.catch ->
             match catch with
-            | Catch (tag, labl) -> Catch (index tag, label i ret labl)
-            | CatchRef (tag, labl) -> CatchRef (index tag, label i ret labl)
-            | CatchAll labl -> CatchAll (label i ret labl)
-            | CatchAllRef labl -> CatchAllRef (label i ret labl))
+            | Catch (tag, labl) -> Catch (index tag, label ret labl)
+            | CatchRef (tag, labl) -> CatchRef (index tag, label ret labl)
+            | CatchAll labl -> CatchAll (label ret labl)
+            | CatchAllRef labl -> CatchAllRef (label ret labl))
           catches
       in
       folded loc
@@ -631,7 +623,8 @@ let rec instruction ret ctx i : location Text.instr list =
             let wasm_name = Namespace.add ctx.namespace name.desc in
             ctx.locals <- StringMap.add name.desc wasm_name ctx.locals;
             ctx.allocated_locals :=
-              (Some wasm_name, valtype ty) :: !(ctx.allocated_locals)
+              (Some { name with desc = wasm_name }, valtype ty)
+              :: !(ctx.allocated_locals)
         | None -> assert false
       in
       List.iter binding (List.rev decls);
@@ -644,7 +637,8 @@ let rec instruction ret ctx i : location Text.instr list =
             let wasm_name = Namespace.add ctx.namespace name.desc in
             ctx.locals <- StringMap.add name.desc wasm_name ctx.locals;
             ctx.allocated_locals :=
-              (Some wasm_name, valtype ty) :: !(ctx.allocated_locals);
+              (Some { name with desc = wasm_name }, valtype ty)
+              :: !(ctx.allocated_locals);
             folded loc
               (Text.LocalSet (with_loc name.info (Text.Id wasm_name)))
               (instruction ret ctx e)
@@ -653,30 +647,30 @@ let rec instruction ret ctx i : location Text.instr list =
       List.concat (List.map2 binding decls [ body ])
   | Br (l, None) ->
       (*ZZZ label should be located*)
-      folded loc (Br (label i ret l)) []
+      folded loc (Br (label ret l)) []
   | Br (l, Some expr) ->
-      folded loc (Br (label i ret l)) (instruction ret ctx expr)
+      folded loc (Br (label ret l)) (instruction ret ctx expr)
   | Br_if (l, expr) ->
-      folded loc (Br_if (label i ret l)) (instruction ret ctx expr)
+      folded loc (Br_if (label ret l)) (instruction ret ctx expr)
   | Br_table (labels, expr) -> (
       let code = instruction ret ctx expr in
       match List.rev labels with
       | default_label_name :: other_labels_rev ->
-          let default_idx = label i ret default_label_name in
+          let default_idx = label ret default_label_name in
           let other_idx =
-            List.rev_map (fun l -> label i ret l) other_labels_rev
+            List.rev_map (fun l -> label ret l) other_labels_rev
           in
           folded loc (Br_table (other_idx, default_idx)) code
       | _ -> assert false)
   | Br_on_null (l, expr) ->
-      folded loc (Br_on_null (label i ret l)) (instruction ret ctx expr)
+      folded loc (Br_on_null (label ret l)) (instruction ret ctx expr)
   | Br_on_non_null (l, expr) ->
-      folded loc (Br_on_non_null (label i ret l)) (instruction ret ctx expr)
+      folded loc (Br_on_non_null (label ret l)) (instruction ret ctx expr)
   | Br_on_cast (l, target_reftype, expr) ->
       (*ZZZ LUB for now *)
       folded loc
         (Br_on_cast
-           ( label i ret l,
+           ( label ret l,
              reftype
                (Option.value ~default:target_reftype (expr_opt_reftype expr)),
              reftype target_reftype ))
@@ -684,7 +678,7 @@ let rec instruction ret ctx i : location Text.instr list =
   | Br_on_cast_fail (l, target_reftype, expr) ->
       folded loc
         (Br_on_cast_fail
-           ( label i ret l,
+           ( label ret l,
              reftype
                (Option.value ~default:target_reftype (expr_opt_reftype expr)),
              reftype target_reftype ))
@@ -716,16 +710,21 @@ let import attributes =
     (fun (k, v) ->
       match (k, v.desc) with
       | ( "import",
-          Sequence [ { desc = String (_, m); _ }; { desc = String (_, n); _ } ]
-        ) ->
-          Some (m, n)
+          Sequence
+            [
+              { desc = String (_, m); info = l };
+              { desc = String (_, n); info = l' };
+            ] ) ->
+          Some ({ desc = m; info = l }, { desc = n; info = l' })
       | _ -> None)
     attributes
 
 let exports attributes =
   List.filter_map
     (fun (k, v) ->
-      match (k, v.desc) with "export", String (_, n) -> Some n | _ -> None)
+      match (k, v.desc) with
+      | "export", String (_, n) -> Some { v with desc = n }
+      | _ -> None)
     attributes
 
 let globaltype mut t : Text.globaltype = { mut; typ = valtype t }
@@ -741,7 +740,7 @@ let subtype s : Text.subtype =
         Struct
           (Array.map
              (fun (name, { mut; typ }) ->
-               (Some name.desc, { Text.Types.mut; typ = storagetype typ }))
+               (Some name, { Text.Types.mut; typ = storagetype typ }))
              fields)
     | Array { mut; typ } -> Array { mut; typ = storagetype typ }
   in
@@ -811,7 +810,7 @@ let module_ fields =
         match field with
         | Type rectype ->
             Text.Types
-              (Array.map (fun (idx, s) -> (Some idx.desc, subtype s)) rectype)
+              (Array.map (fun (idx, s) -> (Some idx, subtype s)) rectype)
         | Global { name; mut; typ; def; attributes } ->
             let typ = Option.value ~default:(expr_valtype def) typ in
             let ctx =
@@ -819,7 +818,7 @@ let module_ fields =
             in
             Text.Global
               {
-                id = Some name.desc;
+                id = Some name;
                 typ = globaltype mut typ;
                 init = instruction None ctx def;
                 exports = exports attributes;
@@ -830,7 +829,7 @@ let module_ fields =
               {
                 module_;
                 name = import_name;
-                id = Some name.desc;
+                id = Some name;
                 desc = Global (globaltype mut typ);
                 exports = exports attributes;
               }
@@ -840,7 +839,7 @@ let module_ fields =
               {
                 module_;
                 name = import_name;
-                id = Some name.desc;
+                id = Some name;
                 desc = Func (typeuse typ sign);
                 exports = exports attributes;
               }
@@ -852,13 +851,12 @@ let module_ fields =
                   {
                     module_;
                     name = import_name;
-                    id = Some name.desc;
+                    id = Some name;
                     desc = Tag (typeuse typ sign);
                     exports;
                   }
             | None ->
-                Text.Tag
-                  { id = Some name.desc; typ = typeuse typ sign; exports })
+                Text.Tag { id = Some name; typ = typeuse typ sign; exports })
         | Func { name; sign; typ; body = label, instrs; attributes } ->
             let namespace = Namespace.make () in
             let allocated_locals = ref [] in
@@ -884,13 +882,15 @@ let module_ fields =
             in
             let instrs =
               List.concat_map
-                (instruction (Option.map (fun label -> (label, 0)) label) ctx)
+                (instruction
+                   (Option.map (fun label -> (label.desc, 0)) label)
+                   ctx)
                 instrs
             in
             let func_locals = List.rev !allocated_locals in
             Text.Func
               {
-                id = Some name.desc;
+                id = Some name;
                 typ = typeuse typ sign;
                 locals = func_locals;
                 instrs;

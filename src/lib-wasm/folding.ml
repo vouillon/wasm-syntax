@@ -47,7 +47,7 @@ module Tbl = struct
       by_name =
         (match id with
         | None -> tbl.by_name
-        | Some id -> StringMap.add id v tbl.by_name);
+        | Some id -> StringMap.add id.Ast.desc v tbl.by_name);
       last = tbl.last + 1;
     }
 end
@@ -145,7 +145,7 @@ let module_env (_, m) =
 
 type env = {
   outer_env : outer_env;
-  labels : (id option * int) list;
+  labels : (name option * int) list;
   return_arity : int;
 }
 
@@ -196,7 +196,8 @@ let label_arity env idx =
   | Id id ->
       snd
         (List.find
-           (fun e -> match e with Some id', _ -> id = id' | _ -> false)
+           (fun e ->
+             match e with Some id', _ -> id = id'.Ast.desc | _ -> false)
            env.labels)
   | Num i -> snd (List.nth env.labels (Uint32.to_int i))
 

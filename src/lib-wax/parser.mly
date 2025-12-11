@@ -162,6 +162,9 @@ let blocktype bt = Option.value ~default:{params = [||]; results = [||]} bt
 %inline ident:
 | t = IDENT { with_loc $sloc t }
 
+%inline label:
+| "'" l = IDENT { with_loc $sloc l }
+
 heaptype:
 | t = ident { try Hashtbl.find absheaptype_tbl t.desc with Not_found -> Type t }
 
@@ -258,7 +261,7 @@ tag:
                  { {named_params; results = Option.value ~default:[] results} })
   { (name, t, sign) }
 
-%inline label: l = ioption("'" l = IDENT ":" { l }) { l }
+%inline block_label: l = ioption(l = label ":" { l }) { l }
 
 blocktype:
 | "(" params = separated_list(",", valtype) ")"
@@ -268,15 +271,16 @@ blocktype:
 | t = valtype { {params = [||]; results = [|t|] } }
 
 %inline block:
-| label = label "{" l = delimited_instr_list "}" { (label, l) }
+| label = block_label "{" l = delimited_instr_list "}" { (label, l) }
 
 %inline blockinstr:
 | b = block { let (label, l) = b in with_loc $sloc (Block(label, blocktype None, l)) }
-| label = label DO bt = option(blocktype) "{" l = delimited_instr_list "}"
+| label = block_label DO bt = option(blocktype) "{" l = delimited_instr_list "}"
   { with_loc $sloc (Block(label, blocktype bt, l)) }
-| label = label LOOP bt = option(blocktype) "{" l = delimited_instr_list "}"
+| label = block_label LOOP bt = option(blocktype)
+  "{" l = delimited_instr_list "}"
   { with_loc $sloc (Loop(label, blocktype bt, l)) }
-| label = label IF e = instr bt = option("=>" bt = blocktype { bt })
+| label = block_label IF e = instr bt = option("=>" bt = blocktype { bt })
   "{" l1 = delimited_instr_list "}"
   l2 = option(ELSE  "{" l = delimited_instr_list "}" { l })
   { with_loc $sloc (If(label, blocktype bt, e, l1, l2)) }
@@ -363,22 +367,22 @@ plaininstr:
                                 { (p, t) })
   ")" i = option("=" i = instr {i})
   { with_loc $sloc (Let (l, i)) }
-| BR "'" l = IDENT i = ioption(instr)
+| BR l = label i = ioption(instr)
   { with_loc $sloc (Br (l, i)) } %prec prec_branch
-| BR_IF "'" l = IDENT i = instr
+| BR_IF l = label i = instr
   { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
 (*
-| BR "'" l = IDENT IF i = instr
+| BR l = label IF i = instr
   { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
 *)
-| DISPATCH instr "["   list("'" IDENT { () }) ELSE "'" IDENT "]" "{" instr "}"
+| DISPATCH instr "["   list(label { () }) ELSE label "]" "{" instr "}"
  { with_loc $sloc Nop }
-| BR_TABLE "[" lst = list("'" i = IDENT { i }) ELSE "'" l = IDENT  "]" i = instr
+| BR_TABLE "[" lst = list(i = label { i }) ELSE l = label  "]" i = instr
   { with_loc $sloc (Br_table (lst @ [l], i)) } %prec prec_branch
-| BR_ON_NULL "'" l = IDENT i = instr { with_loc $sloc (Br_on_null (l, i)) } %prec prec_branch
-| BR_ON_NON_NULL "'" l = IDENT i = instr { with_loc $sloc (Br_on_non_null (l, i)) } %prec prec_branch
-| BR_ON_CAST "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
-| BR_ON_CAST_FAIL "'" l = IDENT t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
+| BR_ON_NULL l = label i = instr { with_loc $sloc (Br_on_null (l, i)) } %prec prec_branch
+| BR_ON_NON_NULL l = label i = instr { with_loc $sloc (Br_on_non_null (l, i)) } %prec prec_branch
+| BR_ON_CAST l = label t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
+| BR_ON_CAST_FAIL l = label t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) }
 | THROW t = ident  "(" l = separated_list(",", instr) ")"
   { with_loc $sloc (Throw (t, l)) }

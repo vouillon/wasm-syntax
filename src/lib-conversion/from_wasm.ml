@@ -1,3 +1,6 @@
+(*ZZZ
+collect exports
+*)
 open Wax
 module Src = Wasm.Ast.Text
 module Uint32 = Utils.Uint32
@@ -23,11 +26,13 @@ module Sequence = struct
       default;
     }
 
-  let register' seq id exports =
+  let register' seq (id : Src.name option) exports =
     let name =
       let name =
         match (id, exports) with
-        | (Some nm, _ | None, nm :: _) when Lexer.is_valid_identifier nm -> nm
+        | (Some nm, _ | None, nm :: _)
+          when Lexer.is_valid_identifier nm.Ast.desc ->
+            nm.Ast.desc
         | _ -> seq.default
       in
       Namespace.add seq.namespace name
@@ -35,7 +40,7 @@ module Sequence = struct
     let idx = Uint32.of_int seq.last_index in
     seq.last_index <- seq.last_index + 1;
     Hashtbl.add seq.index_mapping idx name;
-    Option.iter (fun id -> Hashtbl.add seq.label_mapping id name) id;
+    Option.iter (fun id -> Hashtbl.add seq.label_mapping id.Ast.desc name) id;
     name
 
   let register seq id exports = ignore (register' seq id exports)
@@ -63,17 +68,27 @@ module LabelStack = struct
     stack : (string option * (string * bool ref)) list;
   }
 
-  let push st label =
+  let push st (label : Src.name option) =
     let ns = Namespace.dup st.ns in
     let used = ref false in
     let name =
       Namespace.add ns
         (match label with
-        | Some label when Lexer.is_valid_identifier label -> label
+        | Some label when Lexer.is_valid_identifier label.desc -> label.desc
         | _ -> "l")
     in
-    ( (fun () -> if !used then Some name else None),
-      { ns; stack = (label, (name, used)) :: st.stack } )
+    ( (fun () ->
+        if !used then
+          Some
+            (match label with
+            | Some label -> { label with desc = name }
+            | None -> Ast.no_loc name)
+        else None),
+      {
+        ns;
+        stack =
+          (Option.map (fun l -> l.Ast.desc) label, (name, used)) :: st.stack;
+      } )
 
   let get st (idx : Src.idx) =
     let name, used =
@@ -82,7 +97,7 @@ module LabelStack = struct
       | Id id -> List.assoc (Some id) st.stack
     in
     used := true;
-    name
+    { idx with desc = name }
 
   let make () = { ns = Namespace.make (); stack = [] }
 end
@@ -109,7 +124,7 @@ type ctx = {
   type_defs : Src.subtype Tbl.t;
   function_types : Src.typeuse Tbl.t;
   tag_types : Src.typeuse Tbl.t;
-  label_arities : (Src.id option * int) list;
+  label_arities : (string option * int) list;
   return_arity : int;
 }
 
@@ -158,10 +173,7 @@ let rec valtype st (t : Src.valtype) : Ast.valtype =
 
 let functype st (t : Src.functype) : Ast.functype =
   {
-    params =
-      Array.map
-        (fun (id, t) -> (Option.map Ast.no_loc id, valtype st t))
-        t.params;
+    params = Array.map (fun (id, t) -> (id, valtype st t)) t.params;
     results = Array.map (fun t -> valtype st t) t.results;
   }
 
@@ -187,11 +199,9 @@ let comptype st name (t : Src.comptype) : Ast.comptype =
            (fun i t ->
              annotated
                (Sequence.get seq
-                  (Ast.no_loc
-                     (match get_annot t with
-                      | None -> Num (Uint32.of_int i)
-                      | Some id -> Id id
-                       : Src.idx_desc)))
+                  (match get_annot t with
+                  | None -> Ast.no_loc (Src.Num (Uint32.of_int i))
+                  | Some id -> { id with desc = Id id.Ast.desc }))
                (fieldtype st (get_type t)))
            l)
   | Array t -> Array (fieldtype st t)
@@ -545,17 +555,16 @@ let blocktype ctx (typ : Src.blocktype option) =
         | None, None -> assert false
       in
       {
-        Ast.params =
-          Array.map
-            (fun (id, t) -> (Option.map Ast.no_loc id, valtype ctx t))
-            params;
+        Ast.params = Array.map (fun (id, t) -> (id, valtype ctx t)) params;
         results = Array.map (fun t -> valtype ctx t) results;
       }
 
 let push_label ctx ~loop label typ =
   let arity = blocktype_arity ctx typ in
   let i = if loop then fst arity else snd arity in
-  let label_arities = (label, i) :: ctx.label_arities in
+  let label_arities =
+    (Option.map (fun l -> l.Ast.desc) label, i) :: ctx.label_arities
+  in
   let label, labels = LabelStack.push ctx.labels label in
   (label, { ctx with labels; label_arities })
 
@@ -967,7 +976,7 @@ let bind_locals st l =
              None )))
     l
 
-let typeuse kind ctx (typ, sign) =
+let typeuse kind ctx ((typ, sign) : Src.typeuse) =
   ( Option.map (fun i -> idx ctx `Type i) typ,
     match (kind, typ, sign) with
     | `Sig, _, None -> None
@@ -975,9 +984,7 @@ let typeuse kind ctx (typ, sign) =
         Some
           {
             Ast.named_params =
-              List.mapi
-                (fun _ (id, t) -> (Option.map Ast.no_loc id, valtype ctx t))
-                p;
+              List.mapi (fun _ (id, t) -> (id, valtype ctx t)) p;
             results = List.map (fun t -> valtype ctx t) r;
           }
     | `Func, None, None -> assert false
@@ -1008,27 +1015,22 @@ let typeuse kind ctx (typ, sign) =
                 (fun n (id, t) ->
                   ( Some
                       (idx ctx `Local
-                         (Ast.no_loc
-                            (match id with
-                             | Some id -> Id id
-                             | None -> Num (Uint32.of_int n)
-                              : Src.idx_desc))),
+                         (match id with
+                         | Some id -> { id with desc = Src.Id id.Ast.desc }
+                         | None -> Ast.no_loc (Src.Num (Uint32.of_int n)))),
                     valtype ctx t ))
                 p;
             results = List.map (fun t -> valtype ctx t) r;
           } )
 
-let exports e =
-  List.map (fun nm -> ("export", Ast.no_loc (Ast.String (None, nm)))) e
+let string_of_name (nm : Src.name) =
+  { nm with desc = Ast.String (None, nm.desc) }
 
-let import (module_, name) =
+let exports e = List.map (fun nm -> ("export", string_of_name nm)) e
+
+let import module_ name =
   ( "import",
-    Ast.no_loc
-      (Ast.Sequence
-         [
-           Ast.no_loc (Ast.String (None, module_));
-           Ast.no_loc (Ast.String (None, name));
-         ]) )
+    Ast.no_loc (Ast.Sequence [ string_of_name module_; string_of_name name ]) )
 
 let single_expression l = match l with [ e ] -> e | _ -> assert false
 
@@ -1081,7 +1083,7 @@ let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
                  name = Sequence.get_current ctx.functions;
                  typ;
                  sign;
-                 attributes = import (module_, name) :: exports e;
+                 attributes = import module_ name :: exports e;
                })
       | Tag typ ->
           let typ, sign = typeuse `Sig ctx typ in
@@ -1091,7 +1093,7 @@ let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
                  name = Sequence.get_current ctx.tags;
                  typ;
                  sign;
-                 attributes = import (module_, name) :: exports e;
+                 attributes = import module_ name :: exports e;
                })
       | Global typ ->
           let typ' = globaltype ctx typ in
@@ -1101,7 +1103,7 @@ let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
                  name = Sequence.get_current ctx.globals;
                  mut = typ'.mut;
                  typ = typ'.typ;
-                 attributes = import (module_, name) :: exports e;
+                 attributes = import module_ name :: exports e;
                })
       | Memory _ | Table _ -> None (*ZZZ*))
   | Global { typ; init; exports = e; _ } ->

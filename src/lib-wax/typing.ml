@@ -1,5 +1,6 @@
 (*
 TODO:
+- Check that import correspond to a declaration
 - Fix grab order in struct
 - Check the _ make sense (check that underscores are properly placed)
 - Typing: implement LUB (for select)
@@ -795,7 +796,7 @@ let branch_target ctx label =
   let rec find l label =
     match l with
     | [] -> assert false (* ZZZ *)
-    | (Some label', res) :: _ when label = label' -> res
+    | (Some label', res) :: _ when label.desc = label' -> res
     | _ :: rem -> find rem label
   in
   find ctx.control_types label
@@ -2009,7 +2010,12 @@ and block ctx loc label params results br_params block =
      in
      let* block' =
        block_contents
-         { ctx with control_types = (label, br_params) :: ctx.control_types }
+         {
+           ctx with
+           control_types =
+             (Option.map (fun l -> l.desc) label, br_params)
+             :: ctx.control_types;
+         }
          block
      in
      let* () = pop_args ctx (Array.to_list results) in
@@ -2181,7 +2187,8 @@ let functions ctx fields =
             {
               ctx with
               locals = !locals;
-              control_types = [ (label, return_types) ];
+              control_types =
+                [ (Option.map (fun l -> l.desc) label, return_types) ];
               return_types;
             }
           in

@@ -44,6 +44,7 @@ let print_valtype f ty =
   | Tuple _ -> Format.fprintf f "tuple"
 
 let print_string f s =
+  let s = s.Ast.desc in
   let len, s = Output.escape_string s in
   Format.pp_print_as f len s
 
@@ -149,7 +150,8 @@ module Error = struct
   let index_already_bound context ~location kind index =
     (*ZZZ print $"..." *)
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "The %s index $%s is already bound." kind index)
+        Format.fprintf f "The %s index $%s is already bound." kind
+          index.Ast.desc)
 
   let expected_func_type context ~location idx =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
@@ -195,7 +197,7 @@ module Sequence = struct
     let idx = seq.last_index in
     seq.last_index <- seq.last_index + 1;
     Hashtbl.add seq.index_mapping idx v;
-    Option.iter (fun id -> Hashtbl.add seq.label_mapping id idx) id
+    Option.iter (fun id -> Hashtbl.add seq.label_mapping id.Ast.desc idx) id
 
   let get d seq (idx : Ast.Text.idx) =
     try
@@ -472,6 +474,7 @@ let get_local ctx ?(initialize = false) i =
     ctx.initialized_locals <- IntSet.add idx ctx.initialized_locals
   else if not (IntSet.mem idx ctx.initialized_locals) then
     failwith "uninitialized local";
+  (*ZZZ*)
   l
 
 let is_nullable ty =
@@ -1524,7 +1527,12 @@ and block ctx loc label params results br_params block =
     (let* () = push_results params in
      let* () =
        instructions
-         { ctx with control_types = (label, br_params) :: ctx.control_types }
+         {
+           ctx with
+           control_types =
+             (Option.map (fun l -> l.Ast.desc) label, br_params)
+             :: ctx.control_types;
+         }
          block
      in
      pop_args ctx loc (*ZZZ More precise loc*) results)
@@ -1599,7 +1607,8 @@ let add_type d ctx ty =
         (Uint32.of_int (ctx.last_index + i))
         (lnot i, []);
       Option.iter
-        (fun label -> Hashtbl.replace ctx.label_mapping label (lnot i, []))
+        (fun label ->
+          Hashtbl.replace ctx.label_mapping label.Ast.desc (lnot i, []))
         label)
     ty;
   match rectype d ctx ty with
@@ -1608,7 +1617,7 @@ let add_type d ctx ty =
         (fun i (label, _) ->
           Hashtbl.remove ctx.index_mapping (Uint32.of_int (ctx.last_index + i));
           Option.iter
-            (fun label -> Hashtbl.remove ctx.label_mapping label)
+            (fun label -> Hashtbl.remove ctx.label_mapping label.Ast.desc)
             label)
         ty
   | Some ty' ->
@@ -1620,7 +1629,9 @@ let add_type d ctx ty =
             | Struct fields ->
                 Array.mapi
                   (fun i (id, _) ->
-                    match id with Some id -> Some (id, i) | None -> None)
+                    match id with
+                    | Some id -> Some (id.Ast.desc, i)
+                    | None -> None)
                   fields
                 |> Array.to_list |> List.filter_map Fun.id
             | _ -> []
@@ -1630,18 +1641,17 @@ let add_type d ctx ty =
             (i' + i, fields);
           Option.iter
             (fun label ->
-              Hashtbl.replace ctx.label_mapping label (i' + i, fields))
+              Hashtbl.replace ctx.label_mapping label.Ast.desc (i' + i, fields))
             label)
         ty;
       ctx.last_index <- ctx.last_index + Array.length ty
 
 let register_exports ctx lst =
   List.iter
-    (fun name ->
-      if Hashtbl.mem ctx.exports name then
-        Error.duplicated_export ctx.diagnostics ~location:(Ast.no_loc ()).info
-          name (*ZZZ*)
-      else Hashtbl.add ctx.exports name ())
+    (fun (name : Ast.Text.name) ->
+      if Hashtbl.mem ctx.exports name.desc then
+        Error.duplicated_export ctx.diagnostics ~location:name.info name
+      else Hashtbl.add ctx.exports name.desc ())
     lst
 
 let limits ctx location kind { mi; ma; address_type } max_fn =
@@ -2038,11 +2048,10 @@ let check_syntax diagnostics (_, lst) =
   let elems = Hashtbl.create 16 in
   let datas = Hashtbl.create 16 in
   let check_unbound tbl kind id =
-    let>@ id = id in
-    if Hashtbl.mem tbl id then
-      Error.index_already_bound diagnostics ~location:(Ast.no_loc ()).info
-        (*ZZZ*) kind id
-    else Hashtbl.add tbl id ()
+    let>@ id : Ast.Text.name = id in
+    if Hashtbl.mem tbl id.desc then
+      Error.index_already_bound diagnostics ~location:id.info kind id
+    else Hashtbl.add tbl id.desc ()
   in
   let types_ctx =
     {
@@ -2068,7 +2077,7 @@ let check_syntax diagnostics (_, lst) =
               Option.iter
                 (fun id ->
                   check_unbound types "type" (Some id);
-                  Hashtbl.replace types_ctx.label_mapping id mapping)
+                  Hashtbl.replace types_ctx.label_mapping id.desc mapping)
                 id;
               (Hashtbl.add type_defs idx def;
                match subtype.Ast.Text.typ with
@@ -2248,11 +2257,9 @@ let check_syntax diagnostics (_, lst) =
     let seen = Hashtbl.create 16 in
     List.iter
       (fun (id, _) ->
-        let*? id = id in
-        if Hashtbl.mem seen id then (
-          Format.eprintf "Parsing should have failed (duplicate local): ...@.";
-          failwith ("duplicate local " ^ id))
-        else Hashtbl.add seen id ())
+        let*? id : Ast.Text.name = id in
+        if Hashtbl.mem seen id.desc then failwith ("duplicate local $" ^ id.desc)
+        else Hashtbl.add seen id.desc ())
       all_locals
   in
   List.iter

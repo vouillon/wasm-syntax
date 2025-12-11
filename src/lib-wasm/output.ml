@@ -219,7 +219,7 @@ let id ?loc x =
     let i, s = escape_string x in
     Atom { loc; style = Identifier; len = Some (i + 3); s = "$\"" ^ s ^ "\"" }
 
-let opt_id = option (fun i -> [ id i ])
+let opt_id = option (fun i -> [ id i.Ast.desc ])
 
 let index x =
   match x.Ast.desc with
@@ -327,7 +327,7 @@ let limits { mi; ma; address_type = at } =
 let tabletype { limits = l; reftype = typ } = limits l @ [ reftype typ ]
 
 let quoted_string s =
-  let i, s = escape_string s in
+  let i, s = escape_string s.Ast.desc in
   Atom { loc = None; style = String; len = Some (i + 2); s = "\"" ^ s ^ "\"" }
 
 let exports l =
@@ -1148,7 +1148,7 @@ let modulefield f =
                   (if i.desc = Num Uint32.zero then []
                    else [ list [ keyword "memory"; index i ] ])
                   @ [ expr "offset" e ])
-           @ [ quoted_string init ]))
+           @ List.map quoted_string init))
   | Start idx -> list [ keyword "start"; index idx ]
   | Memory { id; limits = l; init; exports = e } ->
       list
@@ -1161,7 +1161,7 @@ let modulefield f =
         | None -> []
         | Some init ->
             address_type l.address_type
-            @ [ list [ keyword "data"; quoted_string init ] ]))
+            @ [ list (keyword "data" :: List.map quoted_string init) ]))
   | Table { id; typ; init; exports = e } ->
       list
         (block

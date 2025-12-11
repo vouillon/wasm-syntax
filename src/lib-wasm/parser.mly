@@ -8,8 +8,8 @@ ZZZ
 %token <string> NAT
 %token <string> INT
 %token <string> FLOAT
-%token <string> STRING
-%token <string> ID
+%token <(string, Ast.location) Ast.annotated> STRING
+%token <(string, Ast.location) Ast.annotated> ID
 %token I32 I64 F32 F64
 %token <Ast.Text.packedtype> PACKEDTYPE
 %token LPAREN "("
@@ -194,6 +194,8 @@ ZZZ
 module Uint32 = Utils.Uint32
 module Uint64 = Utils.Uint64
 module V128 = Utils.V128
+module Wasm = struct
+end
 open Ast.Text
 
 let lane_width : [ `I8 | `I16 | `I32 | `I64 ] -> Uint64.t = function
@@ -214,25 +216,27 @@ let check_constant f loc s =
          ( loc,
            Printf.sprintf "Constant %s is out of range.\n" s))
 
-let check_labels loc lab lab' =
-  let mismatch =
-    match lab, lab' with
-    | Some lab, Some lab' -> lab <> lab'
-    | None, Some _ -> true
-    | _ -> false
-  in
-  if mismatch then
-      raise
-        (Parsing.Syntax_error
-           ( loc,
-             Printf.sprintf "Label mismatch.\n"))
+let check_labels lab (lab' : Ast.Text.name option) =
+  match lab' with
+  | None -> ()
+  | Some lab' ->
+      let mismatch =
+        match lab with
+        | Some lab -> lab.Ast.desc <> lab'.desc
+        | None -> true
+      in
+      if mismatch then
+        raise
+          (Parsing.Syntax_error
+             ( (lab'.info.loc_start, lab'.info.loc_end),
+               Printf.sprintf "Label mismatch.\n"))
 
 
 %}
 
-%start <string option * Ast.location modulefield list> parse
+%start <Ast.location Ast.Text.module_> parse
 %start <([`Valid | `Invalid of string | `Malformed of string ] *
-         [`Parsed of string option * Ast.location modulefield list
+         [`Parsed of Ast.location Ast.Text.module_
          | `Text of string | `Binary of string ]) list> parse_script
 
 %%
@@ -277,15 +281,15 @@ f64:
 
 idx:
 | n = u32 { with_loc $sloc (Num n) }
-| i = ID { with_loc $sloc (Id i) }
+| i = ID { {info = i.info; desc = (Id i.Ast.desc)} }
 
 name: s = STRING
-  { if not (String.is_valid_utf_8 s) then
+  { if not (String.is_valid_utf_8 s.Ast.desc) then
       raise
         (Parsing.Syntax_error
-           ( $sloc,
+           ( (s.info.Ast.loc_start, s.info.loc_end),
              Printf.sprintf "Malformed name \"%s\".\n"
-               (snd (Misc.escape_string s))));
+               (snd (Misc.escape_string s.desc))));
     s
   }
 
@@ -414,30 +418,30 @@ tabletype(cont):
 
 blockinstr:
 | BLOCK label = label bti = blocktype(instrs(END)) label2 = label
-  { check_labels $loc(label2) label label2;
+  { check_labels label label2;
     let (typ, block) = bti in with_loc $sloc (Block {label; typ; block}) }
 | LOOP label = label bti = blocktype(instrs(END)) label2 = label
-  { check_labels $loc(label2) label label2;
+  { check_labels label label2;
     let (typ, block) = bti in with_loc $sloc (Loop {label; typ; block}) }
 | IF label = label bti = blocktype(instrs(ELSE))
   label2 = label else_block = instrs(END)
   label3 = label
-  { check_labels $loc(label2) label label2;
-    check_labels $loc(label3) label label3;
+  { check_labels label label2;
+    check_labels label label3;
     let (typ, if_block) = bti in
     with_loc $sloc (If {label; typ; if_block; else_block }) }
 | IF label = label bti = blocktype(instrs(END))
   label2 = label
-  { check_labels $loc(label2) label label2;
+  { check_labels label label2;
     let (typ, if_block) = bti in
     with_loc $sloc (If {label; typ; if_block; else_block = [] }) }
 | TRY_TABLE label = label bti = blocktype(tbl_catches(instrs({})))
   END label2 = label
-   { check_labels $loc(label2) label label2;
+   { check_labels label label2;
      let (typ, (catches, block)) = bti in
      with_loc $sloc (TryTable {label; typ; catches; block}) }
 | TRY label = label bti = blocktype(instrs({})) c = catches END label2 = label
-  { check_labels $loc(label2) label label2;
+  { check_labels label label2;
     let (typ, block) = bti in
     let (catches, catch_all) = c in
     with_loc $sloc (Try {label; typ; block; catches; catch_all}) }
@@ -773,7 +777,9 @@ memory:
               { (at, s) }) ")"
   { let (exports, (at, s)) = r in
     let address_type = Option.value ~default:`I32 at in
-    let sz = Uint64.of_int ((String.length s + 65535) lsr 16) in
+    let data_len =
+      List.fold_left (fun len {Ast.desc; _} -> len + String.length desc) 0 s in
+    let sz = Uint64.of_int ((data_len + 65535) lsr 16) in
     Memory {id; limits = {mi = sz; ma = Some sz; address_type}; init = Some s; exports} }
 | "(" MEMORY id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
@@ -881,7 +887,7 @@ offset:
 | instr = foldedinstr { [instr] }
 
 datastring:
-| l = STRING * { String.concat "" l }
+| l = STRING * { l }
 
 %inline memuse:
 | "(" MEMORY i = idx ")" { i }
@@ -930,9 +936,11 @@ module_:
 | "(" MODULE DEFINITION ? name = ID ? l = modulefield * ")"
   { fun status -> [(status, `Parsed (name, l))] }
 | "(" MODULE DEFINITION ? ID ? BINARY s = STRING *  ")"
-  { fun status -> [(status, `Binary (String.concat "" s))] }
+  { fun status ->
+    [(status, `Binary (String.concat "" (List.map (fun s -> s.Ast.desc) s)))] }
 | "(" MODULE DEFINITION ? ID ? QUOTE s = STRING *  ")"
-  { fun status -> [(status, `Text (String.concat "\n" s))] }
+  { fun status ->
+    [(status, `Text (String.concat "\n" (List.map (fun s -> s.Ast.desc) s)))] }
 
 script_instance:
 | instance { fun _ -> [] }
@@ -976,8 +984,10 @@ assertion:
 | "(" ASSERT_EXCEPTION action ")" { [] }
 | "(" ASSERT_TRAP action STRING ")" { [] }
 | "(" ASSERT_EXHAUSTION action STRING ")" { [] }
-| "(" ASSERT_MALFORMED m = module_ r = STRING ")" { m (`Malformed r) }
-| "(" ASSERT_INVALID m = module_ r = STRING ")" { m (`Invalid r) }
+| "(" ASSERT_MALFORMED m = module_ r = STRING ")"
+  { m (`Malformed ((fun s -> s.Ast.desc) r)) }
+| "(" ASSERT_INVALID m = module_ r = STRING ")"
+  { m (`Invalid ((fun s -> s.Ast.desc) r)) }
 | "(" ASSERT_UNLINKABLE m = script_instance STRING ")" { m `Valid }
 | "(" ASSERT_TRAP m = script_instance STRING ")" { m `Valid }
 

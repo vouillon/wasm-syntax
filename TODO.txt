@@ -1,11 +1,15 @@
+- Support for conditional compilation
+- Comments
 - Fix parser
+- extensions, like strings, char
+
 - Syntax: Try/Try_table
 - Properly handle typeuse
 
 - Fix syntactic type checks
 
 Use a wrapper library to print errors
-==> deal with line breaking / proper string with for escaped strings
+==> deal with line breaking / proper string width for escaped strings
 
 rewrite trapping int instructions into non-trapping instruction when
 the type is undeterminate

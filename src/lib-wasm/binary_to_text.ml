@@ -108,7 +108,7 @@ let rec instr (names : B.names) local_names label_names label_counter stack
         let stack' = name :: stack in
         Block
           {
-            label = Option.map (fun s -> s) name;
+            label = Option.map Ast.no_loc name;
             typ = Option.map (blocktype names.types) typ;
             block =
               List.map
@@ -120,7 +120,7 @@ let rec instr (names : B.names) local_names label_names label_counter stack
         let stack' = name :: stack in
         Loop
           {
-            label = Option.map (fun s -> s) name;
+            label = Option.map Ast.no_loc name;
             typ = Option.map (blocktype names.types) typ;
             block =
               List.map
@@ -132,7 +132,7 @@ let rec instr (names : B.names) local_names label_names label_counter stack
         let stack' = name :: stack in
         If
           {
-            label = Option.map (fun s -> s) name;
+            label = Option.map Ast.no_loc name;
             typ = Option.map (blocktype names.types) typ;
             if_block =
               List.map
@@ -148,7 +148,7 @@ let rec instr (names : B.names) local_names label_names label_counter stack
         let stack' = name :: stack in
         TryTable
           {
-            label = Option.map (fun s -> s) name;
+            label = Option.map Ast.no_loc name;
             typ = Option.map (blocktype names.types) typ;
             catches = List.map (catch names stack) catches;
             block =
@@ -161,7 +161,7 @@ let rec instr (names : B.names) local_names label_names label_counter stack
         let stack' = name :: stack in
         Try
           {
-            label = Option.map (fun s -> s) name;
+            label = Option.map Ast.no_loc name;
             typ = Option.map (blocktype names.types) typ;
             block =
               List.map
@@ -337,7 +337,7 @@ let datamode (names : B.names) local_names (d : _ B.datamode) : _ T.datamode =
   | Active (i, ex) ->
       Active (index ~map:names.memories i, expr names local_names ex)
 
-let id map idx = B.IntMap.find_opt idx map
+let id map idx = Option.map Ast.no_loc (B.IntMap.find_opt idx map)
 
 let module_ (m : _ B.module_) : _ T.module_ =
   let all_subtypes = Array.concat m.types in
@@ -353,7 +353,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
           Array.mapi
             (fun i t ->
               let name = B.IntMap.find_opt i local_names in
-              (name, valtype m.names.types t))
+              (Option.map Ast.no_loc name, valtype m.names.types t))
             ft.params
           |> Array.to_list
         in
@@ -378,8 +378,8 @@ let module_ (m : _ B.module_) : _ T.module_ =
         let item =
           T.Import
             {
-              module_ = imp.module_;
-              name = imp.name;
+              module_ = Ast.no_loc imp.module_;
+              name = Ast.no_loc imp.name;
               id;
               desc =
                 (match imp.desc with
@@ -472,7 +472,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
       (fun (e : B.export) : _ T.modulefield ->
         Export
           {
-            name = e.name;
+            name = Ast.no_loc e.name;
             kind = e.kind;
             index =
               (match e.kind with
@@ -505,7 +505,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
         Data
           {
             id = id m.names.data i;
-            init = d.init;
+            init = [ Ast.no_loc d.init ];
             mode = datamode m.names B.IntMap.empty d.mode;
           })
       m.data

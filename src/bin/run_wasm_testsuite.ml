@@ -139,8 +139,7 @@ let iter_files dirs skip suffix f =
 
 type script =
   ([ `Valid | `Invalid of string | `Malformed of string ]
-  * [ `Parsed of
-      string option * Wasm.Ast.location Wasm.Ast.Text.modulefield list
+  * [ `Parsed of Wasm.Ast.location Wasm.Ast.Text.module_
     | `Text of string
     | `Binary of string ])
   list
@@ -162,7 +161,7 @@ end
 module ModuleParser =
   Wasm.Parsing.Make_parser
     (struct
-      type t = string option * Wasm.Ast.location Wasm.Ast.Text.modulefield list
+      type t = Wasm.Ast.location Wasm.Ast.Text.module_
     end)
     (Wasm.Parser)
     (Wasm.Fast_parser)

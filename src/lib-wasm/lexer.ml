@@ -73,7 +73,7 @@ let rec string lexbuf =
       raise
         (Parsing.Syntax_error
            ( Sedlexing.lexing_bytes_positions lexbuf,
-             Printf.sprintf "Unknown operator '%s'.\n"
+             Printf.sprintf "Unknown token '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))
   | Plus (Sub (any, (0 .. 31 | 0x7f | '"' | '\\'))) ->
       Buffer.add_string string_buffer (Sedlexing.Utf8.lexeme lexbuf);
@@ -143,6 +143,15 @@ let rec skip_annotation depth lexbuf =
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Illegal character.\n" ))
 
+let with_loc f lexbuf =
+  let loc_start = Sedlexing.lexing_bytes_position_start lexbuf in
+  let desc = f lexbuf in
+  {
+    Ast.desc;
+    info =
+      { Ast.loc_start; loc_end = Sedlexing.lexing_bytes_position_curr lexbuf };
+  }
+
 let rec token lexbuf =
   let open Parser in
   match%sedlex lexbuf with
@@ -151,18 +160,18 @@ let rec token lexbuf =
   | uN -> NAT (Sedlexing.Utf8.lexeme lexbuf)
   | sN -> INT (Sedlexing.Utf8.lexeme lexbuf)
   | fN -> FLOAT (Sedlexing.Utf8.lexeme lexbuf)
-  | '"' -> STRING (string lexbuf)
+  | '"' -> STRING (with_loc string lexbuf)
   | "$\"" ->
-      let s = string lexbuf in
-      if not (String.is_valid_utf_8 s) then
+      let s = with_loc string lexbuf in
+      if not (String.is_valid_utf_8 s.desc) then
         raise
           (Parsing.Syntax_error
-             ( Sedlexing.lexing_bytes_positions lexbuf,
+             ( (s.info.loc_start, s.info.loc_end),
                "Identifier contains malformed UTF-8 byte sequences" ));
-      if s = "" then
+      if s.desc = "" then
         raise
           (Parsing.Syntax_error
-             ( Sedlexing.lexing_bytes_positions lexbuf,
+             ( (s.info.loc_start, s.info.loc_end),
                "An identifier cannot be the empty string" ));
       ID s
   | newline | linecomment -> token lexbuf
@@ -188,9 +197,14 @@ let rec token lexbuf =
       skip_annotation 1 lexbuf;
       token lexbuf
   | id ->
+      let loc_start, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
       ID
-        (Sedlexing.Utf8.sub_lexeme lexbuf 1
-           (Sedlexing.lexeme_length lexbuf - 1))
+        {
+          Ast.desc =
+            Sedlexing.Utf8.sub_lexeme lexbuf 1
+              (Sedlexing.lexeme_length lexbuf - 1);
+          Ast.info = { Ast.loc_start; loc_end };
+        }
   | eof -> EOF
   | "i32" -> I32
   | "i64" -> I64
@@ -848,7 +862,7 @@ let rec token lexbuf =
       raise
         (Parsing.Syntax_error
            ( Sedlexing.lexing_bytes_positions lexbuf,
-             Printf.sprintf "Unknown operator '%s'.\n"
+             Printf.sprintf "Unknown token '%s'.\n"
                (Sedlexing.Utf8.lexeme lexbuf) ))
   | _ ->
       raise

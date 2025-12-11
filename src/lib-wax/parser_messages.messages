@@ -581,17 +581,6 @@ parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT UNREACHABLE
 
 Expecting a colon ':' after the label name.
 
-parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT COLON UNREACHABLE
-##
-## Ends in an error in state: 484.
-##
-## func -> list(attribute) fundecl QUOTE IDENT COLON . LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
-##
-## The known suffix of the stack is as follows:
-## list(attribute) fundecl QUOTE IDENT COLON
-##
-
-Expecting a block starting with character '{'.
 
 parse: REC LBRACE TYPE IDENT EQUAL LBRACE RBRACE REC
 ##
@@ -6875,6 +6864,18 @@ parse: CONST IDENT EQUAL STRING COLON
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 166, spurious reduction of production plaininstr -> simpleinstr
 ## In state 170, spurious reduction of production instr -> plaininstr
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT QUOTE IDENT COLON UNREACHABLE
+##
+## Ends in an error in state: 484.
+##
+## func -> list(attribute) fundecl QUOTE IDENT COLON . LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
+##
+## The known suffix of the stack is as follows:
+## list(attribute) fundecl QUOTE IDENT COLON
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>

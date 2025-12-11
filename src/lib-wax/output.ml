@@ -337,7 +337,7 @@ let block_label pp label =
   Option.iter
     (fun label ->
       identifier pp "'";
-      identifier pp label;
+      identifier pp label.desc;
       punctuation pp ":";
       space pp ())
     label
@@ -348,7 +348,7 @@ let label_comment pp (l, label) =
       (fun label ->
         space pp ();
         comment pp "/* '";
-        comment pp label;
+        comment pp label.desc;
         comment pp " */")
       label
 
@@ -366,7 +366,7 @@ let branch_instr instr prec pp name label i =
       keyword pp name;
       space pp ();
       identifier pp "'";
-      identifier pp label;
+      identifier pp label.desc;
       Option.iter
         (fun i ->
           space pp ();
@@ -379,7 +379,7 @@ let branch_ref_instr instr prec pp name label ty i =
       keyword pp name;
       space pp ();
       identifier pp "'";
-      identifier pp label;
+      identifier pp label.desc;
       space pp ();
       reftype pp ty;
       space pp ();
@@ -539,7 +539,7 @@ let rec instr prec pp (i : _ instr) =
                               punctuation pp "->";
                               space pp ();
                               identifier pp "'";
-                              identifier pp label;
+                              identifier pp label.desc;
                               if i < last then punctuation pp ","
                           | CatchRef (tag, label) ->
                               identifier pp tag.desc;
@@ -549,7 +549,7 @@ let rec instr prec pp (i : _ instr) =
                               punctuation pp "->";
                               space pp ();
                               identifier pp "'";
-                              identifier pp label;
+                              identifier pp label.desc;
                               if i < last then punctuation pp ","
                           | CatchAll label ->
                               operator pp "_";
@@ -557,7 +557,7 @@ let rec instr prec pp (i : _ instr) =
                               punctuation pp "->";
                               space pp ();
                               identifier pp "'";
-                              identifier pp label;
+                              identifier pp label.desc;
                               if i < last then punctuation pp ","
                           | CatchAllRef label ->
                               operator pp "_";
@@ -567,7 +567,7 @@ let rec instr prec pp (i : _ instr) =
                               punctuation pp "->";
                               space pp ();
                               identifier pp "'";
-                              identifier pp label;
+                              identifier pp label.desc;
                               if i < last then punctuation pp ","))
                     catches);
               punctuation pp "]"))
@@ -731,7 +731,7 @@ let rec instr prec pp (i : _ instr) =
                 (fun pp label ->
                   space pp ();
                   identifier pp "'";
-                  identifier pp label)
+                  identifier pp label.desc)
                 pp
                 (List.rev (List.tl labels));
               space pp ();
@@ -739,7 +739,7 @@ let rec instr prec pp (i : _ instr) =
                   keyword pp "else";
                   space pp ();
                   identifier pp "'";
-                  identifier pp (List.hd labels));
+                  identifier pp (List.hd labels).desc);
               space pp ();
               punctuation pp "]");
           space pp ();

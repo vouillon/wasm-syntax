@@ -556,22 +556,24 @@ end
 type exportable = Func | Memory | Table | Tag | Global
 
 module Text : sig
-  type id = string
-  type idx_desc = Num of Uint32.t | Id of id
+  type name = (string, location) annotated
+  type idx_desc = Num of Uint32.t | Id of string
   type idx = (idx_desc, location) annotated
 
   module X : sig
     type nonrec idx = idx
-    type 'a annotated_array = (id option * 'a) array
-    type 'a opt_annotated_array = (id option * 'a) array
-    type label = id option
+    type 'a annotated_array = (name option * 'a) array
+    type 'a opt_annotated_array = (name option * 'a) array
+    type label = name option
   end
 
   module Types : module type of Make_types (X)
   include module type of Make_types (X)
 
   type typeuse_no_bindings = idx option * functype option
-  type typeuse = idx option * ((id option * valtype) list * valtype list) option
+
+  type typeuse =
+    idx option * ((name option * valtype) list * valtype list) option
 
   include module type of Make_instructions (struct
     include X
@@ -587,6 +589,8 @@ module Text : sig
     type float_t = string
     type v128_t = Utils.V128.t
   end)
+
+  type datastring = (string, location) annotated list
 
   type importdesc =
     | Func of typeuse
@@ -607,53 +611,52 @@ module Text : sig
   type 'info modulefield =
     | Types of rectype
     | Import of {
-        module_ : string;
-        name : string;
-        id : id option;
+        module_ : name;
+        name : name;
+        id : name option;
         desc : importdesc;
-        exports : string list;
+        exports : name list;
       }
     | Func of {
-        id : id option;
+        id : name option;
         typ : typeuse;
-        locals : (id option * valtype) list;
+        locals : (name option * valtype) list;
         instrs : 'info instr list;
-        exports : string list;
+        exports : name list;
       }
     | Memory of {
-        id : id option;
+        id : name option;
         limits : limits;
-        init : string option;
-        exports : string list;
+        init : datastring option;
+        exports : name list;
       }
     | Table of {
-        id : id option;
+        id : name option;
         typ : tabletype;
         init : 'info tableinit;
-        exports : string list;
+        exports : name list;
       }
-    | Tag of { id : id option; typ : typeuse; exports : string list }
+    | Tag of { id : name option; typ : typeuse; exports : name list }
     | Global of {
-        id : id option;
+        id : name option;
         typ : globaltype;
         init : 'info expr;
-        exports : string list;
+        exports : name list;
       }
-    | Export of { name : string; kind : exportable; index : idx }
+    | Export of { name : name; kind : exportable; index : idx }
     | Start of idx
     | Elem of {
-        id : id option;
+        id : name option;
         typ : reftype;
         init : 'info expr list;
         mode : 'info elemmode;
       }
-    | Data of { id : id option; init : string; mode : 'info datamode }
+    | Data of { id : name option; init : datastring; mode : 'info datamode }
 
-  type 'info module_ = string option * 'info modulefield list
+  type 'info module_ = name option * 'info modulefield list
 end
 
 module Binary : sig
-  type id = unit
   type idx = int
 
   module X : sig
@@ -696,7 +699,6 @@ module Binary : sig
   type 'info table = { typ : tabletype; expr : 'info expr option }
 
   type 'info memory = {
-    id : id option;
     limits : limits;
     init : string option;
     exports : string list;

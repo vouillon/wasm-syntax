@@ -11,7 +11,7 @@ let add_name space id =
   let idx = space.count in
   let map =
     match id with
-    | Some name -> StringMap.add name idx space.map
+    | Some name -> StringMap.add name.Ast.desc idx space.map
     | None -> space.map
   in
   ({ map; count = idx + 1 }, idx)
@@ -163,11 +163,14 @@ let resolve_field_idx ctx type_idx (field_idx_text : T.idx) : B.idx =
           failwith
             (Printf.sprintf "No field map found for type index %d" type_idx))
 
+let push_label ctx label =
+  { ctx with labels = Option.map (fun l -> l.Ast.desc) label :: ctx.labels }
+
 let rec instr ~resolve_type ctx (i : 'info T.instr) =
   let desc : _ B.instr_desc =
     match i.desc with
     | Block { label; typ; block } ->
-        let ctx' = { ctx with labels = label :: ctx.labels } in
+        let ctx' = push_label ctx label in
         Block
           {
             label = ();
@@ -175,7 +178,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
             block = List.map (instr ~resolve_type ctx') block;
           }
     | Loop { label; typ; block } ->
-        let ctx' = { ctx with labels = label :: ctx.labels } in
+        let ctx' = push_label ctx label in
         Loop
           {
             label = ();
@@ -183,7 +186,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
             block = List.map (instr ~resolve_type ctx') block;
           }
     | If { label; typ; if_block; else_block } ->
-        let ctx' = { ctx with labels = label :: ctx.labels } in
+        let ctx' = push_label ctx label in
         If
           {
             label = ();
@@ -261,7 +264,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | RefFunc i -> RefFunc (resolve_idx ctx.funcs i)
     | RefIsNull -> RefIsNull
     | TryTable { label; typ; catches; block } ->
-        let ctx' = { ctx with labels = label :: ctx.labels } in
+        let ctx' = push_label ctx label in
         TryTable
           {
             label = ();
@@ -270,7 +273,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
             block = List.map (instr ~resolve_type ctx') block;
           }
     | Try { label; typ; block; catches; catch_all } ->
-        let ctx' = { ctx with labels = label :: ctx.labels } in
+        let ctx' = push_label ctx label in
         Try
           {
             label = ();
@@ -361,43 +364,26 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
   { desc; info = i.info }
 
 let collect_labels instrs ctr map =
+  let add ctr map label =
+    let idx = !ctr in
+    incr ctr;
+    match label with Some l -> B.IntMap.add idx l.desc map | None -> map
+  in
   let rec go instrs ctr map =
     List.fold_left
       (fun map (i : _ T.instr) ->
         match i.desc with
         | Block { label; block; _ } | Loop { label; block; _ } ->
-            let idx = !ctr in
-            incr ctr;
-            let map =
-              match label with Some l -> B.IntMap.add idx l map | None -> map
-            in
-            go block ctr map
+            add ctr map label |> go block ctr
         | If { label; if_block; else_block; _ } ->
-            let idx = !ctr in
-            incr ctr;
-            let map =
-              match label with Some l -> B.IntMap.add idx l map | None -> map
-            in
-            let map = go if_block ctr map in
-            go else_block ctr map
+            add ctr map label |> go if_block ctr |> go else_block ctr
+        | TryTable { label; block; _ } -> add ctr map label |> go block ctr
         | Try { label; block; catches; catch_all; _ } -> (
-            let idx = !ctr in
-            incr ctr;
-            let map =
-              match label with Some l -> B.IntMap.add idx l map | None -> map
-            in
-            let map = go block ctr map in
+            let map = add ctr map label |> go block ctr in
             let map =
               List.fold_left (fun map (_, b) -> go b ctr map) map catches
             in
             match catch_all with Some b -> go b ctr map | None -> map)
-        | TryTable { label; block; _ } ->
-            let idx = !ctr in
-            incr ctr;
-            let map =
-              match label with Some l -> B.IntMap.add idx l map | None -> map
-            in
-            go block ctr map
         | _ -> map)
       map instrs
   in
@@ -492,7 +478,8 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
                       Array.fold_left
                         (fun (fmap, fidx) (fname, _) ->
                           match fname with
-                          | Some n -> (StringMap.add n fidx fmap, fidx + 1)
+                          | Some n ->
+                              (StringMap.add n.Ast.desc fidx fmap, fidx + 1)
                           | None -> (fmap, fidx + 1))
                         (StringMap.empty, 0) field_defs
                       |> fst
@@ -581,7 +568,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
                   Tag (resolve_type { params; results })
               | Tag (None, None) -> failwith "Tag import missing type"
             in
-            Some { B.module_; name; desc }
+            Some { B.module_ = module_.desc; name = name.desc; desc }
         | _ -> None)
       fields
   in
@@ -726,7 +713,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
               | Global -> (Global, resolve_idx ctx.globals index)
               | Tag -> (Tag, resolve_idx ctx.tags index)
             in
-            Some { B.name; kind; index }
+            Some { B.name = name.desc; kind; index }
         | _ -> None)
       fields
   in
@@ -805,12 +792,14 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
                   ( resolve_idx ctx.memories i,
                     List.map (instr ~resolve_type ctx) ex )
           in
+          let init = String.concat "" (List.map (fun s -> s.Ast.desc) init) in
           let d = { B.init; mode } in
           scan rest mem_idx (d :: acc)
       | T.Memory { init = Some init; _ } :: rest ->
           let (mode : 'info B.datamode) =
             B.Active (mem_idx, [ Ast.no_loc (B.Const (B.I32 0l)) ])
           in
+          let init = String.concat "" (List.map (fun s -> s.Ast.desc) init) in
           let d = { B.init; mode } in
           scan rest (mem_idx + 1) (d :: acc)
       | T.Memory _ :: rest -> scan rest (mem_idx + 1) acc
@@ -858,7 +847,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     data;
     names =
       {
-        B.module_ = module_name;
+        B.module_ = Option.map (fun n -> n.Ast.desc) module_name;
         functions = invert_map ctx.funcs.map;
         locals = !locals_names;
         types = invert_map ctx.types.map;
