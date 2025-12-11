@@ -155,7 +155,7 @@ let with_loc (loc_start, loc_end) desc =
 let blocktype bt = Option.value ~default:{params = [||]; results = [||]} bt
 %}
 
-%start <location modulefield list> parse
+%start <location module_> parse
 
 %%
 
@@ -226,8 +226,8 @@ typedef:
     { (name, {typ; supertype; final = not op}) }
 
 rectype:
-| REC "{" l = list(typedef) "}" { Array.of_list l }
-| t = typedef { [|t|] }
+| REC "{" l = list(typedef) "}" { with_loc $loc($1) (Array.of_list l) }
+| t = typedef { with_loc $sloc [|t|] }
 
 attribute:
 | "#" "[" name = IDENT "=" i = instr "]" { (name, i) }
@@ -251,7 +251,7 @@ fundecl:
 func:
 | attributes = list(attribute) f = fundecl body = block
   { let (name, typ, sign) = f in
-    Func {name; typ; sign; body; attributes} }
+    with_loc $loc(f) (Func {name; typ; sign; body; attributes}) }
 
 tag:
 | TAG name = ident
@@ -416,21 +416,24 @@ global:
 | attributes = list(attribute) mut = globalmut name = ident
   typ = option(":" typ = valtype { typ })
   "=" def = instr ";"
-  { Global {name; mut; typ; def; attributes} }
+  { with_loc ($symbolstartpos, $endpos(typ))
+      (Global {name; mut; typ; def; attributes}) }
 
 globaldecl:
 | attributes = list(attribute) mut = globalmut name = ident
   ":" typ = valtype option(";")
-  { GlobalDecl {name; mut; typ; attributes} }
+  { with_loc $sloc (GlobalDecl {name; mut; typ; attributes}) }
 
 modulefield:
-| r = rectype { Type r }
+| r = rectype { {desc = Type r.desc; info = r.info} }
 | attributes = list(attribute) f = fundecl option(";")
-  { let (name, typ, sign) = f in Fundecl {name; typ; sign; attributes} }
+  { let (name, typ, sign) = f in
+    with_loc $loc(f) (Fundecl {name; typ; sign; attributes}) }
 | f = func { f }
 | g = global { g }
 | g = globaldecl { g }
 | attributes = list(attribute) f = tag option(";")
-  { let (name, typ, sign) = f in Tag {name; typ; sign; attributes} }
+  { let (name, typ, sign) = f in
+    with_loc $loc(f) (Tag {name; typ; sign; attributes}) }
 
 parse: l = list(modulefield) EOF { l }

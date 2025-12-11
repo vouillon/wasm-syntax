@@ -181,7 +181,7 @@ module ScriptParser =
 module WaxParser =
   Wasm.Parsing.Make_parser
     (struct
-      type t = Wax.Ast.location Wax.Ast.modulefield list
+      type t = Wax.Ast.location Wax.Ast.module_
     end)
     (Wax.Parser)
     (Wax.Fast_parser)

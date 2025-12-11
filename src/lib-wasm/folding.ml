@@ -5,25 +5,29 @@ let map_instrs func (name, fields) =
   ( name,
     List.map
       (fun f ->
-        match f with
-        | Func ({ typ; locals; instrs; _ } as f) ->
-            Func { f with instrs = func (Some (typ, locals)) instrs }
-        | Global ({ init; _ } as g) -> Global { g with init = func None init }
-        | Table ({ init; _ } as t) ->
-            Table
-              {
-                t with
-                init =
-                  (match init with
-                  | Init_default -> Init_default
-                  | Init_expr init -> Init_expr (func None init)
-                  | Init_segment seg ->
-                      Init_segment (List.map (fun e -> func None e) seg));
-              }
-        | Elem ({ init; _ } as e) ->
-            Elem { e with init = List.map (fun l -> func None l) init }
-        | Types _ | Import _ | Memory _ | Tag _ | Export _ | Start _ | Data _ ->
-            f)
+        let desc =
+          match f.Ast.desc with
+          | Func ({ typ; locals; instrs; _ } as f) ->
+              Func { f with instrs = func (Some (typ, locals)) instrs }
+          | Global ({ init; _ } as g) -> Global { g with init = func None init }
+          | Table ({ init; _ } as t) ->
+              Table
+                {
+                  t with
+                  init =
+                    (match init with
+                    | Init_default -> Init_default
+                    | Init_expr init -> Init_expr (func None init)
+                    | Init_segment seg ->
+                        Init_segment (List.map (fun e -> func None e) seg));
+                }
+          | Elem ({ init; _ } as e) ->
+              Elem { e with init = List.map (fun l -> func None l) init }
+          | Types _ | Import _ | Memory _ | Tag _ | Export _ | Start _ | Data _
+            ->
+              f.desc
+        in
+        { f with desc })
       fields )
 
 (****)
@@ -70,7 +74,7 @@ type outer_env = {
 let types m =
   List.fold_left
     (fun tbl f ->
-      match f with
+      match f.Ast.desc with
       | Types l ->
           Array.fold_left (fun tbl (id, typ) -> Tbl.add id typ tbl) tbl l
       | Import _ | Func _ | Memory _ | Table _ | Tag _ | Global _ | Export _
@@ -81,7 +85,7 @@ let types m =
 let functions f =
   List.fold_left
     (fun tbl f ->
-      match f with
+      match f.Ast.desc with
       | Func { id; typ; _ } | Import { id; desc = Func typ; _ } ->
           Tbl.add id typ tbl
       | Import { desc = Memory _ | Table _ | Global _ | Tag _; _ }
@@ -93,7 +97,7 @@ let functions f =
 let globals f =
   List.fold_left
     (fun tbl f ->
-      match f with
+      match f.Ast.desc with
       | Global { id; typ; _ } | Import { id; desc = Global typ; _ } ->
           Tbl.add id typ tbl
       | Import { desc = Func _ | Memory _ | Table _ | Tag _; _ }
@@ -105,7 +109,7 @@ let globals f =
 let tags f =
   List.fold_left
     (fun tbl f ->
-      match f with
+      match f.Ast.desc with
       | Tag { id; typ; _ } | Import { id; desc = Tag typ; _ } ->
           Tbl.add id typ tbl
       | Import { desc = Func _ | Memory _ | Table _ | Global _; _ }

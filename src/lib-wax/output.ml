@@ -865,7 +865,7 @@ let print_attr_prefix pp attributes_list content_fn =
       content_fn ())
 
 let modulefield pp field =
-  match field with
+  match field.desc with
   | Type t -> rectype pp t
   | Func { name; typ; sign; body = label, body; attributes = a } ->
       print_attr_prefix pp a (fun () ->

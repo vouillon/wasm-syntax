@@ -314,7 +314,7 @@ let fieldtype d ctx ty = muttype storagetype d ctx ty
 
 let tabletype d ctx ({ limits; reftype = typ } : Ast.Text.tabletype) =
   let+@ reftype = reftype d ctx typ in
-  { limits; reftype }
+  { Ast.Binary.limits = limits.desc; reftype }
 
 let globaltype d ctx ty = muttype valtype d ctx ty
 
@@ -377,7 +377,7 @@ type module_context = {
   subtyping_info : Types.subtyping_info;
   functions : int Sequence.t;
   memories : limits Sequence.t;
-  tables : tabletype Sequence.t;
+  tables : Ast.Binary.tabletype Sequence.t;
   globals : globaltype Sequence.t;
   tags : int Sequence.t;
   data : unit Sequence.t;
@@ -1665,7 +1665,8 @@ let register_exports ctx lst =
       else Hashtbl.add ctx.exports name.desc ())
     lst
 
-let limits ctx location kind { mi; ma; address_type } max_fn =
+let limits ctx kind { Ast.desc = { mi; ma; address_type }; info = location }
+    max_fn =
   let max = max_fn address_type in
   match ma with
   | None ->
@@ -1725,8 +1726,8 @@ and register_typeuses' d ctx (i : _ Ast.Text.instr) =
 
 let build_initial_env ctx fields =
   List.iter
-    (fun (field : _ Ast.Text.modulefield) ->
-      match field with
+    (fun (field : (_ Ast.Text.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Import { id; desc; exports; module_ = _; name = _ } -> (
           (* ZZZ Check for non-import fields *)
           register_exports ctx exports;
@@ -1736,10 +1737,10 @@ let build_initial_env ctx fields =
                 (let+@ ty = typeuse ctx.diagnostics ctx.types tu in
                  Sequence.register ctx.functions id ty)
           | Memory lim ->
-              limits ctx (Ast.no_loc ()).info "memory" lim max_memory_size;
-              Sequence.register ctx.memories id lim
+              limits ctx "memory" lim max_memory_size;
+              Sequence.register ctx.memories id lim.desc
           | Table typ ->
-              limits ctx (Ast.no_loc ()).info "table" typ.limits max_table_size;
+              limits ctx "table" typ.limits max_table_size;
               let>@ typ = tabletype ctx.diagnostics ctx.types typ in
               Sequence.register ctx.tables id typ
           | Global ty ->
@@ -1804,15 +1805,14 @@ let check_type_definitions ctx =
 
 let tables_and_memories ctx fields =
   List.iter
-    (fun (field : _ Ast.Text.modulefield) ->
-      match field with
+    (fun (field : (_ Ast.Text.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Memory { id; limits = lim; init = _; exports } ->
-          limits ctx (Ast.no_loc ()).info (*ZZZ*) "memory" lim max_memory_size;
-          Sequence.register ctx.memories id lim;
+          limits ctx "memory" lim max_memory_size;
+          Sequence.register ctx.memories id lim.desc;
           register_exports ctx exports
       | Table { id; typ; init; exports } ->
-          limits ctx (Ast.no_loc ()).info (*ZZZ*) "table" typ.limits
-            max_table_size;
+          limits ctx "table" typ.limits max_table_size;
           let>@ typ = tabletype ctx.diagnostics ctx.types typ in
           (match init with
           | Init_default -> assert typ.reftype.nullable
@@ -1825,8 +1825,8 @@ let tables_and_memories ctx fields =
 
 let globals ctx fields =
   List.iter
-    (fun (field : _ Ast.Text.modulefield) ->
-      match field with
+    (fun (field : (_ Ast.Text.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Global { id; typ; init; exports } ->
           let>@ typ = globaltype ctx.diagnostics ctx.types typ in
           constant_expression ctx typ.typ init;
@@ -1837,8 +1837,8 @@ let globals ctx fields =
 
 let segments ctx fields =
   List.iter
-    (fun (field : _ Ast.Text.modulefield) ->
-      match field with
+    (fun (field : (_ Ast.Text.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Memory { init; _ } ->
           let*? _ = init in
           Sequence.register ctx.data None ()
@@ -1879,8 +1879,8 @@ let segments ctx fields =
 
 let functions ctx fields =
   List.iter
-    (fun (field : _ Ast.Text.modulefield) ->
-      match field with
+    (fun (field : (_ Ast.Text.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Func { id = _; typ; locals = locs; instrs; exports } ->
           let>@ func_typ =
             let+@ typ = typeuse ctx.diagnostics ctx.types typ in
@@ -1941,8 +1941,8 @@ let functions ctx fields =
 
 let exports ctx fields =
   List.iter
-    (fun (field : _ Ast.Text.modulefield) ->
-      match field with
+    (fun (field : (_ Ast.Text.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Export { name; kind; index } -> (
           register_exports ctx [ name ];
           match kind with
@@ -1956,15 +1956,12 @@ let exports ctx fields =
 
 let start ctx fields =
   List.iter
-    (fun (field : _ Ast.Text.modulefield) ->
-      match field with
+    (fun (field : (_ Ast.Text.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Start idx -> (
           let*? ty = Sequence.get ctx.diagnostics ctx.functions idx in
-          let loc = (Ast.no_loc ()).info in
           match (Types.get_subtype ctx.subtyping_info ty).typ with
-          | Struct _ | Array _ ->
-              Error.expected_func_type ctx.diagnostics ~location:loc idx;
-              ignore (unreachable Empty)
+          | Struct _ | Array _ -> assert false (* Should not happen *)
           | Func { params; results } -> assert (params = [||] && results = [||])
           )
       | _ -> ())
@@ -1980,8 +1977,8 @@ let f diagnostics (_, fields) =
     }
   in
   List.iter
-    (fun (field : _ Ast.Text.modulefield) ->
-      match field with
+    (fun (field : (_ Ast.Text.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Types rectype -> add_type diagnostics type_context rectype
       | _ -> ())
     fields;
@@ -2077,7 +2074,8 @@ let check_syntax diagnostics (_, lst) =
   let type_defs = Hashtbl.create 16 in
   let type_defs_text = Hashtbl.create 16 in
   List.iter
-    (function
+    (fun field ->
+      match field.Ast.desc with
       | Ast.Text.Types lst ->
           Array.iter
             (fun (id, subtype) ->
@@ -2198,7 +2196,7 @@ let check_syntax diagnostics (_, lst) =
 
   List.iter
     (fun field ->
-      (match field with
+      (match field.Ast.desc with
       | Ast.Text.Import { desc; _ } -> (
           match desc with
           | Func (None, Some sign) -> safe_add_implicit_type (`Sig sign)
@@ -2207,7 +2205,7 @@ let check_syntax diagnostics (_, lst) =
       | Func { typ = None, Some sign; _ } -> safe_add_implicit_type (`Sig sign)
       | Tag { typ = None, Some sign; _ } -> safe_add_implicit_type (`Sig sign)
       | _ -> ());
-      match field with
+      match field.Ast.desc with
       | Ast.Text.Func { instrs; _ } ->
           iter_instrs
             (fun desc ->
@@ -2274,8 +2272,8 @@ let check_syntax diagnostics (_, lst) =
       all_locals
   in
   List.iter
-    (fun (field : _ Ast.Text.modulefield) ->
-      match field with
+    (fun (field : (_ Ast.Text.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Types lst ->
           Array.iter
             (fun (_, subtype) ->
@@ -2321,11 +2319,11 @@ let check_syntax diagnostics (_, lst) =
     lst;
   ignore
     (List.fold_left
-       (fun can_import (field : _ Ast.Text.modulefield) ->
-         match (can_import, field) with
+       (fun can_import (field : (_ Ast.Text.modulefield, _) Ast.annotated) ->
+         match (can_import, field.desc) with
          | Some previous, Import _ ->
-             Error.import_after_definition diagnostics
-               ~location:(Ast.no_loc ()).info previous;
+             Error.import_after_definition diagnostics ~location:field.info
+               previous;
              can_import
          | None, Func _ -> Some "function"
          | None, Memory _ -> Some "memory"
@@ -2340,6 +2338,7 @@ let check_syntax diagnostics (_, lst) =
   assert (
     List.length
       (List.filter
-         (fun field -> match field with Ast.Text.Start _ -> true | _ -> false)
+         (fun field ->
+           match field.Ast.desc with Ast.Text.Start _ -> true | _ -> false)
          lst)
     <= 1)

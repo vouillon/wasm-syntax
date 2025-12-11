@@ -82,7 +82,6 @@ end) : sig
   }
 
   type globaltype = valtype muttype
-  type tabletype = { limits : limits; reftype : reftype }
 end
 
 (* Instructions *)
@@ -575,6 +574,8 @@ module Text : sig
   type typeuse =
     idx option * ((name option * valtype) list * valtype list) option
 
+  type tabletype = { limits : (limits, location) annotated; reftype : reftype }
+
   include module type of Make_instructions (struct
     include X
     (* include Types *)
@@ -594,7 +595,7 @@ module Text : sig
 
   type importdesc =
     | Func of typeuse
-    | Memory of limits
+    | Memory of (limits, location) annotated
     | Table of tabletype
     | Global of globaltype
     | Tag of typeuse
@@ -626,7 +627,7 @@ module Text : sig
       }
     | Memory of {
         id : name option;
-        limits : limits;
+        limits : (limits, location) annotated;
         init : datastring option;
         exports : name list;
       }
@@ -653,7 +654,8 @@ module Text : sig
       }
     | Data of { id : name option; init : datastring; mode : 'info datamode }
 
-  type 'info module_ = name option * 'info modulefield list
+  type 'info module_ =
+    name option * ('info modulefield, location) annotated list
 end
 
 module Binary : sig
@@ -670,6 +672,7 @@ module Binary : sig
   include module type of Make_types (X)
 
   type typeuse = idx
+  type tabletype = { limits : limits; reftype : reftype }
 
   include module type of Make_instructions (struct
     include X

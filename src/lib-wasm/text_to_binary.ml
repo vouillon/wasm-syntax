@@ -127,8 +127,8 @@ let sub_type ctx (s : T.subtype) : B.subtype =
 let rec_type ctx r = Array.map (fun (_, s) -> sub_type ctx s) r
 let global_type ctx g = mut_type valtype ctx g
 
-let table_type_fix ctx (t : T.tabletype) : B.tabletype =
-  { limits = t.limits; reftype = reftype ctx t.reftype }
+let table_type ctx (t : T.tabletype) : B.tabletype =
+  { limits = t.limits.desc; reftype = reftype ctx t.reftype }
 
 let block_type ~resolve_type ctx (b : T.blocktype) : B.blocktype =
   match b with
@@ -402,7 +402,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let ctx, func_types_by_idx =
     List.fold_left
       (fun (ctx, acc_func_types) f ->
-        match f with
+        match f.desc with
         | T.Types r ->
             let types_space, _ =
               Array.fold_left
@@ -468,7 +468,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     let rec scan_fields type_idx fields acc =
       match fields with
       | [] -> acc
-      | T.Types r :: rest ->
+      | { desc = T.Types r; _ } :: rest ->
           let acc, _ =
             Array.fold_left
               (fun (acc, i) (_, subtype) ->
@@ -506,7 +506,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     let rec scan_existing_types idx fields =
       match fields with
       | [] -> ()
-      | T.Types r :: rest ->
+      | { desc = T.Types r; _ } :: rest ->
           Array.iteri
             (fun i (_, subtype) ->
               match subtype.T.typ with
@@ -537,7 +537,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let imports =
     List.filter_map
       (fun f ->
-        match f with
+        match f.desc with
         | T.Import { module_; name; desc; _ } ->
             let desc : B.importdesc =
               match desc with
@@ -553,8 +553,8 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
                   in
                   Func (resolve_type { params; results })
               | Func (None, None) -> assert false
-              | Table t -> Table (table_type_fix ctx t)
-              | Memory l -> Memory l
+              | Table t -> Table (table_type ctx t)
+              | Memory l -> Memory l.desc
               | Global g -> Global (global_type ctx g)
               | Tag (Some i, _) -> Tag (resolve_idx ctx.types i)
               | Tag (None, Some (params, results)) ->
@@ -575,14 +575,15 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
 
   let explicit_types =
     List.filter_map
-      (fun f -> match f with T.Types r -> Some (rec_type ctx r) | _ -> None)
+      (fun f ->
+        match f.desc with T.Types r -> Some (rec_type ctx r) | _ -> None)
       fields
   in
 
   let functions =
     List.filter_map
       (fun f ->
-        match f with
+        match f.desc with
         | T.Func { typ = Some i, _; _ } -> Some (resolve_idx ctx.types i)
         | T.Func { typ = None, Some (params, results); _ } ->
             let params =
@@ -599,7 +600,9 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let func_import_count =
     List.fold_left
       (fun acc f ->
-        match f with T.Import { desc = T.Func _; _ } -> acc + 1 | _ -> acc)
+        match f.desc with
+        | T.Import { desc = T.Func _; _ } -> acc + 1
+        | _ -> acc)
       0 fields
   in
 
@@ -610,7 +613,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     let rec process_funcs func_types_by_idx fields func_idx acc =
       match fields with
       | [] -> List.rev acc
-      | T.Func { typ; locals; instrs; _ } :: rest ->
+      | { desc = T.Func { typ; locals; instrs; _ }; _ } :: rest ->
           (* Build local context *)
           let locals_space =
             let num_unnamed_params =
@@ -667,14 +670,14 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let tables =
     List.filter_map
       (fun f ->
-        match f with
+        match f.desc with
         | T.Table { typ; init; _ } ->
             let expr =
               match init with
               | T.Init_expr e -> Some (List.map (instr ~resolve_type ctx) e)
               | _ -> None
             in
-            Some { B.typ = table_type_fix ctx typ; B.expr }
+            Some { B.typ = table_type ctx typ; B.expr }
         | _ -> None)
       fields
   in
@@ -682,14 +685,16 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let memories =
     List.filter_map
       (fun f ->
-        match f with T.Memory { limits; _ } -> Some limits | _ -> None)
+        match f.desc with
+        | T.Memory { limits; _ } -> Some limits.desc
+        | _ -> None)
       fields
   in
 
   let globals =
     List.filter_map
       (fun f ->
-        match f with
+        match f.desc with
         | T.Global { typ; init; _ } ->
             Some
               {
@@ -703,7 +708,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let exports =
     List.filter_map
       (fun f ->
-        match f with
+        match f.desc with
         | T.Export { name; kind; index } ->
             let (kind : B.exportable), index =
               match kind with
@@ -721,14 +726,18 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let start =
     List.find_map
       (fun f ->
-        match f with T.Start i -> Some (resolve_idx ctx.funcs i) | _ -> None)
+        match f.desc with
+        | T.Start i -> Some (resolve_idx ctx.funcs i)
+        | _ -> None)
       fields
   in
 
   let table_import_count =
     List.fold_left
       (fun acc f ->
-        match f with T.Import { desc = T.Table _; _ } -> acc + 1 | _ -> acc)
+        match f.desc with
+        | T.Import { desc = T.Table _; _ } -> acc + 1
+        | _ -> acc)
       0 fields
   in
 
@@ -736,7 +745,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     let rec scan fields table_idx acc =
       match fields with
       | [] -> List.rev acc
-      | T.Elem { typ; init; mode; _ } :: rest ->
+      | { desc = T.Elem { typ; init; mode; _ }; _ } :: rest ->
           let mode : 'info B.elemmode =
             match mode with
             | Passive -> Passive
@@ -754,7 +763,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             }
           in
           scan rest table_idx (e :: acc)
-      | T.Table { typ; init = T.Init_segment exprs; _ } :: rest ->
+      | { desc = T.Table { typ; init = T.Init_segment exprs; _ }; _ } :: rest ->
           let mode =
             B.Active (table_idx, [ Ast.no_loc (B.Const (B.I32 0l)) ])
           in
@@ -766,7 +775,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             }
           in
           scan rest (table_idx + 1) (e :: acc)
-      | T.Table _ :: rest -> scan rest (table_idx + 1) acc
+      | { desc = T.Table _; _ } :: rest -> scan rest (table_idx + 1) acc
       | _ :: rest -> scan rest table_idx acc
     in
     scan fields table_import_count []
@@ -775,7 +784,9 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let memory_import_count =
     List.fold_left
       (fun acc f ->
-        match f with T.Import { desc = T.Memory _; _ } -> acc + 1 | _ -> acc)
+        match f.desc with
+        | T.Import { desc = T.Memory _; _ } -> acc + 1
+        | _ -> acc)
       0 fields
   in
 
@@ -783,7 +794,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     let rec scan fields mem_idx acc =
       match fields with
       | [] -> List.rev acc
-      | T.Data { init; mode; _ } :: rest ->
+      | { desc = T.Data { init; mode; _ }; _ } :: rest ->
           let mode : 'info B.datamode =
             match mode with
             | Passive -> Passive
@@ -795,14 +806,14 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
           let init = String.concat "" (List.map (fun s -> s.Ast.desc) init) in
           let d = { B.init; mode } in
           scan rest mem_idx (d :: acc)
-      | T.Memory { init = Some init; _ } :: rest ->
+      | { desc = T.Memory { init = Some init; _ }; _ } :: rest ->
           let (mode : 'info B.datamode) =
             B.Active (mem_idx, [ Ast.no_loc (B.Const (B.I32 0l)) ])
           in
           let init = String.concat "" (List.map (fun s -> s.Ast.desc) init) in
           let d = { B.init; mode } in
           scan rest (mem_idx + 1) (d :: acc)
-      | T.Memory _ :: rest -> scan rest (mem_idx + 1) acc
+      | { desc = T.Memory _; _ } :: rest -> scan rest (mem_idx + 1) acc
       | _ :: rest -> scan rest mem_idx acc
     in
     scan fields memory_import_count []
@@ -811,7 +822,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let tags =
     List.filter_map
       (fun f ->
-        match f with
+        match f.desc with
         | T.Tag { typ = Some i, _; _ } -> Some (resolve_idx ctx.types i)
         | Tag { typ = None, Some (params, results); _ } ->
             let params =

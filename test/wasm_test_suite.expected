@@ -277,3 +277,4 @@ Fatal error: exception Invalid_argument("index out of bounds")
 ==== core/utf8-invalid-encoding.wast ====
 ==== legacy/exceptions/core/throw.wast ====
 ==== legacy/exceptions/core/try_catch.wast ====
+==== type-subtype.wast ====

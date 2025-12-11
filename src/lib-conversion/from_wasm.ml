@@ -1034,100 +1034,103 @@ let import module_ name =
 
 let single_expression l = match l with [ e ] -> e | _ -> assert false
 
-let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
-  match f with
-  | Types t -> Some (Type (rectype ctx t))
-  | Func { locals; instrs; typ; exports = e; _ } ->
-      let label, labels = LabelStack.push (LabelStack.make ()) None in
-      let ctx =
-        let return_arity = snd (typeuse_arity ctx typ) in
-        {
-          ctx with
-          locals = Sequence.make (Namespace.dup ctx.common_namespace) "x";
-          labels;
-          label_arities = [ (None, return_arity) ];
-          return_arity;
-        }
-      in
-      (match typ with
-      | _, Some (params, _) ->
-          List.iter (fun (id, _) -> Sequence.register ctx.locals id []) params;
-          Sequence.consume_currents ctx.locals
-      | Some idx, _ -> (
-          match (lookup_type ctx Type idx).typ with
-          | Func ty ->
-              Array.iter
-                (fun _ -> Sequence.register ctx.locals None [])
-                ty.params
-          | Struct _ | Array _ -> assert false)
-      | None, None -> ());
-      List.iter (fun (id, _) -> Sequence.register ctx.locals id []) locals;
-      let locals = bind_locals ctx locals in
-      let typ, sign = typeuse `Func ctx typ in
-      Some
-        (Func
-           {
-             name = Sequence.get_current ctx.functions;
-             typ;
-             sign;
-             body = (label (), locals @ Stack.run (instructions ctx instrs));
-             attributes = exports e;
-           })
-  | Import { module_; name; desc; exports = e; _ } -> (
-      match desc with
-      | Func typ ->
-          let typ, sign = typeuse `Sig ctx typ in
-          Some
-            (Fundecl
-               {
-                 name = Sequence.get_current ctx.functions;
-                 typ;
-                 sign;
-                 attributes = import module_ name :: exports e;
-               })
-      | Tag typ ->
-          let typ, sign = typeuse `Sig ctx typ in
-          Some
-            (Tag
-               {
-                 name = Sequence.get_current ctx.tags;
-                 typ;
-                 sign;
-                 attributes = import module_ name :: exports e;
-               })
-      | Global typ ->
-          let typ' = globaltype ctx typ in
-          Some
-            (GlobalDecl
-               {
-                 name = Sequence.get_current ctx.globals;
-                 mut = typ'.mut;
-                 typ = typ'.typ;
-                 attributes = import module_ name :: exports e;
-               })
-      | Memory _ | Table _ -> None (*ZZZ*))
-  | Global { typ; init; exports = e; _ } ->
-      let typ' = globaltype ctx typ in
-      Some
-        (Global
-           {
-             name = Sequence.get_current ctx.globals;
-             mut = typ'.mut;
-             typ = Some typ'.typ;
-             def = single_expression (Stack.run (instructions ctx init));
-             attributes = exports e;
-           })
-  | Tag { typ; exports = e; _ } ->
-      let typ, sign = typeuse `Sig ctx typ in
-      Some
-        (Tag
-           {
-             name = Sequence.get_current ctx.tags;
-             typ;
-             sign;
-             attributes = exports e;
-           })
-  | Memory _ | Table _ | Start _ | Export _ | Elem _ | Data _ -> None
+let modulefield ctx (f : (_ Src.modulefield, _) Ast.annotated) =
+  let desc : _ Ast.modulefield option =
+    match f.desc with
+    | Types t -> Some (Type (rectype ctx t))
+    | Func { locals; instrs; typ; exports = e; _ } ->
+        let label, labels = LabelStack.push (LabelStack.make ()) None in
+        let ctx =
+          let return_arity = snd (typeuse_arity ctx typ) in
+          {
+            ctx with
+            locals = Sequence.make (Namespace.dup ctx.common_namespace) "x";
+            labels;
+            label_arities = [ (None, return_arity) ];
+            return_arity;
+          }
+        in
+        (match typ with
+        | _, Some (params, _) ->
+            List.iter (fun (id, _) -> Sequence.register ctx.locals id []) params;
+            Sequence.consume_currents ctx.locals
+        | Some idx, _ -> (
+            match (lookup_type ctx Type idx).typ with
+            | Func ty ->
+                Array.iter
+                  (fun _ -> Sequence.register ctx.locals None [])
+                  ty.params
+            | Struct _ | Array _ -> assert false)
+        | None, None -> ());
+        List.iter (fun (id, _) -> Sequence.register ctx.locals id []) locals;
+        let locals = bind_locals ctx locals in
+        let typ, sign = typeuse `Func ctx typ in
+        Some
+          (Func
+             {
+               name = Sequence.get_current ctx.functions;
+               typ;
+               sign;
+               body = (label (), locals @ Stack.run (instructions ctx instrs));
+               attributes = exports e;
+             })
+    | Import { module_; name; desc; exports = e; _ } -> (
+        match desc with
+        | Func typ ->
+            let typ, sign = typeuse `Sig ctx typ in
+            Some
+              (Fundecl
+                 {
+                   name = Sequence.get_current ctx.functions;
+                   typ;
+                   sign;
+                   attributes = import module_ name :: exports e;
+                 })
+        | Tag typ ->
+            let typ, sign = typeuse `Sig ctx typ in
+            Some
+              (Tag
+                 {
+                   name = Sequence.get_current ctx.tags;
+                   typ;
+                   sign;
+                   attributes = import module_ name :: exports e;
+                 })
+        | Global typ ->
+            let typ' = globaltype ctx typ in
+            Some
+              (GlobalDecl
+                 {
+                   name = Sequence.get_current ctx.globals;
+                   mut = typ'.mut;
+                   typ = typ'.typ;
+                   attributes = import module_ name :: exports e;
+                 })
+        | Memory _ | Table _ -> None (*ZZZ*))
+    | Global { typ; init; exports = e; _ } ->
+        let typ' = globaltype ctx typ in
+        Some
+          (Global
+             {
+               name = Sequence.get_current ctx.globals;
+               mut = typ'.mut;
+               typ = Some typ'.typ;
+               def = single_expression (Stack.run (instructions ctx init));
+               attributes = exports e;
+             })
+    | Tag { typ; exports = e; _ } ->
+        let typ, sign = typeuse `Sig ctx typ in
+        Some
+          (Tag
+             {
+               name = Sequence.get_current ctx.tags;
+               typ;
+               sign;
+               attributes = exports e;
+             })
+    | Memory _ | Table _ | Start _ | Export _ | Elem _ | Data _ -> None
+  in
+  Option.map (fun desc -> { f with desc }) desc
 
 (*
     | Memory of {
@@ -1144,8 +1147,8 @@ let modulefield ctx (f : _ Src.modulefield) : _ Ast.modulefield option =
 *)
 let register_names ctx fields =
   List.iter
-    (fun (field : _ Src.modulefield) ->
-      match field with
+    (fun (field : (_ Src.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Import { id; desc; exports; _ } -> (
           (* ZZZ Check for non-import fields *)
           match desc with
@@ -1179,8 +1182,8 @@ let register_names ctx fields =
       | Tag { id; exports; typ; _ } -> register_type ctx Tag id exports typ)
     fields;
   List.iter
-    (fun (field : _ Src.modulefield) ->
-      match field with
+    (fun (field : (_ Src.modulefield, _) Ast.annotated) ->
+      match field.desc with
       | Import { id; desc; exports; _ } -> (
           (* ZZZ Check for non-import fields *)
           match desc with

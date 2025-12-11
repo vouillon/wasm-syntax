@@ -2150,7 +2150,7 @@ type ('before, 'after) phased = Before of 'before | After of 'after
 let globals ctx fields =
   List.map
     (fun field ->
-      match field with
+      match field.desc with
       | Global ({ name; mut; typ = Some typ; def; _ } as g) ->
           (*ZZZ handle typ= None *)
           let def' =
@@ -2161,15 +2161,19 @@ let globals ctx fields =
            Tbl.add ctx.diagnostics ctx.globals name (mut, typ);
            check_type ctx def' (UnionFind.make (Valtype typ)));
           check_constant_instruction ctx def';
-          After (Global { g with def = def' })
-      | f -> Before f)
+          After { field with desc = Global { g with def = def' } }
+      | _ -> Before field)
     fields
 
 let functions ctx fields =
   List.filter_map
     (fun field ->
       match field with
-      | Before (Func { name; sign; body = label, body; typ; attributes }) ->
+      | Before
+          ({
+             desc = Func { name; sign; body = label, body; typ; attributes };
+             _;
+           } as f) ->
           let*@ func_typ =
             let+@ ty =
               let*@ func_typ = Tbl.find ctx.diagnostics ctx.functions name in
@@ -2210,9 +2214,14 @@ let functions ctx fields =
                let* () = pop_args ctx (Array.to_list return_types) in
                return body)
           in
-          Some (Func { name; sign; body = (label, body); typ; attributes })
-      | Before (Global _) -> assert false
-      | After f | Before ((Type _ | Fundecl _ | GlobalDecl _ | Tag _) as f) ->
+          Some
+            {
+              f with
+              desc = Func { name; sign; body = (label, body); typ; attributes };
+            }
+      | Before { desc = Global _; _ } -> assert false
+      | After f
+      | Before ({ desc = Type _ | Fundecl _ | GlobalDecl _ | Tag _; _ } as f) ->
           Some f)
     fields
 
@@ -2255,8 +2264,8 @@ let f diagnostics fields =
     }
   in
   List.iter
-    (fun (field : _ modulefield) ->
-      match field with
+    (fun (field : (_ modulefield, _) annotated) ->
+      match field.desc with
       | Type rectype -> ignore (add_type diagnostics type_context rectype)
       | _ -> ())
     fields;
@@ -2279,7 +2288,7 @@ let f diagnostics fields =
   check_type_definitions ctx;
   List.iter
     (fun field ->
-      match field with
+      match field.desc with
       | Fundecl { name; typ; sign; _ } ->
           let>@ decl = fundecl ctx name typ sign in
           Tbl.add diagnostics ctx.functions name decl
@@ -2311,22 +2320,26 @@ let f diagnostics fields =
   let fields = functions ctx fields in
   List.map
     (fun f ->
-      Ast_utils.map_modulefield
-        (fun (types, loc) ->
-          ( Array.map
-              (fun ty ->
-                match UnionFind.find ty with
-                | Unknown -> None
-                | Null -> Some (Value (Ref { nullable = true; typ = None_ }))
-                | Number -> Some (Value I32)
-                | Int8 -> Some (Packed I8)
-                | Int16 -> Some (Packed I16)
-                | Int -> Some (Value I32)
-                | Float -> Some (Value F64)
-                | Valtype { typ; _ } -> Some (Value typ))
-              types,
-            loc ))
-        f)
+      let desc =
+        Ast_utils.map_modulefield
+          (fun (types, loc) ->
+            ( Array.map
+                (fun ty ->
+                  match UnionFind.find ty with
+                  | Unknown -> None
+                  | Null -> Some (Value (Ref { nullable = true; typ = None_ }))
+                  | Number -> Some (Value I32)
+                  | Int8 -> Some (Packed I8)
+                  | Int16 -> Some (Packed I16)
+                  | Int -> Some (Value I32)
+                  | Float -> Some (Value F64)
+                  | Valtype { typ; _ } -> Some (Value typ))
+                types,
+              loc ))
+          f.desc
+      in
+      { f with desc })
     fields
 
-let erase_types m = List.map (Ast_utils.map_modulefield snd) m
+let erase_types m =
+  List.map (fun m -> { m with desc = Ast_utils.map_modulefield snd m.desc }) m

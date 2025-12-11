@@ -8,5 +8,5 @@ val module_ :
   ?color:Utils.Colors.flag ->
   ?out_channel:out_channel ->
   Utils.Printer.t ->
-  'a Ast.modulefield list ->
+  'a Ast.module_ ->
   unit

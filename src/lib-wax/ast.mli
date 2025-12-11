@@ -163,3 +163,5 @@ type 'info modulefield =
       sign : funsig option;
       attributes : attributes;
     }
+
+type 'info module_ = ('info modulefield, location) annotated list

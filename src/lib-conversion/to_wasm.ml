@@ -747,16 +747,20 @@ let subtype s : Text.subtype =
   { typ; supertype = Option.map index s.supertype; final = s.final }
 
 let reorder_imports lst =
-  let rec traverse acc (cur : _ Ast.Text.modulefield list) =
+  let rec traverse acc (cur : (_ Ast.Text.modulefield, _) Ast.annotated list) =
     match cur with
     | [] -> lst (* Nothing to do *)
-    | ((Import _ | Types _ | Export _ | Start _ | Elem _ | Data _) as f) :: rem
-      ->
+    | ({
+         Ast.desc = Import _ | Types _ | Export _ | Start _ | Elem _ | Data _;
+         _;
+       } as f)
+      :: rem ->
         traverse (f :: acc) rem
-    | (Func _ | Memory _ | Table _ | Tag _ | Global _) :: _ ->
+    | { desc = Func _ | Memory _ | Table _ | Tag _ | Global _; _ } :: _ ->
         let imports, others =
           List.partition
-            (fun f -> match f with Ast.Text.Import _ -> true | _ -> false)
+            (fun f ->
+              match f.desc with Ast.Text.Import _ -> true | _ -> false)
             cur
         in
         List.rev_append acc (imports @ others)
@@ -780,7 +784,7 @@ let module_ fields =
   in
   List.iter
     (fun field ->
-      match field with
+      match field.desc with
       | Type rectype ->
           Array.iter
             (fun (idx, subtype) ->
@@ -807,98 +811,103 @@ let module_ fields =
   let wasm_fields =
     List.map
       (fun field ->
-        match field with
-        | Type rectype ->
-            Text.Types
-              (Array.map (fun (idx, s) -> (Some idx, subtype s)) rectype)
-        | Global { name; mut; typ; def; attributes } ->
-            let typ = Option.value ~default:(expr_valtype def) typ in
-            let ctx =
-              { ctx with referenced_functions = func_refs_outside_func }
-            in
-            Text.Global
-              {
-                id = Some name;
-                typ = globaltype mut typ;
-                init = instruction None ctx def;
-                exports = exports attributes;
-              }
-        | GlobalDecl { name; mut; typ; attributes } ->
-            let module_, import_name = Option.get (import attributes) in
-            Text.Import
-              {
-                module_;
-                name = import_name;
-                id = Some name;
-                desc = Global (globaltype mut typ);
-                exports = exports attributes;
-              }
-        | Fundecl { name; typ; sign; attributes } ->
-            let module_, import_name = Option.get (import attributes) in
-            Text.Import
-              {
-                module_;
-                name = import_name;
-                id = Some name;
-                desc = Func (typeuse typ sign);
-                exports = exports attributes;
-              }
-        | Tag { name; typ; sign; attributes } -> (
-            let exports = exports attributes in
-            match import attributes with
-            | Some (module_, import_name) ->
-                Text.Import
-                  {
-                    module_;
-                    name = import_name;
-                    id = Some name;
-                    desc = Tag (typeuse typ sign);
-                    exports;
-                  }
-            | None ->
-                Text.Tag { id = Some name; typ = typeuse typ sign; exports })
-        | Func { name; sign; typ; body = label, instrs; attributes } ->
-            let namespace = Namespace.make () in
-            let allocated_locals = ref [] in
-            let locals =
-              List.fold_left
-                (fun locals (id, _) ->
-                  match id with
-                  | Some id ->
-                      let wasm_name = Namespace.add namespace id.desc in
-                      StringMap.add id.desc wasm_name locals
-                  | None -> locals)
-                StringMap.empty
-                (match sign with Some sign -> sign.named_params | None -> [])
-            in
-            let ctx =
-              {
-                ctx with
-                namespace;
-                allocated_locals;
-                locals;
-                referenced_functions = func_refs_in_func;
-              }
-            in
-            let instrs =
-              List.concat_map
-                (instruction
-                   (Option.map (fun label -> (label.desc, 0)) label)
-                   ctx)
-                instrs
-            in
-            let func_locals = List.rev !allocated_locals in
-            Text.Func
-              {
-                id = Some name;
-                typ = typeuse typ sign;
-                locals = func_locals;
-                instrs;
-                exports = exports attributes;
-              })
+        let desc =
+          match field.desc with
+          | Type rectype ->
+              Text.Types
+                (Array.map (fun (idx, s) -> (Some idx, subtype s)) rectype)
+          | Global { name; mut; typ; def; attributes } ->
+              let typ = Option.value ~default:(expr_valtype def) typ in
+              let ctx =
+                { ctx with referenced_functions = func_refs_outside_func }
+              in
+              Text.Global
+                {
+                  id = Some name;
+                  typ = globaltype mut typ;
+                  init = instruction None ctx def;
+                  exports = exports attributes;
+                }
+          | GlobalDecl { name; mut; typ; attributes } ->
+              let module_, import_name = Option.get (import attributes) in
+              Text.Import
+                {
+                  module_;
+                  name = import_name;
+                  id = Some name;
+                  desc = Global (globaltype mut typ);
+                  exports = exports attributes;
+                }
+          | Fundecl { name; typ; sign; attributes } ->
+              let module_, import_name = Option.get (import attributes) in
+              Text.Import
+                {
+                  module_;
+                  name = import_name;
+                  id = Some name;
+                  desc = Func (typeuse typ sign);
+                  exports = exports attributes;
+                }
+          | Tag { name; typ; sign; attributes } -> (
+              let exports = exports attributes in
+              match import attributes with
+              | Some (module_, import_name) ->
+                  Text.Import
+                    {
+                      module_;
+                      name = import_name;
+                      id = Some name;
+                      desc = Tag (typeuse typ sign);
+                      exports;
+                    }
+              | None ->
+                  Text.Tag { id = Some name; typ = typeuse typ sign; exports })
+          | Func { name; sign; typ; body = label, instrs; attributes } ->
+              let namespace = Namespace.make () in
+              let allocated_locals = ref [] in
+              let locals =
+                List.fold_left
+                  (fun locals (id, _) ->
+                    match id with
+                    | Some id ->
+                        let wasm_name = Namespace.add namespace id.desc in
+                        StringMap.add id.desc wasm_name locals
+                    | None -> locals)
+                  StringMap.empty
+                  (match sign with
+                  | Some sign -> sign.named_params
+                  | None -> [])
+              in
+              let ctx =
+                {
+                  ctx with
+                  namespace;
+                  allocated_locals;
+                  locals;
+                  referenced_functions = func_refs_in_func;
+                }
+              in
+              let instrs =
+                List.concat_map
+                  (instruction
+                     (Option.map (fun label -> (label.desc, 0)) label)
+                     ctx)
+                  instrs
+              in
+              let func_locals = List.rev !allocated_locals in
+              Text.Func
+                {
+                  id = Some name;
+                  typ = typeuse typ sign;
+                  locals = func_locals;
+                  instrs;
+                  exports = exports attributes;
+                }
+        in
+        { field with desc })
       fields
   in
-  let elem_declare : _ Text.modulefield list =
+  let elem_declare : (_ Text.modulefield, _) Ast.annotated list =
     let funcs =
       Hashtbl.fold
         (fun k _ acc ->
@@ -914,13 +923,14 @@ let module_ fields =
           funcs
       in
       [
-        Text.Elem
-          {
-            id = None;
-            typ = { nullable = false; typ = Func };
-            init;
-            mode = Declare;
-          };
+        Ast.no_loc
+          (Text.Elem
+             {
+               id = None;
+               typ = { nullable = false; typ = Func };
+               init;
+               mode = Declare;
+             });
       ]
   in
   let wasm_fields = wasm_fields @ elem_declare in

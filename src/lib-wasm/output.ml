@@ -320,7 +320,7 @@ let blocktype =
 
 let address_type at = match at with `I32 -> [] | `I64 -> [ keyword "i64" ]
 
-let limits { mi; ma; address_type = at } =
+let limits { Ast.desc = { mi; ma; address_type = at }; _ } =
   address_type at
   @ (u64 ~style:Constant mi :: option (fun i -> [ u64 ~style:Constant i ]) ma)
 
@@ -1086,7 +1086,7 @@ let function_indices typ lst =
   | _ -> None
 
 let modulefield f =
-  match f with
+  match f.Ast.desc with
   | Types [| t |] -> subtype t
   | Types l -> list (keyword "rec" :: List.map subtype (Array.to_list l))
   | Func { id; typ; locals; instrs = i; exports = e } ->
@@ -1160,7 +1160,7 @@ let modulefield f =
         (match init with
         | None -> []
         | Some init ->
-            address_type l.address_type
+            address_type l.desc.address_type
             @ [ list (keyword "data" :: List.map quoted_string init) ]))
   | Table { id; typ; init; exports = e } ->
       list
@@ -1171,8 +1171,8 @@ let modulefield f =
               match init with
               | Init_default | Init_expr _ -> tabletype typ
               | Init_segment _ ->
-                  address_type typ.limits.address_type @ [ reftype typ.reftype ]
-              ))
+                  address_type typ.limits.desc.address_type
+                  @ [ reftype typ.reftype ]))
         ::
         (match init with
         | Init_default -> []

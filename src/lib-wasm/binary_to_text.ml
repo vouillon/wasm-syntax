@@ -68,7 +68,7 @@ let rectype type_names r = Array.map (fun s -> (None, subtype type_names s)) r
 let globaltype type_names g = muttype (valtype type_names) g
 
 let tabletype type_names (t : B.tabletype) : T.tabletype =
-  { limits = t.limits; reftype = reftype type_names t.reftype }
+  { limits = Ast.no_loc t.limits; reftype = reftype type_names t.reftype }
 
 let blocktype type_names (b : B.blocktype) : T.blocktype =
   match b with
@@ -384,7 +384,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
               desc =
                 (match imp.desc with
                 | Func i -> T.Func (None, expand_functype f_i i)
-                | Memory l -> T.Memory l
+                | Memory l -> T.Memory (Ast.no_loc l)
                 | Table t -> T.Table (tabletype m.names.types t)
                 | Global gt -> T.Global (globaltype m.names.types gt)
                 | Tag i -> T.Tag (Some (index ~map:m.names.types i), None));
@@ -448,7 +448,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
         Memory
           {
             id = id m.names.memories global_idx;
-            limits = l;
+            limits = Ast.no_loc l;
             init = None;
             exports = [];
           })
@@ -523,17 +523,18 @@ let module_ (m : _ B.module_) : _ T.module_ =
       m.tags
   in
   ( None,
-    List.flatten
-      [
-        List.map (fun t -> T.Types t) types;
-        imports;
-        funcs;
-        tables;
-        memories;
-        globals;
-        exports;
-        (match start with Some s -> [ s ] | None -> []);
-        elems;
-        datas;
-        tags;
-      ] )
+    List.map Ast.no_loc
+      (List.flatten
+         [
+           List.map (fun t -> T.Types t) types;
+           imports;
+           funcs;
+           tables;
+           memories;
+           globals;
+           exports;
+           (match start with Some s -> [ s ] | None -> []);
+           elems;
+           datas;
+           tags;
+         ]) )
