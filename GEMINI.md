@@ -61,10 +61,12 @@ The CLI supports the following flows:
     * `uint32.ml` / `.mli`, `uint64.ml` / `.mli` - Unsigned integer handling.
     * `colors.ml` / `.mli` - Terminal color support.
     * `source_map.ml` / '.mli' - Source map output support
+    * `unicode.ml` / `.mli` - Unicode utilities (width).
+    * `unicode_widths.ml` / `.mli` - Generated unicode width table.
 * `src/lib-conversion/` - AST-to-AST transformation.
     * `from_wasm.ml` / `.mli` - Logic to convert WAT -> Wax.
     * `to_wasm.ml` / `.mli` - Logic to convert Wax -> WAT.
-    * `namespace.ml` - Namespace management for conversion.
+    * `namespace.ml` / `.mli` - Namespace management for conversion.
 * `src/lib-wasm/` - **Target Language** (WAT) handling.
     * `ast.ml` / `.mli` - Wasm AST (Functor-based).
     * `ast_utils.ml` / `.mli` - AST traversal and utility functions.

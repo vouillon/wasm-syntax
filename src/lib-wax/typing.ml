@@ -1,9 +1,7 @@
 (*
 TODO:
 - Check that import correspond to a declaration
-- Fix grab order in struct
 - Check the _ make sense (check that underscores are properly placed)
-- Typing: implement LUB (for select)
 - we need to decide on an order to visit subexpression in structs
 - fix typeuse validation (add a type if not already present)
 - error messages
@@ -159,6 +157,13 @@ module Error = struct
            @[<2>%a@]."
           output_inferred_type ty output_inferred_type ty')
 
+  let select_type_mismatch context ~location ty1 ty2 =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "The two branches of the select does not have a common supertype. \
+           There types are respectively@ @[<2>%a@]@ and@ @[<2>%a@]."
+          output_inferred_type ty1 output_inferred_type ty2)
+
   let name_already_bound context ~location kind x =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "A %s named %a is already bound" kind print_name x)
@@ -235,7 +240,7 @@ end
 
 type type_context = {
   internal_types : Wasm.Types.t;
-  types : (int * comptype) Tbl.t;
+  types : (int * subtype) Tbl.t;
 }
 
 let resolve_type_name d ctx name =
@@ -361,8 +366,7 @@ let rectype d ctx ty = array_mapi_opt (fun i (_, ty) -> subtype d ctx i ty) ty
 
 let add_type d ctx ty =
   Array.iteri
-    (fun i (name, (typ : subtype)) ->
-      Tbl.add d ctx.types name (lnot i, typ.typ))
+    (fun i (name, (typ : subtype)) -> Tbl.add d ctx.types name (lnot i, typ))
     ty;
   match rectype d ctx ty with
   | None ->
@@ -373,7 +377,7 @@ let add_type d ctx ty =
       let i' = Wasm.Types.add_rectype ctx.internal_types ity in
       Array.iteri
         (fun i (name, (typ : subtype)) ->
-          Tbl.override ctx.types name (i' + i, typ.typ))
+          Tbl.override ctx.types name (i' + i, typ))
         ty;
       Some i'
 
@@ -381,7 +385,7 @@ type module_context = {
   diagnostics : Utils.Diagnostic.context;
   type_context : type_context;
   subtyping_info : Wasm.Types.subtyping_info;
-  types : (int * comptype) Tbl.t;
+  types : (int * subtype) Tbl.t;
   functions : (int * string) Tbl.t;
   globals : (*mutable:*) (bool * inferred_valtype) Tbl.t;
   tags : functype Tbl.t;
@@ -393,7 +397,7 @@ type module_context = {
 
 let lookup_func_type ?location ctx name =
   let*@ ty = Tbl.find_opt ctx.type_context.types name in
-  match snd ty with
+  match (snd ty).typ with
   | Func f -> Some f
   | Struct _ | Array _ ->
       Error.expected_func_type ctx.diagnostics
@@ -402,7 +406,7 @@ let lookup_func_type ?location ctx name =
 
 let lookup_struct_type ?location ctx name =
   let*@ ty = Tbl.find_opt ctx.type_context.types name in
-  match snd ty with
+  match (snd ty).typ with
   | Struct fields -> Some fields
   | Func _ | Array _ ->
       Error.expected_struct_type ctx.diagnostics
@@ -411,7 +415,7 @@ let lookup_struct_type ?location ctx name =
 
 let lookup_array_type ?location ctx name =
   let*@ ty = Tbl.find_opt ctx.type_context.types name in
-  match snd ty with
+  match (snd ty).typ with
   | Array field -> Some field
   | Func _ | Struct _ ->
       Error.expected_array_type ctx.diagnostics
@@ -426,7 +430,7 @@ let top_heap_type ctx (t : heaptype) : heaptype option =
   | Extern | NoExtern -> Some Extern
   | Type ty -> (
       let+@ ty = Tbl.find ctx.diagnostics ctx.types ty in
-      match snd ty with Struct _ | Array _ -> Any | Func _ -> Func)
+      match (snd ty).typ with Struct _ | Array _ -> Any | Func _ -> Func)
 
 let diff_ref_type t1 t2 =
   { nullable = t1.nullable && not t2.nullable; typ = t1.typ }
@@ -740,9 +744,26 @@ let rec grab_parameters ctx acc i =
       grab_parameters ctx acc i1
   | Sequence l | ArrayFixed (_, l) | Throw (_, l) ->
       grab_parameters_from_list ctx acc l
-  | Struct (_, l) ->
-      (*ZZZ Fix order*)
-      grab_parameters_from_list ctx acc (List.map snd l)
+  | Struct (name_opt, l) ->
+      let fields =
+        match name_opt with
+        | Some name -> (
+            match lookup_struct_type ctx name with
+            | Some fields ->
+                let field_map =
+                  List.fold_left
+                    (fun acc (name, instr) -> StringMap.add name.desc instr acc)
+                    StringMap.empty l
+                in
+                (* Reorder fields according to definition *)
+                Array.map
+                  (fun (name, _) -> StringMap.find name.desc field_map)
+                  fields
+                |> Array.to_list
+            | None -> List.map snd l)
+        | None -> List.map snd l
+      in
+      grab_parameters_from_list ctx acc fields
   | Select (c, t, e) ->
       let* acc = grab_parameters ctx acc e in
       let* acc = grab_parameters ctx acc t in
@@ -884,6 +905,66 @@ let split_on_last_type i =
   let len = Array.length a in
   assert (len > 0);
   (a.(len - 1), Array.sub a 0 (len - 1))
+
+let immediate_supertype s : Ast.heaptype =
+  match (s.supertype, s.typ) with
+  | Some t, _ -> Type t
+  | None, (Struct _ | Array _) -> Any
+  | None, Func _ -> Func
+
+(* The type lookups below never fail *)
+let rec heap_lub ctx (h1 : Ast.heaptype) (h2 : Ast.heaptype) =
+  match (h1, h2) with
+  | Type id1, Type id2 ->
+      let*@ i1, s1 = Tbl.find_opt ctx.type_context.types id1 in
+      let*@ i2, s2 = Tbl.find_opt ctx.type_context.types id2 in
+      if i1 > i2 then heap_lub ctx (immediate_supertype s1) h2
+      else if i2 > i1 then heap_lub ctx h1 (immediate_supertype s2)
+      else Some h1
+  | Type id1, _ ->
+      let*@ _, s1 = Tbl.find_opt ctx.type_context.types id1 in
+      heap_lub ctx (immediate_supertype s1) h2
+  | _, Type id2 ->
+      let*@ _, s2 = Tbl.find_opt ctx.type_context.types id2 in
+      heap_lub ctx h1 (immediate_supertype s2)
+      (* Abstract hierarchy *)
+  | None_, None_ -> Some None_
+  | (None_ | I31), I31 | I31, None_ -> Some I31
+  | (None_ | Struct), Struct | Struct, None_ -> Some Struct
+  | (None_ | Array), Array | Array, None_ -> Some Array
+  | (None_ | I31 | Struct | Array | Eq), Eq
+  | Eq, (None_ | I31 | Struct | Array)
+  | (Struct | Array), I31
+  | I31, (Struct | Array)
+  | Struct, Array
+  | Array, Struct ->
+      Some Eq
+  | (None_ | I31 | Struct | Array | Eq | Any), Any
+  | Any, (None_ | Eq | I31 | Struct | Array) ->
+      Some Any
+  | NoFunc, NoFunc -> Some NoFunc
+  | (NoFunc | Func), Func | Func, NoFunc -> Some Func
+  | NoExtern, NoExtern -> Some NoExtern
+  | (NoExtern | Extern), Extern | Extern, NoExtern -> Some Extern
+  | NoExn, NoExn -> Some NoExn
+  | (NoExn | Exn), Exn | Exn, NoExn -> Some Exn
+  | ( (None_ | Eq | I31 | Struct | Array | Any),
+      (NoExtern | Extern | NoExn | Exn | NoFunc | Func) )
+  | ( (NoExtern | Extern | NoExn | Exn | NoFunc | Func),
+      (None_ | Eq | I31 | Struct | Array | Any) )
+  | (NoFunc | Func), (NoExtern | Extern | NoExn | Exn)
+  | (NoExtern | Extern | NoExn | Exn), (NoFunc | Func)
+  | (NoExtern | Extern), (NoExn | Exn)
+  | (NoExn | Exn), (NoExtern | Extern) ->
+      None
+
+let val_lub ctx v1 v2 =
+  match (v1, v2) with
+  | Ref r1, Ref r2 ->
+      let+@ lub = heap_lub ctx r1.typ r2.typ in
+      let nullable = r1.nullable || r2.nullable in
+      Ref { nullable; typ = lub }
+  | _ -> if v1 = v2 then Some v1 else None
 
 let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
   (*
@@ -1286,7 +1367,7 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
         match (UnionFind.find ty, field.desc) with
         | Valtype { typ = Ref { typ = Type ty; _ }; _ }, _ -> (
             let*@ _, def = Tbl.find_opt ctx.type_context.types ty in
-            match def with
+            match def.typ with
             | Struct fields ->
                 let*@ typ =
                   Array.find_map
@@ -1298,6 +1379,7 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
             | Array _ when field.desc = "length" ->
                 Some (UnionFind.make (Valtype { typ = I32; internal = I32 }))
             | Func _ | Array _ ->
+                (*ZZZ Fix location*)
                 if field.desc = "length" then
                   Error.expected_array_type ctx.diagnostics ~location:ty.info
                 else
@@ -1827,38 +1909,39 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
       let* i1' = instruction ctx i1 in
       check_type ctx i1'
         (UnionFind.make (Valtype { typ = I32; internal = I32 }));
-      let ty =
+      let*! ty =
         let ty1 = expression_type i2' in
         let ty2 = expression_type i3' in
         match (UnionFind.find ty1, UnionFind.find ty2) with
-        | _, Unknown -> ty1
-        | Unknown, _ -> ty2
+        | _, Unknown -> Some ty1
+        | Unknown, _ -> Some ty2
         | Valtype { internal = I32; _ }, Valtype { internal = I32; _ }
         | Valtype { internal = I64; _ }, Valtype { internal = I64; _ }
         | Valtype { internal = F32; _ }, Valtype { internal = F32; _ }
         | Valtype { internal = F64; _ }, Valtype { internal = F64; _ } ->
-            ty2
+            Some ty2
         | (Int | Number), (Int | Valtype { internal = I32 | I64; _ })
         | (Float | Number), (Float | Valtype { internal = F32 | F64; _ })
         | Number, Number ->
             UnionFind.merge ty1 ty2 (UnionFind.find ty2);
-            ty2
+            Some ty2
         | ( (Valtype { internal = I32; _ } | Valtype { internal = I64; _ }),
             (Int | Number) )
         | ( (Valtype { internal = F32; _ } | Valtype { internal = F64; _ }),
             (Float | Number) )
         | (Int | Float), Number ->
             UnionFind.merge ty1 ty2 (UnionFind.find ty1);
-            ty1
-        | Valtype { internal = typ1; _ }, Valtype { internal = typ2; _ }
-          when typ1 = typ2 ->
-            (*ZZZ fragile *)
-            ty1
-        | Valtype { typ = typ1; _ }, Valtype { typ = typ2; _ } ->
-            Format.eprintf "AAAA %a %a@." Output.valtype typ1 Output.valtype
-              typ2;
-            assert false
-        | _ -> (*ZZZ*) assert false
+            Some ty1
+        | Valtype { typ = typ1; _ }, Valtype { typ = typ2; _ } -> (
+            match val_lub ctx typ1 typ2 with
+            | Some ty -> internalize ctx ty
+            | None ->
+                Error.select_type_mismatch ctx.diagnostics ~location:i.info ty1
+                  ty2;
+                None)
+        | _ ->
+            Error.select_type_mismatch ctx.diagnostics ~location:i.info ty1 ty2;
+            None
       in
       return_expression i (Select (i1', i2', i3')) ty
   | Let (([] | _ :: _), _) ->
@@ -2180,7 +2263,7 @@ let functions ctx fields =
               Tbl.find ctx.diagnostics ctx.types
                 { name with desc = snd func_typ }
             in
-            match ty with _, Func typ -> typ | _ -> assert false
+            match ty with _, { typ = Func typ; _ } -> typ | _ -> assert false
           in
           let*@ return_types =
             array_map_opt (fun typ -> internalize ctx typ) func_typ.results
@@ -2303,12 +2386,14 @@ let f diagnostics fields =
             match (typ, sign) with
             | Some typ, _ -> (
                 let+@ info = Tbl.find ctx.diagnostics ctx.types typ in
-                match snd info with Func typ -> typ | _ -> assert false)
+                match snd info with
+                | { typ = Func typ; _ } -> typ
+                | _ -> assert false)
             | None, Some sign -> Some (funsig ctx sign)
             | None, None -> assert false (*ZZZ*)
           in
           Tbl.add diagnostics ctx.tags name typ
-      | _ -> ())
+      | Type _ | Global _ -> ())
     fields;
   let ctx =
     {
