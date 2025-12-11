@@ -16,7 +16,7 @@
     (dune (>= 3.13))
     sedlex
     menhirLib
-    uucp
+    (uucp :with-dev-setup)
     re
     cmdliner
   )

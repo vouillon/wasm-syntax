@@ -1,4 +1,11 @@
 (library
  (name utils)
  (public_name wax.utils)
- (libraries unix uucp))
+ (libraries unix))
+
+(rule
+ (mode promote)
+ (action
+  (with-stdout-to
+   unicode_widths.ml
+   (run %{project_root}/scripts/build_unicode_width_table.exe))))
