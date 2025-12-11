@@ -4,8 +4,6 @@ ZZZ
 - resolve all type uses
 *)
 
-(* Check that all occurences of instructions ref.func uses a function
-   index that occurs in the module outside functions *)
 let validate_refs = ref true
 
 module Uint32 = Utils.Uint32
@@ -349,7 +347,7 @@ let typeuse d ctx (idx, sign) =
       let+@ ty = signature d ctx sign in
       Types.add_rectype ctx.types
         [| { typ = Func ty; supertype = None; final = true } |]
-  | None, None -> assert false
+  | None, None -> assert false (* Should not happen *)
 
 let typeuse' d ctx (idx, sign) =
   match (idx, sign) with
@@ -358,7 +356,7 @@ let typeuse' d ctx (idx, sign) =
       let+@ ty = functype d ctx sign in
       Types.add_rectype ctx.types
         [| { typ = Func ty; supertype = None; final = true } |]
-  | None, None -> assert false
+  | None, None -> assert false (* Should not happen *)
 
 type module_context = {
   diagnostics : Utils.Diagnostic.context;
@@ -480,7 +478,7 @@ let is_nullable ty =
   match ty with
   | None -> true
   | Some (Ref { nullable; _ }) -> nullable
-  | _ -> assert false
+  | _ -> assert false (* Should not happen *)
 
 let is_defaultable ty =
   match ty with
@@ -499,7 +497,11 @@ let int_un_op_type ty (op : Ast.Text.int_un_op) =
   | Trunc (sz, _) | TruncSat (sz, _) ->
       ((match sz with `F32 -> F32 | `F64 -> F64), ty)
   | Reinterpret ->
-      ((match ty with I32 -> F32 | I64 -> F64 | _ -> assert false), ty)
+      ( (match ty with
+        | I32 -> F32
+        | I64 -> F64
+        | _ -> assert false (* Should not happen *)),
+        ty )
   | Eqz -> (ty, I32)
 
 let int_bin_op_type ty (op : Ast.Text.int_bin_op) =
@@ -514,7 +516,10 @@ let float_un_op_type ty (op : Ast.Text.float_un_op) =
   | Neg | Abs | Ceil | Floor | Trunc | Nearest | Sqrt -> ty
   | Convert (sz, _) -> ( match sz with `I32 -> I32 | `I64 -> I64)
   | Reinterpret -> (
-      match ty with F32 -> I32 | F64 -> I64 | _ -> assert false)
+      match ty with
+      | F32 -> I32
+      | F64 -> I64
+      | _ -> assert false (* Should not happen *))
 
 let float_bin_op_type ty (op : Ast.Text.float_bin_op) =
   match op with
@@ -539,7 +544,7 @@ let blocktype ctx (ty : Ast.Text.blocktype option) =
       match (Types.get_subtype ctx.subtyping_info ty).typ with
       | Func { params; results } -> (Array.to_list params, Array.to_list results)
       | _ -> assert false)
-  | Some (Typeuse (None, None)) -> assert false
+  | Some (Typeuse (None, None)) -> assert false (* Should not happen *)
   | Some (Valtype ty) ->
       let+@ ty = valtype ctx.diagnostics ctx.types ty in
       ([], [ ty ])
@@ -841,6 +846,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | Br_on_cast (idx, ty1, ty2) ->
       let*! ty1 = reftype ctx.modul.diagnostics ctx.modul.types ty1 in
       let*! ty2 = reftype ctx.modul.diagnostics ctx.modul.types ty2 in
+      (* ZZZ Relaxed condition *)
       assert (Types.val_subtype ctx.modul.subtyping_info (Ref ty2) (Ref ty1));
       let* () = pop ctx loc (Ref ty1) in
       let* () = push None (Ref ty2) in
@@ -898,7 +904,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct _ | Array _ ->
           Error.expected_func_type ctx.modul.diagnostics ~location:loc idx;
-          assert false
+          unreachable
       | Func { params; results } ->
           let* () = pop_args ctx loc (Array.to_list params) in
           with_empty_stack ctx.modul loc (*ZZZ*)
@@ -922,7 +928,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct _ | Array _ ->
           Error.expected_func_type ctx.modul.diagnostics ~location:loc idx;
-          assert false
+          unreachable
       | Func { params; results } ->
           let* () =
             pop ctx loc (address_type_to_valtype typ.limits.address_type)
@@ -1928,13 +1934,10 @@ let exports ctx fields =
     fields
 
 let start ctx fields =
-  let start_count = ref 0 in
   List.iter
     (fun (field : _ Ast.Text.modulefield) ->
       match field with
       | Start idx -> (
-          assert (!start_count = 0);
-          incr start_count;
           let*? ty = Sequence.get ctx.diagnostics ctx.functions idx in
           let loc = (Ast.no_loc ()).info in
           match (Types.get_subtype ctx.subtyping_info ty).typ with
