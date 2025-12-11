@@ -4,8 +4,6 @@
 ==== core/binary-leb128.wast ====
 ==== core/binary.wast ====
 ==== core/block.wast ====
-Parsing should have failed (mismatching label): (func block end $l)
-Parsing should have failed (mismatching label): (func block $a end $l)
 ==== core/br.wast ====
 ==== core/br_if.wast ====
 ==== core/br_on_non_null.wast ====
@@ -88,16 +86,6 @@ Error: The type index 1 is not bound.
 ==== core/i64.wast ====
 ==== core/id.wast ====
 ==== core/if.wast ====
-Parsing should have failed (mismatching label): (func i32.const 0 if end $l)
-Parsing should have failed (mismatching label): (func i32.const 0 if $a end $l)
-Parsing should have failed (mismatching label): (func i32.const 0 if else $l end)
-Parsing should have failed (mismatching label): (func i32.const 0 if $a else $l end)
-Parsing should have failed (mismatching label): (func i32.const 0 if else end $l)
-Parsing should have failed (mismatching label): (func i32.const 0 if else $l end $l)
-Parsing should have failed (mismatching label): (func i32.const 0 if else $l1 end $l2)
-Parsing should have failed (mismatching label): (func i32.const 0 if $a else end $l)
-Parsing should have failed (mismatching label): (func i32.const 0 if $a else $a end $l)
-Parsing should have failed (mismatching label): (func i32.const 0 if $a else $l end $l)
 ==== core/imports.wast ====
 ==== core/inline-module.wast ====
 ==== core/instance.wast ====
@@ -112,8 +100,6 @@ Parsing should have failed (mismatching label): (func i32.const 0 if $a else $l 
 ==== core/local_set.wast ====
 ==== core/local_tee.wast ====
 ==== core/loop.wast ====
-Parsing should have failed (mismatching label): (func loop end $l)
-Parsing should have failed (mismatching label): (func loop $a end $l)
 ==== core/memory.wast ====
 ==== core/memory64/address64.wast ====
 ==== core/memory64/align64.wast ====

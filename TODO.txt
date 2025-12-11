@@ -1,7 +1,19 @@
+- Fix parser
 - Syntax: Try/Try_table
 - Properly handle typeuse
 
 - Fix syntactic type checks
+
+Use a wrapper library to print errors
+==> deal with line breaking / proper string with for escaped strings
+
+rewrite trapping int instructions into non-trapping instruction when
+the type is undeterminate
+
+Braces allow to group module fields / instructions
+They are erased when going to Wasm
+Attributes for conditional compilation:
+    #[if(A)] ... #[else] ...
 
 ============
 
@@ -29,8 +41,6 @@ syntaxic sugar:
 
 ====
 
-collect constraints on untyped variables while parsing
-
 Keep strings as strings
 
 Precedence tests (read and write text and check unchanged)
@@ -51,12 +61,7 @@ Two-step inference?
 
 ============
 
-ref.as_non_null (need types?)
-we need to put constraints on integer/float constants and eliminate afterwards
-exceptions
 tuples
-array.copy/fill
-block types? |t1,..,t2| -> t { ... }
 
 strings: we should probably not escape them as much as we do
 

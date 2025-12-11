@@ -3,6 +3,6 @@
  (public_name wax.wax)
  (preprocess
   (pps sedlex.ppx))
- (libraries wasm sedlex menhirLib uuseg.string))
+ (libraries wasm sedlex menhirLib))
 
 (include ../lib-wasm/dune.menhir)

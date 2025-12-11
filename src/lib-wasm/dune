@@ -4,6 +4,6 @@
  (preprocess
   (pps sedlex.ppx))
 ; (modules :standard \ wasm_link)
- (libraries utils sedlex menhirLib uuseg.string unix))
+ (libraries utils sedlex menhirLib unix))
 
 (include dune.menhir)

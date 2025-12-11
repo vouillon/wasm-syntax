@@ -134,3 +134,32 @@ let is_float32 s =
       && float32_of_string s > -0x1.ffffffp127)
 
 let is_float64 s = check_float s 52 (fun s -> Float.(is_finite (of_string s)))
+
+(*ZZZ We could be smarter: if we have invalid UTF-8 character, use \xx
+  for all characters *)
+let escape_string s =
+  let b = Buffer.create (String.length s + 2) in
+  let rec loop b i len =
+    if i < len then
+      let dec = String.get_utf_8_uchar s i in
+      if Uchar.utf_decode_is_valid dec then (
+        let u = Uchar.utf_decode_uchar dec in
+        let c = Uchar.to_int u in
+        (if c >= 32 && c <> 127 && c <> 34 (* '"' *) && c <> 92 (* '\\' *) then
+           Buffer.add_utf_8_uchar b u
+         else
+           match Char.chr c with
+           | '\t' -> Buffer.add_string b "\\t"
+           | '\n' -> Buffer.add_string b "\\n"
+           | '\r' -> Buffer.add_string b "\\r"
+           | '"' -> Buffer.add_string b "\\\""
+           | '\\' -> Buffer.add_string b "\\\\"
+           | _ -> Printf.bprintf b "\\%02x" c);
+        loop b (i + Uchar.utf_decode_length dec) len)
+      else (
+        Printf.bprintf b "\\%02x" (Char.code s.[i]);
+        loop b (i + 1) len)
+  in
+  loop b 0 (String.length s);
+  let s' = Buffer.contents b in
+  (Utils.Unicode.terminal_width s', s')

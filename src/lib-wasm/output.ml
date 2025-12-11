@@ -204,23 +204,7 @@ let structured_block ?loc l = Structured_block (loc, l)
 let option f x = match x with None -> [] | Some x -> f x
 let u32 ~style ?loc i = atom ~style ?loc (Uint32.to_string i)
 let u64 ?loc i = atom ?loc (Uint64.to_string i)
-
-let escape_string s =
-  let b = Buffer.create (String.length s + 2) in
-  for i = 0 to String.length s - 1 do
-    let c = s.[i] in
-    if c >= ' ' && c < '\x7f' && c <> '"' && c <> '\\' then Buffer.add_char b c
-    else
-      match c with
-      | '\t' -> Buffer.add_string b "\\t"
-      | '\n' -> Buffer.add_string b "\\n"
-      | '\r' -> Buffer.add_string b "\\r"
-      | '"' -> Buffer.add_string b "\\\""
-      | '\\' -> Buffer.add_string b "\\\\"
-      | _ -> Printf.bprintf b "\\%02x" (Char.code c)
-  done;
-  let s = Buffer.contents b in
-  (Utils.Unicode.terminal_width s, s)
+let escape_string = Misc.escape_string
 
 let id ?loc x =
   if Lexer.is_valid_identifier x then

@@ -213,6 +213,21 @@ let check_constant f loc s =
       (Parsing.Syntax_error
          ( loc,
            Printf.sprintf "Constant %s is out of range.\n" s))
+
+let check_labels loc lab lab' =
+  let mismatch =
+    match lab, lab' with
+    | Some lab, Some lab' -> lab <> lab'
+    | None, Some _ -> true
+    | _ -> false
+  in
+  if mismatch then
+      raise
+        (Parsing.Syntax_error
+           ( loc,
+             Printf.sprintf "Label mismatch.\n"))
+
+
 %}
 
 %start <string option * Ast.location modulefield list> parse
@@ -269,8 +284,10 @@ name: s = STRING
       raise
         (Parsing.Syntax_error
            ( $sloc,
-             Printf.sprintf "Malformed name \"%s\".\n" s));
-    s }
+             Printf.sprintf "Malformed name \"%s\".\n"
+               (snd (Misc.escape_string s))));
+    s
+  }
 
 (* Types *)
 
@@ -396,25 +413,32 @@ tabletype(cont):
 (* Instructions *)
 
 blockinstr:
-| BLOCK label = label bti = blocktype(instrs(END)) label
-  { let (typ, block) = bti in with_loc $sloc (Block {label; typ; block}) }
-| LOOP label = label bti = blocktype(instrs(END)) label
-  { let (typ, block) = bti in with_loc $sloc (Loop {label; typ; block}) }
+| BLOCK label = label bti = blocktype(instrs(END)) label2 = label
+  { check_labels $loc(label2) label label2;
+    let (typ, block) = bti in with_loc $sloc (Block {label; typ; block}) }
+| LOOP label = label bti = blocktype(instrs(END)) label2 = label
+  { check_labels $loc(label2) label label2;
+    let (typ, block) = bti in with_loc $sloc (Loop {label; typ; block}) }
 | IF label = label bti = blocktype(instrs(ELSE))
-  label else_block = instrs(END)
-  label (*ZZZ labels must match *)
-  { let (typ, if_block) = bti in
+  label2 = label else_block = instrs(END)
+  label3 = label
+  { check_labels $loc(label2) label label2;
+    check_labels $loc(label3) label label3;
+    let (typ, if_block) = bti in
     with_loc $sloc (If {label; typ; if_block; else_block }) }
 | IF label = label bti = blocktype(instrs(END))
-  label (*ZZZ labels must match *)
-  { let (typ, if_block) = bti in
+  label2 = label
+  { check_labels $loc(label2) label label2;
+    let (typ, if_block) = bti in
     with_loc $sloc (If {label; typ; if_block; else_block = [] }) }
 | TRY_TABLE label = label bti = blocktype(tbl_catches(instrs({})))
-  END label
-   { let (typ, (catches, block)) = bti in
+  END label2 = label
+   { check_labels $loc(label2) label label2;
+     let (typ, (catches, block)) = bti in
      with_loc $sloc (TryTable {label; typ; catches; block}) }
-| TRY label = label bti = blocktype(instrs({})) c = catches END label
-  { let (typ, block) = bti in
+| TRY label = label bti = blocktype(instrs({})) c = catches END label2 = label
+  { check_labels $loc(label2) label label2;
+    let (typ, block) = bti in
     let (catches, catch_all) = c in
     with_loc $sloc (Try {label; typ; block; catches; catch_all}) }
 

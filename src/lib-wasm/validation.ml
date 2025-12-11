@@ -45,6 +45,10 @@ let print_valtype f ty =
       else Format.fprintf f "@[<1>(ref@ %a)@]" print_heaptype typ
   | Tuple _ -> Format.fprintf f "tuple"
 
+let print_string f s =
+  let len, s = Output.escape_string s in
+  Format.pp_print_as f len s
+
 let print_index f (idx : Ast.Text.idx) =
   match idx.desc with
   | Num n -> Format.fprintf f "%s" (Uint32.to_string n)
@@ -137,7 +141,8 @@ module Error = struct
 
   let duplicated_export context ~location name =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "There is already an export of name \"%s\"." name)
+        Format.fprintf f "There is already an export of name \"%a\"."
+          print_string name)
 
   let import_after_definition context ~location kind =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
