@@ -57,9 +57,9 @@ fn parse_sign_and_base(s: &string) -> (i32, i32, i32, i32) {
 }
 #[export = "parse_digit"]
 fn parse_digit(c: i32) -> i32 {
-    if (c >=u 48) & (c <=u 57) { return (c - 48); }
-    if (c >=u 65) & (c <=u 90) { return (c - 55); }
-    if (c >=u 97) & (c <=u 122) { return (c - 87); }
+    if (c >=u 48) & (c <=u 57) { return c - 48; }
+    if (c >=u 65) & (c <=u 90) { return c - 55; }
+    if (c >=u 97) & (c <=u 122) { return c - 87; }
     return -1;
 }
 #[export = "parse_int"]
@@ -91,7 +91,7 @@ fn parse_int(v: &eq, nbits: i32, errmsg: &string) -> i32 {
         i = i + 1;
         if i <s len {
             c = s[i] as i32_u;
-            br_if 'loop (c == 95);
+            br_if 'loop c == 95;
             d = parse_digit(c);
             if d >=u base { caml_failwith(errmsg); }
             if res >u threshold { caml_failwith(errmsg); }
@@ -159,20 +159,20 @@ fn parse_int_format(s: &string) -> (i32, i32, i32, i32, i32) {
     i = 1;
     'return: {
         'bad_format: {
-            br_if 'bad_format (len <u 2);
-            br_if 'bad_format (s[0] as i32_u != 37);
+            br_if 'bad_format len <u 2;
+            br_if 'bad_format s[0] as i32_u != 37;
             c = s[1] as i32_u;
             if c == 43 { sign_style = 1; i = i + 1; }
             if c == 32 { sign_style = 2; i = i + 1; }
             if c == 35 { alternate = 1; i = i + 1; }
-            br_if 'bad_format (i == len);
+            br_if 'bad_format i == len;
             c = s[i] as i32_u;
             if (c == 76) | (c == 108) | (c == 110) {
                 i = i + 1;
-                br_if 'bad_format (i == len);
+                br_if 'bad_format i == len;
                 c = s[i] as i32_u;
             }
-            br_if 'bad_format (i + 1 != len);
+            br_if 'bad_format i + 1 != len;
             if (c == 100) | (c == 105) {
                 base = 10;
                 signed = 1;

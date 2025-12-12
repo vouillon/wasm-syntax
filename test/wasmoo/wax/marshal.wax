@@ -208,13 +208,13 @@ fn readfloat(s: &intern_state, code: i32) -> f64 {
         'loop: loop {
             d = d << 8 | src[pos + i] as i32_u as i64_u;
             i = i + 1;
-            br_if 'loop (i <u 8);
+            br_if 'loop i <u 8;
         }
     } else {
         'loop: loop {
             d = rotr(d | src[pos + i] as i32_u as i64_u, 8);
             i = i + 1;
-            br_if 'loop (i <u 8);
+            br_if 'loop i <u 8;
         }
     }
     d.from_bits;
@@ -683,7 +683,7 @@ fn writefloat(s: &extern_state, f: f64) {
     'loop: loop {
         buf[pos + i] = (d >>u (i << 3) as i64_u) as i32;
         i = i + 1;
-        br_if 'loop (i <u 8);
+        br_if 'loop i <u 8;
     }
 }
 fn writefloats(s: &extern_state, b: &float_array) {
@@ -704,7 +704,7 @@ fn writefloats(s: &extern_state, b: &float_array) {
             'loop: loop {
                 buf[pos + i] = (d >>u (i << 3) as i64_u) as i32;
                 i = i + 1;
-                br_if 'loop (i <u 8);
+                br_if 'loop i <u 8;
             }
             pos = pos + 8;
             j = j + 1;
@@ -921,7 +921,7 @@ fn extern_output_length(s: &extern_state, pos: i32) -> i32 {
     let len: i32;
     let output_block: &output_block;
     if s.user_provided_output => i32 {
-        return (s.pos - pos);
+        return s.pos - pos;
     } else {
         s.output_last.end = s.pos;
         output_block = s.output_first;

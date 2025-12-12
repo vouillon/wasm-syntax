@@ -233,8 +233,7 @@ fn bigarray_hash(x: &eq) -> i32 {
                     'l_3: {
                         'l_4: {
                             'l_5: {
-                                br_table [ 'l_2 'l_3 'l_4 else 'l_5 ]
-                                    (len & 3);
+                                br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] len & 3;
                             }
                             w = ta_get_ui8(data, i + 2) << 16;
                         }
@@ -264,7 +263,7 @@ fn bigarray_hash(x: &eq) -> i32 {
                 'l_3: {
                     'l_4: {
                         'l_5: {
-                            br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] (len & 3);
+                            br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] len & 3;
                         }
                         w = ta_get_i8(data, i + 2) << 16;
                     }
@@ -1307,20 +1306,20 @@ fn caml_ba_compare(v1: &eq, v2: &eq, total: i32) -> i32 {
     b1 = v1 as &bigarray;
     b2 = v2 as &bigarray;
     if b2.ba_layout as i32_u != b1.ba_layout as i32_u {
-        return (b2.ba_layout as i32_u - b1.ba_layout as i32_u);
+        return b2.ba_layout as i32_u - b1.ba_layout as i32_u;
     }
     if b2.ba_kind as i32_u != b1.ba_kind as i32_u {
-        return (b2.ba_kind as i32_u - b1.ba_kind as i32_u);
+        return b2.ba_kind as i32_u - b1.ba_kind as i32_u;
     }
     if b2.ba_num_dims as i32_u != b1.ba_num_dims as i32_u {
-        return (b2.ba_num_dims as i32_u - b1.ba_num_dims as i32_u);
+        return b2.ba_num_dims as i32_u - b1.ba_num_dims as i32_u;
     }
     len = b2.ba_num_dims as i32_u;
     'loop: loop {
         if i <u len {
             i1 = b1.ba_dim[i];
             i2 = b2.ba_dim[i];
-            if i1 != i2 { return (i1 <u i2?-1:1); }
+            if i1 != i2 { return i1 <u i2?-1:1; }
             i = i + 1;
             br 'loop;
         }

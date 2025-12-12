@@ -97,7 +97,7 @@ fn caml_i64_of_digits
         i = i + 1;
         if i <s len {
             c = s[i] as i32_u;
-            br_if 'loop (c == 95);
+            br_if 'loop c == 95;
             d = parse_digit(c);
             if d >=u base { caml_failwith(errmsg); }
             if res >u threshold { caml_failwith(errmsg); }
@@ -137,13 +137,13 @@ fn format_int64_default(d: i64) -> &eq {
     let n: i64;
     if d <s 0 { negative = 1; i = 1; d = 0 - d; }
     n = d;
-    'count: loop { i = i + 1; n = n /u 10; br_if 'count (n != 0); }
+    'count: loop { i = i + 1; n = n /u 10; br_if 'count n != 0; }
     s = [string| 0; i];
     'write: loop {
         i = i - 1;
         s[i] = 48 + (d %u 10) as i32;
         d = d /u 10;
-        br_if 'write (d != 0);
+        br_if 'write d != 0;
     }
     if negative { s[0] = 45; }
     s;
@@ -175,7 +175,7 @@ fn caml_int64_format(x: &eq, x_2: &eq) -> &eq {
     sign_style = _;
     if signed & (d <s 0) { negative = 1; d = 0 - d; }
     n = d;
-    'count: loop { i = i + 1; n = n /u base; br_if 'count (n != 0); }
+    'count: loop { i = i + 1; n = n /u base; br_if 'count n != 0; }
     if negative | sign_style { i = i + 1; }
     if alternate {
         if d != 0 {
@@ -189,7 +189,7 @@ fn caml_int64_format(x: &eq, x_2: &eq) -> &eq {
         i = i - 1;
         s[i] = chars[(d %u base) as i32] as i32_u;
         d = d /u base;
-        br_if 'write (d != 0);
+        br_if 'write d != 0;
     }
     if negative {
         s[0] = 45;

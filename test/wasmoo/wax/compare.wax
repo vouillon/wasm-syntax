@@ -172,15 +172,15 @@ fn do_compare_val(stack: &compare_stack, v1: &eq, v2: &eq, total: i32) -> i32
     let res: i32;
     'loop: loop {
         'next_item: {
-            if total { br_if 'next_item (v1 == v2); }
+            if total { br_if 'next_item v1 == v2; }
             _ =
                 'v1_is_not_int: do &eq {
                     i1 = br_on_cast_fail 'v1_is_not_int &i31 v1;
-                    br_if 'next_item (v1 == v2);
+                    br_if 'next_item v1 == v2;
                     _ =
                         'v2_is_not_int: do &eq {
                             i2 = br_on_cast_fail 'v2_is_not_int &i31 v2;
-                            return (i1 as i32_s - i2 as i32_s);
+                            return i1 as i32_s - i2 as i32_s;
                         };
                     _ =
                         'v2_not_forward: do &eq {
@@ -243,15 +243,14 @@ fn do_compare_val(stack: &compare_stack, v1: &eq, v2: &eq, total: i32) -> i32
                             if t1 == object_tag {
                                 v1 = b1[2];
                                 v2 = b2[2];
-                                br_if 'next_item (v1 == v2);
+                                br_if 'next_item v1 == v2;
                                 return
-                                    (v1 as &i31 as i32_s -
-                                         v2 as &i31 as i32_s);
+                                    v1 as &i31 as i32_s - v2 as &i31 as i32_s;
                             }
                             s1 = b1.length;
                             s2 = b2.length;
-                            if s1 != s2 { return (s1 - s2); }
-                            br_if 'next_item (s1 == 1);
+                            if s1 != s2 { return s1 - s2; }
+                            br_if 'next_item s1 == 1;
                             if s1 >u 2 {
                                 stack = push_compare_stack(stack, b1, b2, 2);
                             }
@@ -290,7 +289,7 @@ fn do_compare_val(stack: &compare_stack, v1: &eq, v2: &eq, total: i32) -> i32
                                     v2;
                             s1 = fa1.length;
                             s2 = fa2.length;
-                            if s1 != s2 { return (s1 - s2); }
+                            if s1 != s2 { return s1 - s2; }
                             i = 0;
                             'float_array: loop {
                                 if i <s s1 {

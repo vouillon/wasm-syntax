@@ -58,7 +58,7 @@ fn caml_array_of_uniform_array(vinit: &eq) -> &eq {
             'loop: loop {
                 res[i] = (init[i + 1] as &float).f;
                 i = i + 1;
-                br_if 'loop (i <u size);
+                br_if 'loop i <u size;
             }
             return res;
         }

@@ -27,7 +27,7 @@ fn caml_ephe_get_data(vx: &eq) -> &eq {
     d = x[caml_ephe_data_offset];
     'no_data: {
         'released: {
-            br_if 'no_data (d == caml_ephe_none);
+            br_if 'no_data d == caml_ephe_none;
             i = caml_ephe_key_offset;
             len = x.length;
             m = unwrap(d)!;
@@ -35,7 +35,7 @@ fn caml_ephe_get_data(vx: &eq) -> &eq {
                 if i <u len {
                     v = x[i];
                     i = i + 1;
-                    br_if 'loop (v == caml_ephe_none);
+                    br_if 'loop v == caml_ephe_none;
                     br_if 'loop v is &i31;
                     v = br_on_null 'released weak_deref(unwrap(v));
                     m = br_on_null 'released map_get(m, v);
@@ -77,7 +77,7 @@ fn caml_ephe_set_data(vx: &eq, data: &eq) -> &eq {
         i = i - 1;
         if i >=u caml_ephe_key_offset {
             v = x[i];
-            br_if 'loop (v == caml_ephe_none);
+            br_if 'loop v == caml_ephe_none;
             br_if 'loop v is &i31;
             'released: {
                 v = br_on_null 'released weak_deref(unwrap(v));
@@ -121,7 +121,7 @@ fn caml_ephe_get_key(vx: &eq, vi: &eq) -> &eq {
     v = x[i];
     'value: {
         'no_value: {
-            br_if 'no_value (v == caml_ephe_none);
+            br_if 'no_value v == caml_ephe_none;
             br_if 'value v is &i31;
             'released: {
                 v = br_on_null 'released weak_deref(unwrap(v));
@@ -159,7 +159,7 @@ fn caml_ephe_check_key(vx: &eq, vi: &eq) -> &eq {
     v = x[i];
     'value: {
         'no_value: {
-            br_if 'no_value (v == caml_ephe_none);
+            br_if 'no_value v == caml_ephe_none;
             br_if 'value v is &i31;
             br_if 'value !!weak_deref(unwrap(v));
             x[i] = caml_ephe_none;

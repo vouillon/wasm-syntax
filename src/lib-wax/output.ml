@@ -615,7 +615,7 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           operator pp "=";
           space pp ();
-          instr Assignement pp i)
+          instr Instruction pp i)
   | Tee (x, i) ->
       parentheses prec Assignement pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
@@ -623,7 +623,7 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           operator pp ":=";
           space pp ();
-          instr Assignement pp i)
+          instr Instruction pp i)
   | Call (i, l) -> call_instr instr prec pp i l
   | TailCall (i, l) -> call_instr instr prec pp ~prefix:"become" i l
   | String (t, s) ->
@@ -679,7 +679,7 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           operator pp "=";
           space pp ();
-          instr Assignement pp i')
+          instr Instruction pp i')
   | Array (nm, i, n) ->
       array_instr pp nm (fun () ->
           instr Instruction pp i;
@@ -712,7 +712,7 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           operator pp "=";
           space pp ();
-          instr Assignement pp i3)
+          instr Instruction pp i3)
   | BinOp (op, i, i') ->
       let out, left, right = prec_op op in
       parentheses prec out pp @@ fun () ->
@@ -739,7 +739,7 @@ let rec instr prec pp (i : _ instr) =
               space pp ();
               keyword pp "=";
               space pp ();
-              instr Assignement pp i)
+              instr Instruction pp i)
             i)
   | Br (label, i) -> branch_instr instr prec pp "br" label i
   | Br_if (label, i) -> branch_instr instr prec pp "br_if" label (Some i)

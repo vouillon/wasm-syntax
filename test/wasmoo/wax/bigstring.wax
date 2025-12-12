@@ -49,7 +49,7 @@ fn caml_hash_mix_bigstring(h: i32, b: &eq) -> i32 {
     'l_2: {
         'l_3: {
             'l_4: {
-                'l_5: { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] (len & 3); }
+                'l_5: { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] len & 3; }
                 w = ta_get_ui8(data, i + 2) << 16;
             }
             w = w | ta_get_ui8(data, i + 1) << 8;
@@ -96,8 +96,8 @@ fn caml_bigstring_memcmp(s1: &eq, vpos1: &eq, s2: &eq, vpos2: &eq, vlen: &eq)
             c1 = ta_get_ui8(d1, pos1 + i);
             c2 = ta_get_ui8(d2, pos2 + i);
             i = i + 1;
-            br_if 'loop (c1 == c2);
-            return (c1 <u c2?-1 as &i31:1 as &i31);
+            br_if 'loop c1 == c2;
+            return c1 <u c2?-1 as &i31:1 as &i31;
         }
     } /* 'loop */
     0 as &i31;
@@ -123,8 +123,8 @@ fn caml_bigstring_memcmp_string
             c1 = ta_get_ui8(d1, pos1 + i);
             c2 = s2[pos2 + i] as i32_u;
             i = i + 1;
-            br_if 'loop (c1 == c2);
-            return (c1 <u c2?-1 as &i31:1 as &i31);
+            br_if 'loop c1 == c2;
+            return c1 <u c2?-1 as &i31:1 as &i31;
         }
     } /* 'loop */
     0 as &i31;

@@ -55,7 +55,7 @@ fn jsstring_of_substring(s: &string, pos: i32, len: i32) -> &?any {
         'loop: loop {
             if i <u len {
                 c = s[pos + i] as i32_u;
-                br_if 'continue (c >=u 128);
+                br_if 'continue c >=u 128;
                 buffer[i] = c;
                 i = i + 1;
                 br 'loop;

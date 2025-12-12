@@ -266,7 +266,7 @@ fn caml_get_public_method(obj: &eq, x: &eq, x_2: &eq) -> &eq {
     cacheid = x_2 as &i31 as i32_u;
     len = method_cache.length;
     if cacheid >=s len {
-        'size: loop { len = len << 1; br_if 'size (cacheid >=s len); }
+        'size: loop { len = len << 1; br_if 'size cacheid >=s len; }
         a = [int_array| 0; len];
         a.copy(0, method_cache, 0, method_cache.length);
         method_cache = a;

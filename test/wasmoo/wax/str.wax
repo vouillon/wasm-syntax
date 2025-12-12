@@ -144,21 +144,21 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                                                     else
                                                                     'CHECKPROGRESS
                                                                     ]
-                                                                    (instr &
-                                                                    0xff);
+                                                                    instr &
+                                                                    0xff;
                                                                     }
                                                                     br_if
                                                                     'prefix_match
-                                                                    (pos ==
-                                                                    len);
+                                                                    pos ==
+                                                                    len;
                                                                     arg =
                                                                     instr >>u
                                                                     8;
                                                                     br_if
                                                                     'backtrack
-                                                                    (arg !=
+                                                                    arg !=
                                                                     s[pos]
-                                                                    as i32_u);
+                                                                    as i32_u;
                                                                     pos =
                                                                     pos + 1;
                                                                     br
@@ -167,19 +167,19 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                                                     /* 'CHARNORM */
                                                                     br_if
                                                                     'prefix_match
-                                                                    (pos ==
-                                                                    len);
+                                                                    pos ==
+                                                                    len;
                                                                     arg =
                                                                     instr >>u
                                                                     8;
                                                                     br_if
                                                                     'backtrack
-                                                                    (arg !=
+                                                                    arg !=
                                                                     normtable
                                                                     [
                                                                     s[pos]
                                                                     as i32_u]
-                                                                    as i32_u);
+                                                                    as i32_u;
                                                                     pos =
                                                                     pos + 1;
                                                                     br
@@ -203,15 +203,15 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                                                     i <u l {
                                                                     br_if
                                                                     'prefix_match
-                                                                    (pos ==
-                                                                    len);
+                                                                    pos ==
+                                                                    len;
                                                                     br_if
                                                                     'backtrack
-                                                                    (s'[i]
+                                                                    s'[i]
                                                                     as i32_u
                                                                     !=
                                                                     s[pos]
-                                                                    as i32_u);
+                                                                    as i32_u;
                                                                     pos =
                                                                     pos + 1;
                                                                     i = i + 1;
@@ -240,18 +240,18 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                                                     i <u l {
                                                                     br_if
                                                                     'prefix_match
-                                                                    (pos ==
-                                                                    len);
+                                                                    pos ==
+                                                                    len;
                                                                     br_if
                                                                     'backtrack
-                                                                    (s'[i]
+                                                                    s'[i]
                                                                     as i32_u
                                                                     !=
                                                                     normtable
                                                                     [
                                                                     s[pos]
                                                                     as i32_u]
-                                                                    as i32_u);
+                                                                    as i32_u;
                                                                     pos =
                                                                     pos + 1;
                                                                     i = i + 1;
@@ -265,8 +265,8 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                                                     /* 'CHARCLASS */
                                                                     br_if
                                                                     'prefix_match
-                                                                    (pos ==
-                                                                    len);
+                                                                    pos ==
+                                                                    len;
                                                                     arg =
                                                                     instr >>u
                                                                     8;
@@ -290,23 +290,23 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                                                     !pos;
                                                                     br_if
                                                                     'continue
-                                                                    (10 ==
+                                                                    10 ==
                                                                     s
                                                                     [pos - 1]
-                                                                    as i32_u);
+                                                                    as i32_u;
                                                                     br
                                                                     'backtrack;
                                                                     }
                                                                     /* 'EOL */
                                                                     br_if
                                                                     'continue
-                                                                    (pos ==
-                                                                    len);
+                                                                    pos ==
+                                                                    len;
                                                                     br_if
                                                                     'continue
-                                                                    (10 ==
+                                                                    10 ==
                                                                     s[pos]
-                                                                    as i32_u);
+                                                                    as i32_u;
                                                                     br
                                                                     'backtrack;
                                                                 }
@@ -314,8 +314,8 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                                                 if !pos {
                                                                     br_if
                                                                     'prefix_match
-                                                                    (pos ==
-                                                                    len);
+                                                                    pos ==
+                                                                    len;
                                                                     br_if
                                                                     'continue
                                                                     is_word_letter
@@ -338,14 +338,14 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                                                     } else {
                                                                     br_if
                                                                     'continue
-                                                                    (is_word_letter
+                                                                    is_word_letter
                                                                     (s
                                                                     [pos - 1]
                                                                     as i32_u)
                                                                     !=
                                                                     is_word_letter
                                                                     (s[pos]
-                                                                    as i32_u));
+                                                                    as i32_u);
                                                                     br
                                                                     'backtrack;
                                                                     }
@@ -386,18 +386,17 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                                     i = group_start[arg];
                                                     j = group_end[arg];
                                                     br_if 'backtrack
-                                                        ((i <s 0) | (j <s 0));
+                                                        (i <s 0) | (j <s 0);
                                                     'loop: loop {
                                                         if i <u j {
                                                             br_if
                                                                 'prefix_match
-                                                                (pos == len);
+                                                                pos == len;
                                                             br_if 'backtrack
-                                                                (s[i]
-                                                                    as i32_u
+                                                                s[i] as i32_u
                                                                     !=
                                                                     s[pos]
-                                                                    as i32_u);
+                                                                    as i32_u;
                                                             pos = pos + 1;
                                                             i = i + 1;
                                                             br 'loop;
@@ -434,7 +433,7 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                             } /* 'loop */
                                             br 'continue;
                                         } /* 'SIMPLEPLUS */
-                                        br_if 'prefix_match (pos == len);
+                                        br_if 'prefix_match pos == len;
                                         arg = instr >>u 8;
                                         set = cpool[arg + 1] as &string;
                                         br_if 'backtrack
@@ -472,7 +471,7 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                             br 'continue;
                         } /* 'CHECKPROGRESS */
                         arg = instr >>u 8;
-                        br_if 'backtrack (pos == re_register[arg]);
+                        br_if 'backtrack pos == re_register[arg];
                         br 'continue;
                     } /* 'prefix_match */
                     br_if 'ACCEPT accept_partial_match;
@@ -529,7 +528,7 @@ fn re_search_forward(re: &eq, vs: &eq, vpos: &eq) -> &eq {
         res = re_match(re, s, pos, 0);
         if res is &block { return res; }
         pos = pos + 1;
-        br_if 'loop (pos <=u len);
+        br_if 'loop pos <=u len;
     } /* 'loop */
     [block| 0 as &i31];
 }
@@ -547,7 +546,7 @@ fn re_search_backward(re: &eq, vs: &eq, vpos: &eq) -> &eq {
         res = re_match(re, s, pos, 0);
         if res is &block { return res; }
         pos = pos - 1;
-        br_if 'loop (pos >=s 0);
+        br_if 'loop pos >=s 0;
     } /* 'loop */
     [block| 0 as &i31];
 }
