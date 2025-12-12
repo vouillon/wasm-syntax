@@ -1077,13 +1077,9 @@ let function_indices typ lst =
         Some idx
     | _ -> None
   in
-  match typ with
-  (*ZZZ Check *)
-  | { nullable = true; typ = Func; _ } ->
-      if List.for_all (fun i -> extract i <> None) lst then
-        Some (List.filter_map extract lst)
-      else None
-  | _ -> None
+  if List.for_all (fun i -> extract i <> None) lst then
+    Some (List.filter_map extract lst)
+  else None
 
 let modulefield f =
   match f.Ast.desc with
