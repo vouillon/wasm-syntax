@@ -42,7 +42,7 @@ type style =
       (** For annotations (e.g., `(@custom)` in Wasm; Rust macros like
           `vec![]`). *)
   | Comment  (** For comments in the code. *)
-  | Punctuation  (** For structural punctuation (e.g., (, ), {, }, :, ;, ,). *)
+  | Punctuation  (** For structural punctuation (e.g., (, ), :, ;, ,). *)
 
 type theme = {
   keyword : string;
