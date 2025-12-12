@@ -360,8 +360,7 @@ let casttype pp ty =
   | Signedtype { typ; signage; strict } ->
       type_ pp (Ast.format_signed_type typ signage strict)
 
-let branch_instr instr prec pp name label i =
-  parentheses prec Branch pp @@ fun () ->
+let branch_instr instr pp name label i =
   box pp ~indent:indent_level (fun () ->
       keyword pp name;
       space pp ();
@@ -373,8 +372,7 @@ let branch_instr instr prec pp name label i =
           instr Branch pp i)
         i)
 
-let branch_ref_instr instr prec pp name label ty i =
-  parentheses prec Branch pp @@ fun () ->
+let branch_ref_instr instr pp name label ty i =
   box pp ~indent:indent_level (fun () ->
       keyword pp name;
       space pp ();
@@ -385,8 +383,7 @@ let branch_ref_instr instr prec pp name label ty i =
       space pp ();
       instr Branch pp i)
 
-let call_instr instr prec pp ?prefix i l =
-  parentheses prec Call pp @@ fun () ->
+let call_instr instr pp ?prefix i l =
   box pp ~indent:indent_level (fun () ->
       Option.iter
         (fun s ->
@@ -422,6 +419,27 @@ let array_instr pp nm f =
       space pp ();
       f ())
 
+let get_prec (i : _ Ast.instr) =
+  match i.desc with
+  | Block _ | Loop _ | If _ | Try _ | TryTable _ -> Block
+  | Unreachable | Nop | Pop | Null | Get _ | String _ | Int _ | Float _
+  | Struct _ | StructDefault _ | Array _ | ArrayDefault _ | ArrayFixed _
+  | ArrayGet _ | ArraySet _ | Sequence _ ->
+      Block
+  | Set _ | Tee _ -> Assignement
+  | Call _ | TailCall _ -> Call
+  | Cast _ | Test _ -> Cast
+  | NonNull _ | UnOp _ -> UnaryOp
+  | StructGet _ | StructSet _ -> FieldAccess
+  | BinOp (op, _, _) ->
+      let out, _, _ = prec_op op in
+      out
+  | Let _ -> Let
+  | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | Br_on_cast_fail _ | Throw _ | ThrowRef _ | Return _ ->
+      Branch
+  | Select _ -> Select
+
 let is_block (i : _ Ast.instr) =
   match i.desc with
   | Block _ | Loop _ | If _ | Try _ | TryTable _ -> true
@@ -434,36 +452,38 @@ let is_block (i : _ Ast.instr) =
     ->
       false
 
-let rec starts_with_block (i : _ Ast.instr) =
-  match i.desc with
-  | Block _ | Loop _ | If _ | Try _ | TryTable _ -> true
-  | Call (i, _)
-  | Cast (i, _)
-  | Test (i, _)
-  | NonNull i
-  | StructGet (i, _)
-  | StructSet (i, _, _)
-  | ArrayGet (i, _)
-  | ArraySet (i, _, _)
-  | BinOp (_, i, _)
-  | Select (i, _, _) ->
-      starts_with_block i
-  | Unreachable | Nop | Pop | Null | Get _ | Set _ | Tee _ | TailCall _
-  | String _ | Int _ | Float _ | Struct _ | StructDefault _ | Array _
-  | ArrayDefault _ | ArrayFixed _ | UnOp _ | Let _ | Br _ | Br_if _ | Br_table _
-  | Br_on_null _ | Br_on_non_null _ | Br_on_cast _ | Br_on_cast_fail _ | Throw _
-  | ThrowRef _ | Return _ | Sequence _ ->
-      false
+let rec starts_with_block_prec prec (i : 'a Ast.instr) =
+  let actual = get_prec i in
+  if prec > actual then false
+  else
+    match i.desc with
+    | Block _ | Loop _ | If _ | Try _ | TryTable _ -> true
+    | Call (i, _) | ArrayGet (i, _) | ArraySet (i, _, _) ->
+        starts_with_block_prec Call i
+    | Cast (i, _) | Test (i, _) -> starts_with_block_prec Cast i
+    | NonNull i | UnOp (_, i) -> starts_with_block_prec UnaryOp i
+    | StructGet (i, _) | StructSet (i, _, _) ->
+        starts_with_block_prec FieldAccess i
+    | BinOp (op, i, _) ->
+        let _, left, _ = prec_op op in
+        starts_with_block_prec left i
+    | Select (i, _, _) -> starts_with_block_prec Select i
+    | Unreachable | Nop | Pop | Null | Get _ | Set _ | Tee _ | TailCall _
+    | String _ | Int _ | Float _ | Struct _ | StructDefault _ | Array _
+    | ArrayDefault _ | ArrayFixed _ | Let _ | Br _ | Br_if _ | Br_table _
+    | Br_on_null _ | Br_on_non_null _ | Br_on_cast _ | Br_on_cast_fail _
+    | Throw _ | ThrowRef _ | Return _ | Sequence _ ->
+        false
+
+let starts_with_block i = starts_with_block_prec Instruction i
 
 let rec instr prec pp (i : _ instr) =
+  parentheses prec (get_prec i) pp @@ fun () ->
   match i.desc with
   | Block (label, bt, l) ->
-      parentheses prec Block pp @@ fun () ->
       block pp label (if need_blocktype bt then Some "do" else None) bt l
-  | Loop (label, bt, l) ->
-      parentheses prec Block pp @@ fun () -> block pp label (Some "loop") bt l
+  | Loop (label, bt, l) -> block pp label (Some "loop") bt l
   | If (label, bt, i, l1, l2) ->
-      parentheses prec Block pp @@ fun () ->
       hvbox pp (fun () ->
           box pp (fun () ->
               block_label pp label;
@@ -493,7 +513,6 @@ let rec instr prec pp (i : _ instr) =
                   punctuation pp "}")
           | None -> punctuation pp "}")
   | Try { label; typ = bt; block = l; catches; catch_all } ->
-      parentheses prec Block pp @@ fun () ->
       hvbox pp (fun () ->
           box pp (fun () ->
               block_label pp label;
@@ -541,7 +560,6 @@ let rec instr prec pp (i : _ instr) =
                   space pp ());
               punctuation pp "}"))
   | TryTable { label; typ = bt; block = l; catches } ->
-      parentheses prec Block pp @@ fun () ->
       hvbox pp (fun () ->
           box pp (fun () ->
               block_label pp label;
@@ -609,7 +627,6 @@ let rec instr prec pp (i : _ instr) =
   | Pop -> operator pp "_"
   | Get x -> identifier pp x.desc
   | Set (x, i) ->
-      parentheses prec Assignement pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           simple_pat pp x;
           space pp ();
@@ -617,15 +634,14 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           instr Instruction pp i)
   | Tee (x, i) ->
-      parentheses prec Assignement pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           identifier pp x.desc;
           space pp ();
           operator pp ":=";
           space pp ();
           instr Instruction pp i)
-  | Call (i, l) -> call_instr instr prec pp i l
-  | TailCall (i, l) -> call_instr instr prec pp ~prefix:"become" i l
+  | Call (i, l) -> call_instr instr pp i l
+  | TailCall (i, l) -> call_instr instr pp ~prefix:"become" i l
   | String (t, s) ->
       Option.iter
         (fun t ->
@@ -638,7 +654,6 @@ let rec instr prec pp (i : _ instr) =
       string pp "\""
   | Int s | Float s -> constant pp s
   | Cast (i, t) ->
-      parentheses prec Cast pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           instr Cast pp i;
           space pp ();
@@ -647,11 +662,9 @@ let rec instr prec pp (i : _ instr) =
               space pp ();
               casttype pp t))
   | NonNull i ->
-      parentheses prec UnaryOp pp @@ fun () ->
       instr UnaryOp pp i;
       operator pp "!"
   | Test (i, t) ->
-      parentheses prec Cast pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           instr Cast pp i;
           space pp ();
@@ -666,12 +679,10 @@ let rec instr prec pp (i : _ instr) =
             pp l)
   | StructDefault nm -> struct_instr pp nm (fun () -> punctuation pp "..")
   | StructGet (i, s) ->
-      parentheses prec FieldAccess pp @@ fun () ->
       instr FieldAccess pp i;
       operator pp ".";
       identifier pp s.desc
   | StructSet (i, s, i') ->
-      parentheses prec FieldAccess pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           instr FieldAccess pp i;
           operator pp ".";
@@ -714,8 +725,7 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           instr Instruction pp i3)
   | BinOp (op, i, i') ->
-      let out, left, right = prec_op op in
-      parentheses prec out pp @@ fun () ->
+      let _, left, right = prec_op op in
       box pp ~indent:indent_level (fun () ->
           instr left pp i;
           space pp ();
@@ -723,11 +733,9 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           instr right pp i')
   | UnOp (op, i) ->
-      parentheses prec UnaryOp pp @@ fun () ->
       operator pp (unop op);
       instr UnaryOp pp i
   | Let (l, i) ->
-      parentheses prec Let pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           keyword pp "let";
           space pp ();
@@ -741,19 +749,17 @@ let rec instr prec pp (i : _ instr) =
               space pp ();
               instr Instruction pp i)
             i)
-  | Br (label, i) -> branch_instr instr prec pp "br" label i
-  | Br_if (label, i) -> branch_instr instr prec pp "br_if" label (Some i)
-  | Br_on_null (label, i) ->
-      branch_instr instr prec pp "br_on_null" label (Some i)
+  | Br (label, i) -> branch_instr instr pp "br" label i
+  | Br_if (label, i) -> branch_instr instr pp "br_if" label (Some i)
+  | Br_on_null (label, i) -> branch_instr instr pp "br_on_null" label (Some i)
   | Br_on_non_null (label, i) ->
-      branch_instr instr prec pp "br_on_non_null" label (Some i)
+      branch_instr instr pp "br_on_non_null" label (Some i)
   | Br_on_cast (label, ty, i) ->
-      branch_ref_instr instr prec pp "br_on_cast" label ty i
+      branch_ref_instr instr pp "br_on_cast" label ty i
   | Br_on_cast_fail (label, ty, i) ->
-      branch_ref_instr instr prec pp "br_on_cast_fail" label ty i
+      branch_ref_instr instr pp "br_on_cast_fail" label ty i
   | Br_table (labels, i) ->
       let labels = List.rev labels in
-      parentheses prec Branch pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           keyword pp "br_table";
           space pp ();
@@ -778,7 +784,6 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           instr Branch pp i)
   | Return i ->
-      parentheses prec Branch pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           keyword pp "return";
           Option.iter
@@ -787,7 +792,6 @@ let rec instr prec pp (i : _ instr) =
               instr Branch pp i)
             i)
   | Throw (tag, l) ->
-      parentheses prec Branch pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           keyword pp "throw";
           space pp ();
@@ -795,14 +799,12 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           print_paren_list (instr Instruction) pp l)
   | ThrowRef i ->
-      parentheses prec Branch pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           keyword pp "throw_ref";
           space pp ();
           instr Branch pp i)
   | Sequence l -> print_paren_list (instr Instruction) pp l
   | Select (i1, i2, i3) ->
-      parentheses prec Select pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
           instr Select pp i1;
           cut pp ();
