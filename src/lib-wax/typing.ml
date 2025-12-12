@@ -1,5 +1,6 @@
 (*
 TODO:
+- Fix grab logic: count number of holes, type, check hole order
 - Check that import correspond to a declaration
 - Check the _ make sense (check that underscores are properly placed)
 - we need to decide on an order to visit subexpression in structs
@@ -909,7 +910,8 @@ let split_on_last_type i =
 let immediate_supertype s : Ast.heaptype =
   match (s.supertype, s.typ) with
   | Some t, _ -> Type t
-  | None, (Struct _ | Array _) -> Any
+  | None, Struct _ -> Struct
+  | None, Array _ -> Array
   | None, Func _ -> Func
 
 (* The type lookups below never fail *)
