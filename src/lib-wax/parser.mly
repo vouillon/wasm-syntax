@@ -69,29 +69,27 @@
 %token BR_ON_NULL BR_ON_NON_NULL
 %token DISPATCH
 
-%nonassoc LET
-%right RETURN THROW_REF
-%nonassoc IDENT prec_branch RBRACE
-%right EQUAL COLONEQUAL
-%nonassoc LBRACE LBRACKET
-%right QUESTIONMARK COLON
-%nonassoc EQUALEQUAL BANGEQUAL GT GTU GTS LT LTU LTS GE GES GEU LE LES LEU
-%left PIPE
-%left CARET
-%left AMPERSAND
-%left SHL SHRS SHRU
-%left MINUS PLUS
-%left STAR SLASH SLASHS SLASHU PERCENTS PERCENTU
+%nonassoc prec_ident (* {a|...} *) prec_plain (* throw_ref f(1) *) prec_block
+%right THROW_REF RETURN prec_let prec_branch
+%nonassoc "{"  (* return { abcd } *)
+%right "?" ":"
+%right ":=" "="
+%nonassoc "==" "!=" "<" "<u" "<s" ">" ">u" ">s" "<=" "<=u" "<=s" ">=" ">=u" ">=s"
+%left "|"
+%left "^"
+%left "&"
+%left "<<" ">>u" ">>s"
+%left "+" "-"
+%left "*" "/" "/u" "/s" "%u" "%s"
 %left AS IS
-%right prec_unary
-%right BANG
-%left DOT LPAREN
+%nonassoc prec_unary
+%nonassoc "!"
+%left "." "(" "["
 
-(* BR foo 1 + 2 understood as BR foo (1 + 2)
+(* BR 'foo 1 + 2 understood as BR 'foo (1 + 2)
    BR_TABLE { ...} 1 + 2 understood as BR_TABLE { ...} (1 + 2)
    BR foo { ... } understood as a single instruction
    LET x = br foo LET --> LET x = (br foo) LET  (LET < branch)
-   IF BR_TABLE {...} { ... } --> IF (BR_TABLE {...}) { ... } (br < LBRACE)
    { ... } ( ... } --> sequence (instr < LPAREN)
    {a| b:}  ==> struct; {a|b} should need parenthesis <<< special case??
                             (IDENT < PIPE)
@@ -274,7 +272,8 @@ blocktype:
 | label = block_label "{" l = delimited_instr_list "}" { (label, l) }
 
 %inline blockinstr:
-| b = block { let (label, l) = b in with_loc $sloc (Block(label, blocktype None, l)) }
+| b = block
+  { let (label, l) = b in with_loc $sloc (Block(label, blocktype None, l)) }
 | label = block_label DO bt = option(blocktype) "{" l = delimited_instr_list "}"
   { with_loc $sloc (Block(label, blocktype bt, l)) }
 | label = block_label LOOP bt = option(blocktype)
@@ -285,14 +284,14 @@ blocktype:
   l2 = option(ELSE  "{" l = delimited_instr_list "}" { l })
   { with_loc $sloc (If(label, blocktype bt, e, l1, l2)) }
 
-simpleinstr:
+plaininstr:
 | NOP { with_loc $sloc Nop }
 | UNREACHABLE { with_loc $sloc Unreachable }
 | NULL { with_loc $sloc Null }
 | "_" {with_loc $sloc Pop }
-| x = ident { with_loc $sloc (Get x) }
+| x = ident { with_loc $sloc (Get x) } %prec prec_ident
 | "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
-| i = simpleinstr "(" l = separated_list(",", instr) ")"
+| i = plaininstr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (Call(i, l)) }
 | t  = option(t = ident "#" { t }) s = STRING { with_loc $sloc (String (t, s)) }
 | i = INT { with_loc $sloc (Int i) }
@@ -317,9 +316,6 @@ simpleinstr:
   { with_loc $sloc (Array (Some t, i1, i2)) }
 | "[" t = ident "|" ".." ";" i = instr "]"
   { with_loc $sloc (ArrayDefault (Some t, i)) }
-
-plaininstr:
-| i = simpleinstr { i }
 | BECOME i = instr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (TailCall(i, l)) }
 | x = simple_pat "=" i = instr { with_loc $sloc (Set (x, i)) }
@@ -356,21 +352,23 @@ plaininstr:
 | i = instr "<=" j = instr { with_loc $sloc (BinOp(Le None, i, j)) }
 | i = instr "<=s" j = instr { with_loc $sloc (BinOp(Le (Some Signed), i, j)) }
 | i = instr "<=u" j = instr { with_loc $sloc (BinOp(Le (Some Unsigned), i, j)) }
-| LET x = simple_pat
+| LET x = simple_pat %prec prec_let
   { with_loc $sloc (Let ([(x, None)], None)) }
 | LET x = simple_pat "=" i = instr
-  { with_loc $sloc (Let ([(x, None)], Some i)) }
-| LET x = simple_pat ":" t = valtype i = option("=" i = instr {i})
-  { with_loc $sloc (Let ([(x, Some t)], i)) }
+  { with_loc $sloc (Let ([(x, None)], Some i)) } %prec prec_let
+| LET x = simple_pat ":" t = valtype "=" i = instr %prec prec_let
+  { with_loc $sloc (Let ([(x, Some t)], Some i)) }
+| LET x = simple_pat ":" t = valtype
+  { with_loc $sloc (Let ([(x, Some t)], None)) }
 | LET
   "(" l = separated_list(",", p = simple_pat t = option(":" t = valtype {t})
                                 { (p, t) })
-  ")" i = option("=" i = instr {i})
+  ")" i = ioption("=" i = instr {i}) %prec prec_let
   { with_loc $sloc (Let (l, i)) }
-| BR l = label i = ioption(instr)
-  { with_loc $sloc (Br (l, i)) } %prec prec_branch
-| BR_IF l = label i = instr
-  { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
+| BR l = label i = ioption(instr) %prec prec_branch
+  { with_loc $sloc (Br (l, i)) }
+| BR_IF l = label i = instr %prec prec_branch
+  { with_loc $sloc (Br_if (l, i))} 
 (*
 | BR l = label IF i = instr
   { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
@@ -380,9 +378,9 @@ plaininstr:
 | BR_TABLE "[" lst = list(i = label { i }) ELSE l = label  "]" i = instr
   { with_loc $sloc (Br_table (lst @ [l], i)) } %prec prec_branch
 | BR_ON_NULL l = label i = instr { with_loc $sloc (Br_on_null (l, i)) } %prec prec_branch
-| BR_ON_NON_NULL l = label i = instr { with_loc $sloc (Br_on_non_null (l, i)) } %prec prec_branch
-| BR_ON_CAST l = label t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) }
-| BR_ON_CAST_FAIL l = label t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) }
+| BR_ON_NON_NULL l = label i = instr { with_loc $sloc (Br_on_non_null (l, i)) }  %prec prec_branch
+| BR_ON_CAST l = label t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) } %prec prec_branch
+| BR_ON_CAST_FAIL l = label t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) } %prec prec_branch
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) }
 | THROW t = ident  "(" l = separated_list(",", instr) ")"
   { with_loc $sloc (Throw (t, l)) }
@@ -399,8 +397,8 @@ plaininstr:
 | i = instr "!" { with_loc $sloc (NonNull i) }
 
 instr:
-| i = blockinstr { i }
-| i = plaininstr { i }
+| i = blockinstr %prec prec_block { i }
+| i = plaininstr %prec prec_plain { i }
 
 delimited_instr_list:
 | { [] }

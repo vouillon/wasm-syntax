@@ -1,5 +1,6 @@
 (*
 TODO:
+- Special type for unreachable? Put return/... in expressions?
 - Fix grab logic: count number of holes, type, check hole order
 - Check that import correspond to a declaration
 - Check the _ make sense (check that underscores are properly placed)
@@ -167,7 +168,7 @@ module Error = struct
 
   let name_already_bound context ~location kind x =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "A %s named %a is already bound" kind print_name x)
+        Format.fprintf f "A %s named %a is already bound." kind print_name x)
 
   let unbound_name context ~location kind x =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
@@ -207,6 +208,13 @@ module Namespace = struct
 
   let make () = Hashtbl.create 16
 
+  let exists d ns x =
+    match Hashtbl.find_opt ns x.desc with
+    | None -> false
+    | Some (kind, _) ->
+        Error.name_already_bound d ~location:x.info kind x;
+        true
+
   let register d ns kind x =
     match Hashtbl.find_opt ns x.desc with
     | None -> Hashtbl.replace ns x.desc (kind, x.info)
@@ -226,6 +234,7 @@ module Tbl = struct
     Namespace.register d env.namespace env.kind x;
     Hashtbl.replace env.tbl x.desc v
 
+  let exists d env x = Namespace.exists d env.namespace x
   let override env x v = Hashtbl.replace env.tbl x.desc v
 
   let find d env x =
@@ -2318,28 +2327,30 @@ let funsig _ctx sign =
   }
 
 let fundecl ctx name typ sign =
-  match typ with
-  | Some typ ->
-      let+@ info = Tbl.find ctx.diagnostics ctx.types typ in
-      (*ZZZ Check signature*)
-      (fst info, typ.desc)
-  | None -> (
-      match sign with
-      | Some sign ->
-          let name = { name with desc = "func:" ^ name.desc } in
-          let+@ i =
-            add_type ctx.diagnostics ctx.type_context
-              [|
-                ( name,
-                  {
-                    supertype = None;
-                    typ = Func (funsig ctx sign);
-                    final = true;
-                  } );
-              |]
-          in
-          (i, name.desc)
-      | None -> assert false (*ZZZ*))
+  if Tbl.exists ctx.diagnostics ctx.functions name then None
+  else
+    match typ with
+    | Some typ ->
+        let+@ info = Tbl.find ctx.diagnostics ctx.types typ in
+        (*ZZZ Check signature*)
+        (fst info, typ.desc)
+    | None -> (
+        match sign with
+        | Some sign ->
+            let name = { name with desc = "func:" ^ name.desc } in
+            let+@ i =
+              add_type ctx.diagnostics ctx.type_context
+                [|
+                  ( name,
+                    {
+                      supertype = None;
+                      typ = Func (funsig ctx sign);
+                      final = true;
+                    } );
+                |]
+            in
+            (i, name.desc)
+        | None -> assert false (*ZZZ*))
 
 let f diagnostics fields =
   let type_context =
