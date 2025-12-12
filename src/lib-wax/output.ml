@@ -276,6 +276,7 @@ let unop op = match op with Neg -> "-" | Pos -> "+" | Not -> "!"
 
 type prec =
   | Instruction
+  | Branch
   | Let
   | Assignement
   | Select
@@ -286,7 +287,6 @@ type prec =
   | Shift
   | Addition
   | Multiplication
-  | Branch
   | Cast
   | UnaryOp
   | Call
@@ -421,6 +421,39 @@ let array_instr pp nm f =
     (fun () ->
       space pp ();
       f ())
+
+let is_block (i : _ Ast.instr) =
+  match i.desc with
+  | Block _ | Loop _ | If _ | Try _ | TryTable _ -> true
+  | Call _ | Unreachable | Nop | Pop | Null | Get _ | Set _ | Tee _ | TailCall _
+  | String _ | Int _ | Float _ | Cast _ | Test _ | NonNull _ | Struct _
+  | StructDefault _ | StructGet _ | StructSet _ | Array _ | ArrayDefault _
+  | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _ | Let _ | Br _
+  | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | Br_on_cast_fail _ | Throw _ | ThrowRef _ | Return _ | Sequence _ | Select _
+    ->
+      false
+
+let rec starts_with_block (i : _ Ast.instr) =
+  match i.desc with
+  | Block _ | Loop _ | If _ | Try _ | TryTable _ -> true
+  | Call (i, _)
+  | Cast (i, _)
+  | Test (i, _)
+  | NonNull i
+  | StructGet (i, _)
+  | StructSet (i, _, _)
+  | ArrayGet (i, _)
+  | ArraySet (i, _, _)
+  | BinOp (_, i, _)
+  | Select (i, _, _) ->
+      starts_with_block i
+  | Unreachable | Nop | Pop | Null | Get _ | Set _ | Tee _ | TailCall _
+  | String _ | Int _ | Float _ | Struct _ | StructDefault _ | Array _
+  | ArrayDefault _ | ArrayFixed _ | UnOp _ | Let _ | Br _ | Br_if _ | Br_table _
+  | Br_on_null _ | Br_on_non_null _ | Br_on_cast _ | Br_on_cast_fail _ | Throw _
+  | ThrowRef _ | Return _ | Sequence _ ->
+      false
 
 let rec instr prec pp (i : _ instr) =
   match i.desc with
@@ -572,7 +605,7 @@ let rec instr prec pp (i : _ instr) =
                     catches);
               punctuation pp "]"))
   | Unreachable -> keyword pp "unreachable"
-  | Nop -> operator pp "_"
+  | Nop -> operator pp "nop"
   | Pop -> operator pp "_"
   | Get x -> identifier pp x.desc
   | Set (x, i) ->
@@ -799,18 +832,10 @@ and block pp label kind bt (l : _ instr list) =
           label_comment pp (l, label)))
 
 and deliminated_instr pp (i : _ instr) =
-  match i.desc with
-  | Block _ | Loop _ | If _ | TryTable _ | Try _ -> instr Instruction pp i
-  | Unreachable | Nop | Pop | Get _ | Set _ | Tee _ | Call _ | TailCall _
-  | String _ | Int _ | Float _ | Cast _ | NonNull _ | Test _ | Struct _
-  | StructDefault _ | StructGet _ | StructSet _ | Array _ | ArrayDefault _
-  | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _ | Let _ | Br _
-  | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
-  | Br_on_cast_fail _ | Return _ | Throw _ | ThrowRef _ | Sequence _ | Null
-  | Select _ ->
-      box pp (fun () ->
-          instr Instruction pp i;
-          punctuation pp ";")
+  if is_block i then instr Instruction pp i
+  else (
+    instr (if starts_with_block i then Block else Instruction) pp i;
+    punctuation pp ";")
 
 and block_contents pp (l : _ instr list) =
   if l <> [] then (

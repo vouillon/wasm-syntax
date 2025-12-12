@@ -349,15 +349,15 @@ let runtest filename _ =
             let ok =
               in_child_process (fun () ->
                   let m' = WaxParser.parse_from_string ~color ~filename text in
-                  if false (*XXX*) then
+                  if true then
                     let ok =
                       in_child_process (fun () ->
                           ignore
-                            (Utils.Diagnostic.run ~color ~source (fun d ->
-                                 Wax.Typing.f d m')))
+                            (Utils.Diagnostic.run ~color ~source:(Some text)
+                               (fun d -> Wax.Typing.f d m')))
                     in
                     if not ok then
-                      if true then prerr_endline "(after parsing)"
+                      if false then prerr_endline "(after parsing)"
                       else (
                         Format.eprintf "@[%a@]@." (print_wax ~color) m';
                         prerr_endline "===";

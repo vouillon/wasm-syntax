@@ -345,7 +345,9 @@ plaininstr:
 | NULL { with_loc $sloc Null }
 | "_" {with_loc $sloc Pop }
 | x = ident { with_loc $sloc (Get x) } %prec prec_ident
-| "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
+| "(" l = instr ")" { l }
+| "(" i = instr "," l = separated_list(",", instr) ")"
+  { with_loc $sloc (Sequence (i :: l)) }
 | i = instr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (Call(i, l)) }
 | t  = option(t = ident "#" { t }) s = STRING { with_loc $sloc (String (t, s)) }
