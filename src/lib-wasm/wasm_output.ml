@@ -691,23 +691,6 @@ module Encoder = struct
         byte b 0x1E
     | Pop _ | TupleMake _ -> ()
     | TupleExtract _ -> failwith "unsupported binaryen extension"
-    | VecLoadLane (idx, op, m, lane) ->
-        byte b 0xFD;
-        uint b
-          (match op with `I8 -> 84 | `I16 -> 85 | `I32 -> 86 | `I64 -> 87);
-        memarg b m idx;
-        uint b lane
-    | VecStoreLane (idx, op, m, lane) ->
-        byte b 0xFD;
-        uint b
-          (match op with `I8 -> 88 | `I16 -> 89 | `I32 -> 90 | `I64 -> 91);
-        memarg b m idx;
-        uint b lane
-    | VecLoadSplat (idx, op, m) ->
-        byte b 0xFD;
-        uint b (match op with `I8 -> 7 | `I16 -> 8 | `I32 -> 9 | `I64 -> 10);
-
-        memarg b m idx
     | VecLoad (idx, op, m) ->
         byte b 0xFD;
         uint b
@@ -719,13 +702,35 @@ module Encoder = struct
           | Load16x4U -> 4
           | Load32x2S -> 5
           | Load32x2U -> 6
-          | Load32Zero -> 0x5C
-          | Load64Zero -> 0x5D);
+          | Load32Zero -> 92
+          | Load64Zero -> 93);
+        memarg b m idx
+    | VecLoadSplat (idx, op, m) ->
+        byte b 0xFD;
+        uint b (match op with `I8 -> 7 | `I16 -> 8 | `I32 -> 9 | `I64 -> 10);
         memarg b m idx
     | VecStore (idx, m) ->
         byte b 0xFD;
         uint b 11;
         memarg b m idx
+    | VecConst v ->
+        byte b 0xFD;
+        uint b 12;
+        v128 b v
+    | VecShuffle v ->
+        byte b 0xFD;
+        uint b 13;
+        v128 b v
+    | VecSplat shape ->
+        byte b 0xFD;
+        uint b
+          (match shape with
+          | I8x16 -> 15
+          | I16x8 -> 16
+          | I32x4 -> 17
+          | I64x2 -> 18
+          | F32x4 -> 19
+          | F64x2 -> 20)
     | VecExtract (op, s, lane) ->
         byte b 0xFD;
         uint b
@@ -738,7 +743,7 @@ module Encoder = struct
           | I64x2, None -> 29
           | F32x4, None -> 31
           | F64x2, None -> 33
-          | _ -> failwith "Invalid VecExtract op");
+          | _ -> assert false);
         uint b lane
     | VecReplace (op, lane) ->
         byte b 0xFD;
@@ -751,14 +756,6 @@ module Encoder = struct
           | F32x4 -> 32
           | F64x2 -> 34);
         uint b lane
-    | VecConst v ->
-        byte b 0xFD;
-        uint b 12;
-        v128 b v
-    | VecShuffle v ->
-        byte b 0xFD;
-        uint b 13;
-        v128 b v
     | VecBitselect ->
         byte b 0xFD;
         uint b 82
@@ -772,6 +769,27 @@ module Encoder = struct
           | AllTrue I32x4 -> 163
           | AllTrue I64x2 -> 195
           | AllTrue (F32x4 | F64x2) -> failwith "AllTrue on float not supported")
+    | VecLoadLane (idx, op, m, lane) ->
+        byte b 0xFD;
+        uint b
+          (match op with `I8 -> 84 | `I16 -> 85 | `I32 -> 86 | `I64 -> 87);
+        memarg b m idx;
+        uint b lane
+    | VecStoreLane (idx, op, m, lane) ->
+        byte b 0xFD;
+        uint b
+          (match op with `I8 -> 88 | `I16 -> 89 | `I32 -> 90 | `I64 -> 91);
+        memarg b m idx;
+        uint b lane
+    | VecBitmask (Bitmask shape) ->
+        byte b 0xFD;
+        uint b
+          (match shape with
+          | I8x16 -> 100
+          | I16x8 -> 132
+          | I32x4 -> 164
+          | I64x2 -> 196
+          | F32x4 | F64x2 -> assert false)
     | VecShift op ->
         byte b 0xFD;
         uint b
@@ -788,59 +806,37 @@ module Encoder = struct
           | Shl I64x2 -> 203
           | Shr (Signed, I64x2) -> 204
           | Shr (Unsigned, I64x2) -> 205
-          | _ -> failwith "Invalid VecShift op")
-    | VecBitmask (Bitmask shape) ->
-        byte b 0xFD;
-        uint b
-          (match shape with
-          | I8x16 -> 100
-          | I16x8 -> 132
-          | I32x4 -> 164
-          | I64x2 -> 196
-          | F32x4 | F64x2 -> failwith "Bitmask on float not supported")
-    | VecTernOp op ->
-        byte b 0xFD;
-        uint b
-          (match op with
-          | VecRelaxedMAdd `F32 -> 0x105
-          | VecRelaxedNMAdd `F32 -> 0x106
-          | VecRelaxedMAdd `F64 -> 0x107
-          | VecRelaxedNMAdd `F64 -> 0x108
-          | VecRelaxedLaneSelect I8x16 -> 0x109
-          | VecRelaxedLaneSelect I16x8 -> 0x10a
-          | VecRelaxedLaneSelect I32x4 -> 0x10b
-          | VecRelaxedLaneSelect I64x2 -> 0x10c
-          | VecRelaxedDotAdd -> 0x113
-          | VecRelaxedLaneSelect (F32x4 | F64x2) -> assert false)
-    | VecSplat shape ->
-        byte b 0xFD;
-        uint b
-          (match shape with
-          | I8x16 -> 15
-          | I16x8 -> 16
-          | I32x4 -> 17
-          | I64x2 -> 18
-          | F32x4 -> 19
-          | F64x2 -> 20)
+          | _ -> assert false)
     | VecUnOp op ->
         byte b 0xFD;
         uint b
           (match op with
+          | VecNot -> 77
+          | VecDemote -> 94
+          | VecPromote -> 95
           | VecAbs I8x16 -> 96
           | VecNeg I8x16 -> 97
           | VecPopcnt -> 98
-          | VecAbs I16x8 -> 128
-          | VecNeg I16x8 -> 129
+          | VecCeil `F32 -> 103
+          | VecFloor `F32 -> 104
+          | VecTrunc `F32 -> 105
+          | VecNearest `F32 -> 106
+          | VecCeil `F64 -> 116
+          | VecFloor `F64 -> 117
+          | VecTrunc `F64 -> 122
           | VecExtAddPairwise (Signed, `I8) -> 124
           | VecExtAddPairwise (Unsigned, `I8) -> 125
+          | VecExtAddPairwise (Signed, `I16) -> 126
+          | VecExtAddPairwise (Unsigned, `I16) -> 127
+          | VecAbs I16x8 -> 128
+          | VecNeg I16x8 -> 129
           | VecExtend (`Low, `_8, Signed) -> 135
           | VecExtend (`High, `_8, Signed) -> 136
           | VecExtend (`Low, `_8, Unsigned) -> 137
           | VecExtend (`High, `_8, Unsigned) -> 138
+          | VecNearest `F64 -> 148
           | VecAbs I32x4 -> 160
           | VecNeg I32x4 -> 161
-          | VecExtAddPairwise (Signed, `I16) -> 126
-          | VecExtAddPairwise (Unsigned, `I16) -> 127
           | VecExtend (`Low, `_16, Signed) -> 167
           | VecExtend (`High, `_16, Signed) -> 168
           | VecExtend (`Low, `_16, Unsigned) -> 169
@@ -854,36 +850,26 @@ module Encoder = struct
           | VecAbs F32x4 -> 224
           | VecNeg F32x4 -> 225
           | VecSqrt `F32 -> 227
-          | VecCeil `F32 -> 236
-          | VecFloor `F32 -> 237
-          | VecTrunc `F32 -> 238
-          | VecNearest `F32 -> 239
-          | VecAbs F64x2 -> 240
-          | VecNeg F64x2 -> 241
-          | VecSqrt `F64 -> 243
-          | VecCeil `F64 -> 252
-          | VecFloor `F64 -> 253
-          | VecTrunc `F64 -> 254
-          | VecNearest `F64 -> 255
+          | VecAbs F64x2 -> 236
+          | VecNeg F64x2 -> 237
+          | VecSqrt `F64 -> 239
           | VecTruncSat (`F32, Signed) -> 248
           | VecTruncSat (`F32, Unsigned) -> 249
+          | VecConvert (`F32, Signed) -> 250
+          | VecConvert (`F32, Unsigned) -> 251
           | VecTruncSat (`F64, Signed) -> 252
           | VecTruncSat (`F64, Unsigned) -> 253
+          | VecConvert (`F64, Signed) -> 254
+          | VecConvert (`F64, Unsigned) -> 255
           | VecRelaxedTrunc Signed -> 0x101
           | VecRelaxedTrunc Unsigned -> 0x102
           | VecRelaxedTruncZero Signed -> 0x103
-          | VecRelaxedTruncZero Unsigned -> 0x104
-          | VecConvert (`F32, Signed) -> 250
-          | VecConvert (`F32, Unsigned) -> 251
-          | VecConvert (`F64, Signed) -> 254
-          | VecConvert (`F64, Unsigned) -> 255
-          | VecDemote -> 94
-          | VecPromote -> 95
-          | VecNot -> 77)
+          | VecRelaxedTruncZero Unsigned -> 0x104)
     | VecBinOp op ->
         byte b 0xFD;
         uint b
           (match op with
+          | VecSwizzle -> 14
           | VecEq I8x16 -> 35
           | VecNe I8x16 -> 36
           | VecLt (Some Signed, I8x16) -> 37
@@ -914,56 +900,38 @@ module Encoder = struct
           | VecLe (Some Unsigned, I32x4) -> 62
           | VecGe (Some Signed, I32x4) -> 63
           | VecGe (Some Unsigned, I32x4) -> 64
-          | VecEq I64x2 -> 214
-          | VecNe I64x2 -> 215
-          | VecLt (Some Signed, I64x2) -> 216
-          | VecGt (Some Signed, I64x2) -> 217
-          | VecLe (Some Signed, I64x2) -> 218
-          | VecGe (Some Signed, I64x2) -> 219
-          | VecLt (Some Unsigned, I64x2)
-          | VecGt (Some Unsigned, I64x2)
-          | VecLe (Some Unsigned, I64x2)
-          | VecGe (Some Unsigned, I64x2)
-          | VecMin (Some Unsigned, I64x2)
-          | VecMax (Some Unsigned, I64x2) ->
-              failwith "Not supported for I64x2"
           | VecEq F32x4 -> 65
           | VecNe F32x4 -> 66
           | VecLt (None, F32x4) -> 67
-          | VecLt (Some _, F32x4) -> failwith "Signage not supported for F32x4"
           | VecGt (None, F32x4) -> 68
-          | VecGt (Some _, F32x4) -> failwith "Signage not supported for F32x4"
           | VecLe (None, F32x4) -> 69
-          | VecLe (Some _, F32x4) -> failwith "Signage not supported for F32x4"
           | VecGe (None, F32x4) -> 70
-          | VecGe (Some _, F32x4) -> failwith "Signage not supported for F32x4"
           | VecEq F64x2 -> 71
           | VecNe F64x2 -> 72
           | VecLt (None, F64x2) -> 73
-          | VecLt (Some _, F64x2) -> failwith "Signage not supported for F64x2"
           | VecGt (None, F64x2) -> 74
-          | VecGt (Some _, F64x2) -> failwith "Signage not supported for F64x2"
           | VecLe (None, F64x2) -> 75
-          | VecLe (Some _, F64x2) -> failwith "Signage not supported for F64x2"
           | VecGe (None, F64x2) -> 76
-          | VecGe (Some _, F64x2) -> failwith "Signage not supported for F64x2"
           | VecAnd -> 78
           | VecAndNot -> 79
           | VecOr -> 80
           | VecXor -> 81
-          | VecSwizzle -> 14
+          | VecNarrow (Signed, `I8) -> 101
+          | VecNarrow (Unsigned, `I8) -> 102
           | VecAdd I8x16 -> 110
           | VecAddSat (Signed, `I8) -> 111
           | VecAddSat (Unsigned, `I8) -> 112
           | VecSub I8x16 -> 113
           | VecSubSat (Signed, `I8) -> 114
           | VecSubSat (Unsigned, `I8) -> 115
-          | VecMul I8x16 -> assert false
           | VecMin (Some Signed, I8x16) -> 118
           | VecMin (Some Unsigned, I8x16) -> 119
           | VecMax (Some Signed, I8x16) -> 120
           | VecMax (Some Unsigned, I8x16) -> 121
           | VecAvgr `I8 -> 123
+          | VecQ15MulrSat -> 130
+          | VecNarrow (Signed, `I16) -> 133
+          | VecNarrow (Unsigned, `I16) -> 134
           | VecAdd I16x8 -> 142
           | VecAddSat (Signed, `I16) -> 143
           | VecAddSat (Unsigned, `I16) -> 144
@@ -976,7 +944,6 @@ module Encoder = struct
           | VecMax (Some Signed, I16x8) -> 152
           | VecMax (Some Unsigned, I16x8) -> 153
           | VecAvgr `I16 -> 155
-          | VecQ15MulrSat -> 99
           | VecExtMulLow (Signed, `_8) -> 156
           | VecExtMulHigh (Signed, `_8) -> 157
           | VecExtMulLow (Unsigned, `_8) -> 158
@@ -994,8 +961,14 @@ module Encoder = struct
           | VecExtMulLow (Unsigned, `_16) -> 190
           | VecExtMulHigh (Unsigned, `_16) -> 191
           | VecAdd I64x2 -> 206
-          | VecSub I64x2 -> 207
-          | VecMul I64x2 -> 208
+          | VecSub I64x2 -> 209
+          | VecMul I64x2 -> 213
+          | VecEq I64x2 -> 214
+          | VecNe I64x2 -> 215
+          | VecLt (Some Signed, I64x2) -> 216
+          | VecGt (Some Signed, I64x2) -> 217
+          | VecLe (Some Signed, I64x2) -> 218
+          | VecGe (Some Signed, I64x2) -> 219
           | VecExtMulLow (Signed, `_32) -> 220
           | VecExtMulHigh (Signed, `_32) -> 221
           | VecExtMulLow (Unsigned, `_32) -> 222
@@ -1008,18 +981,14 @@ module Encoder = struct
           | VecMax (None, F32x4) -> 233
           | VecPMin `F32 -> 234
           | VecPMax `F32 -> 235
-          | VecAdd F64x2 -> 244
-          | VecSub F64x2 -> 245
-          | VecMul F64x2 -> 246
-          | VecDiv `F64 -> 247
-          | VecMin (None, F64x2) -> 248
-          | VecMax (None, F64x2) -> 249
-          | VecPMin `F64 -> 250
-          | VecPMax `F64 -> 251
-          | VecNarrow (Signed, `I8) -> 101
-          | VecNarrow (Unsigned, `I8) -> 102
-          | VecNarrow (Signed, `I16) -> 133
-          | VecNarrow (Unsigned, `I16) -> 138
+          | VecAdd F64x2 -> 240
+          | VecSub F64x2 -> 241
+          | VecMul F64x2 -> 242
+          | VecDiv `F64 -> 243
+          | VecMin (None, F64x2) -> 244
+          | VecMax (None, F64x2) -> 245
+          | VecPMin `F64 -> 246
+          | VecPMax `F64 -> 247
           (* Relaxed SIMD *)
           | VecRelaxedSwizzle -> 0x100
           | VecRelaxedMin F32x4 -> 0x10d
@@ -1028,9 +997,30 @@ module Encoder = struct
           | VecRelaxedMax F64x2 -> 0x110
           | VecRelaxedQ15Mulr -> 0x111
           | VecRelaxedDot -> 0x112
+          | VecMul I8x16
+          | VecLt (Some Unsigned, I64x2)
+          | VecGt (Some Unsigned, I64x2)
+          | VecLe (Some Unsigned, I64x2)
+          | VecGe (Some Unsigned, I64x2)
+          | VecMin (Some Unsigned, I64x2)
+          | VecMax (Some Unsigned, I64x2)
           | VecLt _ | VecGt _ | VecLe _ | VecGe _ | VecMin _ | VecMax _
           | VecRelaxedMin _ | VecRelaxedMax _ ->
               assert false)
+    | VecTernOp op ->
+        byte b 0xFD;
+        uint b
+          (match op with
+          | VecRelaxedMAdd `F32 -> 0x105
+          | VecRelaxedNMAdd `F32 -> 0x106
+          | VecRelaxedMAdd `F64 -> 0x107
+          | VecRelaxedNMAdd `F64 -> 0x108
+          | VecRelaxedLaneSelect I8x16 -> 0x109
+          | VecRelaxedLaneSelect I16x8 -> 0x10a
+          | VecRelaxedLaneSelect I32x4 -> 0x10b
+          | VecRelaxedLaneSelect I64x2 -> 0x10c
+          | VecRelaxedDotAdd -> 0x113
+          | VecRelaxedLaneSelect (F32x4 | F64x2) -> assert false)
     | Folded (i, is) ->
         List.iter (instr ~source_map_t b) is;
         instr ~source_map_t b i

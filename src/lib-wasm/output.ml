@@ -1047,19 +1047,21 @@ let fundecl (idx, typ) =
   option typeuse idx
   @ option
       (fun (params, results) ->
-        [
-          block
-            ((if List.for_all (fun (i, _) -> i = None) params then
-                make_list ~kind:keyword "param"
-                  (fun tl -> List.map valtype tl)
-                  (List.map snd params)
-              else
-                List.map
-                  (fun (i, t) ->
-                    list (keyword "param" :: (opt_id i @ [ valtype t ])))
-                  params)
-            @ valtype_list "result" results);
-        ])
+        if params = [] && results = [] then []
+        else
+          [
+            block
+              ((if List.for_all (fun (i, _) -> i = None) params then
+                  make_list ~kind:keyword "param"
+                    (fun tl -> List.map valtype tl)
+                    (List.map snd params)
+                else
+                  List.map
+                    (fun (i, t) ->
+                      list (keyword "param" :: (opt_id i @ [ valtype t ])))
+                    params)
+              @ valtype_list "result" results);
+          ])
       typ
 
 let expr name e =

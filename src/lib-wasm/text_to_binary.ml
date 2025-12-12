@@ -822,7 +822,15 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
           scan rest table_idx (e :: acc)
       | { desc = T.Table { typ; init = T.Init_segment exprs; _ }; _ } :: rest ->
           let mode =
-            B.Active (table_idx, [ Ast.no_loc (B.Const (B.I32 0l)) ])
+            B.Active
+              ( table_idx,
+                [
+                  Ast.no_loc
+                    (B.Const
+                       (match typ.limits.desc.address_type with
+                       | `I32 -> B.I32 0l
+                       | `I64 -> B.I64 0L));
+                ] )
           in
           let e =
             {
@@ -863,9 +871,17 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
           let init = String.concat "" (List.map (fun s -> s.Ast.desc) init) in
           let d = { B.init; mode } in
           scan rest mem_idx (d :: acc)
-      | { desc = T.Memory { init = Some init; _ }; _ } :: rest ->
+      | { desc = T.Memory { init = Some init; limits; _ }; _ } :: rest ->
           let (mode : 'info B.datamode) =
-            B.Active (mem_idx, [ Ast.no_loc (B.Const (B.I32 0l)) ])
+            B.Active
+              ( mem_idx,
+                [
+                  Ast.no_loc
+                    (B.Const
+                       (match limits.desc.address_type with
+                       | `I32 -> B.I32 0l
+                       | `I64 -> B.I64 0L));
+                ] )
           in
           let init = String.concat "" (List.map (fun s -> s.Ast.desc) init) in
           let d = { B.init; mode } in
