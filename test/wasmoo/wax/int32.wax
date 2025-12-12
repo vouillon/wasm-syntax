@@ -1,0 +1,116 @@
+#[import = ("ints", "parse_int")]
+fn parse_int(_: &eq, _: i32, _: &string) -> i32
+#[import = ("ints", "format_int")]
+fn format_int(_: &eq, _: i32, _: i32) -> &eq
+#[import = ("fail", "caml_failwith")] fn caml_failwith(_: &eq)
+#[import = ("marshal", "caml_serialize_int_1")]
+fn caml_serialize_int_1(_: &eq, _: i32)
+#[import = ("marshal", "caml_serialize_int_4")]
+fn caml_serialize_int_4(_: &eq, _: i32)
+#[import = ("marshal", "caml_deserialize_uint_1")]
+fn caml_deserialize_uint_1(_: &eq) -> i32
+#[import = ("marshal", "caml_deserialize_int_4")]
+fn caml_deserialize_int_4(_: &eq) -> i32
+type string = [mut i8]
+type compare = fn(_: &eq, _: &eq, _: i32) -> i32
+type hash = fn(_: &eq) -> i32
+type fixed_length = { bsize_32: i32, bsize_64: i32 }
+type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
+type deserialize = fn(_: &eq) -> (&eq, i32)
+type dup = fn(_: &eq) -> &eq
+type custom_operations = {
+    id: &string,
+    compare: &?compare,
+    compare_ext: &?compare,
+    hash: &?hash,
+    fixed_length: &?fixed_length,
+    serialize: &?serialize,
+    deserialize: &?deserialize,
+    dup: &?dup
+}
+type custom = open { f: &custom_operations }
+#[export = "int32_ops"]
+const int32_ops: &custom_operations =
+    {custom_operations|
+        id: string#"_i",
+        compare: int32_cmp,
+        compare_ext: null as &?compare,
+        hash: int32_hash,
+        fixed_length: {fixed_length| bsize_32: 4, bsize_64: 4 },
+        serialize: int32_serialize,
+        deserialize: int32_deserialize,
+        dup: int32_dup
+    };
+type int32: custom = { f: &custom_operations, f_2: i32 }
+fn int32_cmp(v1: &eq, v2: &eq, x: i32) -> i32 {
+    let i1: i32;
+    let i2: i32;
+    i1 = (v1 as &int32).f_2;
+    i2 = (v2 as &int32).f_2;
+    (i1 >s i2) - (i1 <s i2);
+}
+fn int32_hash(v: &eq) -> i32 { (v as &int32).f_2; }
+fn int32_serialize(s: &eq, v: &eq) -> (i32, i32) {
+    caml_serialize_int_4(s, (v as &int32).f_2);
+    4;
+    4;
+}
+fn int32_deserialize(s: &eq) -> (&eq, i32) {
+    {int32| f: int32_ops, f_2: caml_deserialize_int_4(s) };
+    4;
+}
+fn int32_dup(v: &eq) -> &eq {
+    let d: &int32;
+    d = v as &int32;
+    {int32| f: d.f, f_2: d.f_2 };
+}
+#[export = "caml_copy_int32"]
+fn caml_copy_int32(i: i32) -> &eq { {int32| f: int32_ops, f_2: i }; }
+#[export = "Int32_val"] fn Int32_val(x: &eq) -> i32 { (x as &int32).f_2; }
+#[export = "caml_int32_bswap"]
+fn caml_int32_bswap(i: i32) -> i32 {
+    rotr(i & 0x00FF00FF, 8) | rotl(i & 0xFF00FF00, 8);
+}
+const INT32_ERRMSG: &string = string#"Int32.of_string";
+#[export = "caml_int32_of_string"]
+fn caml_int32_of_string(v: &eq) -> &eq {
+    become caml_copy_int32(parse_int(v, 32, INT32_ERRMSG));
+}
+#[export = "caml_int32_compare"]
+fn caml_int32_compare(i1: i32, i2: i32) -> &eq {
+    ((i1 >s i2) - (i1 <s i2)) as &i31;
+}
+#[export = "nativeint_ops"]
+const nativeint_ops: &custom_operations =
+    {custom_operations|
+        id: string#"_n",
+        compare: int32_cmp,
+        compare_ext: null as &?compare,
+        hash: int32_hash,
+        fixed_length: {fixed_length| bsize_32: 4, bsize_64: 8 },
+        serialize: nativeint_serialize,
+        deserialize: nativeint_deserialize,
+        dup: int32_dup
+    };
+fn nativeint_serialize(s: &eq, v: &eq) -> (i32, i32) {
+    caml_serialize_int_1(s, 1);
+    caml_serialize_int_4(s, (v as &int32).f_2);
+    4;
+    8;
+}
+fn nativeint_deserialize(s: &eq) -> (&eq, i32) {
+    if caml_deserialize_uint_1(s) != 1 { caml_failwith(string#"foo"); }
+    {int32| f: nativeint_ops, f_2: caml_deserialize_int_4(s) };
+    4;
+}
+#[export = "caml_copy_nativeint"]
+fn caml_copy_nativeint(i: i32) -> &eq { {int32| f: nativeint_ops, f_2: i }; }
+const NATIVEINT_ERRMSG: &string = string#"Native.of_string";
+#[export = "caml_nativeint_of_string"]
+fn caml_nativeint_of_string(v: &eq) -> &eq {
+    become caml_copy_nativeint(parse_int(v, 32, NATIVEINT_ERRMSG));
+}
+#[export = "caml_int32_format"]
+fn caml_int32_format(x: &eq, x_2: &eq) -> &eq {
+    become format_int(x, (x_2 as &int32).f_2, 0);
+}

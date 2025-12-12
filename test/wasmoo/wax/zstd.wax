@@ -1,0 +1,2 @@
+#[export = "caml_zstd_initialize"]
+fn caml_zstd_initialize(x: &eq) -> &eq { 0 as &i31; }

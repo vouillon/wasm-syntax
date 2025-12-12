@@ -1,0 +1,19 @@
+(executable
+ (name gen_dune)
+ (modules gen_dune))
+
+(rule
+ (deps
+  (source_tree wasm-source))
+ (target dune.inc.gen)
+ (action
+  (with-stdout-to
+   %{target}
+   (run ./gen_dune.exe))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff dune.inc dune.inc.gen)))
+
+(include dune.inc)

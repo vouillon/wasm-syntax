@@ -1,0 +1,224 @@
+#[import = ("obj", "object_tag")] const object_tag: i32
+#[import = ("obj", "forward_tag")] const forward_tag: i32
+#[import = ("jsstring", "jsstring_test")] fn jsstring_test(_: &?any) -> i32
+#[import = ("jsstring", "jsstring_hash")]
+fn jsstring_hash(_: i32, _: &?any) -> i32
+type block = [mut &eq]
+type string = [mut i8]
+type float = { f: f64 }
+type js = { f: &?any }
+type compare = fn(_: &eq, _: &eq, _: i32) -> i32
+type hash = fn(_: &eq) -> i32
+type fixed_length = { bsize_32: i32, bsize_64: i32 }
+type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
+type deserialize = fn(_: &eq) -> (&eq, i32)
+type dup = fn(_: &eq) -> &eq
+type custom_operations = {
+    id: &string,
+    compare: &?compare,
+    compare_ext: &?compare,
+    hash: &?hash,
+    fixed_length: &?fixed_length,
+    serialize: &?serialize,
+    deserialize: &?deserialize,
+    dup: &?dup
+}
+type custom = open { f: &custom_operations }
+#[export = "caml_hash_mix_int"]
+fn caml_hash_mix_int(h: i32, d: i32) -> i32 {
+    rotl(rotl(d * 0xcc9e2d51, 15) * 0x1b873593 ^ h, 13) * 5 + 0xe6546b64;
+}
+#[export = "caml_hash_mix_final"]
+fn caml_hash_mix_final(h: i32) -> i32 {
+    h = h ^ h >>u 16;
+    h = h * 0x85ebca6b;
+    h = h ^ h >>u 13;
+    h = h * 0xc2b2ae35;
+    h ^ h >>u 16;
+}
+#[export = "caml_hash_mix_int64"]
+fn caml_hash_mix_int64(h: i32, d: i64) -> i32 {
+    become caml_hash_mix_int
+        (caml_hash_mix_int(h, d as i32), (d >>u 32) as i32);
+}
+#[export = "caml_hash_mix_double"]
+fn caml_hash_mix_double(h: i32, d: f64) -> i32 {
+    let i: i64;
+    i = d.to_bits;
+    if i & 0x7FF0000000000000 == 0x7ff0000000000000 {
+        if i & 0xFFFFFFFFFFFFF != 0 { i = 0x7ff0000000000001; }
+    }
+    if i == 0x8000000000000000 { i = 0; }
+    become caml_hash_mix_int64(h, i);
+}
+#[export = "caml_hash_mix_float"]
+fn caml_hash_mix_float(h: i32, d: f32) -> i32 {
+    let i: i32;
+    i = d.to_bits;
+    if i & 0x7F800000 == 0x7F800000 {
+        if i & 0x7FFFFF != 0 { i = 0x7F800001; }
+    }
+    if i == 0x80000000 { i = 0; }
+    become caml_hash_mix_int(h, i);
+}
+#[export = "caml_hash_mix_string"]
+fn caml_hash_mix_string(h: i32, s: &string) -> i32 {
+    let i: i32;
+    let len: i32;
+    let w: i32;
+    len = s.length;
+    i = 0;
+    'loop: loop {
+        if i + 4 <=u len {
+            h =
+                caml_hash_mix_int
+                    (h,
+                     s[i] as i32_u | s[i + 1] as i32_u << 8 |
+                         (s[i + 2] as i32_u << 16 | s[i + 3] as i32_u << 24));
+            i = i + 4;
+            br 'loop;
+        }
+    } /* 'loop */
+    w = 0;
+    'l_2: {
+        'l_3: {
+            'l_4: {
+                'l_5: { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] (len & 3); }
+                w = s[i + 2] as i32_u << 16;
+            }
+            w = w | s[i + 1] as i32_u << 8;
+        } /* 'l_3 */
+        w = w | s[i] as i32_u;
+        h = caml_hash_mix_int(h, w);
+    } /* 'l_2 */
+    h ^ len;
+}
+const HASH_QUEUE_SIZE: i32 = 256;
+const MAX_FORWARD_DEREFERENCE: i32 = 1000;
+const caml_hash_queue: &block = [block| 0 as &i31; HASH_QUEUE_SIZE];
+#[export = "caml_hash"]
+fn caml_hash(count: &eq, limit: &eq, seed: &eq, obj: &eq) -> &eq {
+    let sz: i32;
+    let num: i32;
+    let h: i32;
+    let rd: i32;
+    let wr: i32;
+    let v: &eq;
+    let b: &block;
+    let i: i32;
+    let len: i32;
+    let tag_2: i32;
+    let str: &?any;
+    sz = limit as &i31 as i32_u;
+    if sz >u HASH_QUEUE_SIZE { sz = HASH_QUEUE_SIZE; }
+    num = count as &i31 as i32_u;
+    h = seed as &i31 as i32_s;
+    caml_hash_queue[0] = obj;
+    rd = 0;
+    wr = 1;
+    'loop: loop {
+        if (rd <u wr) & (num >u 0) {
+            v = caml_hash_queue[rd];
+            rd = rd + 1;
+            'again: {
+                _ =
+                    'not_int: do &eq {
+                        h =
+                            caml_hash_mix_int
+                                (h,
+                                 ((br_on_cast_fail 'not_int &i31 v) as i32_s
+                                      << 1)
+                                     + 1);
+                        num = num - 1;
+                        br 'loop;
+                    };
+                _ =
+                    'not_string: do &eq {
+                        h =
+                            caml_hash_mix_string
+                                (h, br_on_cast_fail 'not_string &string v);
+                        num = num - 1;
+                        br 'loop;
+                    };
+                _ =
+                    'not_block: do &eq {
+                        b = br_on_cast_fail 'not_block &block v;
+                        tag_2 = b[0] as &i31 as i32_u;
+                        if tag_2 == forward_tag {
+                            i = 0;
+                            'forward: loop {
+                                v = b[1];
+                                _ =
+                                    'not_block': do &eq {
+                                        b =
+                                            br_on_cast_fail 'not_block'
+                                                &block v;
+                                        br_if 'again
+                                            !(b[0] == forward_tag as &i31);
+                                        i = i + 1;
+                                        br_if 'loop
+                                            (i == MAX_FORWARD_DEREFERENCE);
+                                        br 'forward;
+                                    } /* 'not_block' */;
+                                br 'again;
+                            }
+                        }
+                        if tag_2 == object_tag {
+                            h = caml_hash_mix_int(h, b[2] as &i31 as i32_s);
+                            br 'loop;
+                        }
+                        len = b.length;
+                        h = caml_hash_mix_int(h, len - 1 << 10 | tag_2);
+                        i = 1;
+                        'block_iter: loop &eq {
+                            br_if 'loop (i >=u len);
+                            br_if 'loop (wr >=u sz);
+                            caml_hash_queue[wr] = b[i];
+                            wr = wr + 1;
+                            i = i + 1;
+                            br 'block_iter;
+                        } /* 'block_iter */
+                    } /* 'not_block */;
+                _ =
+                    'not_float: do &eq {
+                        h =
+                            caml_hash_mix_double
+                                (h, (br_on_cast_fail 'not_float &float v).f);
+                        num = num - 1;
+                        br 'loop;
+                    };
+                _ =
+                    'not_custom: do &eq {
+                        h =
+                            caml_hash_mix_int
+                                (h,
+                                 (br_on_null 'loop
+                                      (br_on_cast_fail 'not_custom &custom v).f.hash)
+                                     (v));
+                        num = num - 1;
+                        br 'loop;
+                    };
+                _ =
+                    'not_jsstring: do &?any {
+                        str = (br_on_cast_fail 'not_jsstring &js v).f;
+                        _ =
+                            br_if 'not_jsstring
+                                (0 as &i31, !jsstring_test(str));
+                        h = jsstring_hash(h, str);
+                        0 as &i31;
+                    };
+                br 'loop;
+            } /* 'again */
+        }
+    } /* 'loop */
+    caml_hash_queue.fill(0, 0 as &i31, wr);
+    (caml_hash_mix_final(h) & 0x3FFFFFFF) as &i31;
+}
+#[export = "caml_string_hash"]
+fn caml_string_hash(x: &eq, x_2: &eq) -> &eq {
+    let h: i32;
+    (caml_hash_mix_final
+         (caml_hash_mix_string(x as &i31 as i32_s, x_2 as &string)) &
+         0x3FFFFFFF)
+        as &i31;
+}

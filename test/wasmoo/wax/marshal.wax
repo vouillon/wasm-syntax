@@ -1,0 +1,1078 @@
+#[import = ("fail", "caml_failwith")] fn caml_failwith(_: &eq)
+#[import = ("fail", "caml_invalid_argument")]
+fn caml_invalid_argument(_: &eq)
+#[import = ("fail", "caml_raise_end_of_file")] fn caml_raise_end_of_file()
+#[import = ("obj", "double_array_tag")] const double_array_tag: i32
+#[import = ("string", "caml_string_concat")]
+fn caml_string_concat(_: &eq, _: &eq) -> &eq
+#[import = ("obj", "caml_is_closure")] fn caml_is_closure(_: &eq) -> i32
+#[import = ("effect", "caml_is_continuation")]
+fn caml_is_continuation(_: &eq) -> i32
+#[import = ("bindings", "map_new")] fn map_new() -> &any
+#[import = ("bindings", "map_get")] fn map_get(_: &any, _: &eq) -> &?i31
+#[import = ("bindings", "map_set")] fn map_set(_: &any, _: &eq, _: &i31)
+#[import = ("io", "caml_really_putblock")]
+fn caml_really_putblock(_: &eq, _: &string, _: i32, _: i32)
+#[import = ("io", "caml_really_getblock")]
+fn caml_really_getblock(_: &eq, _: &string, _: i32, _: i32) -> i32
+#[import = ("io", "caml_flush_if_unbuffered")]
+fn caml_flush_if_unbuffered(_: &eq)
+#[import = ("custom", "caml_init_custom_operations")]
+fn caml_init_custom_operations()
+#[import = ("custom", "caml_find_custom_operations")]
+fn caml_find_custom_operations(_: &string) -> &?custom_operations
+#[import = ("version-dependent", "caml_marshal_header_size")]
+const caml_marshal_header_size: i32
+const input_val_from_string: &string = string#"input_val_from_string";
+#[export = "caml_input_value_from_bytes"]
+fn caml_input_value_from_bytes(vstr: &eq, vofs: &eq) -> &eq {
+    let str: &string;
+    let ofs: i32;
+    let s: &intern_state;
+    let h: &marshal_header;
+    str = vstr as &string;
+    ofs = vofs as &i31 as i32_u;
+    s = get_intern_state(str, ofs);
+    h = parse_header(s, input_val_from_string);
+    if ofs + (h.data_len + 20) >s str.length {
+        bad_length(input_val_from_string);
+    }
+    become intern_rec(s, h);
+}
+const input_value: &string = string#"input_value";
+#[export = "caml_input_value"]
+fn caml_input_value(ch: &eq) -> &eq {
+    let r: i32;
+    let len: i32;
+    let header: &string;
+    let buf: &string;
+    let s: &intern_state;
+    let h: &marshal_header;
+    header = [string| 0; 20];
+    r = caml_really_getblock(ch, header, 0, 20);
+    if !r { caml_raise_end_of_file(); }
+    if r <u 20 { caml_failwith(string#"foo"); }
+    s = get_intern_state(header, 0);
+    h = parse_header(s, input_value);
+    len = h.data_len;
+    buf = [string| 0; len];
+    if caml_really_getblock(ch, buf, 0, len) <u len {
+        caml_failwith(string#"foo");
+    }
+    s = get_intern_state(buf, 0);
+    become intern_rec(s, h);
+}
+type block = [mut &eq]
+type string = [mut i8]
+type float = { f: f64 }
+type float_array = [mut f64]
+type js = { f: &?any }
+type compare = fn(_: &eq, _: &eq, _: i32) -> i32
+type hash = fn(_: &eq) -> i32
+type fixed_length = { bsize_32: i32, bsize_64: i32 }
+type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
+type deserialize = fn(_: &eq) -> (&eq, i32)
+type dup = fn(_: &eq) -> &eq
+type custom_operations = {
+    id: &string,
+    compare: &?compare,
+    compare_ext: &?compare,
+    hash: &?hash,
+    fixed_length: &?fixed_length,
+    serialize: &?serialize,
+    deserialize: &?deserialize,
+    dup: &?dup
+}
+type custom = open { f: &custom_operations }
+const Intext_magic_number_small: i32 = 0x8495A6BE;
+const Intext_magic_number_big: i32 = 0x8495A6BF;
+const PREFIX_SMALL_BLOCK: i32 = 0x80;
+const PREFIX_SMALL_INT: i32 = 0x40;
+const PREFIX_SMALL_STRING: i32 = 0x20;
+const CODE_INT8: i32 = 0x00;
+const CODE_INT16: i32 = 0x01;
+const CODE_INT32: i32 = 0x02;
+const CODE_INT64: i32 = 0x03;
+const CODE_SHARED8: i32 = 0x04;
+const CODE_SHARED16: i32 = 0x05;
+const CODE_SHARED32: i32 = 0x06;
+const CODE_BLOCK32: i32 = 0x08;
+const CODE_BLOCK64: i32 = 0x13;
+const CODE_STRING8: i32 = 0x09;
+const CODE_STRING32: i32 = 0x0A;
+const CODE_DOUBLE_BIG: i32 = 0x0B;
+const CODE_DOUBLE_LITTLE: i32 = 0x0C;
+const CODE_DOUBLE_ARRAY8_BIG: i32 = 0x0D;
+const CODE_DOUBLE_ARRAY8_LITTLE: i32 = 0x0E;
+const CODE_DOUBLE_ARRAY32_BIG: i32 = 0x0F;
+const CODE_DOUBLE_ARRAY32_LITTLE: i32 = 0x07;
+const CODE_CODEPOINTER: i32 = 0x10;
+const CODE_INFIXPOINTER: i32 = 0x11;
+const CODE_CUSTOM: i32 = 0x12;
+const CODE_CUSTOM_LEN: i32 = 0x18;
+const CODE_CUSTOM_FIXED: i32 = 0x19;
+type intern_state = {
+    src: &string,
+    pos: mut i32,
+    obj_table: mut &?block,
+    obj_counter: mut i32
+}
+fn get_intern_state(src: &string, pos: i32) -> &intern_state {
+    {intern_state|
+        src: src,
+        pos: pos,
+        obj_table: null as &?block,
+        obj_counter: 0
+    };
+}
+fn read8u(s: &intern_state) -> i32 {
+    let pos: i32;
+    let res: i32;
+    pos = s.pos;
+    res = s.src[pos] as i32_u;
+    s.pos = pos + 1;
+    res;
+}
+fn read8s(s: &intern_state) -> i32 {
+    let pos: i32;
+    let res: i32;
+    pos = s.pos;
+    res = s.src[pos] as i32_s;
+    s.pos = pos + 1;
+    res;
+}
+fn read16u(s: &intern_state) -> i32 {
+    let src: &string;
+    let pos: i32;
+    let res: i32;
+    src = s.src;
+    pos = s.pos;
+    res = src[pos] as i32_u << 8 | src[pos + 1] as i32_u;
+    s.pos = pos + 2;
+    res;
+}
+fn read16s(s: &intern_state) -> i32 {
+    let src: &string;
+    let pos: i32;
+    let res: i32;
+    src = s.src;
+    pos = s.pos;
+    res = src[pos] as i32_s << 8 | src[pos + 1] as i32_u;
+    s.pos = pos + 2;
+    res;
+}
+fn read32(s: &intern_state) -> i32 {
+    let src: &string;
+    let pos: i32;
+    let res: i32;
+    src = s.src;
+    pos = s.pos;
+    res =
+        src[pos] as i32_u << 24 | src[pos + 1] as i32_u << 16 |
+            (src[pos + 2] as i32_u << 8 | src[pos + 3] as i32_u);
+    s.pos = pos + 4;
+    res;
+}
+fn readblock(s: &intern_state, str: &string) {
+    let len: i32;
+    let pos: i32;
+    len = str.length;
+    pos = s.pos;
+    str.copy(0, s.src, pos, len);
+    s.pos = pos + len;
+}
+fn readstr(s: &intern_state) -> &string {
+    let len: i32;
+    let pos: i32;
+    let res: &string;
+    let src: &string;
+    src = s.src;
+    pos = s.pos;
+    'loop: loop { if src[pos + len] as i32_u { len = len + 1; br 'loop; } }
+    res = [string| 0; len];
+    res.copy(0, src, pos, len);
+    s.pos = pos + (len + 1);
+    res;
+}
+fn readfloat(s: &intern_state, code: i32) -> f64 {
+    let src: &string;
+    let pos: i32;
+    let res: i32;
+    let d: i64;
+    let i: i32;
+    let v: &eq;
+    src = s.src;
+    pos = s.pos;
+    s.pos = pos + 8;
+    if code == CODE_DOUBLE_BIG {
+        'loop: loop {
+            d = d << 8 | src[pos + i] as i32_u as i64_u;
+            i = i + 1;
+            br_if 'loop (i <u 8);
+        }
+    } else {
+        'loop: loop {
+            d = rotr(d | src[pos + i] as i32_u as i64_u, 8);
+            i = i + 1;
+            br_if 'loop (i <u 8);
+        }
+    }
+    d.from_bits;
+}
+fn readfloats(s: &intern_state, code: i32, len: i32) -> &eq {
+    let dest: &float_array;
+    let i: i32;
+    code =
+        (code == CODE_DOUBLE_ARRAY8_BIG) | (code == CODE_DOUBLE_ARRAY32_BIG)
+            ?CODE_DOUBLE_BIG:CODE_DOUBLE_LITTLE;
+    dest = [float_array| 0.; len];
+    'loop: loop {
+        if i <u len { dest[i] = readfloat(s, code); i = i + 1; br 'loop; }
+    } /* 'loop */
+    dest;
+}
+#[export = "caml_deserialize_uint_1"]
+fn caml_deserialize_uint_1(s: &eq) -> i32 {
+    become read8u(s as &intern_state);
+}
+#[export = "caml_deserialize_sint_1"]
+fn caml_deserialize_sint_1(s: &eq) -> i32 {
+    become read8s(s as &intern_state);
+}
+#[export = "caml_deserialize_uint_2"]
+fn caml_deserialize_uint_2(s: &eq) -> i32 {
+    become read16u(s as &intern_state);
+}
+#[export = "caml_deserialize_sint_2"]
+fn caml_deserialize_sint_2(s: &eq) -> i32 {
+    become read16s(s as &intern_state);
+}
+#[export = "caml_deserialize_int_4"]
+fn caml_deserialize_int_4(s: &eq) -> i32 {
+    become read32(s as &intern_state);
+}
+#[export = "caml_deserialize_int_8"]
+fn caml_deserialize_int_8(vs: &eq) -> i64 {
+    let s: &intern_state;
+    s = vs as &intern_state;
+    read32(s) as i64_u << 32 | read32(s) as i64_u;
+}
+fn register_object(s: &intern_state, v: &eq) {
+    let obj_table: &block;
+    let p: i32;
+    'exit: {
+        obj_table = br_on_null 'exit s.obj_table;
+        p = s.obj_counter;
+        obj_table[p] = v;
+        s.obj_counter = p + 1;
+    }
+}
+type stack_item = { blk: &block, pos: mut i32, next: &?stack_item }
+fn intern_custom(s: &intern_state, code: i32) -> &eq {
+    let ops: &custom_operations;
+    let expected_size: i32;
+    let res: &eq;
+    let sz: i32;
+    'unknown: {
+        ops = br_on_null 'unknown caml_find_custom_operations(readstr(s));
+        'no_length: {
+            if code == CODE_CUSTOM_FIXED {
+                expected_size =
+                    (br_on_null 'no_length ops.fixed_length).bsize_32;
+            } else {
+                if code == CODE_CUSTOM_LEN {
+                    expected_size = read32(s);
+                    s.pos = s.pos + 8;
+                }
+            }
+            ops.deserialize(s);
+            sz = _;
+            res = _;
+            if (sz != expected_size) & (code != CODE_CUSTOM) {
+                caml_failwith(string#"foo");
+            }
+            return res;
+        } /* 'no_length */
+        caml_failwith(string#"foo");
+    } /* 'unknown */
+    caml_failwith(string#"foo");
+    0 as &i31;
+}
+fn intern_rec(s: &intern_state, h: &marshal_header) -> &eq {
+    let res: &block;
+    let dest: &block;
+    let sp: &?stack_item;
+    let item: &stack_item;
+    let code: i32;
+    let header: i32;
+    let tag_2: i32;
+    let size: i32;
+    let len: i32;
+    let pos: i32;
+    let pos': i32;
+    let ofs: i32;
+    let b: &block;
+    let str: &string;
+    let v: &eq;
+    caml_init_custom_operations();
+    res = [block| 0 as &i31];
+    sp = {stack_item| blk: res, pos: 0, next: null as &?stack_item };
+    size = h.num_objects;
+    if size { s.obj_table = [block| 0 as &i31; size]; }
+    v = 0 as &i31;
+    'exit: {
+        'loop: loop {
+            item = br_on_null 'exit sp;
+            dest = item.blk;
+            pos = item.pos;
+            pos' = pos + 1;
+            item.pos = pos';
+            if pos' == dest.length { sp = item.next; }
+            'done: {
+                'read_block: {
+                    'read_string: {
+                        'read_double_array: {
+                            'read_shared: {
+                                code = read8u(s);
+                                if code >=u PREFIX_SMALL_INT {
+                                    if code >=u PREFIX_SMALL_BLOCK {
+                                        tag_2 = code & 0xF;
+                                        size = code >>u 4 & 0x7;
+                                        br 'read_block;
+                                    } else {
+                                        v = (code & 0x3F) as &i31;
+                                        br 'done;
+                                    }
+                                } else {
+                                    if code >=u PREFIX_SMALL_STRING {
+                                        len = code & 0x1F;
+                                        br 'read_string;
+                                    } else {
+                                        'INT8: {
+                                            'INT16: {
+                                                'INT32: {
+                                                    'INT64: {
+                                                        'SHARED8: {
+                                                            'SHARED16: {
+                                                                'SHARED32: {
+                                                                    'BLOCK32:
+                                                                    {
+                                                                    'STRING8:
+                                                                    {
+                                                                    'STRING32:
+                                                                    {
+                                                                    'DOUBLE:
+                                                                    {
+                                                                    'DOUBLE_ARRAY8:
+                                                                    {
+                                                                    'DOUBLE_ARRAY32:
+                                                                    {
+                                                                    'CODEPOINTER:
+                                                                    {
+                                                                    'CUSTOM:
+                                                                    {
+                                                                    'default:
+                                                                    {
+                                                                    br_table
+                                                                    [ 'INT8
+                                                                    'INT16
+                                                                    'INT32
+                                                                    'INT64
+                                                                    'SHARED8
+                                                                    'SHARED16
+                                                                    'SHARED32
+                                                                    'DOUBLE_ARRAY32
+                                                                    'BLOCK32
+                                                                    'STRING8
+                                                                    'STRING32
+                                                                    'DOUBLE
+                                                                    'DOUBLE
+                                                                    'DOUBLE_ARRAY8
+                                                                    'DOUBLE_ARRAY8
+                                                                    'DOUBLE_ARRAY32
+                                                                    'CODEPOINTER
+                                                                    'CODEPOINTER
+                                                                    'CUSTOM
+                                                                    'default
+                                                                    'default
+                                                                    'default
+                                                                    'default
+                                                                    'default
+                                                                    'CUSTOM
+                                                                    'CUSTOM
+                                                                    else
+                                                                    'default
+                                                                    ] code;
+                                                                    }
+                                                                    caml_failwith
+                                                                    (string#"foo");
+                                                                    br 'done;
+                                                                    }
+                                                                    /* 'CUSTOM */
+                                                                    v =
+                                                                    intern_custom
+                                                                    (s, code);
+                                                                    register_object
+                                                                    (s, v);
+                                                                    br 'done;
+                                                                    }
+                                                                    /* 'CODEPOINTER */
+                                                                    caml_failwith
+                                                                    (string#"foo");
+                                                                    br 'done;
+                                                                    }
+                                                                    /* 'DOUBLE_ARRAY32 */
+                                                                    len =
+                                                                    read32(s);
+                                                                    br
+                                                                    'read_double_array;
+                                                                    }
+                                                                    /* 'DOUBLE_ARRAY8 */
+                                                                    len =
+                                                                    read8u(s);
+                                                                    br
+                                                                    'read_double_array;
+                                                                    }
+                                                                    /* 'DOUBLE */
+                                                                    v =
+                                                                    {float|
+                                                                    f:
+                                                                    readfloat
+                                                                    (s, code)
+                                                                    };
+                                                                    register_object
+                                                                    (s, v);
+                                                                    br 'done;
+                                                                    }
+                                                                    /* 'STRING32 */
+                                                                    len =
+                                                                    read32(s);
+                                                                    br
+                                                                    'read_string;
+                                                                    }
+                                                                    /* 'STRING8 */
+                                                                    len =
+                                                                    read8u(s);
+                                                                    br
+                                                                    'read_string;
+                                                                    }
+                                                                    /* 'BLOCK32 */
+                                                                    header =
+                                                                    read32(s);
+                                                                    tag_2 =
+                                                                    header &
+                                                                    0xFF;
+                                                                    size =
+                                                                    header
+                                                                    >>u 10;
+                                                                    br
+                                                                    'read_block;
+                                                                }
+                                                                /* 'SHARED32 */
+                                                                ofs =
+                                                                    read32(s);
+                                                                br
+                                                                    'read_shared;
+                                                            } /* 'SHARED16 */
+                                                            ofs = read16u(s);
+                                                            br 'read_shared;
+                                                        } /* 'SHARED8 */
+                                                        ofs = read8u(s);
+                                                        br 'read_shared;
+                                                    } /* 'INT64 */
+                                                    caml_failwith
+                                                        (string#"foo");
+                                                    br 'done;
+                                                } /* 'INT32 */
+                                                v = read32(s) as &i31;
+                                                br 'done;
+                                            } /* 'INT16 */
+                                            v = read16s(s) as &i31;
+                                            br 'done;
+                                        } /* 'INT8 */
+                                        v = read8s(s) as &i31;
+                                        br 'done;
+                                    }
+                                }
+                            } /* 'read_shared */
+                            ofs = s.obj_counter - ofs;
+                            v = (s.obj_table!)[ofs];
+                            br 'done;
+                        } /* 'read_double_array */
+                        v = readfloats(s, code, len);
+                        register_object(s, v);
+                        br 'done;
+                    } /* 'read_string */
+                    str = [string| 0; len];
+                    readblock(s, str);
+                    v = str;
+                    register_object(s, v);
+                    br 'done;
+                } /* 'read_block */
+                b = [block| 0 as &i31; size + 1];
+                b[0] = tag_2 as &i31;
+                if size {
+                    register_object(s, b);
+                    sp = {stack_item| blk: b, pos: 1, next: sp };
+                }
+                v = b;
+                br 'done;
+            } /* 'done */
+            dest[pos] = v;
+            br 'loop;
+        } /* 'loop */
+    } /* 'exit */
+    res[0];
+}
+fn too_large(prim: &string) {
+    caml_failwith(caml_string_concat(prim, string#"foo"));
+}
+fn bad_object(prim: &string) {
+    caml_failwith(caml_string_concat(prim, string#"foo"));
+}
+fn bad_length(prim: &string) {
+    caml_failwith(caml_string_concat(prim, string#"foo"));
+}
+type marshal_header = { data_len: i32, num_objects: i32 }
+fn parse_header(s: &intern_state, prim: &string) -> &marshal_header {
+    let magic: i32;
+    let data_len: i32;
+    let num_objects: i32;
+    let whsize: i32;
+    magic = read32(s);
+    if magic == Intext_magic_number_big { too_large(prim); }
+    if magic != Intext_magic_number_small { bad_object(prim); }
+    data_len = read32(s);
+    num_objects = read32(s);
+    _ = read32(s);
+    _ = read32(s);
+    {marshal_header| data_len: data_len, num_objects: num_objects };
+}
+#[export = "caml_marshal_data_size"]
+fn caml_marshal_data_size(buf: &eq, ofs: &eq) -> &eq {
+    let s: &intern_state;
+    let magic: i32;
+    s = get_intern_state(buf as &string, ofs as &i31 as i32_u);
+    magic = read32(s);
+    if magic == Intext_magic_number_big { too_large(string#"foo"); }
+    if magic != Intext_magic_number_small { bad_object(string#"foo"); }
+    (20 - caml_marshal_header_size + read32(s)) as &i31;
+}
+type output_block = { next: mut &?output_block, end: mut i32, data: &string }
+type extern_state = {
+    no_sharing: i32,
+    user_provided_output: i32,
+    obj_counter: mut i32,
+    size_32: mut i32,
+    size_64: mut i32,
+    pos_table: &any,
+    buf: mut &string,
+    pos: mut i32,
+    limit: mut i32,
+    output_first: &output_block,
+    output_last: mut &output_block
+}
+fn init_extern_state
+(flags: &eq, output: &output_block, pos: i32, user_provided_output: i32) ->
+&extern_state {
+    let b: &block;
+    let no_sharing: i32;
+    'parse_flags: loop {
+        _ =
+            'done: do &eq {
+                b = br_on_cast_fail 'done &block flags;
+                if b[1] == 0 as &i31 { no_sharing = 1; }
+                flags = b[2];
+                br 'parse_flags;
+            } /* 'done */;
+    }
+    {extern_state|
+        no_sharing: no_sharing,
+        user_provided_output: user_provided_output,
+        obj_counter: 0,
+        size_32: 0,
+        size_64: 0,
+        pos_table: map_new(),
+        buf: output.data,
+        pos: pos,
+        limit: output.end,
+        output_first: output,
+        output_last: output
+    };
+}
+const SIZE_EXTERN_OUTPUT_BLOCK: i32 = 8100;
+fn reserve_extern_output(s: &extern_state, required: i32) -> i32 {
+    let last: &output_block;
+    let blk: &output_block;
+    let pos: i32;
+    let extra: i32;
+    let buf: &string;
+    pos = s.pos;
+    if pos + required <=u s.limit { s.pos = pos + required; return pos; }
+    if s.user_provided_output { caml_failwith(string#"foo"); }
+    last = s.output_last;
+    last.end = s.pos;
+    if required >s SIZE_EXTERN_OUTPUT_BLOCK >>u 1 { extra = required; }
+    buf = [string| 0; SIZE_EXTERN_OUTPUT_BLOCK + extra];
+    blk = {output_block| next: null as &?output_block, end: 0, data: buf };
+    last.next = blk;
+    s.output_last = blk;
+    s.buf = buf;
+    s.pos = required;
+    s.limit = buf.length;
+    0;
+}
+fn store16(s: &string, pos: i32, n: i32) {
+    s[pos] = n >>u 8;
+    s[pos + 1] = n;
+}
+fn store32(s: &string, pos: i32, n: i32) {
+    s[pos] = n >>u 24;
+    s[pos + 1] = n >>u 16;
+    s[pos + 2] = n >>u 8;
+    s[pos + 3] = n;
+}
+fn store64(s: &string, pos: i32, n: i64) {
+    store32(s, pos, (n >>u 32) as i32);
+    store32(s, pos + 4, n as i32);
+}
+fn write(s: &extern_state, c: i32) {
+    let pos: i32;
+    pos = reserve_extern_output(s, 1);
+    s.buf[pos] = c;
+}
+fn writecode8(s: &extern_state, c: i32, v: i32) {
+    let pos: i32;
+    let buf: &string;
+    pos = reserve_extern_output(s, 2);
+    buf = s.buf;
+    buf[pos] = c;
+    buf[pos + 1] = v;
+}
+fn writecode16(s: &extern_state, c: i32, v: i32) {
+    let pos: i32;
+    let buf: &string;
+    pos = reserve_extern_output(s, 3);
+    buf = s.buf;
+    buf[pos] = c;
+    store16(buf, pos + 1, v);
+}
+fn writecode32(s: &extern_state, c: i32, v: i32) {
+    let pos: i32;
+    let buf: &string;
+    pos = reserve_extern_output(s, 5);
+    buf = s.buf;
+    buf[pos] = c;
+    store32(buf, pos + 1, v);
+}
+fn writeblock(s: &extern_state, str: &string) {
+    let len: i32;
+    let pos: i32;
+    len = str.length;
+    pos = reserve_extern_output(s, len);
+    s.buf.copy(pos, str, 0, len);
+}
+fn writefloat(s: &extern_state, f: f64) {
+    let pos: i32;
+    let buf: &string;
+    let d: i64;
+    let i: i32;
+    pos = reserve_extern_output(s, 8);
+    buf = s.buf;
+    d = f.to_bits;
+    'loop: loop {
+        buf[pos + i] = (d >>u (i << 3) as i64_u) as i32;
+        i = i + 1;
+        br_if 'loop (i <u 8);
+    }
+}
+fn writefloats(s: &extern_state, b: &float_array) {
+    let pos: i32;
+    let sz: i32;
+    let buf: &string;
+    let d: i64;
+    let i: i32;
+    let j: i32;
+    sz = b.length;
+    pos = reserve_extern_output(s, sz << 3);
+    buf = s.buf;
+    j = 0;
+    'loop2: loop {
+        if j <u sz {
+            d = b[j].to_bits;
+            i = 0;
+            'loop: loop {
+                buf[pos + i] = (d >>u (i << 3) as i64_u) as i32;
+                i = i + 1;
+                br_if 'loop (i <u 8);
+            }
+            pos = pos + 8;
+            j = j + 1;
+            br 'loop2;
+        }
+    } /* 'loop2 */
+}
+fn extern_lookup_position(s: &extern_state, obj: &eq) -> i32 {
+    'not_found: {
+        br_if 'not_found s.no_sharing;
+        return (br_on_null 'not_found map_get(s.pos_table, obj)) as i32_s;
+    }
+    -1;
+}
+fn extern_record_location(s: &extern_state, obj: &eq) {
+    let pos: i32;
+    if s.no_sharing { return; }
+    pos = s.obj_counter;
+    s.obj_counter = pos + 1;
+    map_set(s.pos_table, obj, pos as &i31);
+}
+fn extern_size(s: &extern_state, s32: i32, s64: i32) {
+    s.size_32 = s.size_32 + (s32 + 1);
+    s.size_64 = s.size_64 + (s64 + 1);
+}
+fn extern_int(s: &extern_state, n: i32) {
+    if (n >=s 0) & (n <s 0x40) {
+        write(s, PREFIX_SMALL_INT + n);
+    } else {
+        if (n >=s -128) & (n <s 128) {
+            writecode8(s, CODE_INT8, n);
+        } else {
+            if (n >=s -32768) & (n <s 32768) {
+                writecode16(s, CODE_INT16, n);
+            } else { writecode32(s, CODE_INT32, n); }
+        }
+    }
+}
+fn extern_shared_reference(s: &extern_state, d: i32) {
+    if d <u 0x100 {
+        writecode8(s, CODE_SHARED8, d);
+    } else {
+        if d <u 0x10000 {
+            writecode16(s, CODE_SHARED16, d);
+        } else { writecode32(s, CODE_SHARED32, d); }
+    }
+}
+fn extern_header(s: &extern_state, sz: i32, tag_2: i32) {
+    if (tag_2 <u 16) & (sz <u 8) {
+        write(s, PREFIX_SMALL_BLOCK + (tag_2 | sz << 4));
+    } else { writecode32(s, CODE_BLOCK32, tag_2 | sz << 10); }
+}
+fn extern_string(s: &extern_state, v: &string) {
+    let len: i32;
+    len = v.length;
+    if len <u 0x20 {
+        write(s, PREFIX_SMALL_STRING + len);
+    } else {
+        if len <u 0x100 {
+            writecode8(s, CODE_STRING8, len);
+        } else { writecode32(s, CODE_STRING32, len); }
+    }
+    writeblock(s, v);
+}
+fn extern_float(s: &extern_state, v: f64) {
+    write(s, CODE_DOUBLE_LITTLE);
+    writefloat(s, v);
+}
+fn extern_float_array(s: &extern_state, v: &float_array) {
+    let nfloats: i32;
+    nfloats = v.length;
+    if nfloats <u 0x100 {
+        writecode8(s, CODE_DOUBLE_ARRAY8_LITTLE, nfloats);
+    } else { writecode32(s, CODE_DOUBLE_ARRAY32_LITTLE, nfloats); }
+    writefloats(s, v);
+}
+fn extern_custom(s: &extern_state, v: &custom) -> (i32, i32) {
+    let ops: &custom_operations;
+    let serialize: &serialize;
+    let fixed_length: &fixed_length;
+    let pos: i32;
+    let buf: &string;
+    let sz32: i32;
+    let sz64: i32;
+    ops = v.f;
+    'abstract: {
+        serialize = br_on_null 'abstract ops.serialize;
+        'variable_length: {
+            fixed_length = br_on_null 'variable_length ops.fixed_length;
+            write(s, CODE_CUSTOM_FIXED);
+            writeblock(s, ops.id);
+            write(s, 0);
+            serialize(s, v);
+            sz64 = _;
+            sz32 = _;
+            if
+                (sz32 != fixed_length.bsize_32) |
+                    (sz64 != fixed_length.bsize_64)
+            {
+                caml_failwith(caml_string_concat(string#"foo", ops.id));
+            }
+            return (sz32, sz64);
+        } /* 'variable_length */
+        write(s, CODE_CUSTOM_LEN);
+        writeblock(s, ops.id);
+        write(s, 0);
+        pos = reserve_extern_output(s, 12);
+        buf = s.buf;
+        serialize(s, v);
+        sz64 = _;
+        sz32 = _;
+        store32(buf, pos, sz32);
+        store32(buf, pos + 8, sz64);
+        return (sz32, sz64);
+    } /* 'abstract */
+    caml_invalid_argument(string#"foo");
+    return (0, 0);
+}
+fn extern_rec(s: &extern_state, v: &eq) {
+    let sp: &?stack_item;
+    let item: &stack_item;
+    let b: &block;
+    let str: &string;
+    let fa: &float_array;
+    let hd: i32;
+    let tag_2: i32;
+    let sz: i32;
+    let pos: i32;
+    let sz32: i32;
+    let sz64: i32;
+    'loop: loop {
+        'next_item: {
+            _ =
+                'not_int: do &eq {
+                    extern_int(s, (br_on_cast_fail 'not_int &i31 v) as i32_s);
+                    br 'next_item;
+                };
+            _ =
+                'not_block: do &eq {
+                    b = br_on_cast_fail 'not_block &block v;
+                    tag_2 = b[0] as &i31 as i32_u;
+                    sz = b.length - 1;
+                    if !sz { extern_header(s, 0, tag_2); br 'next_item; }
+                    pos = extern_lookup_position(s, v);
+                    if pos >=s 0 {
+                        extern_shared_reference(s, s.obj_counter - pos);
+                        br 'next_item;
+                    }
+                    extern_record_location(s, v);
+                    extern_header(s, sz, tag_2);
+                    extern_size(s, sz, sz);
+                    if sz >u 1 {
+                        sp = {stack_item| blk: b, pos: 2, next: sp };
+                    }
+                    v = b[1];
+                    br 'loop;
+                } /* 'not_block */;
+            pos = extern_lookup_position(s, v);
+            if pos >=s 0 {
+                extern_shared_reference(s, s.obj_counter - pos);
+                br 'next_item;
+            }
+            extern_record_location(s, v);
+            _ =
+                'not_string: do &eq {
+                    str = br_on_cast_fail 'not_string &string v;
+                    extern_string(s, str);
+                    sz = str.length;
+                    extern_size(s, 1 + (sz >>u 2), 1 + (sz >>u 3));
+                    br 'next_item;
+                } /* 'not_string */;
+            _ =
+                'not_float: do &eq {
+                    extern_float(s, (br_on_cast_fail 'not_float &float v).f);
+                    extern_size(s, 2, 1);
+                    br 'next_item;
+                };
+            _ =
+                'not_float_array: do &eq {
+                    fa = br_on_cast_fail 'not_float_array &float_array v;
+                    sz = fa.length;
+                    extern_float_array(s, fa);
+                    extern_size(s, sz * 2, sz);
+                    br 'next_item;
+                } /* 'not_float_array */;
+            _ =
+                'not_custom: do &eq {
+                    extern_custom(s, br_on_cast_fail 'not_custom &custom v);
+                    sz64 = _;
+                    sz32 = _;
+                    extern_size(s, sz32 + 7 >>u 2, sz64 + 15 >>u 3);
+                    br 'next_item;
+                } /* 'not_custom */;
+            if caml_is_closure(v) { caml_invalid_argument(string#"foo"); }
+            if caml_is_continuation(v) {
+                caml_invalid_argument(string#"foo");
+            }
+            if v is &js { caml_invalid_argument(string#"foo"); }
+            caml_invalid_argument(string#"foo");
+        } /* 'next_item */
+        'done: {
+            item = br_on_null 'done sp;
+            b = item.blk;
+            pos = item.pos;
+            v = b[pos];
+            pos = pos + 1;
+            item.pos = pos;
+            if pos == b.length { sp = item.next; }
+            br 'loop;
+        } /* 'done */
+    } /* 'loop */
+}
+fn extern_output_length(s: &extern_state, pos: i32) -> i32 {
+    let len: i32;
+    let output_block: &output_block;
+    if s.user_provided_output => i32 {
+        return (s.pos - pos);
+    } else {
+        s.output_last.end = s.pos;
+        output_block = s.output_first;
+        'loop: loop {
+            'done: {
+                len = len + output_block.end;
+                output_block = br_on_null 'done output_block.next;
+                br 'loop;
+            }
+        } /* 'loop */
+        return len;
+    }
+}
+fn extern_value
+(flags: &eq, output: &output_block, pos: i32, user_provided_output: i32,
+ v: &eq)
+-> (i32, &string, &extern_state) {
+    let s: &extern_state;
+    let len: i32;
+    let header: &string;
+    s = init_extern_state(flags, output, pos, user_provided_output);
+    extern_rec(s, v);
+    len = extern_output_length(s, pos);
+    header = [string| 0; 20];
+    store32(header, 0, Intext_magic_number_small);
+    store32(header, 4, len);
+    store32(header, 8, s.obj_counter);
+    store32(header, 12, s.size_32);
+    store32(header, 16, s.size_64);
+    len;
+    header;
+    s;
+}
+#[export = "caml_output_value_to_string"]
+fn caml_output_value_to_string(v: &eq, flags: &eq) -> &eq {
+    let sz: i32;
+    let buf: &string;
+    let st: &extern_state;
+    let blk: &output_block;
+    let pos: i32;
+    let len: i32;
+    let res: &string;
+    blk =
+        {output_block|
+            next: null as &?output_block,
+            end: SIZE_EXTERN_OUTPUT_BLOCK,
+            data: [string| 0; SIZE_EXTERN_OUTPUT_BLOCK]
+        };
+    extern_value(flags, blk, 0, 0, v);
+    st = _;
+    buf = _;
+    sz = _;
+    res = [string| 0; sz + 20];
+    res.copy(0, buf, 0, 20);
+    pos = 20;
+    'loop: loop {
+        'done: {
+            len = blk.end;
+            res.copy(pos, blk.data, 0, len);
+            pos = pos + len;
+            blk = br_on_null 'done blk.next;
+            br 'loop;
+        } /* 'done */
+    } /* 'loop */
+    res;
+}
+#[export = "caml_output_value_to_buffer"]
+fn caml_output_value_to_buffer
+(vbuf: &eq, vpos: &eq, vlen: &eq, v: &eq, flags: &eq) -> &eq {
+    let buf: &string;
+    let pos: i32;
+    let len: i32;
+    let sz: i32;
+    let buf_2: &string;
+    let st: &extern_state;
+    let blk: &output_block;
+    buf_2 = vbuf as &string;
+    pos = vpos as &i31 as i32_u;
+    len = vlen as &i31 as i32_u;
+    blk =
+        {output_block|
+            next: null as &?output_block,
+            end: pos + len,
+            data: buf_2
+        };
+    extern_value(flags, blk, pos + 20, 1, v);
+    _ = _;
+    buf_2 = _;
+    _ = _;
+    buf_2.copy(pos, buf_2, 0, 20);
+    0 as &i31;
+}
+#[export = "caml_output_value"]
+fn caml_output_value(ch: &eq, v: &eq, flags: &eq) -> &eq {
+    let sz: i32;
+    let buf: &string;
+    let st: &extern_state;
+    let blk: &output_block;
+    let len: i32;
+    let res: &string;
+    blk =
+        {output_block|
+            next: null as &?output_block,
+            end: SIZE_EXTERN_OUTPUT_BLOCK,
+            data: [string| 0; SIZE_EXTERN_OUTPUT_BLOCK]
+        };
+    extern_value(flags, blk, 0, 0, v);
+    st = _;
+    buf = _;
+    sz = _;
+    caml_really_putblock(ch, buf, 0, 20);
+    'loop: loop {
+        'done: {
+            len = blk.end;
+            caml_really_putblock(ch, blk.data, 0, blk.end);
+            blk = br_on_null 'done blk.next;
+            br 'loop;
+        }
+    } /* 'loop */
+    caml_flush_if_unbuffered(ch);
+    0 as &i31;
+}
+#[export = "caml_serialize_int_1"]
+fn caml_serialize_int_1(vs: &eq, i: i32) {
+    let s: &extern_state;
+    let pos: i32;
+    s = vs as &extern_state;
+    pos = reserve_extern_output(s, 1);
+    s.buf[pos] = i;
+}
+#[export = "caml_serialize_int_2"]
+fn caml_serialize_int_2(vs: &eq, i: i32) {
+    let s: &extern_state;
+    let pos: i32;
+    s = vs as &extern_state;
+    pos = reserve_extern_output(s, 2);
+    store16(s.buf, pos, i);
+}
+#[export = "caml_serialize_int_4"]
+fn caml_serialize_int_4(vs: &eq, i: i32) {
+    let s: &extern_state;
+    let pos: i32;
+    s = vs as &extern_state;
+    pos = reserve_extern_output(s, 4);
+    store32(s.buf, pos, i);
+}
+#[export = "caml_serialize_int_8"]
+fn caml_serialize_int_8(vs: &eq, i: i64) {
+    let s: &extern_state;
+    let pos: i32;
+    s = vs as &extern_state;
+    pos = reserve_extern_output(s, 8);
+    store64(s.buf, pos, i);
+}

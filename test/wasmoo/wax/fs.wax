@@ -1,0 +1,106 @@
+#[import = ("jslib", "log_str")] fn log_str(_: &string)
+#[import = ("bindings", "getcwd")] fn getcwd() -> &?any
+#[import = ("bindings", "chdir")] fn chdir(_: &?any)
+#[import = ("bindings", "mkdir")] fn mkdir(_: &?any, _: i32)
+#[import = ("bindings", "unlink")] fn unlink(_: &?any)
+#[import = ("bindings", "readdir")] fn readdir(_: &?any) -> &extern
+#[import = ("bindings", "file_exists")] fn file_exists(_: &?any) -> &eq
+#[import = ("bindings", "is_directory")] fn is_directory(_: &?any) -> &eq
+#[import = ("bindings", "rename")] fn rename(_: &?any, _: &?any)
+#[import = ("jslib", "wrap")] fn wrap(_: &?any) -> &eq
+#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
+#[import = ("jslib", "caml_string_of_jsstring")]
+fn caml_string_of_jsstring(_: &eq) -> &eq
+#[import = ("jslib", "caml_jsstring_of_string")]
+fn caml_jsstring_of_string(_: &eq) -> &eq
+#[import = ("jslib", "caml_js_to_string_array")]
+fn caml_js_to_string_array(a: &extern) -> &eq
+#[import = ("fail", "caml_raise_sys_error")] fn caml_raise_sys_error(_: &eq)
+#[import = ("fail", "javascript_exception")]
+tag javascript_exception(_: &?extern)
+#[import = ("sys", "caml_handle_sys_error")]
+fn caml_handle_sys_error(_: &?extern)
+type string = [mut i8]
+#[export = "caml_sys_getcwd"]
+fn caml_sys_getcwd(x: &eq) -> &eq {
+    become caml_string_of_jsstring(wrap(getcwd()));
+}
+#[export = "caml_sys_chdir"]
+fn caml_sys_chdir(name: &eq) -> &eq {
+    try {
+        chdir(unwrap(caml_jsstring_of_string(name)));
+    } catch { javascript_exception => { caml_handle_sys_error(_); } }
+    0 as &i31;
+}
+#[export = "caml_sys_mkdir"]
+fn caml_sys_mkdir(name: &eq, perm: &eq) -> &eq {
+    try {
+        mkdir(unwrap(caml_jsstring_of_string(name)), perm as &i31 as i32_u);
+    } catch { javascript_exception => { caml_handle_sys_error(_); } }
+    0 as &i31;
+}
+#[export = "caml_sys_read_directory"]
+fn caml_sys_read_directory(name: &eq) -> &eq {
+    try &eq {
+        return
+            caml_js_to_string_array
+                (readdir(unwrap(caml_jsstring_of_string(name))));
+    } catch {
+        javascript_exception => {
+            caml_handle_sys_error(_);
+            return 0 as &i31;
+        }
+    }
+}
+#[export = "caml_sys_remove"]
+fn caml_sys_remove(name: &eq) -> &eq {
+    try {
+        unlink(unwrap(caml_jsstring_of_string(name)));
+    } catch { javascript_exception => { caml_handle_sys_error(_); } }
+    0 as &i31;
+}
+#[export = "caml_sys_rename"]
+fn caml_sys_rename(o: &eq, n: &eq) -> &eq {
+    try {
+        rename
+            (unwrap(caml_jsstring_of_string(o)),
+             unwrap(caml_jsstring_of_string(n)));
+    } catch { javascript_exception => { caml_handle_sys_error(_); } }
+    0 as &i31;
+}
+#[export = "caml_sys_file_exists"]
+fn caml_sys_file_exists(name: &eq) -> &eq {
+    become file_exists(unwrap(caml_jsstring_of_string(name)));
+}
+fn caml_raise_no_such_file(vname: &eq) {
+    let name: &string;
+    let msg: &string;
+    let len: i32;
+    name = vname as &string;
+    len = name.length;
+    msg = [string| 0; len + 27];
+    msg.copy(0, name, 0, len);
+    msg;
+    len;
+    0;
+    27;
+    unreachable;
+    caml_raise_sys_error(msg);
+}
+#[export = "caml_read_file_content"]
+fn caml_read_file_content(x: &eq) -> &eq {
+    caml_raise_no_such_file(x);
+    0 as &i31;
+}
+#[export = "caml_fs_init"] fn caml_fs_init() -> &eq { 0 as &i31; }
+#[export = "caml_sys_is_directory"]
+fn caml_sys_is_directory(name: &eq) -> &eq {
+    try &eq {
+        return is_directory(unwrap(caml_jsstring_of_string(name)));
+    } catch {
+        javascript_exception => {
+            caml_handle_sys_error(_);
+            return 0 as &i31;
+        }
+    }
+}

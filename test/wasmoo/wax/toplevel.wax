@@ -1,0 +1,2 @@
+#[export = "caml_terminfo_rows"]
+fn caml_terminfo_rows(x: &eq) -> &eq { 0 as &i31; }

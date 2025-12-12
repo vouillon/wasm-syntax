@@ -1,0 +1,418 @@
+#[import = ("bindings", "equals")] fn equals(_: &?any, _: &?any) -> i32
+#[import = ("obj", "forward_tag")] const forward_tag: i32
+#[import = ("obj", "object_tag")] const object_tag: i32
+#[import = ("obj", "double_array_tag")] const double_array_tag: i32
+#[import = ("obj", "caml_obj_tag")] fn caml_obj_tag(_: &eq) -> &eq
+#[import = ("obj", "caml_is_closure")] fn caml_is_closure(_: &eq) -> i32
+#[import = ("fail", "caml_invalid_argument")]
+fn caml_invalid_argument(_: &eq)
+#[import = ("effect", "caml_is_continuation")]
+fn caml_is_continuation(_: &eq) -> i32
+#[import = ("string", "caml_string_compare")]
+fn caml_string_compare(_: &eq, _: &eq) -> &eq
+#[import = ("jsstring", "jsstring_test")] fn jsstring_test(_: &?any) -> i32
+#[import = ("jsstring", "jsstring_compare")]
+fn jsstring_compare(_: &?any, _: &?any) -> i32
+type block = [mut &eq]
+type string = [mut i8]
+type float = { f: f64 }
+type float_array = [mut f64]
+type js = { f: &?any }
+type int_array = [mut i32]
+type block_array = [mut &block]
+type compare_stack = {
+    f: mut i32,
+    f_2: &block_array,
+    f_3: &block_array,
+    f_4: &int_array
+}
+type compare = fn(_: &eq, _: &eq, _: i32) -> i32
+type hash = fn(_: &eq) -> i32
+type fixed_length = { bsize_32: i32, bsize_64: i32 }
+type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
+type deserialize = fn(_: &eq) -> (&eq, i32)
+type dup = fn(_: &eq) -> &eq
+type custom_operations = {
+    id: &string,
+    compare: &?compare,
+    compare_ext: &?compare,
+    hash: &?hash,
+    fixed_length: &?fixed_length,
+    serialize: &?serialize,
+    deserialize: &?deserialize,
+    dup: &?dup
+}
+type custom = open { f: &custom_operations }
+const dummy_block: &block = [block| 0 as &i31; 0];
+const default_compare_stack: &compare_stack =
+    {compare_stack|
+        f: -1,
+        f_2: [block_array| dummy_block; 8],
+        f_3: [block_array| dummy_block; 8],
+        f_4: [int_array| 0; 8]
+    };
+fn compare_stack_is_not_empty(stack: &compare_stack) -> i32 {
+    stack.f >=s 0;
+}
+fn pop_compare_stack(stack: &compare_stack) -> (&eq, &eq) {
+    let i: i32;
+    let p: i32;
+    let p': i32;
+    let v1: &block;
+    let v2: &block;
+    i = stack.f;
+    p = stack.f_4[i];
+    p' = p + 1;
+    stack.f_4[i] = p';
+    v1 = stack.f_2[i];
+    v2 = stack.f_3[i];
+    if p' == v1.length {
+        stack.f_2[i] = dummy_block;
+        stack.f_3[i] = dummy_block;
+        stack.f = i - 1;
+    }
+    v1[p];
+    v2[p];
+}
+fn push_compare_stack(stack: &compare_stack, v1: &block, v2: &block, p: i32)
+-> &compare_stack {
+    let i: i32;
+    let len: i32;
+    let len': i32;
+    let stack': &compare_stack;
+    i = stack.f + 1;
+    len = stack.f_2.length;
+    if i >=u len {
+        len' = len << 1;
+        stack' =
+            {compare_stack|
+                f: i,
+                f_2: [block_array| dummy_block; len'],
+                f_3: [block_array| dummy_block; len'],
+                f_4: [int_array| 0; len']
+            };
+        stack'.f_2.copy(0, stack.f_2, 0, len);
+        stack'.f_3.copy(0, stack.f_3, 0, len);
+        stack'.f_4.copy(0, stack.f_4, 0, len);
+        stack = stack';
+    }
+    stack.f = i;
+    stack.f_2[i] = v1;
+    stack.f_3[i] = v2;
+    stack.f_4[i] = p;
+    stack;
+}
+#[export = "unordered"] const unordered: i32 = 0x80000000;
+fn compare_strings(s1: &string, s2: &string) -> i32 {
+    let l1: i32;
+    let l2: i32;
+    let len: i32;
+    let i: i32;
+    let c1: i32;
+    let c2: i32;
+    if s1 == s2 { return 0; }
+    l1 = s1.length;
+    l2 = s2.length;
+    len = l1 <=u l2?l1:l2;
+    i = 0;
+    'loop: loop {
+        if i <s len {
+            c1 = s1[i] as i32_u;
+            c2 = s2[i] as i32_u;
+            if c1 != c2 { if c1 <=u c2 { return -1; } else { return 1; } }
+            i = i + 1;
+            br 'loop;
+        }
+    } /* 'loop */
+    l1 - l2;
+}
+fn clear_compare_stack() {
+    let stack: &compare_stack;
+    let n: i32;
+    let res: i32;
+    stack = default_compare_stack;
+    n = stack.f;
+    if n >=s 0 {
+        n = n + 1;
+        stack.f_2.fill(0, dummy_block, n);
+        stack.f_3.fill(0, dummy_block, n);
+    }
+}
+fn compare_val(v1: &eq, v2: &eq, total: i32) -> i32 {
+    let stack: &compare_stack;
+    let n: i32;
+    let res: i32;
+    stack = default_compare_stack;
+    stack.f = -1;
+    res = do_compare_val(stack, v1, v2, total);
+    clear_compare_stack();
+    res;
+}
+fn do_compare_val(stack: &compare_stack, v1: &eq, v2: &eq, total: i32) -> i32
+{
+    let i: i32;
+    let i1: &i31;
+    let i2: &i31;
+    let b1: &block;
+    let b2: &block;
+    let t1: i32;
+    let t2: i32;
+    let s1: i32;
+    let s2: i32;
+    let f1: f64;
+    let f2: f64;
+    let fa1: &float_array;
+    let fa2: &float_array;
+    let str1: &string;
+    let str2: &string;
+    let c1: &custom;
+    let c2: &custom;
+    let js1: &?any;
+    let js2: &?any;
+    let res: i32;
+    'loop: loop {
+        'next_item: {
+            if total { br_if 'next_item (v1 == v2); }
+            _ =
+                'v1_is_not_int: do &eq {
+                    i1 = br_on_cast_fail 'v1_is_not_int &i31 v1;
+                    br_if 'next_item (v1 == v2);
+                    _ =
+                        'v2_is_not_int: do &eq {
+                            i2 = br_on_cast_fail 'v2_is_not_int &i31 v2;
+                            return (i1 as i32_s - i2 as i32_s);
+                        };
+                    _ =
+                        'v2_not_forward: do &eq {
+                            b2 = br_on_cast_fail 'v2_not_forward &block v2;
+                            t2 = b2[0] as &i31 as i32_u;
+                            if t2 == forward_tag { v2 = b2[1]; br 'loop; }
+                            1 as &i31;
+                        } /* 'v2_not_forward */;
+                    'v2_not_comparable: {
+                        _ =
+                            'v2_not_custom: do &eq {
+                                c2 =
+                                    br_on_cast_fail 'v2_not_custom &custom v2;
+                                res =
+                                    (br_on_null 'v2_not_comparable
+                                         c2.f.compare_ext)
+                                        (v1, v2, total);
+                                br_if 'next_item !res;
+                                return res;
+                            };
+                    }
+                    return -1;
+                } /* 'v1_is_not_int */;
+            if v2 is &i31 {
+                _ =
+                    'v1_not_forward: do &eq {
+                        b1 = br_on_cast_fail 'v1_not_forward &block v1;
+                        t1 = b1[0] as &i31 as i32_u;
+                        if t1 == forward_tag { v1 = b1[1]; br 'loop; }
+                        1 as &i31;
+                    } /* 'v1_not_forward */;
+                'v1_not_comparable: {
+                    _ =
+                        'v1_not_custom: do &eq {
+                            c1 = br_on_cast_fail 'v1_not_custom &custom v1;
+                            res =
+                                (br_on_null 'v1_not_comparable
+                                     c1.f.compare_ext)
+                                    (v1, v2, total);
+                            br_if 'next_item !res;
+                            return res;
+                        };
+                }
+                return 1;
+            }
+            _ =
+                'heterogeneous: do &eq {
+                    _ =
+                        'v1_not_block: do &eq {
+                            b1 = br_on_cast_fail 'v1_not_block &block v1;
+                            t1 = b1[0] as &i31 as i32_u;
+                            b2 = br_on_cast_fail 'heterogeneous &block v2;
+                            t2 = b2[0] as &i31 as i32_u;
+                            _ = br_if 'heterogeneous (0 as &i31, t1 != t2);
+                            if t1 == forward_tag {
+                                v1 = b1[1];
+                                v2 = b2[1];
+                                br 'loop;
+                            }
+                            if t1 == object_tag {
+                                v1 = b1[2];
+                                v2 = b2[2];
+                                br_if 'next_item (v1 == v2);
+                                return
+                                    (v1 as &i31 as i32_s -
+                                         v2 as &i31 as i32_s);
+                            }
+                            s1 = b1.length;
+                            s2 = b2.length;
+                            if s1 != s2 { return (s1 - s2); }
+                            br_if 'next_item (s1 == 1);
+                            if s1 >u 2 {
+                                stack = push_compare_stack(stack, b1, b2, 2);
+                            }
+                            v1 = b1[1];
+                            v2 = b2[1];
+                            br 'loop;
+                        } /* 'v1_not_block */;
+                    _ =
+                        'v1_not_float: do &eq {
+                            f1 = (br_on_cast_fail 'v1_not_float &float v1).f;
+                            f2 = (br_on_cast_fail 'heterogeneous &float v2).f;
+                            if f1 < f2 { return -1; }
+                            if f1 > f2 { return 1; }
+                            if f1 != f2 {
+                                if !total { return unordered; }
+                                if f1 == f1 { return 1; }
+                                if f2 == f2 { return -1; }
+                            }
+                            br 'next_item;
+                        } /* 'v1_not_float */;
+                    _ =
+                        'v1_not_string: do &eq {
+                            str1 = br_on_cast_fail 'v1_not_string &string v1;
+                            str2 = br_on_cast_fail 'heterogeneous &string v2;
+                            res = compare_strings(str1, str2);
+                            br_if 'next_item !res;
+                            return res;
+                        } /* 'v1_not_string */;
+                    _ =
+                        'v1_not_float_array: do &eq {
+                            fa1 =
+                                br_on_cast_fail 'v1_not_float_array
+                                    &float_array v1;
+                            fa2 =
+                                br_on_cast_fail 'heterogeneous &float_array
+                                    v2;
+                            s1 = fa1.length;
+                            s2 = fa2.length;
+                            if s1 != s2 { return (s1 - s2); }
+                            i = 0;
+                            'float_array: loop {
+                                if i <s s1 {
+                                    f1 = fa1[i];
+                                    f2 = fa2[i];
+                                    if f1 < f2 { return -1; }
+                                    if f1 > f2 { return 1; }
+                                    if f1 != f2 {
+                                        if !total { return unordered; }
+                                        if f1 == f1 { return 1; }
+                                        if f2 == f2 { return -1; }
+                                    }
+                                    i = i + 1;
+                                    br 'float_array;
+                                }
+                            } /* 'float_array */
+                            br 'next_item;
+                        } /* 'v1_not_float_array */;
+                    _ =
+                        'v1_not_custom: do &eq {
+                            c1 = br_on_cast_fail 'v1_not_custom &custom v1;
+                            c2 = br_on_cast_fail 'heterogeneous &custom v2;
+                            if !(c1.f == c2.f) {
+                                return
+                                    caml_string_compare(c1.f.id, c2.f.id)
+                                        as &i31 as i32_s;
+                            }
+                            'not_comparable: {
+                                res =
+                                    (br_on_null 'not_comparable c1.f.compare)
+                                        (v1, v2, total);
+                                br_if 'next_item !res;
+                                return res;
+                            }
+                            clear_compare_stack();
+                            caml_invalid_argument(string#"foo");
+                            0 as &i31;
+                        } /* 'v1_not_custom */;
+                    _ =
+                        'v1_not_js: do &eq {
+                            js1 = (br_on_cast_fail 'v1_not_js &js v1).f;
+                            js2 = (br_on_cast_fail 'heterogeneous &js v2).f;
+                            'not_jsstring: {
+                                br_if 'not_jsstring !jsstring_test(js1);
+                                br_if 'not_jsstring !jsstring_test(js2);
+                                res = jsstring_compare(js1, js2);
+                                br_if 'next_item !res;
+                                return res;
+                            } /* 'not_jsstring */
+                            if !total {
+                                br_if 'next_item equals(js1, js2);
+                                return unordered;
+                            }
+                            br 'heterogeneous 0 as &i31;
+                        } /* 'v1_not_js */;
+                    if caml_is_closure(v1) {
+                        _ =
+                            br_if 'heterogeneous
+                                (0 as &i31, !caml_is_closure(v2));
+                        clear_compare_stack();
+                        caml_invalid_argument(string#"foo");
+                    }
+                    if caml_is_continuation(v1) {
+                        _ =
+                            br_if 'heterogeneous
+                                (0 as &i31, !caml_is_continuation(v2));
+                        clear_compare_stack();
+                        caml_invalid_argument(string#"foo");
+                    }
+                    0 as &i31;
+                } /* 'heterogeneous */;
+            t1 = caml_obj_tag(v1) as &i31 as i32_u;
+            t2 = caml_obj_tag(v2) as &i31 as i32_u;
+            if t1 == forward_tag { v1 = (v1 as &block)[1]; br 'loop; }
+            if t2 == forward_tag { v2 = (v2 as &block)[1]; br 'loop; }
+            res = t1 - t2;
+            if !res {
+                clear_compare_stack();
+                caml_invalid_argument(string#"foo");
+            }
+            return res;
+        } /* 'next_item */
+        if compare_stack_is_not_empty(stack) {
+            pop_compare_stack(stack);
+            v2 = _;
+            v1 = _;
+            br 'loop;
+        }
+    } /* 'loop */
+    0;
+}
+#[export = "caml_compare"]
+fn caml_compare(v1: &eq, v2: &eq) -> &eq {
+    let res: i32;
+    res = compare_val(v1, v2, 1);
+    if res <s 0 { return -1 as &i31; }
+    if res >s 0 { return 1 as &i31; }
+    0 as &i31;
+}
+#[export = "caml_equal"]
+fn caml_equal(v1: &eq, v2: &eq) -> &eq { !compare_val(v1, v2, 0) as &i31; }
+#[export = "caml_notequal"]
+fn caml_notequal(v1: &eq, v2: &eq) -> &eq {
+    (0 != compare_val(v1, v2, 0)) as &i31;
+}
+#[export = "caml_lessthan"]
+fn caml_lessthan(v1: &eq, v2: &eq) -> &eq {
+    let res: i32;
+    res = compare_val(v1, v2, 0);
+    ((res <s 0) & (res != unordered)) as &i31;
+}
+#[export = "caml_lessequal"]
+fn caml_lessequal(v1: &eq, v2: &eq) -> &eq {
+    let res: i32;
+    res = compare_val(v1, v2, 0);
+    ((res <=s 0) & (res != unordered)) as &i31;
+}
+#[export = "caml_greaterthan"]
+fn caml_greaterthan(v1: &eq, v2: &eq) -> &eq {
+    (0 <s compare_val(v1, v2, 0)) as &i31;
+}
+#[export = "caml_greaterequal"]
+fn caml_greaterequal(v1: &eq, v2: &eq) -> &eq {
+    (0 <=s compare_val(v1, v2, 0)) as &i31;
+}

@@ -1,0 +1,233 @@
+#[import = ("obj", "abstract_tag")] const abstract_tag: i32
+#[import = ("obj", "caml_obj_dup")] fn caml_obj_dup(_: &eq) -> &eq
+#[import = ("fail", "caml_invalid_argument")]
+fn caml_invalid_argument(arg: &eq)
+#[import = ("bindings", "weak_new")] fn weak_new(_: &eq) -> &?any
+#[import = ("bindings", "weak_deref")] fn weak_deref(_: &?any) -> &?eq
+#[import = ("bindings", "weak_map_new")] fn weak_map_new() -> &any
+#[import = ("bindings", "map_get")] fn map_get(_: &any, _: &eq) -> &?any
+#[import = ("bindings", "map_set")] fn map_set(_: &any, _: &eq, _: &any)
+#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
+#[import = ("jslib", "wrap")] fn wrap(_: &?any) -> &eq
+type block = [mut &eq]
+type string = [mut i8]
+type js = { f: &?any }
+const caml_ephe_data_offset: i32 = 2;
+const caml_ephe_key_offset: i32 = 3;
+const caml_ephe_none: &eq = [block| abstract_tag as &i31];
+#[export = "caml_ephe_get_data"]
+fn caml_ephe_get_data(vx: &eq) -> &eq {
+    let x: &block;
+    let d: &eq;
+    let v: &eq;
+    let m: &any;
+    let i: i32;
+    let len: i32;
+    x = vx as &block;
+    d = x[caml_ephe_data_offset];
+    'no_data: {
+        'released: {
+            br_if 'no_data (d == caml_ephe_none);
+            i = caml_ephe_key_offset;
+            len = x.length;
+            m = unwrap(d)!;
+            'loop: loop {
+                if i <u len {
+                    v = x[i];
+                    i = i + 1;
+                    br_if 'loop (v == caml_ephe_none);
+                    br_if 'loop v is &i31;
+                    v = br_on_null 'released weak_deref(unwrap(v));
+                    m = br_on_null 'released map_get(m, v);
+                    br 'loop;
+                }
+            } /* 'loop */
+            return [block| 0 as &i31, m as &eq];
+        } /* 'released */
+        x[caml_ephe_data_offset] = caml_ephe_none;
+    } /* 'no_data */
+    0 as &i31;
+}
+#[export = "caml_ephe_get_data_copy"]
+fn caml_ephe_get_data_copy(x: &eq) -> &eq {
+    let r: &eq;
+    r = caml_ephe_get_data(x);
+    _ =
+        'no_copy: do &eq {
+            return
+                [block|
+                    0 as &i31,
+                    caml_obj_dup
+                        (br_on_cast_fail 'no_copy &block
+                             (br_on_cast_fail 'no_copy &block r)[1])];
+        };
+    r;
+}
+#[export = "caml_ephe_set_data"]
+fn caml_ephe_set_data(vx: &eq, data: &eq) -> &eq {
+    let x: &block;
+    let v: &eq;
+    let m: &any;
+    let m': &any;
+    let i: i32;
+    x = vx as &block;
+    i = x.length;
+    m = data;
+    'loop: loop {
+        i = i - 1;
+        if i >=u caml_ephe_key_offset {
+            v = x[i];
+            br_if 'loop (v == caml_ephe_none);
+            br_if 'loop v is &i31;
+            'released: {
+                v = br_on_null 'released weak_deref(unwrap(v));
+                m' = weak_map_new();
+                map_set(m', v, m);
+                m = m';
+                br 'loop;
+            } /* 'released */
+            x[i] = caml_ephe_none;
+            br 'loop;
+        }
+    } /* 'loop */
+    x[caml_ephe_data_offset] = wrap(m);
+    0 as &i31;
+}
+#[export = "caml_ephe_unset_data"]
+fn caml_ephe_unset_data(vx: &eq) -> &eq {
+    let x: &block;
+    x = vx as &block;
+    x[caml_ephe_data_offset] = caml_ephe_none;
+    0 as &i31;
+}
+#[export = "caml_ephe_check_data"]
+fn caml_ephe_check_data(x: &eq) -> &eq {
+    !(caml_ephe_get_data(x) == 0 as &i31) as &i31;
+}
+fn caml_ephe_set_data_opt(x: &eq, opt_data: &eq) {
+    _ =
+        'no_data: do &eq {
+            caml_ephe_set_data
+                (x, (br_on_cast_fail 'no_data &block opt_data)[1]);
+        };
+}
+#[export = "caml_ephe_get_key"]
+fn caml_ephe_get_key(vx: &eq, vi: &eq) -> &eq {
+    let x: &block;
+    let i: i32;
+    let v: &eq;
+    x = vx as &block;
+    i = caml_ephe_key_offset + vi as &i31 as i32_s;
+    v = x[i];
+    'value: {
+        'no_value: {
+            br_if 'no_value (v == caml_ephe_none);
+            br_if 'value v is &i31;
+            'released: {
+                v = br_on_null 'released weak_deref(unwrap(v));
+                br 'value;
+            }
+            x[i] = caml_ephe_none;
+            x[caml_ephe_data_offset] = caml_ephe_none;
+        } /* 'no_value */
+        return 0 as &i31;
+    } /* 'value */
+    [block| 0 as &i31, v];
+}
+#[export = "caml_ephe_get_key_copy"]
+fn caml_ephe_get_key_copy(x: &eq, i: &eq) -> &eq {
+    let r: &eq;
+    r = caml_ephe_get_key(x, i);
+    _ =
+        'no_copy: do &eq {
+            return
+                [block|
+                    0 as &i31,
+                    caml_obj_dup
+                        (br_on_cast_fail 'no_copy &block
+                             (br_on_cast_fail 'no_copy &block r)[1])];
+        };
+    r;
+}
+#[export = "caml_ephe_check_key"]
+fn caml_ephe_check_key(vx: &eq, vi: &eq) -> &eq {
+    let x: &block;
+    let i: i32;
+    let v: &eq;
+    x = vx as &block;
+    i = vi as &i31 as i32_s + caml_ephe_key_offset;
+    v = x[i];
+    'value: {
+        'no_value: {
+            br_if 'no_value (v == caml_ephe_none);
+            br_if 'value v is &i31;
+            br_if 'value !!weak_deref(unwrap(v));
+            x[i] = caml_ephe_none;
+            x[caml_ephe_data_offset] = caml_ephe_none;
+        } /* 'no_value */
+        return 0 as &i31;
+    } /* 'value */
+    1 as &i31;
+}
+#[export = "caml_ephe_set_key"]
+fn caml_ephe_set_key(vx: &eq, vi: &eq, v: &eq) -> &eq {
+    let x: &block;
+    let d: &eq;
+    let i: i32;
+    x = vx as &block;
+    i = vi as &i31 as i32_s + caml_ephe_key_offset;
+    d = 0 as &i31;
+    if v is &i31 {
+        if x[i] is &js { d = caml_ephe_get_data(vx); }
+        x[i] = v;
+    } else { d = caml_ephe_get_data(vx); x[i] = wrap(weak_new(v)); }
+    caml_ephe_set_data_opt(vx, d);
+    0 as &i31;
+}
+#[export = "caml_ephe_unset_key"]
+fn caml_ephe_unset_key(vx: &eq, vi: &eq) -> &eq {
+    let x: &block;
+    let d: &eq;
+    let i: i32;
+    x = vx as &block;
+    i = vi as &i31 as i32_s + caml_ephe_key_offset;
+    d = 0 as &i31;
+    if x[i] is &js { d = caml_ephe_get_data(vx); }
+    x[i] = caml_ephe_none;
+    caml_ephe_set_data_opt(vx, d);
+    0 as &i31;
+}
+#[export = "caml_ephe_create"]
+fn caml_ephe_create(vlen: &eq) -> &eq {
+    let len: i32;
+    let res: &block;
+    len = vlen as &i31 as i32_s;
+    if len <s 0 { caml_invalid_argument(string#"foo"); }
+    res = [block| caml_ephe_none; len + caml_ephe_key_offset];
+    res[0] = abstract_tag as &i31;
+    res;
+}
+#[export = "caml_ephe_blit_data"]
+fn caml_ephe_blit_data(x: &eq, y: &eq) -> &eq {
+    caml_ephe_set_data_opt(y, caml_ephe_get_data(x));
+    0 as &i31;
+}
+#[export = "caml_ephe_blit_key"]
+fn caml_ephe_blit_key(x: &eq, i: &eq, y: &eq, j: &eq, l: &eq) -> &eq {
+    let d: &eq;
+    d = caml_ephe_get_data(y);
+    (y as &block).copy
+        (j as &i31 as i32_s + caml_ephe_key_offset, x as &block,
+         i as &i31 as i32_s + caml_ephe_key_offset, l as &i31 as i32_s);
+    caml_ephe_set_data_opt(y, d);
+    0 as &i31;
+}
+#[export = "caml_weak_set"]
+fn caml_weak_set(x: &eq, i: &eq, v: &eq) -> &eq {
+    _ =
+        'unset: do &eq {
+            become caml_ephe_set_key
+                (x, i, (br_on_cast_fail 'unset &block v)[1]);
+        };
+    become caml_ephe_unset_key(x, i);
+}

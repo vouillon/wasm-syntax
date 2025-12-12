@@ -1,0 +1,564 @@
+#[import = ("fail", "caml_raise_end_of_file")] fn caml_raise_end_of_file()
+#[import = ("jslib", "wrap")] fn wrap(_: &?any) -> &eq
+#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
+#[import = ("jslib", "caml_jsstring_of_string")]
+fn caml_jsstring_of_string(_: &eq) -> &eq
+#[import = ("jslib", "caml_list_of_js_array")]
+fn caml_list_of_js_array(_: &eq) -> &eq
+#[import = ("bindings", "open")] fn open_2(_: &?any, _: i32, _: i32) -> i32
+#[import = ("bindings", "close")] fn close(_: i32)
+#[import = ("bindings", "write")]
+fn write(_: i32, _: &extern, _: i32, _: i32, _: i64) -> i32
+#[import = ("bindings", "write")]
+fn write'(_: i32, _: &extern, _: i32, _: i32, _: &?noextern) -> i32
+#[import = ("bindings", "read")]
+fn read(_: i32, _: &extern, _: i32, _: i32, _: i64) -> i32
+#[import = ("bindings", "read")]
+fn read'(_: i32, _: &extern, _: i32, _: i32, _: &?noextern) -> i32
+#[import = ("bindings", "file_size")] fn file_size(_: i32) -> i64
+#[import = ("bindings", "register_channel")] fn register_channel(_: &eq)
+#[import = ("bindings", "unregister_channel")] fn unregister_channel(_: &eq)
+#[import = ("bindings", "channel_list")] fn channel_list() -> &?any
+#[import = ("bindings", "ta_new")] fn ta_new(_: i32) -> &extern
+#[import = ("bindings", "ta_copy")]
+fn ta_copy(_: &extern, _: i32, _: i32, _: i32)
+#[import = ("bindings", "ta_set_ui8")]
+fn ta_set_ui8(_: &extern, _: i32, _: i32)
+#[import = ("bindings", "ta_get_ui8")]
+fn ta_get_ui8(_: &extern, _: i32) -> i32
+#[import = ("bindings", "ta_blit_from_string")]
+fn ta_blit_from_string(_: &string, _: i32, _: &extern, _: i32, _: i32)
+#[import = ("bindings", "ta_blit_to_string")]
+fn ta_blit_to_string(_: &extern, _: i32, _: &string, _: i32, _: i32)
+#[import = ("custom", "custom_compare_id")]
+fn custom_compare_id(_: &eq, _: &eq, _: i32) -> i32
+#[import = ("custom", "custom_hash_id")] fn custom_hash_id(_: &eq) -> i32
+#[import = ("custom", "custom_next_id")] fn custom_next_id() -> i64
+#[import = ("int64", "caml_copy_int64")] fn caml_copy_int64(_: i64) -> &eq
+#[import = ("int64", "Int64_val")] fn Int64_val(_: &eq) -> i64
+#[import = ("fail", "javascript_exception")]
+tag javascript_exception(_: &?extern)
+#[import = ("sys", "caml_handle_sys_error")]
+fn caml_handle_sys_error(_: &?extern)
+#[import = ("bindings", "map_new")] fn map_new() -> &extern
+#[import = ("bindings", "map_get")]
+fn map_get(_: &extern, _: i32) -> &fd_offset
+#[import = ("bindings", "map_set")]
+fn map_set(_: &extern, _: i32, _: &fd_offset)
+#[import = ("bindings", "map_delete")] fn map_delete(_: &extern, _: i32)
+type block = [mut &eq]
+type string = [mut i8]
+type offset_array = [mut i64]
+type compare = fn(_: &eq, _: &eq, _: i32) -> i32
+type hash = fn(_: &eq) -> i32
+type fixed_length = { bsize_32: i32, bsize_64: i32 }
+type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
+type deserialize = fn(_: &eq) -> (&eq, i32)
+type dup = fn(_: &eq) -> &eq
+type custom_operations = {
+    id: &string,
+    compare: &?compare,
+    compare_ext: &?compare,
+    hash: &?hash,
+    fixed_length: &?fixed_length,
+    serialize: &?serialize,
+    deserialize: &?deserialize,
+    dup: &?dup
+}
+type custom = open { f: &custom_operations }
+type custom_with_id: custom = open { f: &custom_operations, id: i64 }
+const channel_ops: &custom_operations =
+    {custom_operations|
+        id: string#"_chan",
+        compare: custom_compare_id,
+        compare_ext: null as &?compare,
+        hash: custom_hash_id,
+        fixed_length: null as &?fixed_length,
+        serialize: null as &?serialize,
+        deserialize: null as &?deserialize,
+        dup: null as &?dup
+    };
+type channel: custom_with_id = {
+    f: &custom_operations,
+    f_2: i64,
+    fd: mut i32,
+    buffer: mut &extern,
+    curr: mut i32,
+    max: mut i32,
+    size: mut i32,
+    unbuffered: mut i32
+}
+type fd_offset = { offset: mut i64, seeked: mut i32 }
+let fd_offsets: &?extern = null;
+fn get_fd_offsets() -> &extern {
+    let m: &extern;
+    if !fd_offsets {
+        m = map_new();
+        map_set(m, 0, {fd_offset| offset: 0, seeked: 0 });
+        map_set(m, 1, {fd_offset| offset: 0, seeked: 0 });
+        map_set(m, 2, {fd_offset| offset: 0, seeked: 0 });
+        fd_offsets = m;
+    }
+    fd_offsets!;
+}
+fn initialize_fd_offset(fd: i32, offset: i64) {
+    map_set(get_fd_offsets(), fd, {fd_offset| offset: offset, seeked: 0 });
+}
+fn release_fd_offset(fd: i32) { map_delete(get_fd_offsets(), fd); }
+fn get_fd_offset(fd: i32) -> &fd_offset { map_get(get_fd_offsets(), fd); }
+const IO_BUFFER_SIZE: i32 = 65536;
+type open_flags = [i8]
+const sys_open_flags: &open_flags =
+    [open_flags| 1, 2, 6, 8, 16, 32, 0, 0, 64];
+fn convert_flag_list(vflags: &eq) -> i32 {
+    let flags: i32;
+    let cons: &block;
+    'loop: loop {
+        _ =
+            'done: do &eq {
+                cons = br_on_cast_fail 'done &block vflags;
+                flags =
+                    flags | sys_open_flags[cons[1] as &i31 as i32_u] as i32_u;
+                vflags = cons[2];
+                br 'loop;
+            };
+    }
+    flags;
+}
+#[export = "caml_sys_open"]
+fn caml_sys_open(path: &eq, vflags: &eq, perm: &eq) -> &eq {
+    let fd: i32;
+    let flags: i32;
+    let offset: i64;
+    flags = convert_flag_list(vflags);
+    try {
+        fd =
+            open_2
+                (unwrap(caml_jsstring_of_string(path)), flags,
+                 perm as &i31 as i32_u);
+        if flags & 4 { offset = file_size(fd); }
+    } catch { javascript_exception => { caml_handle_sys_error(_); } }
+    initialize_fd_offset(fd, offset);
+    fd as &i31;
+}
+#[export = "caml_sys_close"]
+fn caml_sys_close(x: &eq) -> &eq {
+    let fd: i32;
+    fd = x as &i31 as i32_u;
+    release_fd_offset(fd);
+    try {
+        close(fd);
+    } catch { javascript_exception => { caml_handle_sys_error(_); } }
+    0 as &i31;
+}
+#[export = "caml_ml_set_channel_name"]
+fn caml_ml_set_channel_name(x: &eq, x_2: &eq) -> &eq { 0 as &i31; }
+#[export = "caml_ml_out_channels_list"]
+fn caml_ml_out_channels_list(x: &eq) -> &eq {
+    become caml_list_of_js_array(wrap(channel_list()));
+}
+#[export = "caml_ml_open_descriptor_in"]
+fn caml_ml_open_descriptor_in(fd: &eq) -> &eq {
+    {channel|
+        f: channel_ops,
+        f_2: custom_next_id(),
+        fd: fd as &i31 as i32_u,
+        buffer: ta_new(IO_BUFFER_SIZE),
+        curr: 0,
+        max: 0,
+        size: IO_BUFFER_SIZE,
+        unbuffered: 0
+    };
+}
+#[export = "caml_stderr"] let caml_stderr: &eq = 0 as &i31;
+#[export = "caml_ml_open_descriptor_out"]
+fn caml_ml_open_descriptor_out(fd: &eq) -> &eq {
+    let res: &eq;
+    res =
+        {channel|
+            f: channel_ops,
+            f_2: custom_next_id(),
+            fd: fd as &i31 as i32_u,
+            buffer: ta_new(IO_BUFFER_SIZE),
+            curr: 0,
+            max: -1,
+            size: IO_BUFFER_SIZE,
+            unbuffered: 0
+        };
+    register_channel(res);
+    if fd == 2 as &i31 { caml_stderr = res; }
+    res;
+}
+#[export = "caml_ml_close_channel"]
+fn caml_ml_close_channel(x: &eq) -> &eq {
+    let ch: &channel;
+    let fd: i32;
+    ch = x as &channel;
+    ch.curr = 0;
+    ch.max = 0;
+    ch.size = 0;
+    fd = ch.fd;
+    if fd != -1 {
+        ch.fd = -1;
+        unregister_channel(ch);
+        release_fd_offset(fd);
+        try { close(fd); } catch { javascript_exception => { _ = _; } }
+    }
+    0 as &i31;
+}
+fn caml_do_read(ch: &channel, pos: i32, len: i32) -> i32 {
+    let fd: i32;
+    let fd_offset: &fd_offset;
+    let offset: i64;
+    let n: i32;
+    fd = ch.fd;
+    fd_offset = get_fd_offset(fd);
+    offset = fd_offset.offset;
+    try {
+        n =
+            if fd_offset.seeked => i32 {
+                read(fd, ch.buffer, pos, len, offset);
+            } else { read'(fd, ch.buffer, pos, len, null as &?noextern); };
+    } catch { javascript_exception => { caml_handle_sys_error(_); } }
+    fd_offset.offset = offset + n as i64_u;
+    n;
+}
+fn caml_refill(ch: &channel) -> i32 {
+    let n: i32;
+    let buf: &extern;
+    buf = ch.buffer;
+    n = caml_do_read(ch, 0, ch.size);
+    if !n { caml_raise_end_of_file(); }
+    ch.max = n;
+    ch.curr = 1;
+    return ta_get_ui8(buf, 0);
+}
+#[export = "caml_getblock"]
+fn caml_getblock(vch: &eq, s: &string, pos: i32, len: i32) -> i32 {
+    let ch: &channel;
+    let avail: i32;
+    let nread: i32;
+    if !len { return 0; }
+    ch = vch as &channel;
+    avail = ch.max - ch.curr;
+    if avail {
+        if len >u avail { len = avail; }
+        ta_blit_to_string(ch.buffer, ch.curr, s, pos, len);
+        ch.curr = ch.curr + len;
+        return len;
+    }
+    nread = caml_do_read(ch, 0, ch.size);
+    ch.max = nread;
+    if len >u nread { len = nread; }
+    ta_blit_to_string(ch.buffer, 0, s, pos, len);
+    ch.curr = len;
+    len;
+}
+#[export = "caml_really_getblock"]
+fn caml_really_getblock(ch: &eq, s: &string, pos: i32, len: i32) -> i32 {
+    let read_2: i32;
+    let n: i32;
+    n = len;
+    'loop: loop {
+        if n {
+            read_2 = caml_getblock(ch, s, pos, n);
+            if !read_2 { return (len - n); }
+            pos = pos + read_2;
+            n = n - read_2;
+            br 'loop;
+        }
+    } /* 'loop */
+    len;
+}
+#[export = "caml_ml_input"]
+fn caml_ml_input(vch: &eq, vs: &eq, vpos: &eq, vlen: &eq) -> &eq {
+    let ch: &channel;
+    let s: &string;
+    let pos: i32;
+    let len: i32;
+    let curr: i32;
+    let i: i32;
+    let avail: i32;
+    let nread: i32;
+    let buf: &extern;
+    ch = vch as &channel;
+    s = vs as &string;
+    pos = vpos as &i31 as i32_u;
+    len = vlen as &i31 as i32_u;
+    buf = ch.buffer;
+    curr = ch.curr;
+    avail = ch.max - curr;
+    if len >u avail {
+        if avail >u 0 {
+            len = avail;
+        } else {
+            nread = caml_do_read(ch, 0, ch.size);
+            ch.max = nread;
+            curr = 0;
+            if len >u nread { len = nread; }
+        }
+    }
+    ta_blit_to_string(buf, curr, s, pos, len);
+    ch.curr = curr + len;
+    len as &i31;
+}
+fn caml_getch(ch: &channel) -> i32 {
+    let curr: i32;
+    curr = ch.curr;
+    if curr >=u ch.max { become caml_refill(ch); }
+    ch.curr = curr + 1;
+    become ta_get_ui8(ch.buffer, curr);
+}
+#[export = "caml_ml_input_char"]
+fn caml_ml_input_char(ch: &eq) -> &eq { caml_getch(ch as &channel) as &i31; }
+#[export = "caml_ml_input_int"]
+fn caml_ml_input_int(vch: &eq) -> &eq {
+    let ch: &channel;
+    let res: i32;
+    ch = vch as &channel;
+    res = caml_getch(ch) << 24;
+    res = res | caml_getch(ch) << 16;
+    res = res | caml_getch(ch) << 8;
+    return (res | caml_getch(ch)) as &i31;
+}
+#[export = "caml_ml_pos_in"]
+fn caml_ml_pos_in(vch: &eq) -> &eq {
+    let ch: &channel;
+    ch = vch as &channel;
+    ((get_fd_offset(ch.fd)).offset as i32 - (ch.max - ch.curr)) as &i31;
+}
+#[export = "caml_ml_pos_in_64"]
+fn caml_ml_pos_in_64(vch: &eq) -> &eq {
+    let ch: &channel;
+    ch = vch as &channel;
+    caml_copy_int64
+        ((get_fd_offset(ch.fd)).offset - (ch.max - ch.curr) as i64_s);
+}
+#[export = "caml_ml_pos_out"]
+fn caml_ml_pos_out(vch: &eq) -> &eq {
+    let ch: &channel;
+    ch = vch as &channel;
+    ((get_fd_offset(ch.fd)).offset as i32 + ch.curr) as &i31;
+}
+#[export = "caml_ml_pos_out_64"]
+fn caml_ml_pos_out_64(vch: &eq) -> &eq {
+    let ch: &channel;
+    ch = vch as &channel;
+    caml_copy_int64((get_fd_offset(ch.fd)).offset + ch.curr as i64_s);
+}
+fn caml_seek_in(ch: &channel, dest: i64) -> &eq {
+    let fd: i32;
+    let offset: i64;
+    let fd_offset: &fd_offset;
+    fd = ch.fd;
+    fd_offset = get_fd_offset(fd);
+    offset = fd_offset.offset;
+    if (dest >=s offset - ch.max as i64_s) & (dest <=s offset) {
+        ch.curr = ch.max - (offset - dest) as i32;
+    } else {
+        fd_offset.offset = dest;
+        fd_offset.seeked = 1;
+        ch.curr = 0;
+        ch.max = 0;
+    }
+    0 as &i31;
+}
+#[export = "caml_ml_seek_in"]
+fn caml_ml_seek_in(ch: &eq, dest: &eq) -> &eq {
+    become caml_seek_in(ch as &channel, dest as &i31 as i32_s as i64_s);
+}
+#[export = "caml_ml_seek_in_64"]
+fn caml_ml_seek_in_64(ch: &eq, dest: &eq) -> &eq {
+    become caml_seek_in(ch as &channel, Int64_val(dest));
+}
+#[export = "caml_ml_seek_out"]
+fn caml_ml_seek_out(vch: &eq, voffset: &eq) -> &eq {
+    let ch: &channel;
+    let fd_offset: &fd_offset;
+    ch = vch as &channel;
+    caml_flush(ch);
+    fd_offset = get_fd_offset(ch.fd);
+    fd_offset.offset = voffset as &i31 as i32_s as i64_s;
+    fd_offset.seeked = 1;
+    0 as &i31;
+}
+#[export = "caml_ml_seek_out_64"]
+fn caml_ml_seek_out_64(vch: &eq, voffset: &eq) -> &eq {
+    let ch: &channel;
+    let fd_offset: &fd_offset;
+    ch = vch as &channel;
+    caml_flush(ch);
+    fd_offset = get_fd_offset(ch.fd);
+    fd_offset.offset = Int64_val(voffset);
+    fd_offset.seeked = 1;
+    0 as &i31;
+}
+#[export = "caml_ml_input_scan_line"]
+fn caml_ml_input_scan_line(vch: &eq) -> &eq {
+    let ch: &channel;
+    let p: i32;
+    let n: i32;
+    ch = vch as &channel;
+    p = ch.curr;
+    'loop: loop {
+        if p >=u ch.max {
+            if ch.curr {
+                n = ch.curr;
+                ta_copy(ch.buffer, 0, n, ch.max - ch.curr);
+                ch.curr = 0;
+                ch.max = ch.max - n;
+                p = p - n;
+            }
+            if ch.max >=u ch.size { return (ch.curr - ch.size) as &i31; }
+            n = caml_do_read(ch, ch.max, ch.size - ch.max);
+            if !n { return (ch.curr - ch.max) as &i31; }
+            ch.max = ch.max + n;
+        }
+        if 10 == ta_get_ui8(ch.buffer, p) {
+            return (1 + (p - ch.curr)) as &i31;
+        }
+        p = p + 1;
+        br 'loop;
+    } /* 'loop */
+    unreachable;
+}
+fn caml_flush(ch: &channel) {
+    'loop: loop { br_if 'loop !caml_flush_partial(ch); }
+}
+#[export = "caml_flush_if_unbuffered"]
+fn caml_flush_if_unbuffered(vch: &eq) {
+    let ch: &channel;
+    ch = vch as &channel;
+    if ch.unbuffered { caml_flush(ch); }
+}
+#[export = "caml_ml_flush"]
+fn caml_ml_flush(vch: &eq) -> &eq {
+    let ch: &channel;
+    ch = vch as &channel;
+    if ch.fd != -1 { caml_flush(ch); }
+    0 as &i31;
+}
+fn caml_flush_partial(ch: &channel) -> i32 {
+    let towrite: i32;
+    let written: i32;
+    let fd: i32;
+    let fd_offset: &fd_offset;
+    let offset: i64;
+    let buf: &extern;
+    towrite = ch.curr;
+    if towrite >u 0 {
+        buf = ch.buffer;
+        fd = ch.fd;
+        fd_offset = get_fd_offset(fd);
+        offset = fd_offset.offset;
+        try {
+            written =
+                if fd_offset.seeked => i32 {
+                    write(fd, buf, 0, towrite, offset);
+                } else { write'(fd, buf, 0, towrite, null as &?noextern); };
+        } catch { javascript_exception => { caml_handle_sys_error(_); } }
+        fd_offset.offset = offset + written as i64_u;
+        towrite = towrite - written;
+        if towrite >u 0 { ta_copy(buf, 0, written, towrite); }
+        ch.curr = towrite;
+    }
+    !towrite;
+}
+fn caml_putblock(ch: &channel, s: &string, pos: i32, len: i32) -> i32 {
+    let free: i32;
+    let curr: i32;
+    let buf: &extern;
+    curr = ch.curr;
+    free = ch.size - curr;
+    if len >=u free { len = free; }
+    buf = ch.buffer;
+    ta_blit_from_string(s, pos, buf, curr, len);
+    ch.curr = curr + len;
+    if len >=u free { _ = caml_flush_partial(ch); }
+    len;
+}
+#[export = "caml_really_putblock"]
+fn caml_really_putblock(ch: &eq, s: &string, pos: i32, len: i32) {
+    let written: i32;
+    'loop: loop {
+        if len {
+            written = caml_putblock(ch as &channel, s, pos, len);
+            pos = pos + written;
+            len = len - written;
+            br 'loop;
+        }
+    } /* 'loop */
+}
+#[export = "caml_ml_output"]
+fn caml_ml_output(ch: &eq, s: &eq, vpos: &eq, vlen: &eq) -> &eq {
+    let pos: i32;
+    let len: i32;
+    let written: i32;
+    pos = vpos as &i31 as i32_u;
+    len = vlen as &i31 as i32_u;
+    'loop: loop {
+        if len >u 0 {
+            written = caml_putblock(ch as &channel, s as &string, pos, len);
+            pos = pos + written;
+            len = len - written;
+            br 'loop;
+        }
+    } /* 'loop */
+    caml_flush_if_unbuffered(ch);
+    0 as &i31;
+}
+fn caml_putch(ch: &channel, c: i32) {
+    let curr: i32;
+    if ch.curr >=u ch.size { _ = caml_flush_partial(ch); }
+    curr = ch.curr;
+    ta_set_ui8(ch.buffer, curr, c);
+    ch.curr = curr + 1;
+}
+#[export = "caml_ml_output_char"]
+fn caml_ml_output_char(ch: &eq, c: &eq) -> &eq {
+    caml_putch(ch as &channel, c as &i31 as i32_u);
+    caml_flush_if_unbuffered(ch);
+    0 as &i31;
+}
+#[export = "caml_ml_output_int"]
+fn caml_ml_output_int(vch: &eq, vn: &eq) -> &eq {
+    let ch: &channel;
+    let n: i32;
+    ch = vch as &channel;
+    n = vn as &i31 as i32_u;
+    caml_putch(ch, n >>u 24);
+    caml_putch(ch, n >>u 16);
+    caml_putch(ch, n >>u 8);
+    caml_putch(ch, n);
+    caml_flush_if_unbuffered(ch);
+    0 as &i31;
+}
+#[export = "caml_ml_is_buffered"]
+fn caml_ml_is_buffered(ch: &eq) -> &eq {
+    !(ch as &channel).unbuffered as &i31;
+}
+#[export = "caml_ml_set_buffered"]
+fn caml_ml_set_buffered(vch: &eq, mode: &eq) -> &eq {
+    let ch: &channel;
+    ch = vch as &channel;
+    if mode as &i31 as i32_s {
+        ch.unbuffered = 0;
+    } else { ch.unbuffered = 1; if ch.fd != -1 { caml_flush(ch); } }
+    0 as &i31;
+}
+#[export = "caml_ml_channel_size"]
+fn caml_ml_channel_size(x: &eq) -> &eq {
+    file_size(caml_ml_get_channel_fd(x)) as i32 as &i31;
+}
+#[export = "caml_ml_channel_size_64"]
+fn caml_ml_channel_size_64(x: &eq) -> &eq {
+    caml_copy_int64(file_size(caml_ml_get_channel_fd(x)));
+}
+#[export = "caml_ml_get_channel_fd"]
+fn caml_ml_get_channel_fd(x: &eq) -> i32 { (x as &channel).fd; }
+#[export = "caml_ml_set_channel_fd"]
+fn caml_ml_set_channel_fd(x: &eq, x_2: i32) { (x as &channel).fd = x_2; }
+#[export = "caml_ml_get_channel_offset"]
+fn caml_ml_get_channel_offset(ch: &eq) -> i64 {
+    (get_fd_offset((ch as &channel).fd)).offset;
+}

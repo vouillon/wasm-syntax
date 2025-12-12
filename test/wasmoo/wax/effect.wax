@@ -1,0 +1,487 @@
+#[import = ("fail", "caml_raise_constant")] fn caml_raise_constant(_: &eq)
+#[import = ("fail", "caml_raise_with_arg")]
+fn caml_raise_with_arg(tag_2: &eq, arg: &eq)
+#[import = ("obj", "caml_fresh_oo_id")] fn caml_fresh_oo_id(_: &eq) -> &eq
+#[import = ("obj", "cont_tag")] const cont_tag: i32
+#[import = ("stdlib", "caml_named_value")]
+fn caml_named_value(_: &string) -> &?eq
+#[import = ("fail", "ocaml_exception")] tag ocaml_exception(_: &eq)
+#[import = ("fail", "javascript_exception")]
+tag javascript_exception(_: &?extern)
+#[import = ("jslib", "caml_wrap_exception")]
+fn caml_wrap_exception(_: &?extern) -> &eq
+#[import = ("bindings", "start_fiber")] fn start_fiber(_: &eq)
+#[import = ("bindings", "suspend_fiber")]
+fn suspend_fiber(f: &?func, env: &?eq) -> &?any
+#[import = ("bindings", "resume_fiber")] fn resume_fiber(_: &?extern, _: &eq)
+type block = [mut &eq]
+type string = [mut i8]
+type function_1 = fn(_: &eq, _: &eq) -> &eq
+type closure = open { f: &function_1 }
+type function_3 = fn(_: &eq, _: &eq, _: &eq, _: &eq) -> &eq
+type closure_3: closure = open { f: &function_1, f_2: &function_3 }
+type pair = { fst: &eq, snd: &eq }
+fn apply_pair(p: &pair) -> &eq {
+    let f_3: &eq;
+    become (f_3 as &closure).f(p.snd, f_3 := p.fst);
+}
+type cont_func = fn(_: &pair, _: &eq)
+type cont = open { cont_func: &cont_func }
+type called_with_continuation = fn(_: &cont, _: &eq)
+type thunk = { f: &called_with_continuation, f_2: &eq }
+type cont_resume: cont = { cont_func: &cont_func, cont_resolver: &?extern }
+fn invoke_promise_resolver(p: &pair, x: &eq) {
+    become resume_fiber((x as &cont_resume).cont_resolver, p);
+}
+fn apply_continuation(resolver: &extern, v: &eq) {
+    let t: &thunk;
+    t = v as &thunk;
+    become t.f
+        ({cont_resume|
+             cont_func: invoke_promise_resolver,
+             cont_resolver: resolver
+         }, t.f_2);
+}
+fn capture_continuation(f_3: &called_with_continuation, v: &eq) -> &eq {
+    become apply_pair
+        (suspend_fiber(apply_continuation, {thunk| f: f_3, f_2: v }) as &pair);
+}
+type handlers = { value: &eq, exn: &eq, effect: &eq }
+type generic_fiber = open { handlers: mut &handlers }
+type fiber: generic_fiber = {
+    handlers: mut &handlers,
+    cont: &cont,
+    next: &?fiber
+}
+fn raise_unhandled(eff: &eq, x: &eq) -> &eq {
+    let effect_unhandled: &string;
+    effect_unhandled = string#"foo";
+    'null: {
+        caml_raise_with_arg
+            (br_on_null 'null caml_named_value(effect_unhandled), eff);
+    }
+    caml_raise_constant
+        ([block| 248 as &i31, effect_unhandled, caml_fresh_oo_id(0 as &i31)]);
+    0 as &i31;
+}
+fn uncaught_effect_handler(eff: &eq, cont: &eq, k: &eq, x: &eq) -> &eq {
+    let k': &cont;
+    k' = push_stack((cont as &block)[1] as &fiber, k as &cont);
+    k'.cont_func({pair| fst: {closure| f: raise_unhandled }, snd: eff }, k');
+    0 as &i31;
+}
+fn dummy_fun(x: &eq, x_2: &eq) -> &eq { unreachable; }
+fn default_continuation(p: &pair, x: &eq) { _ = apply_pair(p); }
+let stack: &?fiber =
+    {fiber|
+        handlers:
+            {handlers|
+                value: 0 as &i31,
+                exn: 0 as &i31,
+                effect:
+                    {closure_3| f: dummy_fun, f_2: uncaught_effect_handler }
+            },
+        cont: {cont| cont_func: default_continuation },
+        next: null as &?fiber
+    };
+fn pop_fiber() -> &cont {
+    let f_3: &fiber;
+    f_3 = stack!;
+    stack = f_3.next;
+    f_3.cont;
+}
+fn push_stack(stack_2: &fiber, k: &cont) -> &cont {
+    'done: {
+        'loop: loop {
+            stack =
+                {fiber| handlers: stack_2.handlers, cont: k, next: stack };
+            k = stack_2.cont;
+            stack_2 = br_on_null 'done stack_2.next;
+            br 'loop;
+        }
+    } /* 'done */
+    k;
+}
+fn do_resume(k: &cont, vp: &eq) {
+    let p: &pair;
+    let stack_2: &fiber;
+    p = vp as &pair;
+    stack_2 = p.fst as &fiber;
+    p = p.snd as &pair;
+    k = push_stack(stack_2, k);
+    become k.cont_func(p, k);
+}
+#[export = "%resume"]
+fn f(stack_2: &eq, f_3: &eq, v: &eq) -> &eq {
+    let k: &cont;
+    let pair: &pair;
+    if stack_2 == 0 as &i31 {
+        caml_raise_constant(caml_named_value(string#"foo")!);
+    }
+    become capture_continuation
+        (do_resume, {pair| fst: stack_2, snd: {pair| fst: f_3, snd: v } });
+}
+type call_handler_env: closure = {
+    f: &function_1,
+    handler: &eq,
+    eff: &eq,
+    cont: &eq
+}
+fn call_effect_handler(k: &eq, venv: &eq) -> &eq {
+    let env: &call_handler_env;
+    let handler: &closure_3;
+    env = venv as &call_handler_env;
+    become handler.f_2
+        (env.eff, env.cont, k, handler := env.handler as &closure_3);
+}
+fn do_perform(k0: &cont, vp: &eq) {
+    let eff: &eq;
+    let cont: &block;
+    let handler: &eq;
+    let k1: &cont;
+    let p: &pair;
+    let next_fiber: &eq;
+    p = vp as &pair;
+    eff = p.fst;
+    cont = p.snd as &block;
+    handler = stack.handlers.effect;
+    next_fiber = cont[1];
+    cont[1] =
+        {fiber|
+            handlers: stack.handlers,
+            cont: k0,
+            next:
+                if next_fiber is &fiber => &?fiber {
+                    next_fiber as &fiber;
+                } else { null as &?fiber; }
+        };
+    k1 = pop_fiber();
+    become k1.cont_func
+        ({pair|
+             fst:
+                 {call_handler_env|
+                     f: call_effect_handler,
+                     handler: handler,
+                     eff: eff,
+                     cont: cont
+                 },
+             snd: k1
+         }, k1);
+}
+#[export = "%reperform"]
+fn reperform(eff: &eq, cont: &eq) -> &eq {
+    become capture_continuation(do_perform, {pair| fst: eff, snd: cont });
+}
+#[export = "%perform"]
+fn f_2(eff: &eq) -> &eq {
+    become reperform(eff, [block| cont_tag as &i31, 0 as &i31, 0 as &i31]);
+}
+fn call_handler(f_3: &eq, x: &eq) {
+    let cont: &cont;
+    become cont.cont_func({pair| fst: f_3, snd: x }, cont := pop_fiber());
+}
+#[export = "caml_start_fiber"]
+fn caml_start_fiber(p: &?eq) {
+    let exn: &eq;
+    let res: &eq;
+    res =
+        try &eq {
+            try &eq {
+                apply_pair(p as &pair);
+            } catch {
+                javascript_exception => {
+                    throw ocaml_exception (caml_wrap_exception(_));
+                }
+            }
+        } catch {
+            ocaml_exception => {
+                exn = _;
+                become call_handler(stack.handlers.exn, exn);
+            }
+        };
+    become call_handler(stack.handlers.value, res);
+}
+fn initial_cont(p: &pair, x: &eq) { become start_fiber(p); }
+#[export = "caml_alloc_stack"]
+fn caml_alloc_stack(hv: &eq, hx: &eq, hf: &eq) -> &eq {
+    {fiber|
+        handlers: {handlers| value: hv, exn: hx, effect: hf },
+        cont: {cont| cont_func: initial_cont },
+        next: null as &?fiber
+    };
+}
+#[export = "caml_continuation_use_noexc"]
+fn caml_continuation_use_noexc(x: &eq) -> &eq {
+    let cont: &block;
+    let stack_2: &eq;
+    _ =
+        'used: do &eq {
+            cont = x as &block;
+            stack_2 = br_on_cast_fail 'used &generic_fiber cont[1];
+            cont[1] = 0 as &i31;
+            return stack_2;
+        };
+    0 as &i31;
+}
+#[export = "caml_continuation_use_and_update_handler_noexc"]
+fn caml_continuation_use_and_update_handler_noexc
+(cont: &eq, hval: &eq, hexn: &eq, heff: &eq) -> &eq {
+    let stack_2: &eq;
+    stack_2 = caml_continuation_use_noexc(cont);
+    _ =
+        'used: do &eq {
+            (br_on_cast_fail 'used &generic_fiber stack_2).handlers =
+                {handlers| value: hval, exn: hexn, effect: heff };
+            0 as &i31;
+        };
+    stack_2;
+}
+#[export = "caml_get_continuation_callstack"]
+fn caml_get_continuation_callstack(x: &eq, x_2: &eq) -> &eq {
+    [block| 0 as &i31];
+}
+#[export = "caml_is_continuation"]
+fn caml_is_continuation(x: &eq) -> i32 {
+    _ =
+        'not_continuation: do &eq {
+            return
+                ((br_on_cast_fail 'not_continuation &block x)[0] ==
+                     cont_tag as &i31);
+        };
+    0;
+}
+type function_2 = fn(_: &eq, _: &eq, _: &eq) -> &eq
+type function_4 = fn(_: &eq, _: &eq, _: &eq, _: &eq, _: &eq) -> &eq
+type cps_closure = open { f: &function_2 }
+type cps_closure_0 = open { f: &function_1 }
+type cps_closure_3: cps_closure = open { f: &function_2, f_2: &function_4 }
+type iterator: closure = { f: &function_1, i: mut i32, args: &block }
+type exn_stack = { h: &eq, next: &?exn_stack }
+type cps_fiber: generic_fiber = {
+    handlers: mut &handlers,
+    cont: &eq,
+    exn_stack: &?exn_stack,
+    next: &?cps_fiber
+}
+let exn_stack: &?exn_stack = null as &?exn_stack;
+#[export = "caml_push_trap"]
+fn caml_push_trap(h: &eq) -> &eq {
+    exn_stack = {exn_stack| h: h, next: exn_stack };
+    0 as &i31;
+}
+fn raise_exception_2(exn: &eq, x: &eq) -> &eq {
+    throw ocaml_exception (exn);
+}
+const raise_exception: &eq = {closure| f: raise_exception_2 };
+#[export = "caml_pop_trap"]
+fn caml_pop_trap() -> &eq {
+    let top: &exn_stack;
+    'empty: {
+        top = br_on_null 'empty exn_stack;
+        exn_stack = top.next;
+        return top.h;
+    }
+    raise_exception;
+}
+#[export = "caml_maybe_attach_backtrace"]
+fn caml_maybe_attach_backtrace(exn: &eq, x: &eq) -> &eq { exn; }
+fn identity_2(x: &eq, x_2: &eq) -> &eq { x; }
+const identity: &closure = {closure| f: identity_2 };
+fn trampoline_iterator(f_3: &eq, venv: &eq) -> &eq {
+    let env: &iterator;
+    let i: i32;
+    let args: &block;
+    env = venv as &iterator;
+    i = env.i;
+    args = env.args;
+    env.i = i + 1;
+    become (f_3 as &cps_closure).f
+        (args[i], if i + 1 == args.length => &eq { identity; } else { env; },
+         f_3);
+}
+fn apply_iterator(f_3: &eq, venv: &eq) -> &eq {
+    let env: &iterator;
+    let i: i32;
+    let args: &block;
+    env = venv as &iterator;
+    i = env.i;
+    args = env.args;
+    env.i = i + 1;
+    become (f_3 as &cps_closure).f
+        (args[i],
+         if i + 2 == args.length => &eq { args[i + 1]; } else { env; }, f_3);
+}
+#[export = "caml_apply_continuation"]
+fn caml_apply_continuation(args: &eq) -> &eq {
+    {iterator| f: apply_iterator, i: 1, args: args as &block };
+}
+fn dummy_cps_fun(x: &eq, x_2: &eq, x_3: &eq) -> &eq { unreachable; }
+let cps_fiber_stack: &?cps_fiber = null as &?cps_fiber;
+const default_fiber_stack: &?cps_fiber =
+    {cps_fiber|
+        handlers:
+            {handlers|
+                value: 0 as &i31,
+                exn: 0 as &i31,
+                effect:
+                    {cps_closure_3|
+                        f: dummy_cps_fun,
+                        f_2: cps_uncaught_effect_handler
+                    }
+            },
+        cont: 0 as &i31,
+        exn_stack: null as &?exn_stack,
+        next: null as &?cps_fiber
+    };
+#[export = "caml_trampoline"]
+fn caml_trampoline(f_3: &eq, vargs: &eq) -> &eq {
+    let args: &block;
+    let i: i32;
+    let res: &eq;
+    let exn: &eq;
+    let top: &exn_stack;
+    let saved_exn_stack: &?exn_stack;
+    let saved_fiber_stack: &?cps_fiber;
+    saved_exn_stack = exn_stack;
+    saved_fiber_stack = cps_fiber_stack;
+    exn_stack = null as &?exn_stack;
+    cps_fiber_stack = default_fiber_stack;
+    args = vargs as &block;
+    exn =
+        try &eq {
+            res =
+                if args.length == 1 => &eq {
+                    (f_3 as &cps_closure_0).f(identity, f_3);
+                } else {
+                    (f_3 as &cps_closure).f
+                        (args[1],
+                         if 2 == args.length => &eq {
+                             identity;
+                         } else {
+                             {iterator|
+                                 f: trampoline_iterator,
+                                 i: 2,
+                                 args: args
+                             };
+                         }, f_3);
+                };
+            exn_stack = saved_exn_stack;
+            cps_fiber_stack = saved_fiber_stack;
+            return res;
+        } catch {
+            ocaml_exception => { _; }
+            javascript_exception => { caml_wrap_exception(_); }
+        };
+    'loop: loop {
+        'empty: {
+            top = br_on_null 'empty exn_stack;
+            exn_stack = top.next;
+            f_3 = top.h;
+            try {
+                res = (f_3 as &closure).f(exn, f_3);
+                exn_stack = saved_exn_stack;
+                cps_fiber_stack = saved_fiber_stack;
+                return res;
+            } catch {
+                ocaml_exception => { exn = _; br 'loop; }
+                javascript_exception => {
+                    exn = caml_wrap_exception(_);
+                    br 'loop;
+                }
+            }
+        } /* 'empty */
+    } /* 'loop */
+    exn_stack = saved_exn_stack;
+    cps_fiber_stack = saved_fiber_stack;
+    throw ocaml_exception (exn);
+}
+#[export = "caml_trampoline_ref"]
+let caml_trampoline_ref: &?function_1 = null as &?function_1;
+fn caml_pop_fiber() -> &eq {
+    let top: &cps_fiber;
+    top = cps_fiber_stack!;
+    cps_fiber_stack = top.next;
+    exn_stack = top.exn_stack;
+    top.cont;
+}
+#[export = "caml_resume_stack"]
+fn caml_resume_stack(vstack: &eq, k: &eq) -> &eq {
+    let stack_2: &cps_fiber;
+    _ =
+        'already_resumed: do &eq {
+            stack_2 = br_on_cast_fail 'already_resumed &cps_fiber vstack;
+            'done: {
+                'loop: loop {
+                    cps_fiber_stack =
+                        {cps_fiber|
+                            handlers: stack_2.handlers,
+                            cont: k,
+                            exn_stack: exn_stack,
+                            next: cps_fiber_stack
+                        };
+                    k = stack_2.cont;
+                    exn_stack = stack_2.exn_stack;
+                    stack_2 = br_on_null 'done stack_2.next;
+                    br 'loop;
+                } /* 'loop */
+            } /* 'done */
+            return k;
+        } /* 'already_resumed */;
+    caml_raise_constant(caml_named_value(string#"foo")!);
+    0 as &i31;
+}
+#[export = "caml_perform_effect"]
+fn caml_perform_effect(eff: &eq, vcont: &eq, k0: &eq) -> &eq {
+    let handlers: &handlers;
+    let handler: &eq;
+    let k1: &eq;
+    let cont: &block;
+    let next_fiber: &eq;
+    cont =
+        'reperform: do &block {
+            _ = br_on_cast 'reperform &block vcont;
+            [block| cont_tag as &i31, 0 as &i31, 0 as &i31];
+        };
+    handlers = (cps_fiber_stack!).handlers;
+    handler = handlers.effect;
+    next_fiber = cont[1];
+    cont[1] =
+        {cps_fiber|
+            handlers: handlers,
+            cont: k0,
+            exn_stack: exn_stack,
+            next:
+                if next_fiber is &cps_fiber => &?cps_fiber {
+                    next_fiber as &cps_fiber;
+                } else { null as &?cps_fiber; }
+        };
+    k1 = caml_pop_fiber();
+    become (handler as &cps_closure_3).f_2(eff, cont, k1, k1, handler);
+}
+fn cps_call_handler(handler: &eq, x: &eq) -> &eq {
+    become (handler as &cps_closure).f(x, caml_pop_fiber(), handler);
+}
+fn value_handler_2(x: &eq, x_2: &eq) -> &eq {
+    become cps_call_handler((cps_fiber_stack!).handlers.value, x);
+}
+const value_handler: &closure = {closure| f: value_handler_2 };
+fn exn_handler_2(x: &eq, x_2: &eq) -> &eq {
+    become cps_call_handler((cps_fiber_stack!).handlers.exn, x);
+}
+const exn_handler: &closure = {closure| f: exn_handler_2 };
+#[export = "caml_cps_alloc_stack"]
+fn caml_cps_alloc_stack(hv: &eq, hx: &eq, hf: &eq) -> &eq {
+    {cps_fiber|
+        handlers: {handlers| value: hv, exn: hx, effect: hf },
+        cont: value_handler,
+        exn_stack: {exn_stack| h: exn_handler, next: null as &?exn_stack },
+        next: null as &?cps_fiber
+    };
+}
+fn cps_uncaught_effect_handler(eff: &eq, k: &eq, ms: &eq, x: &eq, x_2: &eq)
+-> &eq {
+    _ = caml_resume_stack((k as &block)[1], ms);
+    raise_unhandled(eff, 0 as &i31);
+}
+#[export = "caml_cps_initialize_effects"]
+fn caml_cps_initialize_effects() { caml_trampoline_ref = caml_trampoline; }

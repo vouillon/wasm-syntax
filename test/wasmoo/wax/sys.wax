@@ -1,0 +1,120 @@
+#[import = ("bindings", "ta_length")] fn ta_length(_: &extern) -> i32
+#[import = ("bindings", "ta_get_i32")]
+fn ta_get_i32(_: &extern, _: i32) -> i32
+#[import = ("bindings", "random_seed")] fn random_seed() -> &extern
+#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
+#[import = ("jslib", "wrap")] fn wrap(_: &?any) -> &eq
+#[import = ("jslib", "caml_jsstring_of_string")]
+fn caml_jsstring_of_string(_: &eq) -> &eq
+#[import = ("jslib", "caml_string_of_jsstring")]
+fn caml_string_of_jsstring(_: &eq) -> &eq
+#[import = ("jslib", "caml_js_to_string_array")]
+fn caml_js_to_string_array(a: &extern) -> &eq
+#[import = ("jslib", "caml_js_meth_call")]
+fn caml_js_meth_call(_: &eq, _: &eq, _: &eq) -> &eq
+#[import = ("fail", "caml_raise_sys_error")] fn caml_raise_sys_error(_: &eq)
+#[import = ("fail", "caml_raise_not_found")] fn caml_raise_not_found()
+#[import = ("bindings", "argv")] fn argv() -> &extern
+#[import = ("bindings", "system")] fn system(_: &?any) -> &eq
+#[import = ("bindings", "getenv")] fn getenv(_: &?any) -> &?any
+#[import = ("bindings", "time")] fn time() -> f64
+#[import = ("bindings", "array_length")] fn array_length(_: &extern) -> i32
+#[import = ("bindings", "array_get")]
+fn array_get(_: &extern, _: i32) -> &?any
+#[import = ("fail", "javascript_exception")]
+tag javascript_exception(_: &?extern)
+#[import = ("jsstring", "jsstring_test")] fn jsstring_test(_: &?any) -> i32
+type block = [mut &eq]
+type string = [mut i8]
+type float = { f: f64 }
+#[export = "ocaml_exit"] tag ocaml_exit(_: i32)
+#[export = "caml_sys_exit"]
+fn caml_sys_exit(x: &eq) -> &eq { throw ocaml_exit (x as &i31 as i32_s); }
+#[export = "caml_sys_getenv"]
+fn caml_sys_getenv(x: &eq) -> &eq {
+    let res: &?any;
+    res = getenv(unwrap(caml_jsstring_of_string(x)));
+    if !jsstring_test(res) { caml_raise_not_found(); }
+    become caml_string_of_jsstring(wrap(res));
+}
+#[export = "caml_sys_argv"]
+fn caml_sys_argv(x: &eq) -> &eq { caml_js_to_string_array(argv()); }
+#[export = "caml_sys_executable_name"]
+fn caml_sys_executable_name(x: &eq) -> &eq {
+    (caml_js_to_string_array(argv()) as &block)[1];
+}
+#[export = "caml_sys_time"]
+fn caml_sys_time(x: &eq) -> &eq { {float| f: time() * 0.001 }; }
+#[export = "caml_sys_system_command"]
+fn caml_sys_system_command(x: &eq) -> &eq {
+    try &eq {
+        return system(unwrap(caml_jsstring_of_string(x)));
+    } catch {
+        javascript_exception => {
+            caml_handle_sys_error(_);
+            return 0 as &i31;
+        }
+    }
+}
+#[export = "caml_sys_random_seed"]
+fn caml_sys_random_seed(x: &eq) -> &eq {
+    let r: &extern;
+    let a: &block;
+    let i: i32;
+    let n: i32;
+    r = random_seed();
+    n = ta_length(r);
+    a = [block| 0 as &i31; n + 1];
+    i = 0;
+    'loop: loop {
+        if i <u n {
+            a[i + 1] = ta_get_i32(r, i) as &i31;
+            i = i + 1;
+            br 'loop;
+        }
+    } /* 'loop */
+    a;
+}
+#[export = "caml_sys_const_bigendian"]
+fn caml_sys_const_bigendian(x: &eq) -> &eq { 0 as &i31; }
+#[export = "caml_sys_const_word_size"]
+fn caml_sys_const_word_size(x: &eq) -> &eq { 32 as &i31; }
+#[export = "caml_sys_const_int_size"]
+fn caml_sys_const_int_size(x: &eq) -> &eq { 31 as &i31; }
+#[export = "caml_sys_const_max_wosize"]
+fn caml_sys_const_max_wosize(x: &eq) -> &eq { 0xfffffff as &i31; }
+#[export = "caml_sys_const_ostype_unix"]
+fn caml_sys_const_ostype_unix(x: &eq) -> &eq { 1 as &i31; }
+#[export = "caml_sys_const_ostype_win32"]
+fn caml_sys_const_ostype_win32(x: &eq) -> &eq { 0 as &i31; }
+#[export = "caml_sys_const_ostype_cygwin"]
+fn caml_sys_const_ostype_cygwin(x: &eq) -> &eq { 0 as &i31; }
+#[export = "caml_sys_get_config"]
+fn caml_sys_get_config(x: &eq) -> &eq {
+    [block| 0 as &i31, string#"foo", 32 as &i31, 0 as &i31];
+}
+#[export = "caml_sys_isatty"]
+fn caml_sys_isatty(x: &eq) -> &eq { 0 as &i31; }
+#[export = "caml_runtime_variant"]
+fn caml_runtime_variant(x: &eq) -> &eq { string#""; }
+#[export = "caml_runtime_parameters"]
+fn caml_runtime_parameters(x: &eq) -> &eq { string#""; }
+#[export = "caml_install_signal_handler"]
+fn caml_install_signal_handler(x: &eq, x_2: &eq) -> &eq { 0 as &i31; }
+let caml_runtime_warnings: i32 = 0;
+#[export = "caml_ml_enable_runtime_warnings"]
+fn caml_ml_enable_runtime_warnings(x: &eq) -> &eq {
+    caml_runtime_warnings = x as &i31 as i32_u;
+    0 as &i31;
+}
+#[export = "caml_ml_runtime_warnings_enabled"]
+fn caml_ml_runtime_warnings_enabled(x: &eq) -> &eq {
+    caml_runtime_warnings as &i31;
+}
+#[export = "caml_handle_sys_error"]
+fn caml_handle_sys_error(exn: &?extern) {
+    caml_raise_sys_error
+        (caml_string_of_jsstring
+             (caml_js_meth_call
+                  (wrap(exn as &?any), string#"foo", [block| 0 as &i31])));
+}

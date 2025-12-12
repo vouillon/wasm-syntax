@@ -1,0 +1,34 @@
+#[import = ("jslib", "wrap")] fn wrap(_: &?any) -> &eq
+#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
+#[import = ("jslib", "caml_js_global")] fn caml_js_global(_: &eq) -> &eq
+#[import = ("jslib", "caml_js_get")] fn caml_js_get(_: &eq, _: &eq) -> &eq
+#[import = ("jslib", "caml_js_new")] fn caml_js_new(_: &eq, _: &eq) -> &eq
+#[import = ("jslib", "caml_js_from_array")]
+fn caml_js_from_array(_: &eq) -> &eq
+#[import = ("js", "caml_js_on_ie")] fn caml_js_on_ie() -> i32
+#[import = ("js", "caml_js_html_escape")]
+fn caml_js_html_escape(_: &?any) -> &?any
+#[import = ("js", "caml_js_html_entities")]
+fn caml_js_html_entities(_: &?any) -> &?any
+type block = [mut &eq]
+type string = [mut i8]
+#[export = "caml_js_on_ie"]
+fn caml_js_on_ie_2(x: &eq) -> &eq { caml_js_on_ie() as &i31; }
+#[export = "caml_js_html_escape"]
+fn caml_js_html_escape_2(x: &eq) -> &eq {
+    become wrap(caml_js_html_escape(unwrap(x)));
+}
+#[export = "caml_js_html_entities"]
+fn caml_js_html_entities_2(x: &eq) -> &eq {
+    become wrap(caml_js_html_entities(unwrap(x)));
+}
+#[export = "caml_js_get_console"]
+fn caml_js_get_console(x: &eq) -> &eq {
+    become caml_js_get(caml_js_global(0 as &i31), string#"foo");
+}
+#[export = "caml_xmlhttprequest_create"]
+fn caml_xmlhttprequest_create(x: &eq) -> &eq {
+    become caml_js_new
+        (caml_js_get(caml_js_global(0 as &i31), string#"foo"),
+         [block| 0 as &i31]);
+}

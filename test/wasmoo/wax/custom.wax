@@ -1,0 +1,90 @@
+#[import = ("int32", "int32_ops")] const int32_ops: &custom_operations
+#[import = ("int32", "nativeint_ops")]
+const nativeint_ops: &custom_operations
+#[import = ("int64", "int64_ops")] const int64_ops: &custom_operations
+#[import = ("bigarray", "bigarray_ops")]
+const bigarray_ops: &custom_operations
+#[import = ("string", "caml_string_equal")]
+fn caml_string_equal(_: &eq, _: &eq) -> &eq
+type string = [mut i8]
+type compare = fn(_: &eq, _: &eq, _: i32) -> i32
+type hash = fn(_: &eq) -> i32
+type fixed_length = { bsize_32: i32, bsize_64: i32 }
+type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
+type deserialize = fn(_: &eq) -> (&eq, i32)
+type dup = fn(_: &eq) -> &eq
+type custom_operations = {
+    id: &string,
+    compare: &?compare,
+    compare_ext: &?compare,
+    hash: &?hash,
+    fixed_length: &?fixed_length,
+    serialize: &?serialize,
+    deserialize: &?deserialize,
+    dup: &?dup
+}
+type custom = open { f: &custom_operations }
+type custom_with_id: custom = open { f: &custom_operations, id: i64 }
+#[export = "caml_is_custom"]
+fn caml_is_custom(x: &eq) -> i32 { x is &custom; }
+#[export = "caml_dup_custom"]
+fn caml_dup_custom(v: &eq) -> &eq {
+    ('custom: do &custom { _ = br_on_cast 'custom &custom v; unreachable; }.f.dup!)
+        (v);
+}
+#[export = "custom_compare_id"]
+fn custom_compare_id(x: &eq, x_2: &eq, x_3: i32) -> i32 {
+    let i1: i64;
+    let i2: i64;
+    i1 = (x as &custom_with_id).id;
+    i2 = (x_2 as &custom_with_id).id;
+    (i1 >s i2) - (i1 <s i2);
+}
+#[export = "custom_hash_id"]
+fn custom_hash_id(x: &eq) -> i32 { (x as &custom_with_id).id as i32; }
+let next_id: i64 = 0;
+#[export = "custom_next_id"]
+fn custom_next_id() -> i64 {
+    let id: i64;
+    id = next_id;
+    next_id = id + 1;
+    id;
+}
+type custom_operations_list = {
+    ops: &custom_operations,
+    next: &?custom_operations_list
+}
+let custom_operations: &?custom_operations_list =
+    null as &?custom_operations_list;
+#[export = "caml_register_custom_operations"]
+fn caml_register_custom_operations(ops: &custom_operations) {
+    custom_operations =
+        {custom_operations_list| ops: ops, next: custom_operations };
+}
+#[export = "caml_find_custom_operations"]
+fn caml_find_custom_operations(id: &string) -> &?custom_operations {
+    let l: &?custom_operations_list;
+    'not_found: {
+        l = br_on_null 'not_found custom_operations;
+        'loop: loop {
+            if caml_string_equal(id, l.ops.id) as &i31 as i32_u {
+                return l.ops;
+            }
+            l = br_on_null 'not_found l.next;
+            br 'loop;
+        } /* 'loop */
+    } /* 'not_found */
+    null as &?custom_operations;
+}
+let initialized: i32 = 0;
+#[export = "caml_init_custom_operations"]
+fn caml_init_custom_operations() {
+    if initialized { return; }
+    caml_register_custom_operations(int32_ops);
+    caml_register_custom_operations(nativeint_ops);
+    caml_register_custom_operations(int64_ops);
+    caml_register_custom_operations(bigarray_ops);
+    initialized = 1;
+}
+#[export = "caml_custom_identifier"]
+fn caml_custom_identifier(v: &eq) -> &eq { (v as &custom).f.id; }
