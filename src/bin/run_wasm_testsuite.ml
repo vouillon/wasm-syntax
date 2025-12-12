@@ -114,7 +114,7 @@ let in_child_process ?(quiet = false) f =
 let counter = ref 0
 let outputs = ref []
 
-let iter_files dirs skip suffix f =
+let iter_files dirs skip suffix ~output f =
   let pool = create_pool (Domain.recommended_domain_count ()) in
   let rec visit root dir =
     let entries = Sys.readdir (Filename.concat root dir) in
@@ -129,13 +129,13 @@ let iter_files dirs skip suffix f =
             let i = !counter in
             incr counter;
             in_child_process_async pool
-              ~on_termination:(fun _ s -> outputs := (i, s) :: !outputs)
+              ~on_termination:(fun _ s -> outputs := (i, path, s) :: !outputs)
               (fun () -> f full_path path)))
       entries
   in
   List.iter (fun root -> visit root "") dirs;
   wait_all_children pool;
-  List.iter (fun (_, s) -> print_flushed s) (List.sort compare !outputs)
+  List.iter (fun (_, path, s) -> output path s) (List.sort compare !outputs)
 
 type script =
   ([ `Valid | `Invalid of string | `Malformed of string ]
@@ -191,14 +191,9 @@ module WaxParser =
 let print_module ~color f m =
   Utils.Printer.run f (fun p -> Wasm.Output.module_ p ~color m)
 
-let runtest filename path =
+let runtest filename _ =
   let quiet = not !all_errors in
   let color = !color in
-  if true then
-    Format.eprintf "%s==== %s ====%s@."
-      (match color with Always -> Utils.Colors.Ansi.grey | _ -> "")
-      path
-      (match color with Always -> Utils.Colors.Ansi.reset | _ -> "");
   let source = In_channel.with_open_bin filename In_channel.input_all in
   let lst = ScriptParser.parse_from_string ~color ~filename source in
   let lst = List.map (fun (status, m) -> (status, m, Some source)) lst in
@@ -374,9 +369,17 @@ let runtest filename path =
               if true then prerr_endline "(parsing)" else print_flushed text)
     lst
 
+let output path s =
+  if s <> "" then (
+    Format.printf "%s==== %s ====%s@."
+      (match !color with Always -> Utils.Colors.Ansi.grey | _ -> "")
+      path
+      (match !color with Always -> Utils.Colors.Ansi.reset | _ -> "");
+    print_flushed s)
+
 let dirs = [ "wasm-test-suite"; "additional-tests" ]
 
 let () =
-  iter_files dirs
+  iter_files dirs ~output
     (fun p -> List.mem p [ "try_delegate.wast"; "rethrow.wast" ])
     ".wast" runtest
