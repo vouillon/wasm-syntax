@@ -764,7 +764,7 @@ let rec instr prec pp (i : _ instr) =
   | ThrowRef i ->
       parentheses prec Branch pp @@ fun () ->
       box pp ~indent:indent_level (fun () ->
-          keyword pp "throw";
+          keyword pp "throw_ref";
           space pp ();
           instr Branch pp i)
   | Sequence l -> print_paren_list (instr Instruction) pp l

@@ -169,6 +169,8 @@ let rec token lexbuf =
   | "br_on_cast" -> BR_ON_CAST
   | "br_on_cast_fail" -> BR_ON_CAST_FAIL
   | "return" -> RETURN
+  | "try" -> TRY
+  | "catch" -> CATCH
   | "throw" -> THROW
   | "throw_ref" -> THROW_REF
   | int -> INT (Sedlexing.Utf8.lexeme lexbuf)

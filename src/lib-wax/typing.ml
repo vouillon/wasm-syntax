@@ -812,6 +812,7 @@ let with_empty_stack ctx ~kind:_ ~location f =
   if false then prerr_endline "DONE";
   (match st with
   | Cons _ ->
+      (assert false : unit);
       Error.non_empty_stack ctx.diagnostics ~location (fun f () ->
           Format.fprintf f "@[%a@]" output_stack st)
   | Empty | Unreachable -> ());
@@ -1837,34 +1838,46 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
          UnionFind.make (Valtype { typ = Ref ty; internal = Ref ityp })
        in
        check_subtypes ctx (Array.append types [| typ |]) params);
-      let*! typ =
+      let*! typ1, typ2 =
         match UnionFind.find typ' with
         | Valtype { typ = Ref ty'; _ } ->
-            internalize ctx (Ref (diff_ref_type ty' ty))
-        | Unknown -> Some (UnionFind.make Unknown)
+            let*@ ty1 = val_lub ctx (Ref ty) (Ref ty') in
+            let*@ typ1 = internalize ctx ty1 in
+            let+@ typ2 = internalize ctx (Ref (diff_ref_type ty' ty)) in
+            (typ1, typ2)
+        | Unknown -> Some (typ', UnionFind.make Unknown)
         | _ -> assert false
       in
       return_statement i
-        (Br_on_cast (label, ty, i'))
-        (Array.append (Array.sub params 0 (Array.length params - 1)) [| typ |])
+        (Br_on_cast
+           ( label,
+             ty,
+             { i' with info = (Array.append types [| typ1 |], snd i'.info) } ))
+        (Array.append (Array.sub params 0 (Array.length params - 1)) [| typ2 |])
   | Br_on_cast_fail (label, ty, i') ->
       let* i' = instruction ctx i' in
       let typ', types = split_on_last_type i' in
       let*! ityp = reftype ctx.diagnostics ctx.type_context ty in
-      let*! typ =
+      let*! typ1, typ2 =
         match UnionFind.find typ' with
         | Valtype { typ = Ref ty'; _ } ->
-            internalize ctx (Ref (diff_ref_type ty' ty))
-        | Unknown -> Some (UnionFind.make Unknown)
+            let*@ ty1 = val_lub ctx (Ref ty) (Ref ty') in
+            let*@ typ1 = internalize ctx ty1 in
+            let+@ typ2 = internalize ctx (Ref (diff_ref_type ty' ty)) in
+            (typ1, typ2)
+        | Unknown -> Some (typ', UnionFind.make Unknown)
         | _ -> assert false
       in
       let params = branch_target ctx label in
-      check_subtypes ctx (Array.append types [| typ |]) params;
+      check_subtypes ctx (Array.append types [| typ2 |]) params;
       let typ =
         UnionFind.make (Valtype { typ = Ref ty; internal = Ref ityp })
       in
       return_statement i
-        (Br_on_cast_fail (label, ty, i'))
+        (Br_on_cast_fail
+           ( label,
+             ty,
+             { i' with info = (Array.append types [| typ1 |], snd i'.info) } ))
         (Array.append (Array.sub params 0 (Array.length params - 1)) [| typ |])
   | Throw (tag, lst) ->
       let* lst' = instructions ctx lst in
@@ -2015,6 +2028,7 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
         array_map_opt (fun (_, typ) -> internalize ctx typ) params
       in
       let*! results = array_map_opt (internalize ctx) results in
+      let* () = pop_args ctx (Array.to_list params) in
       let body' = block ctx i.info label params results results body in
       let check_catch types label =
         let params = branch_target ctx label in

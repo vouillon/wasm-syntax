@@ -16,6 +16,7 @@ let reserved =
          "br_on_non_null";
          "br_on_null";
          "br_table";
+         "catch";
          "const";
          "do";
          "else";
@@ -32,6 +33,7 @@ let reserved =
          "return";
          "tag";
          "throw";
+         "try";
          "type";
          "unreachable";
        ])

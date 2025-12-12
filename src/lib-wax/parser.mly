@@ -67,11 +67,11 @@
 %token BR BR_IF BR_TABLE RETURN THROW THROW_REF
 %token BR_ON_CAST BR_ON_CAST_FAIL
 %token BR_ON_NULL BR_ON_NON_NULL
+%token TRY CATCH
 %token DISPATCH
 
-%nonassoc prec_ident (* {a|...} *) prec_plain (* throw_ref f(1) *) prec_block
-%right THROW_REF RETURN prec_let prec_branch
-%nonassoc "{"  (* return { abcd } *)
+%nonassoc prec_ident (* {a|...} *) prec_block
+%right prec_branch
 %right "?" ":"
 %right ":=" "="
 %nonassoc "==" "!=" "<" "<u" "<s" ">" ">u" ">s" "<=" "<=u" "<=s" ">=" ">=u" ">=s"
@@ -271,6 +271,19 @@ blocktype:
 %inline block:
 | label = block_label "{" l = delimited_instr_list "}" { (label, l) }
 
+catch:
+| t = ident "->" l = label { Catch (t, l) }
+| t = ident "&" "->" l = label { CatchRef (t, l) }
+| "_" "->" l = label { CatchAll l }
+| "_" "&" "->" l = label { CatchAllRef l }
+
+legacy_catch:
+| t = ident "=>" "{" l = delimited_instr_list "}" { (t, l) }
+
+legacy_catch_all:
+| "_" "=>"  "{" l = delimited_instr_list "}" { l }
+
+
 %inline blockinstr:
 | b = block
   { let (label, l) = b in with_loc $sloc (Block(label, blocktype None, l)) }
@@ -283,15 +296,21 @@ blocktype:
   "{" l1 = delimited_instr_list "}"
   l2 = option(ELSE  "{" l = delimited_instr_list "}" { l })
   { with_loc $sloc (If(label, blocktype bt, e, l1, l2)) }
+| label = block_label TRY bt = option(blocktype) "{" l = delimited_instr_list "}"
+  CATCH "[" catches = separated_list(",", catch) "]"
+  { with_loc $sloc (TryTable {label; typ = blocktype bt; catches; block = l}) }
+| label = block_label TRY bt = option(blocktype) "{" l = delimited_instr_list "}"
+  CATCH
+  "{" catches = list(legacy_catch); catch_all = option(legacy_catch_all) "}"
+  { with_loc $sloc
+      (Try {label; typ = blocktype bt; block = l; catches; catch_all}) }
 
 plaininstr:
-| NOP { with_loc $sloc Nop }
-| UNREACHABLE { with_loc $sloc Unreachable }
 | NULL { with_loc $sloc Null }
 | "_" {with_loc $sloc Pop }
 | x = ident { with_loc $sloc (Get x) } %prec prec_ident
 | "(" l = separated_list(",", instr) ")" { with_loc $sloc (Sequence l) }
-| i = plaininstr "(" l = separated_list(",", instr) ")"
+| i = instr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (Call(i, l)) }
 | t  = option(t = ident "#" { t }) s = STRING { with_loc $sloc (String (t, s)) }
 | i = INT { with_loc $sloc (Int i) }
@@ -316,9 +335,6 @@ plaininstr:
   { with_loc $sloc (Array (Some t, i1, i2)) }
 | "[" t = ident "|" ".." ";" i = instr "]"
   { with_loc $sloc (ArrayDefault (Some t, i)) }
-| BECOME i = instr "(" l = separated_list(",", instr) ")"
-   { with_loc $sloc (TailCall(i, l)) }
-| x = simple_pat "=" i = instr { with_loc $sloc (Set (x, i)) }
 | x = ident ":=" i = instr { with_loc $sloc (Tee (x, i)) }
 | i = instr AS t = casttype { with_loc $sloc (Cast(i, t)) }
 | i = instr IS t = reftype { with_loc $sloc (Test(i, t)) }
@@ -352,21 +368,6 @@ plaininstr:
 | i = instr "<=" j = instr { with_loc $sloc (BinOp(Le None, i, j)) }
 | i = instr "<=s" j = instr { with_loc $sloc (BinOp(Le (Some Signed), i, j)) }
 | i = instr "<=u" j = instr { with_loc $sloc (BinOp(Le (Some Unsigned), i, j)) }
-| LET x = simple_pat %prec prec_let
-  { with_loc $sloc (Let ([(x, None)], None)) }
-| LET x = simple_pat "=" i = instr
-  { with_loc $sloc (Let ([(x, None)], Some i)) } %prec prec_let
-| LET x = simple_pat ":" t = valtype "=" i = instr %prec prec_let
-  { with_loc $sloc (Let ([(x, Some t)], Some i)) }
-| LET x = simple_pat ":" t = valtype
-  { with_loc $sloc (Let ([(x, Some t)], None)) }
-| LET
-  "(" l = separated_list(",", p = simple_pat t = option(":" t = valtype {t})
-                                { (p, t) })
-  ")" i = ioption("=" i = instr {i}) %prec prec_let
-  { with_loc $sloc (Let (l, i)) }
-| BR l = label i = ioption(instr) %prec prec_branch
-  { with_loc $sloc (Br (l, i)) }
 | BR_IF l = label i = instr %prec prec_branch
   { with_loc $sloc (Br_if (l, i))} 
 (*
@@ -375,20 +376,11 @@ plaininstr:
 *)
 | DISPATCH instr "["   list(label { () }) ELSE label "]" "{" instr "}"
  { with_loc $sloc Nop }
-| BR_TABLE "[" lst = list(i = label { i }) ELSE l = label  "]" i = instr
-  { with_loc $sloc (Br_table (lst @ [l], i)) } %prec prec_branch
 | BR_ON_NULL l = label i = instr { with_loc $sloc (Br_on_null (l, i)) } %prec prec_branch
 | BR_ON_NON_NULL l = label i = instr { with_loc $sloc (Br_on_non_null (l, i)) }  %prec prec_branch
 | BR_ON_CAST l = label t = reftype i = instr { with_loc $sloc (Br_on_cast (l, t, i)) } %prec prec_branch
 | BR_ON_CAST_FAIL l = label t = reftype i = instr { with_loc $sloc (Br_on_cast_fail (l, t, i)) } %prec prec_branch
-| RETURN i = ioption(instr) { with_loc $sloc (Return i) }
-| THROW t = ident  "(" l = separated_list(",", instr) ")"
-  { with_loc $sloc (Throw (t, l)) }
-| THROW_REF i = instr
-  { with_loc $sloc (ThrowRef i) }
 | i1 = instr "[" i2 = instr "]" { with_loc $sloc (ArrayGet (i1, i2)) }
-| i1 = instr "[" i2 = instr "]" "=" i3 = instr
-  { with_loc $sloc (ArraySet (i1, i2, i3)) }
 | i1 = instr "?" i2 = instr ":" i3 = instr
   { with_loc $sloc (Select (i1, i2, i3)) }
 | "!" i = instr { with_loc $sloc (UnOp (Not, i)) } %prec prec_unary
@@ -398,13 +390,45 @@ plaininstr:
 
 instr:
 | i = blockinstr %prec prec_block { i }
-| i = plaininstr %prec prec_plain { i }
+| i = plaininstr { i }
+
+statement:
+| i = plaininstr { i }
+| NOP { with_loc $sloc Nop }
+| UNREACHABLE { with_loc $sloc Unreachable }
+| x = simple_pat "=" i = instr { with_loc $sloc (Set (x, i)) }
+| LET x = simple_pat
+  { with_loc $sloc (Let ([(x, None)], None)) }
+| LET x = simple_pat "=" i = instr
+  { with_loc $sloc (Let ([(x, None)], Some i)) }
+| LET x = simple_pat ":" t = valtype "=" i = instr
+  { with_loc $sloc (Let ([(x, Some t)], Some i)) }
+| LET x = simple_pat ":" t = valtype
+  { with_loc $sloc (Let ([(x, Some t)], None)) }
+| LET
+  "(" l = separated_list(",", p = simple_pat t = option(":" t = valtype {t})
+                                { (p, t) })
+  ")" i = ioption("=" i = instr {i})
+  { with_loc $sloc (Let (l, i)) }
+| BR l = label i = ioption(instr)
+  { with_loc $sloc (Br (l, i)) }
+| BR_TABLE "[" lst = list(i = label { i }) ELSE l = label  "]" i = instr
+  { with_loc $sloc (Br_table (lst @ [l], i)) }
+| RETURN i = ioption(instr) { with_loc $sloc (Return i) }
+| THROW t = ident  "(" l = separated_list(",", instr) ")"
+  { with_loc $sloc (Throw (t, l)) }
+| THROW_REF i = instr
+  { with_loc $sloc (ThrowRef i) }
+| BECOME i = instr "(" l = separated_list(",", instr) ")"
+   { with_loc $sloc (TailCall(i, l)) }
+| i1 = instr "[" i2 = instr "]" "=" i3 = instr
+  { with_loc $sloc (ArraySet (i1, i2, i3)) }
 
 delimited_instr_list:
 | { [] }
-| i = plaininstr { [i] }
+| i = statement { [i] }
 | i = blockinstr l = delimited_instr_list { i :: l }
-| i = plaininstr ";" l = delimited_instr_list { i :: l }
+| i = statement ";" l = delimited_instr_list { i :: l }
 
 globalmut:
 | LET { true }
