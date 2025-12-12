@@ -3,7 +3,7 @@
  (public_name wax.wasm)
  (preprocess
   (pps sedlex.ppx))
-; (modules :standard \ wasm_link)
+ ; (modules :standard \ wasm_link)
  (libraries utils sedlex menhirLib unix))
 
 (include dune.menhir)

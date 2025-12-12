@@ -4,7 +4,7 @@
 %token <string> STRING
 
 %token EOF
-
+%token INF NAN
 %token SEMI ";"
 %token SHARP "#"
 %token QUESTIONMARK "?"
@@ -160,8 +160,44 @@ let blocktype bt = Option.value ~default:{params = [||]; results = [||]} bt
 %inline ident:
 | t = IDENT { with_loc $sloc t }
 
+ident_or_keyword:
+| t = IDENT { t }
+| FN { "fn" }
+| TAG { "tag" }
+| MUT { "mut" }
+| TYPE { "type" }
+| REC { "rec" }
+| OPEN { "open" }
+| NOP { "nop" }
+| UNREACHABLE { "unreachable" }
+| NULL { "null" }
+| DO { "do" }
+| LOOP { "loop" }
+| IF { "if" }
+| ELSE { "else" }
+| CONST { "const" }
+| LET { "let" }
+| AS { "as" }
+| IS { "is" }
+| BECOME { "become" }
+| BR { "br" }
+| BR_IF { "br_if" }
+| BR_TABLE { "br_table" }
+| RETURN { "return" }
+| THROW { "throw" }
+| THROW_REF { "throw_ref" }
+| BR_ON_CAST { "br_on_cast" }
+| BR_ON_CAST_FAIL { "br_on_cast_fail" }
+| BR_ON_NULL { "br_on_null" }
+| BR_ON_NON_NULL { "br_on_non_null" }
+| TRY { "try" }
+| CATCH { "catch" }
+| DISPATCH { "dispatch" }
+| INF { "inf" }
+| NAN { "nan" }
+
 %inline label:
-| "'" l = IDENT { with_loc $sloc l }
+| "'" l = ident_or_keyword { with_loc $sloc l }
 
 heaptype:
 | t = ident { try Hashtbl.find absheaptype_tbl t.desc with Not_found -> Type t }
@@ -315,6 +351,8 @@ plaininstr:
 | t  = option(t = ident "#" { t }) s = STRING { with_loc $sloc (String (t, s)) }
 | i = INT { with_loc $sloc (Int i) }
 | f = FLOAT { with_loc $sloc (Float f) }
+| INF { with_loc $sloc (Float "inf") }
+| NAN { with_loc $sloc (Float "nan") }
 | "{" x = ident "|" l = separated_list(",", y = ident ":" i = instr { (y, i) }) "}"
   { with_loc $sloc (Struct (Some x, l)) }
 | "{" l = separated_nonempty_list(",", y = ident ":" i = instr { (y, i) }) "}"

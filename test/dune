@@ -23,9 +23,9 @@
   (glob_files_rec wasm-test-suite/*.wast)
   (glob_files_rec additional-tests/*.wast))
  (action
-  (with-stdout-to wasm_test_suite.output
+  (with-stdout-to
+   wasm_test_suite.output
    (run ../src/bin/run_wasm_testsuite.exe --wasm-only --no-color))))
-
 
 (rule
  (alias runtest)

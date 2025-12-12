@@ -2240,6 +2240,9 @@ let rec check_constant_instruction ctx i =
                  (Ref { nullable; typ = Extern }))
         | _ -> true
       then Error.constant_expression_required ctx.diagnostics ~location
+  | UnOp (Pos, i') -> check_constant_instruction ctx i'
+  | UnOp (Neg, { desc = Float _ | Int _; _ }) -> ()
+  | UnOp ((Neg | Not), _)
   | BinOp
       ( ( Div _ | Rem _ | And | Or | Xor | Shl | Shr _ | Eq | Ne | Lt _ | Gt _
         | Le _ | Ge _ ),
@@ -2247,8 +2250,8 @@ let rec check_constant_instruction ctx i =
         _ )
   | Block _ | Loop _ | If _ | TryTable _ | Try _ | Unreachable | Nop | Pop
   | Set _ | Tee _ | Call _ | TailCall _ | Cast _ | Test _ | NonNull _
-  | StructGet _ | StructSet _ | ArrayGet _ | ArraySet _ | UnOp _ | Let _ | Br _
-  | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
+  | StructGet _ | StructSet _ | ArrayGet _ | ArraySet _ | Let _ | Br _ | Br_if _
+  | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
   | Br_on_cast_fail _ | Throw _ | ThrowRef _ | Return _ | Sequence _ | Select _
     ->
       Error.constant_expression_required ctx.diagnostics ~location

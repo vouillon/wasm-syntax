@@ -21,11 +21,13 @@ let reserved =
          "do";
          "else";
          "fn";
+         "inf";
          "if";
          "is";
          "let";
          "loop";
          "mut";
+         "nan";
          "nop";
          "null";
          "open";
@@ -33,6 +35,7 @@ let reserved =
          "return";
          "tag";
          "throw";
+         "throw_ref";
          "try";
          "type";
          "unreachable";
@@ -54,4 +57,6 @@ let add ns x =
       x
 
 let dup { existing_names } = { existing_names }
-let make () = { existing_names = reserved }
+
+let make ?(allow_keywords = false) () =
+  { existing_names = (if allow_keywords then StringMap.empty else reserved) }

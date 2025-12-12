@@ -24,9 +24,7 @@ let hexfloat =
     ( "0x", hexnum, Opt ('.', Opt hexnum), (('p' | 'P'), sign, num)
     | "0x", hexnum, '.', Opt hexnum )]
 
-let float =
-  [%sedlex.regexp? decfloat | hexfloat | "inf" | "nan" | "nan:0x", hexnum]
-
+let float = [%sedlex.regexp? decfloat | hexfloat | "nan:0x", hexnum]
 let linechar = [%sedlex.regexp? Sub (any, (10 | 13))]
 let linecomment = [%sedlex.regexp? "//", Star linechar, (newline | eof)]
 
@@ -144,6 +142,8 @@ let rec token lexbuf =
   | "<=s" -> LES
   | "<=u" -> LEU
   | "null" -> NULL
+  | "inf" -> INF
+  | "nan" -> NAN
   | "tag" -> TAG
   | "fn" -> FN
   | "mut" -> MUT

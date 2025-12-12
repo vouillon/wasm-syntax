@@ -1,2 +1,3 @@
-(executable (name build_unicode_width_table)
+(executable
+ (name build_unicode_width_table)
  (libraries uucp))

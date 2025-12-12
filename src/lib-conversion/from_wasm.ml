@@ -99,7 +99,7 @@ module LabelStack = struct
     used := true;
     { idx with desc = name }
 
-  let make () = { ns = Namespace.make (); stack = [] }
+  let make () = { ns = Namespace.make ~allow_keywords:true (); stack = [] }
 end
 
 module Tbl = struct
@@ -965,48 +965,21 @@ let bind_locals st l =
              None )))
     l
 
-let typeuse kind ctx ((typ, sign) : Src.typeuse) =
+let typeuse ctx ((typ, sign) : Src.typeuse) =
+  let ns = Namespace.make () in
   ( Option.map (fun i -> idx ctx `Type i) typ,
-    match (kind, typ, sign) with
-    | `Sig, _, None -> None
-    | `Sig, _, Some (p, r) ->
+    match (typ, sign) with
+    | _, None -> None
+    | _, Some (p, r) ->
         Some
           {
             Ast.named_params =
-              List.mapi (fun _ (id, t) -> (id, valtype ctx t)) p;
-            results = List.map (fun t -> valtype ctx t) r;
-          }
-    | `Func, None, None -> assert false
-    | `Func, Some typ, None -> (
-        match (lookup_type ctx Type typ).typ with
-        | Struct _ | Array _ -> assert false
-        | Func ty ->
-            Some
-              {
-                Ast.named_params =
-                  Array.to_list
-                    (Array.mapi
-                       (fun n (_, t) ->
-                         ( Some
-                             (idx ctx `Local
-                                (Ast.no_loc
-                                   (Num (Uint32.of_int n) : Src.idx_desc))),
-                           valtype ctx t ))
-                       ty.params);
-                results =
-                  Array.to_list (Array.map (fun t -> valtype ctx t) ty.results);
-              })
-    | `Func, _, Some (p, r) ->
-        Some
-          {
-            Ast.named_params =
-              List.mapi
-                (fun n (id, t) ->
-                  ( Some
-                      (idx ctx `Local
-                         (match id with
-                         | Some id -> { id with desc = Src.Id id.Ast.desc }
-                         | None -> Ast.no_loc (Src.Num (Uint32.of_int n)))),
+              List.map
+                (fun (id, t) ->
+                  ( Option.map
+                      (fun id ->
+                        { id with Ast.desc = Namespace.add ns id.Ast.desc })
+                      id,
                     valtype ctx t ))
                 p;
             results = List.map (fun t -> valtype ctx t) r;
@@ -1039,34 +1012,64 @@ let modulefield ctx (f : (_ Src.modulefield, _) Ast.annotated) =
             return_arity;
           }
         in
-        (match typ with
-        | _, Some (params, _) ->
-            List.iter (fun (id, _) -> Sequence.register ctx.locals id []) params;
-            Sequence.consume_currents ctx.locals
-        | Some idx, _ -> (
-            match (lookup_type ctx Type idx).typ with
-            | Func ty ->
-                Array.iter
-                  (fun _ -> Sequence.register ctx.locals None [])
-                  ty.params
-            | Struct _ | Array _ -> assert false)
-        | None, None -> ());
+        let sign =
+          match typ with
+          | _, Some (params, results) ->
+              let named_params =
+                List.map
+                  (fun (id, t) ->
+                    let name = Sequence.register' ctx.locals id [] in
+                    ( Some
+                        (match id with
+                        | None -> Ast.no_loc name
+                        | Some id -> { id with Ast.desc = name }),
+                      valtype ctx t ))
+                  params
+              in
+              Sequence.consume_currents ctx.locals;
+              {
+                Ast.named_params;
+                results = List.map (fun t -> valtype ctx t) results;
+              }
+          | Some idx, None -> (
+              match (lookup_type ctx Type idx).typ with
+              | Func { params; results } ->
+                  let params =
+                    Array.map
+                      (fun (id, t) ->
+                        let name = Sequence.register' ctx.locals id [] in
+                        ( Some
+                            (match id with
+                            | None -> Ast.no_loc name
+                            | Some id -> { id with Ast.desc = name }),
+                          valtype ctx t ))
+                      params
+                  in
+                  Sequence.consume_currents ctx.locals;
+                  {
+                    Ast.named_params = Array.to_list params;
+                    results =
+                      Array.to_list (Array.map (fun t -> valtype ctx t) results);
+                  }
+              | Struct _ | Array _ -> assert false)
+          | None, None -> assert false (* Should not happen *)
+        in
+        let typ = Option.map (fun i -> idx ctx `Type i) (fst typ) in
         List.iter (fun (id, _) -> Sequence.register ctx.locals id []) locals;
         let locals = bind_locals ctx locals in
-        let typ, sign = typeuse `Func ctx typ in
         Some
           (Func
              {
                name = Sequence.get_current ctx.functions;
                typ;
-               sign;
+               sign = Some sign;
                body = (label (), locals @ Stack.run (instructions ctx instrs));
                attributes = exports e;
              })
     | Import { module_; name; desc; exports = e; _ } -> (
         match desc with
         | Func typ ->
-            let typ, sign = typeuse `Sig ctx typ in
+            let typ, sign = typeuse ctx typ in
             Some
               (Fundecl
                  {
@@ -1076,7 +1079,7 @@ let modulefield ctx (f : (_ Src.modulefield, _) Ast.annotated) =
                    attributes = import module_ name :: exports e;
                  })
         | Tag typ ->
-            let typ, sign = typeuse `Sig ctx typ in
+            let typ, sign = typeuse ctx typ in
             Some
               (Tag
                  {
@@ -1108,7 +1111,7 @@ let modulefield ctx (f : (_ Src.modulefield, _) Ast.annotated) =
                attributes = exports e;
              })
     | Tag { typ; exports = e; _ } ->
-        let typ, sign = typeuse `Sig ctx typ in
+        let typ, sign = typeuse ctx typ in
         Some
           (Tag
              {
