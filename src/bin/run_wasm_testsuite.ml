@@ -294,8 +294,6 @@ let runtest filename _ =
               Some (status, m, None))
         lst
   in
-  ignore lst'';
-  let lst'' = [] in
   (* Validation *)
   let lst =
     List.filter

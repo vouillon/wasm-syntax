@@ -1067,7 +1067,7 @@ let expr name e =
   | [ ({ Ast.desc = Folded _; _ } as i) ] -> instr i
   | _ -> list (keyword name :: instrs e)
 
-let function_indices typ lst =
+let function_indices lst =
   let extract i =
     match i with
     | [
@@ -1178,7 +1178,7 @@ let modulefield f =
               list
                 (keyword "elem"
                 ::
-                (match function_indices typ.reftype seg with
+                (match function_indices seg with
                 | Some lst -> List.map index lst
                 | None -> List.map (fun e -> expr "item" e) seg));
             ]))
@@ -1200,22 +1200,31 @@ let modulefield f =
             ];
         ]
   | Elem { id; typ; init; mode } ->
+      let lst =
+        (* We don't check the nullability of the type. This may make
+           it non-nullable, but this is safe. *)
+        match typ.typ with
+        | Func -> function_indices init
+        | _ -> None
+      in
       list
-        (block
-           (keyword "elem"
-           :: (opt_id id
-              @
-              match mode with
-              | Passive -> []
-              | Active (idx, ofs) ->
-                  (if idx.desc = Num Uint32.zero then []
-                   else [ list [ keyword "table"; index idx ] ])
-                  @ [ expr "offset" ofs ]
-              | Declare -> [ keyword "declare" ]))
-        ::
-        (match function_indices typ init with
-        | Some lst -> keyword "func" :: List.map index lst
-        | None -> reftype typ :: List.map (fun e -> expr "item" e) init))
+        [
+          block
+            (keyword "elem"
+            :: (opt_id id
+               @ (match mode with
+                 | Passive -> []
+                 | Active (idx, ofs) ->
+                     (if idx.desc = Num Uint32.zero then []
+                      else [ list [ keyword "table"; index idx ] ])
+                     @ [ expr "offset" ofs ]
+                 | Declare -> [ keyword "declare" ])
+               @ [ (if lst = None then reftype typ else keyword "func") ]));
+          block
+            (match lst with
+            | Some lst -> List.map index lst
+            | _ -> List.map (fun e -> expr "item" e) init);
+        ]
 
 let module_ ?(color = Auto) ?out_channel printer (id, fields) =
   let use_color = should_use_color ~color ~out_channel in

@@ -1,5 +1,6 @@
 (*
 TODO:
+- do not differentiate strictly floats and ints
 - Special type for unreachable? Put return/... in expressions?
 - Fix grab logic: count number of holes, type, check hole order
 - Check that import correspond to a declaration

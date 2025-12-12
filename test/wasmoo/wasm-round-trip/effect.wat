@@ -632,17 +632,9 @@
   (func $caml_cps_initialize_effects (export "caml_cps_initialize_effects") 
     (global.set $caml_trampoline_ref (ref.func $caml_trampoline))
   )
-  (elem declare
-    (ref func)
-    (item ref.func $initial_cont)
-    (item ref.func $apply_iterator)
-    (item ref.func $caml_trampoline)
-    (item ref.func $apply_continuation)
-    (item ref.func $invoke_promise_resolver)
-    (item ref.func $do_perform)
-    (item ref.func $do_resume)
-    (item ref.func $trampoline_iterator)
-    (item ref.func $raise_unhandled)
-    (item ref.func $call_effect_handler)
+  (elem declare func
+    $initial_cont $apply_iterator $caml_trampoline $apply_continuation
+    $invoke_promise_resolver $do_perform $do_resume $trampoline_iterator
+    $raise_unhandled $call_effect_handler
   )
 )

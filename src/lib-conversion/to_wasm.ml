@@ -599,6 +599,7 @@ let rec instruction ret ctx i : location Text.instr list =
       match (op, operand_type) with
       | Neg, (Some I32 | None) ->
           (* 0 - a *)
+          (*ZZZ Negation of a constant *)
           let zero = folded loc (Const (I32 "0")) [] in
           let sub = Text.BinOp (I32 Sub) in
           folded loc sub (zero @ instruction ret ctx a)

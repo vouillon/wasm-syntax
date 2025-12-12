@@ -99,7 +99,7 @@ module LabelStack = struct
     used := true;
     { idx with desc = name }
 
-  let make () = { ns = Namespace.make ~allow_keywords:true (); stack = [] }
+  let make () = { ns = Namespace.make ~kind:`Label (); stack = [] }
 end
 
 module Tbl = struct
@@ -1192,7 +1192,7 @@ let module_ (_, fields) =
     let common_namespace = Namespace.make () in
     {
       common_namespace;
-      types = Sequence.make (Namespace.make ()) "t";
+      types = Sequence.make (Namespace.make ~kind:`Type ()) "t";
       struct_fields = Hashtbl.create 16;
       globals = Sequence.make common_namespace "x";
       functions = Sequence.make common_namespace "f";

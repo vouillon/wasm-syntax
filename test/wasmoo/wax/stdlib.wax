@@ -105,7 +105,7 @@ fn caml_register_global(x: &eq, v: &eq, x_2: &eq) -> &eq {
 }
 #[export = "caml_get_global_data"]
 fn caml_get_global_data(x: &eq) -> &eq { caml_global_data; }
-type func = fn() -> &eq
+type func_2 = fn() -> &eq
 let uncaught_exception: &?extern = null;
 fn reraise_exception() -> &eq { throw_2(uncaught_exception); 0 as &i31; }
 #[export = "caml_handle_uncaught_exception"]
@@ -117,7 +117,7 @@ fn caml_handle_uncaught_exception(exn: &?extern) {
 fn caml_main(start: &func) {
     let exn: &eq;
     try {
-        _ = (start as &func)();
+        _ = (start as &func_2)();
     } catch {
         ocaml_exit => { exit(_); }
         ocaml_exception => {

@@ -2,43 +2,63 @@ module StringMap = Map.Make (String)
 
 type t = { mutable existing_names : int StringMap.t }
 
+let build l = StringMap.of_list (List.map (fun s -> (s, 1)) l)
+
 let reserved =
-  StringMap.of_list
-    (List.map
-       (fun s -> (s, 1))
+  build
+    [
+      "as";
+      "become";
+      "br";
+      "br_if";
+      "br_on_cast";
+      "br_on_cast_fail";
+      "br_on_non_null";
+      "br_on_null";
+      "br_table";
+      "catch";
+      "const";
+      "do";
+      "else";
+      "fn";
+      "inf";
+      "if";
+      "is";
+      "let";
+      "loop";
+      "mut";
+      "nan";
+      "nop";
+      "null";
+      "open";
+      "rec";
+      "return";
+      "tag";
+      "throw";
+      "throw_ref";
+      "try";
+      "type";
+      "unreachable";
+    ]
+
+let reserved_heap_types =
+  StringMap.union
+    (fun _ _ -> assert false)
+    reserved
+    (build
        [
-         "as";
-         "become";
-         "br";
-         "br_if";
-         "br_on_cast";
-         "br_on_cast_fail";
-         "br_on_non_null";
-         "br_on_null";
-         "br_table";
-         "catch";
-         "const";
-         "do";
-         "else";
-         "fn";
-         "inf";
-         "if";
-         "is";
-         "let";
-         "loop";
-         "mut";
-         "nan";
-         "nop";
-         "null";
-         "open";
-         "rec";
-         "return";
-         "tag";
-         "throw";
-         "throw_ref";
-         "try";
-         "type";
-         "unreachable";
+         "any";
+         "array";
+         "eq";
+         "exn";
+         "extern";
+         "func";
+         "i31";
+         "noexn";
+         "noextern";
+         "nofunc";
+         "none";
+         "struct";
        ])
 
 let rec add_indexed ns x i =
@@ -58,5 +78,11 @@ let add ns x =
 
 let dup { existing_names } = { existing_names }
 
-let make ?(allow_keywords = false) () =
-  { existing_names = (if allow_keywords then StringMap.empty else reserved) }
+let make ?(kind = `Regular) () =
+  {
+    existing_names =
+      (match kind with
+      | `Regular -> reserved
+      | `Label -> StringMap.empty
+      | `Type -> reserved_heap_types);
+  }

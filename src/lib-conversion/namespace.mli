@@ -2,11 +2,13 @@ type t
 (** A namespace manages a set of unique names, avoiding collisions with reserved
     keywords and previously allocated names. *)
 
-val make : ?allow_keywords:bool -> unit -> t
-(** Create a new namespace. If [allow_keywords] is true (default false),
-    reserved keywords are not registered in the namespace and can be used as
-    identifiers. Otherwise, reserved keywords ("if", "loop", "let", etc.) are
-    registered and cannot be re-used. *)
+val make : ?kind:[ `Regular | `Label | `Type ] -> unit -> t
+(** Create a new namespace. [kind] determines the set of reserved words (default
+    [`Regular]):
+    - [`Regular]: Standard reserved keywords (e.g., "if", "loop").
+    - [`Label]: No reserved words (empty).
+    - [`Type]: Reserved keywords plus abstract heap types (e.g., "func", "any").
+*)
 
 val dup : t -> t
 (** [dup t] returns a copy of the namespace [t]. Changes to the new namespace
