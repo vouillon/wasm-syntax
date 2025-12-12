@@ -411,11 +411,12 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             in
             let current_type_idx = ctx.types.count in
             let acc_func_types =
+              let ctx' = { ctx with types = types_space } in
               Array.fold_left
                 (fun (acc_map, idx_in_arr) (_, subtype) ->
                   match subtype.T.typ with
                   | T.Func func_t ->
-                      let b_func_t = func_type ctx func_t in
+                      let b_func_t = func_type ctx' func_t in
                       ( B.IntMap.add
                           (current_type_idx + idx_in_arr)
                           (Array.length b_func_t.B.Types.params)
@@ -622,10 +623,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
                   let resolved_idx = resolve_idx ctx.types type_idx in
                   match B.IntMap.find_opt resolved_idx func_types_by_idx with
                   | Some num_params -> num_params
-                  | None ->
-                      failwith
-                        (Printf.sprintf "Function type with index %d not found"
-                           resolved_idx))
+                  | None -> assert false)
               | _ -> 0
             in
             let all_variables_for_mapping =
@@ -705,22 +703,81 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
       fields
   in
 
+  (* Collect Exports *)
   let exports =
-    List.filter_map
-      (fun f ->
-        match f.desc with
-        | T.Export { name; kind; index } ->
-            let (kind : B.exportable), index =
-              match kind with
-              | Func -> (Func, resolve_idx ctx.funcs index)
-              | Table -> (Table, resolve_idx ctx.tables index)
-              | Memory -> (Memory, resolve_idx ctx.memories index)
-              | Global -> (Global, resolve_idx ctx.globals index)
-              | Tag -> (Tag, resolve_idx ctx.tags index)
-            in
-            Some { B.name = name.desc; kind; index }
-        | _ -> None)
-      fields
+    let rec scan fields funcs tables memories globals tags acc =
+      match fields with
+      | [] -> List.rev acc
+      | f :: rest ->
+          let acc =
+            match f.desc with
+            | T.Export { name; kind; index } ->
+                let kind, index =
+                  match kind with
+                  | Func -> (Ast.Func, resolve_idx ctx.funcs index)
+                  | Table -> (Ast.Table, resolve_idx ctx.tables index)
+                  | Memory -> (Ast.Memory, resolve_idx ctx.memories index)
+                  | Global -> (Ast.Global, resolve_idx ctx.globals index)
+                  | Tag -> (Ast.Tag, resolve_idx ctx.tags index)
+                in
+                { B.name = name.desc; kind; index } :: acc
+            | T.Func { exports; _ } ->
+                let f (e : T.name) =
+                  { B.name = e.desc; kind = Ast.Func; index = funcs }
+                in
+                List.rev_map f exports @ acc
+            | T.Table { exports; _ } ->
+                let f (e : T.name) =
+                  { B.name = e.desc; kind = Ast.Table; index = tables }
+                in
+                List.rev_map f exports @ acc
+            | T.Memory { exports; _ } ->
+                let f (e : T.name) =
+                  { B.name = e.desc; kind = Ast.Memory; index = memories }
+                in
+                List.rev_map f exports @ acc
+            | T.Global { exports; _ } ->
+                let f (e : T.name) =
+                  { B.name = e.desc; kind = Ast.Global; index = globals }
+                in
+                List.rev_map f exports @ acc
+            | T.Tag { exports; _ } ->
+                let f (e : T.name) =
+                  { B.name = e.desc; kind = Ast.Tag; index = tags }
+                in
+                List.rev_map f exports @ acc
+            | T.Import { desc; exports; _ } ->
+                let kind, index =
+                  match desc with
+                  | T.Func _ -> (Ast.Func, funcs)
+                  | T.Table _ -> (Ast.Table, tables)
+                  | T.Memory _ -> (Ast.Memory, memories)
+                  | T.Global _ -> (Ast.Global, globals)
+                  | T.Tag _ -> (Ast.Tag, tags)
+                in
+                let f (e : T.name) = { B.name = e.desc; kind; index } in
+                List.rev_map f exports @ acc
+            | _ -> acc
+          in
+          let funcs, tables, memories, globals, tags =
+            match f.desc with
+            | T.Func _ -> (funcs + 1, tables, memories, globals, tags)
+            | T.Table _ -> (funcs, tables + 1, memories, globals, tags)
+            | T.Memory _ -> (funcs, tables, memories + 1, globals, tags)
+            | T.Global _ -> (funcs, tables, memories, globals + 1, tags)
+            | T.Tag _ -> (funcs, tables, memories, globals, tags + 1)
+            | T.Import { desc; _ } -> (
+                match desc with
+                | T.Func _ -> (funcs + 1, tables, memories, globals, tags)
+                | T.Table _ -> (funcs, tables + 1, memories, globals, tags)
+                | T.Memory _ -> (funcs, tables, memories + 1, globals, tags)
+                | T.Global _ -> (funcs, tables, memories, globals + 1, tags)
+                | T.Tag _ -> (funcs, tables, memories, globals, tags + 1))
+            | _ -> (funcs, tables, memories, globals, tags)
+          in
+          scan rest funcs tables memories globals tags acc
+    in
+    scan fields 0 0 0 0 0 []
   in
 
   let start =

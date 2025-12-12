@@ -243,7 +243,7 @@ let subtype i ch =
 
 let rectype ch =
   match input_byte ch with
-  | 0x4E -> vec (subtype (input_byte ch)) ch
+  | 0x4E -> vec (fun ch -> subtype (input_byte ch) ch) ch
   | i -> [| subtype i ch |]
 
 let type_section ch =
@@ -395,13 +395,13 @@ and instruction ch =
     | 0x0F -> Return
     | 0x10 -> Call (uint ch)
     | 0x11 ->
-        let y = uint ch in
         let x = uint ch in
+        let y = uint ch in
         CallIndirect (x, y)
     | 0x12 -> ReturnCall (uint ch)
     | 0x13 ->
-        let y = uint ch in
         let x = uint ch in
+        let y = uint ch in
         ReturnCallIndirect (x, y)
     | 0x14 -> CallRef (uint ch)
     | 0x15 -> ReturnCallRef (uint ch)

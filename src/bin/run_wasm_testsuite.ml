@@ -266,7 +266,7 @@ let runtest filename _ =
   in
   (* Serialization and reparsing (Wasm) *)
   let lst'' =
-    if true then []
+    if false then []
     else
       List.filter_map
         (fun (status, m, _) ->
@@ -300,6 +300,7 @@ let runtest filename _ =
       (fun (status, m, source) ->
         match (status, m) with
         | `Valid, m ->
+            if true then Format.eprintf "@[%a@]@." (print_module ~color) m;
             Utils.Diagnostic.run ~color ~source (fun d -> Wasm.Validation.f d m);
             true
         | `Invalid reason, m ->

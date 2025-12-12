@@ -64,7 +64,18 @@ let subtype type_names (s : B.subtype) : T.subtype =
     final = s.final;
   }
 
-let rectype type_names r = Array.map (fun s -> (None, subtype type_names s)) r
+let rectype type_names index r =
+  Array.mapi
+    (fun i s ->
+      let idx = index + i in
+      let name =
+        match B.IntMap.find_opt idx type_names with
+        | Some s -> Some (no_loc s)
+        | None -> None
+      in
+      (name, subtype type_names s))
+    r
+
 let globaltype type_names g = muttype (valtype type_names) g
 
 let tabletype type_names (t : B.tabletype) : T.tabletype =
@@ -363,7 +374,12 @@ let module_ (m : _ B.module_) : _ T.module_ =
         Some (params, results)
     | _ -> None
   in
-  let types = List.map (rectype m.names.types) m.types in
+  let types, _ =
+    List.fold_left
+      (fun (acc, i) r -> (rectype m.names.types i r :: acc, i + Array.length r))
+      ([], 0) m.types
+  in
+  let types = List.rev types in
   let (func_cnt, table_cnt, mem_cnt, global_cnt, tag_cnt), imports =
     List.fold_left
       (fun ((f_i, t_i, m_i, g_i, tg_i), acc) (imp : B.import) ->
