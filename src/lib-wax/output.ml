@@ -414,7 +414,9 @@ let struct_instr pp nm f =
 
 let array_instr pp nm f =
   print_container pp ~opening:"[" ~closing:"]" ~indent:indent_level nm
-    (fun () -> f ())
+    (fun () ->
+      cut pp ();
+      f ())
 
 let get_prec (i : _ Ast.instr) =
   match i.desc with

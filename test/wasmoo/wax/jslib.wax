@@ -483,11 +483,13 @@ fn caml_wrap_exception(x: &?extern) -> &eq {
     exn = x as &?any;
     'undef: {
         return
-            [block|0 as &i31,
+            [block|
+                0 as &i31,
                 br_on_null 'undef caml_named_value(jsError),
                 wrap(exn)];
     }
-    [block|0 as &i31,
+    [block|
+        0 as &i31,
         caml_failwith_tag(),
         caml_string_of_jsstring
             (wrap

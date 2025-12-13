@@ -31,7 +31,24 @@ let with_open_out file f =
   | Some file -> Out_channel.with_open_bin file f
   | None -> f stdout
 
-let wat_to_wat ~input_file ~output_file ~validate ~color
+type fold_mode = Auto | Fold | Unfold
+
+let output_wat ~fold_mode ~output_file ~color ast =
+  let ast =
+    match fold_mode with
+    | Auto -> ast
+    | Fold -> Wasm.Folding.fold ast
+    | Unfold -> Wasm.Folding.unfold ast
+  in
+  with_open_out output_file (fun oc ->
+      let print_wat f m =
+        Utils.Printer.run f (fun p ->
+            Wasm.Output.module_ ~color ~out_channel:oc p m)
+      in
+      let fmt = Format.formatter_of_out_channel oc in
+      Format.fprintf fmt "%a@." print_wat ast)
+
+let wat_to_wat ~input_file ~output_file ~validate ~color ~fold_mode
     ~source_map_file:opt_source_map_file =
   let _ = opt_source_map_file in
   (* Ignored for non-wasm output *)
@@ -44,15 +61,9 @@ let wat_to_wat ~input_file ~output_file ~validate ~color
   if validate then
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wasm.Validation.f d ast);
-  with_open_out output_file (fun oc ->
-      let print_wat f m =
-        Utils.Printer.run f (fun p ->
-            Wasm.Output.module_ ~color ~out_channel:oc p m)
-      in
-      let fmt = Format.formatter_of_out_channel oc in
-      Format.fprintf fmt "%a@." print_wat ast)
+  output_wat ~fold_mode ~output_file ~color ast
 
-let wat_to_wax ~input_file ~output_file ~validate ~color
+let wat_to_wax ~input_file ~output_file ~validate ~color ~fold_mode:_
     ~source_map_file:opt_source_map_file =
   let _ = opt_source_map_file in
   (* Ignored for non-wasm output *)
@@ -79,7 +90,7 @@ let wat_to_wax ~input_file ~output_file ~validate ~color
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wax wax_ast)
 
-let wax_to_wat ~input_file ~output_file ~validate ~color
+let wax_to_wat ~input_file ~output_file ~validate ~color ~fold_mode
     ~source_map_file:opt_source_map_file =
   let _ = opt_source_map_file in
   (* Ignored for non-wasm output *)
@@ -97,15 +108,9 @@ let wax_to_wat ~input_file ~output_file ~validate ~color
   if validate then
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wasm.Validation.f d wasm_ast);
-  with_open_out output_file (fun oc ->
-      let print_wat f m =
-        Utils.Printer.run f (fun p ->
-            Wasm.Output.module_ ~color ~out_channel:oc p m)
-      in
-      let fmt = Format.formatter_of_out_channel oc in
-      Format.fprintf fmt "%a@." print_wat wasm_ast)
+  output_wat ~fold_mode ~output_file ~color wasm_ast
 
-let wax_to_wax ~input_file ~output_file ~validate ~color
+let wax_to_wax ~input_file ~output_file ~validate ~color ~fold_mode:_
     ~source_map_file:opt_source_map_file =
   let _ = opt_source_map_file in
   (* Ignored for non-wasm output *)
@@ -127,7 +132,7 @@ let wax_to_wax ~input_file ~output_file ~validate ~color
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wax ast)
 
-let wax_to_wasm ~input_file ~output_file ~validate ~color
+let wax_to_wasm ~input_file ~output_file ~validate ~color ~fold_mode:_
     ~source_map_file:(opt_source_map_file : string option) =
   let text = with_open_in input_file In_channel.input_all in
   let ast =
@@ -148,7 +153,7 @@ let wax_to_wasm ~input_file ~output_file ~validate ~color
       Wasm.Wasm_output.module_ ~out_channel:oc ?opt_source_map_file
         wasm_ast_binary)
 
-let wat_to_wasm ~input_file ~output_file ~validate ~color
+let wat_to_wasm ~input_file ~output_file ~validate ~color ~fold_mode:_
     ~source_map_file:opt_source_map_file =
   let text = with_open_in input_file In_channel.input_all in
   let ast =
@@ -165,14 +170,14 @@ let wat_to_wasm ~input_file ~output_file ~validate ~color
         wasm_ast_binary)
 
 let wasm_to_wasm ~input_file ~output_file ~validate:_validate ~color:_
-    ~source_map_file:opt_source_map_file =
+    ~fold_mode:_ ~source_map_file:opt_source_map_file =
   let text = with_open_in input_file In_channel.input_all in
   let ast = Wasm.Wasm_parser.module_ text in
   (* if validate then Wasm.Validation.f ast; *)
   with_open_out output_file (fun oc ->
       Wasm.Wasm_output.module_ ~out_channel:oc ?opt_source_map_file ast)
 
-let wasm_to_wat ~input_file ~output_file ~validate ~color
+let wasm_to_wat ~input_file ~output_file ~validate ~color ~fold_mode
     ~source_map_file:opt_source_map_file =
   let _ = opt_source_map_file in
   let text = with_open_in input_file In_channel.input_all in
@@ -181,15 +186,9 @@ let wasm_to_wat ~input_file ~output_file ~validate ~color
   if validate then
     Utils.Diagnostic.run ~color ~source:None (fun d ->
         Wasm.Validation.f d text_ast);
-  with_open_out output_file (fun oc ->
-      let print_wat f m =
-        Utils.Printer.run f (fun p ->
-            Wasm.Output.module_ ~color ~out_channel:oc p m)
-      in
-      let fmt = Format.formatter_of_out_channel oc in
-      Format.fprintf fmt "%a@." print_wat text_ast)
+  output_wat ~fold_mode ~output_file ~color text_ast
 
-let wasm_to_wax ~input_file ~output_file ~validate ~color
+let wasm_to_wax ~input_file ~output_file ~validate ~color ~fold_mode:_
     ~source_map_file:opt_source_map_file =
   let _ = opt_source_map_file in
   let text = with_open_in input_file In_channel.input_all in
@@ -245,7 +244,7 @@ let resolve_format file_opt format_opt ~default =
   | None, None -> default
 
 let convert input_file output_file input_format_opt output_format_opt validate
-    strict_validate color opt_source_map_file =
+    strict_validate color opt_source_map_file fold_mode =
   Wasm.Validation.validate_refs := strict_validate;
   let std file = Option.bind file (fun f -> if f = "-" then None else Some f) in
   let input_file = std input_file in
@@ -270,7 +269,7 @@ let convert input_file output_file input_format_opt output_format_opt validate
     Printf.eprintf "Binary output not allowed on terminal\n";
     exit 123);
   convert ~input_file ~output_file ~validate ~color
-    ~source_map_file:opt_source_map_file
+    ~source_map_file:opt_source_map_file ~fold_mode
 
 (* Define the input file argument (optional for stdin) *)
 let input_file =
@@ -354,6 +353,14 @@ let source_map_file_option =
     & opt (some string) None
     & info [ "source-map-file" ] ~docv:"FILE" ~doc)
 
+(* Define the --fold/--unfold option *)
+let fold_mode_option =
+  let doc = "Fold instructions into nested S-expressions." in
+  let fold = (Fold, Arg.info [ "fold" ] ~doc) in
+  let doc = "Unfold instructions into flat instruction lists." in
+  let unfold = (Unfold, Arg.info [ "unfold" ] ~doc) in
+  Arg.(value & vflag Auto [ fold; unfold ])
+
 (* Combine into command *)
 let convert_term =
   let+ input = input_file
@@ -363,9 +370,10 @@ let convert_term =
   and+ validate = validate_flag
   and+ strict_validate = strict_validate_flag
   and+ color = color_option
-  and+ source_map_file = source_map_file_option in
+  and+ source_map_file = source_map_file_option
+  and+ fold_mode = fold_mode_option in
   convert input output in_fmt out_fmt validate strict_validate color
-    source_map_file
+    source_map_file fold_mode
 
 let convert_cmd =
   let doc = "Convert between WebAssembly formats (.wat, .wasm, .wax)" in

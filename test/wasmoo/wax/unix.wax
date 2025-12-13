@@ -12,7 +12,8 @@ fn caml_alloc_tm
 (sec: i32, min: i32, hour: i32, mday: i32, mon: i32, year: i32, wday: i32,
  yday: i32, isdst: i32)
 -> &eq {
-    [block|0 as &i31,
+    [block|
+        0 as &i31,
         sec as &i31,
         min as &i31,
         hour as &i31,

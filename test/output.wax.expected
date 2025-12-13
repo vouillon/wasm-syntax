@@ -438,7 +438,7 @@ fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
     num_dims = caml_deserialize_int_4(s);
     flags = caml_deserialize_int_4(s);
     kind = flags & 0xff;
-    dim = [int_array| 0; num_dims];
+    dim = [int_array|0; num_dims];
     'loop: loop {
         if i <u num_dims {
             len = caml_deserialize_uint_2(s);
@@ -611,7 +611,7 @@ fn caml_ba_create(vkind: &eq, layout: &eq, d: &eq) -> &eq {
     if num_dims >u CAML_BA_MAX_NUM_DIMS {
         caml_invalid_argument(string#"foo");
     }
-    dim = [int_array| 0; num_dims];
+    dim = [int_array|0; num_dims];
     i = 0;
     'loop: loop {
         if i <u num_dims {
@@ -645,7 +645,7 @@ fn caml_ba_from_typed_array(x: &eq) -> &eq {
     {bigarray|
         f: bigarray_ops,
         ba_data: data,
-        ba_dim: [int_array| len],
+        ba_dim: [int_array|len],
         ba_num_dims: 1,
         ba_kind: kind,
         ba_layout: 0
@@ -1020,9 +1020,9 @@ fn caml_ba_slice(vb: &eq, vind: &eq) -> &eq {
     if num_inds >u b.ba_num_dims as i32_u {
         caml_invalid_argument(string#"foo");
     }
-    sub_dim = [int_array| 0; num_dims - num_inds];
+    sub_dim = [int_array|0; num_dims - num_inds];
     if b.ba_layout as i32_u {
-        index = [int_array| 1; num_dims];
+        index = [int_array|1; num_dims];
         'loop: loop {
             if i <u num_inds {
                 index[num_dims + i - num_inds] = ind[i + 1] as &i31 as i32_u;
@@ -1033,7 +1033,7 @@ fn caml_ba_slice(vb: &eq, vind: &eq) -> &eq {
         offset = caml_ba_offset(b, index);
         sub_dim.copy(0, b.ba_dim, 0, num_dims - num_inds);
     } else {
-        index = [int_array| 0; num_dims];
+        index = [int_array|0; num_dims];
         'loop: loop {
             if i <u num_inds {
                 index[i] = ind[i + 1] as &i31 as i32_u;
@@ -1091,7 +1091,7 @@ fn caml_ba_sub(vba: &eq, vofs: &eq, vlen: &eq) -> &eq {
     if (ofs <s 0) | (len <s 0) | (ofs + len >s dim[changed_dim]) {
         caml_invalid_argument(string#"foo");
     }
-    new_dim = [int_array| 0; num_dims];
+    new_dim = [int_array|0; num_dims];
     new_dim.copy(0, dim, 0, num_dims);
     new_dim[changed_dim] = len;
     mul = mul * caml_ba_size_per_element(ba.ba_kind as i32_u);
@@ -1224,7 +1224,7 @@ fn caml_ba_reshape(vb: &eq, vd: &eq) -> &eq {
         caml_invalid_argument(string#"foo");
     }
     num_elts = 1;
-    dim = [int_array| 0; num_dims];
+    dim = [int_array|0; num_dims];
     'loop: loop {
         if i <u num_dims {
             d = vdim[i + 1] as &i31 as i32_s;
@@ -1263,7 +1263,7 @@ fn caml_ba_change_layout(vb: &eq, vlayout: &eq) -> &eq {
     if b.ba_layout as i32_u != layout => &eq {
         num_dims = b.ba_num_dims as i32_u;
         dim = b.ba_dim;
-        new_dim = [int_array| 0; num_dims];
+        new_dim = [int_array|0; num_dims];
         'loop: loop {
             if i <u num_dims {
                 new_dim[i] = dim[num_dims - i - 1];
@@ -1537,7 +1537,7 @@ fn caml_string_of_array(x: &eq) -> &eq {
     let s: &string;
     a = (unwrap(x) as &?extern)!;
     len = ta_length(a);
-    s = [string| 0; len];
+    s = [string|0; len];
     ta_blit_to_string(a, 0, s, 0, len);
     s;
 }

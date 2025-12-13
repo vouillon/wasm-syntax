@@ -3,6 +3,7 @@ TODO:
 - do not differentiate strictly floats and ints
 - Fix grab logic: count number of holes, type, check hole order
 - Check that import correspond to a declaration
+- In binary_to_text, we need to make sure names are unique
 - Check the _ make sense (check that underscores are properly placed)
 - we need to decide on an order to visit subexpression in structs
 - fix typeuse validation (add a type if not already present)

@@ -270,8 +270,12 @@ simple_pat:
 | x = ident { Some x }
 | "_" { None }
 
+funcparam:
+| x = simple_pat ":" t = valtype { x, t }
+| t = valtype { None, t }
+
 funcparams:
-| l = separated_list(",", x = simple_pat ":" t = valtype { x, t })
+| l = separated_list(",", f = funcparam { f })
   { l }
 
 fundecl:

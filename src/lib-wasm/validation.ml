@@ -2,6 +2,7 @@
 ZZZ
 - tag validation
 - resolve all type uses
+- store text types on the stack for improved error reporting
 *)
 
 let validate_refs = ref true

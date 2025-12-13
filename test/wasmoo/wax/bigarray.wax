@@ -683,15 +683,15 @@ fn caml_ba_get_at_offset(ba: &bigarray, i: i32) -> &eq {
                                                 }
                                                 i = i << 1;
                                                 return
-                                                    [float_array|ta_get_f64
-                                                                    (data, i),
+                                                    [float_array|
+                                                        ta_get_f64(data, i),
                                                         ta_get_f64
                                                             (data, i + 1)];
                                             } /* 'complex32 */
                                             i = i << 1;
                                             return
-                                                [float_array|ta_get_f32
-                                                                 (data, i),
+                                                [float_array|
+                                                    ta_get_f32(data, i),
                                                     ta_get_f32(data, i + 1)];
                                         } /* 'nativeint */
                                         become caml_copy_nativeint

@@ -696,10 +696,10 @@ and instruction ch =
         | 19 ->
             let i = uint ch in
             ArrayInitElem (i, uint ch)
-        | 20 -> RefTest (nullable (heaptype ch))
-        | 21 -> RefTest { nullable = false; typ = heaptype ch }
-        | 22 -> RefCast (nullable (heaptype ch))
-        | 23 -> RefCast { nullable = false; typ = heaptype ch }
+        | 20 -> RefTest { nullable = false; typ = heaptype ch }
+        | 21 -> RefTest (nullable (heaptype ch))
+        | 22 -> RefCast { nullable = false; typ = heaptype ch }
+        | 23 -> RefCast (nullable (heaptype ch))
         | 24 ->
             let flags = input_byte ch in
             let label = uint ch in

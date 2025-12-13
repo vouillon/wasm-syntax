@@ -1,6 +1,5 @@
 - Support for conditional compilation
 - Comments
-- Fix parser
 - extensions, like strings, char
 
 - Syntax: Try/Try_table

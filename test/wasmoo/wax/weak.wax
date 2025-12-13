@@ -55,7 +55,8 @@ fn caml_ephe_get_data_copy(x: &eq) -> &eq {
     _ =
         'no_copy: do &eq {
             return
-                [block|0 as &i31,
+                [block|
+                    0 as &i31,
                     caml_obj_dup
                         (br_on_cast_fail 'no_copy &block
                              (br_on_cast_fail 'no_copy &block r)[1])];
@@ -140,7 +141,8 @@ fn caml_ephe_get_key_copy(x: &eq, i: &eq) -> &eq {
     _ =
         'no_copy: do &eq {
             return
-                [block|0 as &i31,
+                [block|
+                    0 as &i31,
                     caml_obj_dup
                         (br_on_cast_fail 'no_copy &block
                              (br_on_cast_fail 'no_copy &block r)[1])];
