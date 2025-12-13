@@ -713,12 +713,12 @@ let pop ctx ty st =
       Error.empty_stack ctx.diagnostics ~location:(Ast.no_loc ()).info;
       (st, ())
 
-let rec pop_args ctx args =
-  match args with
-  | [] -> return ()
-  | ty :: rem ->
-      let* () = pop_args ctx rem in
-      pop ctx ty
+let pop_args ctx args =
+  Array.fold_right
+    (fun ty rem ->
+      let* () = rem in
+      pop ctx ty)
+    args (return ())
 
 let rec grab_parameters ctx acc i =
   match i.desc with
@@ -2012,7 +2012,7 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
         array_map_opt (fun (_, typ) -> internalize ctx typ) params
       in
       let*! results = array_map_opt (internalize ctx) results in
-      let* () = pop_args ctx (Array.to_list params) in
+      let* () = pop_args ctx params in
       let instrs' = block ctx i.info label params results results instrs in
       return_statement i (Block (label, bt, instrs')) results
   | Loop (label, bt, instrs) ->
@@ -2021,7 +2021,7 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
         array_map_opt (fun (_, typ) -> internalize ctx typ) params
       in
       let*! results = array_map_opt (internalize ctx) results in
-      let* () = pop_args ctx (Array.to_list params) in
+      let* () = pop_args ctx params in
       let instrs' = block ctx i.info label params results params instrs in
       return_statement i (Loop (label, bt, instrs')) results
   | If (label, bt, i', if_block, else_block) ->
@@ -2031,7 +2031,7 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
         array_map_opt (fun (_, typ) -> internalize ctx typ) params
       in
       let*! results = array_map_opt (internalize ctx) results in
-      let* () = pop_args ctx (Array.to_list params) in
+      let* () = pop_args ctx params in
       let if_block' = block ctx i.info label params results results if_block in
       let else_block' =
         Option.map
@@ -2045,7 +2045,7 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
         array_map_opt (fun (_, typ) -> internalize ctx typ) params
       in
       let*! results = array_map_opt (internalize ctx) results in
-      let* () = pop_args ctx (Array.to_list params) in
+      let* () = pop_args ctx params in
       let body' = block ctx i.info label params results results body in
       let check_catch types label =
         let params = branch_target ctx label in
@@ -2091,7 +2091,7 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
         array_map_opt (fun (_, typ) -> internalize ctx typ) params
       in
       let*! results = array_map_opt (internalize ctx) results in
-      let* () = pop_args ctx (Array.to_list params) in
+      let* () = pop_args ctx params in
       let body' = block ctx i.info label params results results body in
       let catches =
         List.filter_map
@@ -2154,7 +2154,7 @@ and block ctx loc label params results br_params block =
          }
          block
      in
-     let* () = pop_args ctx (Array.to_list results) in
+     let* () = pop_args ctx results in
      return block')
 
 (*ZZZ
@@ -2338,7 +2338,7 @@ let functions ctx fields =
           let body =
             with_empty_stack ctx ~location ~kind:Function
               (let* body = block_contents ctx body in
-               let* () = pop_args ctx (Array.to_list return_types) in
+               let* () = pop_args ctx return_types in
                return body)
           in
           Some

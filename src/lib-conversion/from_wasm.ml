@@ -252,21 +252,13 @@ let register_type (type typ) ctx export_tbl (kind : typ kind) idx exports
   | Func -> register ctx.functions ctx.function_types (Some Func) idx
   | Tag -> register ctx.tags ctx.tag_types (Some Tag) idx
 
-let functype_no_bindings_arity { Src.params; results } =
+let functype_arity { Src.params; results } =
   (Array.length params, Array.length results)
-
-let functype_arity (params, results) = (List.length params, List.length results)
 
 let type_arity ctx idx =
   match (lookup_type ctx Type idx).typ with
-  | Func ty -> functype_no_bindings_arity ty
+  | Func ty -> functype_arity ty
   | Struct _ | Array _ -> assert false
-
-let typeuse_no_bindings_arity ctx (i, ty) =
-  match (i, ty) with
-  | _, Some t -> functype_no_bindings_arity t
-  | Some i, None -> type_arity ctx i
-  | None, None -> assert false
 
 let typeuse_arity ctx (i, ty) =
   match (i, ty) with
@@ -278,7 +270,7 @@ let blocktype_arity ctx (typ : Src.blocktype option) =
   match typ with
   | None -> (0, 0)
   | Some (Valtype _) -> (0, 1)
-  | Some (Typeuse t) -> typeuse_no_bindings_arity ctx t
+  | Some (Typeuse t) -> typeuse_arity ctx t
 
 let function_arity ctx f = typeuse_arity ctx (lookup_type ctx Func f)
 let tag_arity ctx t = typeuse_arity ctx (lookup_type ctx Tag t)
@@ -990,19 +982,20 @@ let typeuse ctx ((typ, sign) : Src.typeuse) =
   ( Option.map (fun i -> idx ctx `Type i) typ,
     match (typ, sign) with
     | _, None -> None
-    | _, Some (p, r) ->
+    | _, Some { params; results } ->
         Some
           {
             Ast.named_params =
-              List.map
-                (fun (id, t) ->
-                  ( Option.map
-                      (fun id ->
-                        { id with Ast.desc = Namespace.add ns id.Ast.desc })
-                      id,
-                    valtype ctx t ))
-                p;
-            results = List.map (fun t -> valtype ctx t) r;
+              Array.to_list
+                (Array.map
+                   (fun (id, t) ->
+                     ( Option.map
+                         (fun id ->
+                           { id with Ast.desc = Namespace.add ns id.Ast.desc })
+                         id,
+                       valtype ctx t ))
+                   params);
+            results = Array.to_list (Array.map (fun t -> valtype ctx t) results);
           } )
 
 let string_of_name (nm : Src.name) =
@@ -1067,24 +1060,26 @@ let modulefield ctx export_tbl (f : (_ Src.modulefield, _) Ast.annotated) =
         in
         let sign =
           match typ with
-          | _, Some (params, results) ->
+          | _, Some { params; results } ->
               let named_params =
-                List.map
-                  (fun (id, t) ->
-                    let name =
-                      Sequence.register' ctx.locals export_tbl None id []
-                    in
-                    ( Some
-                        (match id with
-                        | None -> Ast.no_loc name
-                        | Some id -> { id with Ast.desc = name }),
-                      valtype ctx t ))
-                  params
+                Array.to_list
+                  (Array.map
+                     (fun (id, t) ->
+                       let name =
+                         Sequence.register' ctx.locals export_tbl None id []
+                       in
+                       ( Some
+                           (match id with
+                           | None -> Ast.no_loc name
+                           | Some id -> { id with Ast.desc = name }),
+                         valtype ctx t ))
+                     params)
               in
               Sequence.consume_currents ctx.locals;
               {
                 Ast.named_params;
-                results = List.map (fun t -> valtype ctx t) results;
+                results =
+                  Array.to_list (Array.map (fun t -> valtype ctx t) results);
               }
           | Some idx, None -> (
               match (lookup_type ctx Type idx).typ with

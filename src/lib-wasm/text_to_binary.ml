@@ -133,7 +133,7 @@ let table_type ctx (t : T.tabletype) : B.tabletype =
 let block_type ~resolve_type ctx (b : T.blocktype) : B.blocktype =
   match b with
   | Typeuse (Some i, _) -> Typeuse (resolve_idx ctx.types i)
-  | Typeuse (None, Some ft) -> Typeuse (resolve_type (func_type ctx ft))
+  | Typeuse (None, Some ft) -> Typeuse (resolve_type ctx ft)
   | Typeuse (None, None) -> assert false
   | Valtype v -> Valtype (valtype ctx v)
 
@@ -210,7 +210,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
           | Some i -> resolve_idx ctx.types i
           | None -> (
               match type_opt with
-              | Some ft -> resolve_type (func_type ctx ft)
+              | Some ft -> resolve_type ctx ft
               | None -> assert false)
         in
         CallIndirect (resolve_idx ctx.tables table, type_idx)
@@ -220,7 +220,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
           | Some i -> resolve_idx ctx.types i
           | None -> (
               match type_opt with
-              | Some ft -> resolve_type (func_type ctx ft)
+              | Some ft -> resolve_type ctx ft
               | None -> assert false)
         in
         ReturnCallIndirect (resolve_idx ctx.tables table, type_idx)
@@ -523,7 +523,8 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     scan_existing_types 0 fields
   in
 
-  let resolve_type (ft : B.functype) : int =
+  let resolve_type ctx (ft : T.functype) : int =
+    let ft = func_type ctx ft in
     match Hashtbl.find_opt type_map ft with
     | Some i -> i
     | None ->
@@ -543,30 +544,13 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             let desc : B.importdesc =
               match desc with
               | Func (Some i, _) -> Func (resolve_idx ctx.types i)
-              | Func (None, Some (params, results)) ->
-                  (* Inline type in Import *)
-                  let params =
-                    Array.of_list
-                      (List.map (fun (_, t) -> valtype ctx t) params)
-                  in
-                  let results =
-                    Array.of_list (List.map (valtype ctx) results)
-                  in
-                  Func (resolve_type { params; results })
+              | Func (None, Some ty) -> Func (resolve_type ctx ty)
               | Func (None, None) -> assert false
               | Table t -> Table (table_type ctx t)
               | Memory l -> Memory l.desc
               | Global g -> Global (global_type ctx g)
               | Tag (Some i, _) -> Tag (resolve_idx ctx.types i)
-              | Tag (None, Some (params, results)) ->
-                  let params =
-                    Array.of_list
-                      (List.map (fun (_, t) -> valtype ctx t) params)
-                  in
-                  let results =
-                    Array.of_list (List.map (valtype ctx) results)
-                  in
-                  Tag (resolve_type { params; results })
+              | Tag (None, Some ty) -> Tag (resolve_type ctx ty)
               | Tag (None, None) -> failwith "Tag import missing type"
             in
             Some { B.module_ = module_.desc; name = name.desc; desc }
@@ -585,14 +569,11 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     List.filter_map
       (fun f ->
         match f.desc with
-        | T.Func { typ = Some i, _; _ } -> Some (resolve_idx ctx.types i)
-        | T.Func { typ = None, Some (params, results); _ } ->
-            let params =
-              Array.of_list (List.map (fun (_, t) -> valtype ctx t) params)
-            in
-            let results = Array.of_list (List.map (valtype ctx) results) in
-            Some (resolve_type { B.params; results })
-        | T.Func { typ = None, None; _ } -> failwith "Func missing type"
+        | T.Func { typ; _ } -> (
+            match typ with
+            | Some i, _ -> Some (resolve_idx ctx.types i)
+            | None, Some ty -> Some (resolve_type ctx ty)
+            | None, None -> assert false)
         | _ -> None)
       fields
   in
@@ -628,7 +609,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             in
             let all_variables_for_mapping =
               match typ with
-              | _, Some (named_params, _) -> named_params @ locals
+              | _, Some { params; _ } -> Array.to_list params @ locals
               | _, None -> locals
             in
             List.fold_left
@@ -897,12 +878,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
       (fun f ->
         match f.desc with
         | T.Tag { typ = Some i, _; _ } -> Some (resolve_idx ctx.types i)
-        | Tag { typ = None, Some (params, results); _ } ->
-            let params =
-              Array.of_list (List.map (fun (_, t) -> valtype ctx t) params)
-            in
-            let results = Array.of_list (List.map (valtype ctx) results) in
-            Some (resolve_type { B.params; results })
+        | Tag { typ = None, Some ty; _ } -> Some (resolve_type ctx ty)
         | Tag { typ = None, None; _ } ->
             failwith "Tag type must have an explicit type index or inline type"
         | _ -> None)

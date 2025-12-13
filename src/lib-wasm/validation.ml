@@ -359,13 +359,9 @@ let subtype d ctx current { Ast.Text.typ; supertype; final } =
 
 let rectype d ctx ty = array_mapi_opt (fun i (_, ty) -> subtype d ctx i ty) ty
 
-let signature d ctx (params, results) =
-  let*@ params =
-    array_map_opt (fun (_, ty) -> valtype d ctx ty) (Array.of_list params)
-  in
-  let+@ results =
-    array_map_opt (fun ty -> valtype d ctx ty) (Array.of_list results)
-  in
+let signature d ctx { Ast.Text.params; results } =
+  let*@ params = array_map_opt (fun (_, ty) -> valtype d ctx ty) params in
+  let+@ results = array_map_opt (fun ty -> valtype d ctx ty) results in
   { params; results }
 
 let typeuse d ctx (idx, sign) =
@@ -405,8 +401,8 @@ module IntSet = Set.Make (Int)
 
 type ctx = {
   locals : valtype Sequence.t;
-  control_types : (string option * valtype list) list;
-  return_types : valtype list;
+  control_types : (string option * valtype array) list;
+  return_types : valtype array;
   modul : module_context;
   mutable initialized_locals : IntSet.t;
 }
@@ -557,7 +553,7 @@ let float_bin_op_type ty (op : Ast.Text.float_bin_op) =
 
 let blocktype ctx (ty : Ast.Text.blocktype option) =
   match ty with
-  | None -> Some ([], [])
+  | None -> Some ([||], [||])
   | Some (Typeuse (_, Some { params; results })) ->
       let*@ params =
         array_map_opt
@@ -567,30 +563,30 @@ let blocktype ctx (ty : Ast.Text.blocktype option) =
       let+@ results =
         array_map_opt (valtype ctx.diagnostics ctx.types) results
       in
-      (Array.to_list params, Array.to_list results)
+      (params, results)
   | Some (Typeuse (Some idx, None)) -> (
       let+@ ty = resolve_type_index ctx.diagnostics ctx.types idx in
       match (Types.get_subtype ctx.subtyping_info ty).typ with
-      | Func { params; results } -> (Array.to_list params, Array.to_list results)
+      | Func { params; results } -> (params, results)
       | _ -> assert false)
   | Some (Typeuse (None, None)) -> assert false (* Should not happen *)
   | Some (Valtype ty) ->
       let+@ ty = valtype ctx.diagnostics ctx.types ty in
-      ([], [ ty ])
+      ([||], [| ty |])
 
-let rec pop_args ctx loc args =
-  match args with
-  | [] -> return ()
-  | ty :: rem ->
-      let* () = pop_args ctx loc rem in
-      pop ctx loc ty
+let pop_args ctx loc args =
+  Array.fold_right
+    (fun ty rem ->
+      let* () = rem in
+      pop ctx loc ty)
+    args (return ())
 
-let rec push_results results =
-  match results with
-  | [] -> return ()
-  | ty :: rem ->
-      let* () = push None ty in
-      push_results rem
+let push_results results =
+  Array.fold_left
+    (fun rem ty ->
+      let* () = rem in
+      push None ty)
+    (return ()) results
 
 let rec output_stack ~full f st =
   match st with
@@ -772,13 +768,13 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
               let*? args = lookup_tag_type ctx tag in
               let*? params = branch_target ctx label in
               with_empty_stack ctx.modul loc (*ZZZ*)
-                (let* () = push_results (Array.to_list args) in
+                (let* () = push_results args in
                  pop_args ctx loc params)
           | CatchRef (tag, label) ->
               let*? args = lookup_tag_type ctx tag in
               let*? params = branch_target ctx label in
               with_empty_stack ctx.modul loc (*ZZZ*)
-                (let* () = push_results (Array.to_list args) in
+                (let* () = push_results args in
                  let* () = push None (Ref { nullable = false; typ = Exn }) in
                  pop_args ctx loc params)
           | CatchAll label ->
@@ -805,7 +801,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       List.iter
         (fun (tag, b) ->
           let*? params' = lookup_tag_type ctx tag in
-          block ctx loc label (Array.to_list params') results results b)
+          block ctx loc label params' results results b)
         catches;
       Option.iter
         (fun b -> block ctx loc label params results results b)
@@ -815,7 +811,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | Nop -> return ()
   | Throw idx ->
       let*! params = lookup_tag_type ctx idx in
-      let* () = pop_args ctx loc (Array.to_list params) in
+      let* () = pop_args ctx loc params in
       unreachable
   | ThrowRef ->
       let* () = pop ctx loc (Ref { nullable = true; typ = Exn }) in
@@ -832,13 +828,13 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | Br_table (lst, idx) ->
       let* () = pop ctx loc I32 in
       let*! params = branch_target ctx idx in
-      let len = List.length params in
+      let len = Array.length params in
       let* () =
         with_current_stack (fun st ->
             List.iter
               (fun idx' ->
                 let*? params = branch_target ctx idx' in
-                let len' = List.length params in
+                let len' = Array.length params in
                 if len <> len' then
                   Error.branch_parameter_count_mismatch ctx.modul.diagnostics
                     ~location:loc idx len idx' len'
@@ -907,13 +903,13 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           Error.expected_func_type ctx.modul.diagnostics ~location:loc idx;
           unreachable
       | Func { params; results } ->
-          let* () = pop_args ctx loc (Array.to_list params) in
-          push_results (Array.to_list results))
+          let* () = pop_args ctx loc params in
+          push_results results)
   | CallRef idx ->
       let*! type_idx, { params; results } = lookup_func_type ctx idx in
       let* () = pop ctx loc (Ref { nullable = true; typ = Type type_idx }) in
-      let* () = pop_args ctx loc (Array.to_list params) in
-      push_results (Array.to_list results)
+      let* () = pop_args ctx loc params in
+      push_results results
   | CallIndirect (idx, tu) -> (
       let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
       let*! ty = typeuse' ctx.modul.diagnostics ctx.modul.types tu in
@@ -928,8 +924,8 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           let* () =
             pop ctx loc (address_type_to_valtype typ.limits.address_type)
           in
-          let* () = pop_args ctx loc (Array.to_list params) in
-          push_results (Array.to_list results))
+          let* () = pop_args ctx loc params in
+          push_results results)
   | ReturnCall idx -> (
       let*! ty = Sequence.get ctx.modul.diagnostics ctx.modul.functions idx in
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
@@ -937,17 +933,17 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           Error.expected_func_type ctx.modul.diagnostics ~location:loc idx;
           unreachable
       | Func { params; results } ->
-          let* () = pop_args ctx loc (Array.to_list params) in
+          let* () = pop_args ctx loc params in
           with_empty_stack ctx.modul loc (*ZZZ*)
-            (let* () = push_results (Array.to_list results) in
+            (let* () = push_results results in
              pop_args ctx loc ctx.return_types);
           unreachable)
   | ReturnCallRef idx ->
       let*! type_idx, { params; results } = lookup_func_type ctx idx in
       let* () = pop ctx loc (Ref { nullable = true; typ = Type type_idx }) in
-      let* () = pop_args ctx loc (Array.to_list params) in
+      let* () = pop_args ctx loc params in
       with_empty_stack ctx.modul loc (*ZZZ*)
-        (let* () = push_results (Array.to_list results) in
+        (let* () = push_results results in
          pop_args ctx loc ctx.return_types);
       unreachable
   | ReturnCallIndirect (idx, tu) -> (
@@ -964,9 +960,9 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           let* () =
             pop ctx loc (address_type_to_valtype typ.limits.address_type)
           in
-          let* () = pop_args ctx loc (Array.to_list params) in
+          let* () = pop_args ctx loc params in
           with_empty_stack ctx.modul loc (*ZZZ*)
-            (let* () = push_results (Array.to_list results) in
+            (let* () = push_results results in
              pop_args ctx loc ctx.return_types);
           unreachable)
   | Drop ->
@@ -1310,11 +1306,10 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let*! ty, fields = lookup_struct_type ctx idx in
       let* () =
         pop_args ctx loc
-          (Array.to_list
-             (Array.map
-                (fun (f : fieldtype) ->
-                  match f.typ with Value v -> v | Packed _ -> I32)
-                fields))
+          (Array.map
+             (fun (f : fieldtype) ->
+               match f.typ with Value v -> v | Packed _ -> I32)
+             fields)
       in
       push (Some loc) (Ref { nullable = false; typ = Type ty })
   | StructNewDefault idx ->
@@ -1620,7 +1615,7 @@ let constant_expression ctx ty expr =
        {
          locals = Sequence.make "local";
          control_types = [];
-         return_types = [];
+         return_types = [||];
          modul = ctx;
          initialized_locals = IntSet.empty;
        }
@@ -1909,13 +1904,13 @@ let functions ctx fields =
             | Func typ -> typ
             | _ -> assert false
           in
-          let return_types = Array.to_list func_typ.results in
+          let return_types = func_typ.results in
           let locals = Sequence.make "local" in
           let initialized_locals = ref IntSet.empty in
           let i = ref 0 in
           (match typ with
-          | _, Some (params, _) ->
-              List.iter
+          | _, Some { params; _ } ->
+              Array.iter
                 (fun (id, typ) ->
                   initialized_locals := IntSet.add !i !initialized_locals;
                   incr i;
@@ -2119,19 +2114,6 @@ let check_syntax diagnostics (_, lst) =
       | _ -> ())
     lst;
 
-  (* Helper to unify type conversion to Ast.Text.functype *)
-  let to_text_functype raw_sign =
-    let open Ast.Text in
-    match raw_sign with
-    | `Sig (params, results) ->
-        let params =
-          Array.of_list (List.map (fun (_, t) -> (None, t)) params)
-        in
-        let results = Array.of_list results in
-        { params; results }
-    | `Functype ft -> ft
-  in
-
   (* Helper to find reusable type *)
   let find_existing_type sign =
     (* Helper: check if comptype matches signature *)
@@ -2155,7 +2137,12 @@ let check_syntax diagnostics (_, lst) =
   in
 
   (* Helper to add implicit type *)
-  let add_implicit_type sign =
+
+  (* Pass 2: Collect Implicit Types *)
+  let add_implicit_type ft =
+    let params = Array.map (fun (_, t) -> (None, t)) ft.Ast.Text.params in
+    let results = ft.Ast.Text.results in
+    let sign = { Ast.Text.params; results } in
     match find_existing_type sign with
     | Some _ -> () (* Reuse *)
     | None ->
@@ -2163,35 +2150,9 @@ let check_syntax diagnostics (_, lst) =
         let>@ ty = signature diagnostics types_ctx sign in
         let def = Ast.Binary.Types.Func ty in
         Hashtbl.add type_defs idx def;
-        (* Construct Ast.Text.functype from signature for implicit types *)
-        let params, results = sign in
-        let params =
-          Array.of_list (List.map (fun (_, t) -> (None, t)) params)
-        in
-        let results = Array.of_list results in
-        Hashtbl.add type_defs_text idx
-          (Ast.Text.Types.Func { Ast.Text.params; results });
+        Hashtbl.add type_defs_text idx (Ast.Text.Types.Func sign);
         Hashtbl.add types_ctx.index_mapping (Uint32.of_int idx) (idx, []);
         types_ctx.last_index <- idx + 1
-  in
-
-  (* Pass 2: Collect Implicit Types *)
-  let safe_add_implicit_type sign =
-    match sign with
-    | `Sig s -> ( try ignore (add_implicit_type s) with _ -> ())
-    | `Functype _ -> ()
-  in
-
-  (* Helper to convert `Functype to `Sig for add_implicit_type *)
-  let implicit_sig_of_ft ft =
-    let params =
-      Array.to_list (Array.map (fun (_, t) -> (None, t)) ft.Ast.Text.params)
-    in
-    let results = Array.to_list ft.Ast.Text.results in
-    (params, results)
-  in
-  let safe_add_implicit_type_from_ft ft =
-    safe_add_implicit_type (`Sig (implicit_sig_of_ft ft))
   in
 
   let rec iter_instrs f instrs =
@@ -2220,11 +2181,11 @@ let check_syntax diagnostics (_, lst) =
       (match field.Ast.desc with
       | Ast.Text.Import { desc; _ } -> (
           match desc with
-          | Func (None, Some sign) -> safe_add_implicit_type (`Sig sign)
-          | Tag (None, Some sign) -> safe_add_implicit_type (`Sig sign)
+          | Func (None, Some sign) -> add_implicit_type sign
+          | Tag (None, Some sign) -> add_implicit_type sign
           | _ -> ())
-      | Func { typ = None, Some sign; _ } -> safe_add_implicit_type (`Sig sign)
-      | Tag { typ = None, Some sign; _ } -> safe_add_implicit_type (`Sig sign)
+      | Func { typ = None, Some sign; _ } -> add_implicit_type sign
+      | Tag { typ = None, Some sign; _ } -> add_implicit_type sign
       | _ -> ());
       match field.Ast.desc with
       | Ast.Text.Func { instrs; _ } ->
@@ -2233,28 +2194,25 @@ let check_syntax diagnostics (_, lst) =
               match desc with
               | Ast.Text.Block { typ = Some (Ast.Text.Typeuse (_, Some ft)); _ }
                 ->
-                  safe_add_implicit_type_from_ft ft
+                  add_implicit_type ft
               | Loop { typ = Some (Ast.Text.Typeuse (_, Some ft)); _ } ->
-                  safe_add_implicit_type_from_ft ft
+                  add_implicit_type ft
               | If { typ = Some (Ast.Text.Typeuse (_, Some ft)); _ } ->
-                  safe_add_implicit_type_from_ft ft
+                  add_implicit_type ft
               | Try { typ = Some (Ast.Text.Typeuse (_, Some ft)); _ } ->
-                  safe_add_implicit_type_from_ft ft
+                  add_implicit_type ft
               | TryTable { typ = Some (Ast.Text.Typeuse (_, Some ft)); _ } ->
-                  safe_add_implicit_type_from_ft ft
-              | CallIndirect (_, (_, Some ft)) ->
-                  safe_add_implicit_type_from_ft ft
-              | ReturnCallIndirect (_, (_, Some ft)) ->
-                  safe_add_implicit_type_from_ft ft
+                  add_implicit_type ft
+              | CallIndirect (_, (_, Some ft)) -> add_implicit_type ft
+              | ReturnCallIndirect (_, (_, Some ft)) -> add_implicit_type ft
               | _ -> ())
             instrs
       | _ -> ())
     lst;
 
   (* Pass 4: Validation *)
-  let check_inline_type idx raw_sign =
+  let check_inline_type idx target =
     let>@ idx' = resolve_type_index diagnostics types_ctx idx in
-    let target = to_text_functype raw_sign in
     match Hashtbl.find_opt type_defs_text idx' with
     | Some (Ast.Text.Types.Func f) ->
         if not (eq_functype f target) then
@@ -2264,8 +2222,7 @@ let check_syntax diagnostics (_, lst) =
   in
   let check_instr_inline desc =
     let check_typeuse = function
-      | Ast.Text.Typeuse (Some idx, Some ft) ->
-          check_inline_type idx (`Functype ft)
+      | Ast.Text.Typeuse (Some idx, Some ft) -> check_inline_type idx ft
       | _ -> ()
     in
     match desc with
@@ -2275,14 +2232,16 @@ let check_syntax diagnostics (_, lst) =
     | Ast.Text.Try { typ = Some t; _ }
     | Ast.Text.TryTable { typ = Some t; _ } ->
         check_typeuse t
-    | CallIndirect (_, (Some idx, Some ft)) ->
-        check_inline_type idx (`Functype ft)
-    | ReturnCallIndirect (_, (Some idx, Some ft)) ->
-        check_inline_type idx (`Functype ft)
+    | CallIndirect (_, (Some idx, Some ft)) -> check_inline_type idx ft
+    | ReturnCallIndirect (_, (Some idx, Some ft)) -> check_inline_type idx ft
     | _ -> ()
   in
   let check_duplicate_locals typ locals =
-    let params = match snd typ with Some (params, _) -> params | None -> [] in
+    let params =
+      match snd typ with
+      | Some { Ast.Text.params; _ } -> Array.to_list params
+      | None -> []
+    in
     let all_locals = params @ locals in
     let seen = Hashtbl.create 16 in
     List.iter
@@ -2317,13 +2276,13 @@ let check_syntax diagnostics (_, lst) =
           in
           check_unbound tbl kind id;
           match desc with
-          | Func (Some idx, Some sign) -> check_inline_type idx (`Sig sign)
-          | Tag (Some idx, Some sign) -> check_inline_type idx (`Sig sign)
+          | Func (Some idx, Some sign) -> check_inline_type idx sign
+          | Tag (Some idx, Some sign) -> check_inline_type idx sign
           | _ -> ())
       | Func { id; typ; locals; instrs; _ } ->
           check_unbound functions "function" id;
           (match typ with
-          | Some idx, Some sign -> check_inline_type idx (`Sig sign)
+          | Some idx, Some sign -> check_inline_type idx sign
           | _ -> ());
           check_duplicate_locals typ locals;
           iter_instrs check_instr_inline instrs
@@ -2331,7 +2290,7 @@ let check_syntax diagnostics (_, lst) =
       | Table { id; _ } -> check_unbound tables "table" id
       | Tag { id; typ = Some idx, Some sign; _ } ->
           check_unbound tags "tag" id;
-          check_inline_type idx (`Sig sign)
+          check_inline_type idx sign
       | Tag { id; _ } -> check_unbound tags "tag" id
       | Global { id; _ } -> check_unbound globals "global" id
       | Export _ | Start _ -> ()

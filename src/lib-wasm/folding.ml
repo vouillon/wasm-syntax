@@ -120,19 +120,18 @@ let tags f =
 
 let locals env typ l =
   let tbl =
-    match typ with
-    | _, Some (params, _) ->
-        List.fold_left
-          (fun tbl (id, typ) -> Tbl.add id typ tbl)
-          Tbl.empty params
-    | Some ty, None -> (
-        match (lookup env.types ty).typ with
-        | Func ty ->
-            Array.fold_left
-              (fun tbl (_, typ) -> Tbl.add None typ tbl)
-              Tbl.empty ty.params
-        | Struct _ | Array _ -> assert false (*ZZZ*))
-    | None, None -> assert false
+    let ty =
+      match typ with
+      | _, Some ty -> ty
+      | Some ty, None -> (
+          match (lookup env.types ty).typ with
+          | Func ty -> ty
+          | Struct _ | Array _ -> assert false)
+      | None, None -> assert false
+    in
+    Array.fold_left
+      (fun tbl (id, typ) -> Tbl.add id typ tbl)
+      Tbl.empty ty.params
   in
   List.fold_left (fun tbl (id, typ) -> Tbl.add id typ tbl) tbl l
 
@@ -155,21 +154,13 @@ type env = {
 
 let lookup_type env idx = lookup env.outer_env.types idx
 
-let functype_no_bindings_arity { params; results } =
+let functype_arity { params; results } =
   (Array.length params, Array.length results)
-
-let functype_arity (params, results) = (List.length params, List.length results)
 
 let type_arity env idx =
   match (lookup_type env idx).typ with
-  | Func ty -> functype_no_bindings_arity ty
+  | Func ty -> functype_arity ty
   | Struct _ | Array _ -> assert false (*ZZZ*)
-
-let typeuse_no_bindings_arity env (i, ty) =
-  match (i, ty) with
-  | _, Some t -> functype_no_bindings_arity t
-  | Some i, None -> type_arity env i
-  | None, None -> assert false
 
 let typeuse_arity env (i, ty) =
   match (i, ty) with
@@ -181,7 +172,7 @@ let blocktype_arity env t =
   match t with
   | None -> (0, 0)
   | Some (Valtype _) -> (0, 1)
-  | Some (Typeuse t) -> typeuse_no_bindings_arity env t
+  | Some (Typeuse t) -> typeuse_arity env t
 
 let function_arity env f = typeuse_arity env (lookup env.outer_env.functions f)
 let valtype_arity t = match t with Tuple l -> List.length l | _ -> 1
@@ -242,10 +233,10 @@ let arity env i =
       (i, i)
   | Return -> (env.return_arity, unreachable)
   | ReturnCallIndirect (_, ty) ->
-      let i, _ = typeuse_no_bindings_arity env ty in
+      let i, _ = typeuse_arity env ty in
       (i + 1, unreachable)
   | CallIndirect (_, ty) ->
-      let i, o = typeuse_no_bindings_arity env ty in
+      let i, o = typeuse_arity env ty in
       (i + 1, o)
   | Unreachable -> (0, unreachable)
   | Nop -> (0, 0)

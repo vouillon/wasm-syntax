@@ -413,14 +413,11 @@ let module_ (m : _ B.module_) : _ T.module_ =
               let name = B.IntMap.find_opt i local_names in
               (Option.map Ast.no_loc name, valtype m.names.types t))
             ft.params
-          |> Array.to_list
         in
-        let results =
-          Array.map (valtype m.names.types) ft.results |> Array.to_list
-        in
+        let results = Array.map (valtype m.names.types) ft.results in
         ( (if supertype = None && final && not recursive then None
            else Some (index ~map:m.names.types type_idx)),
-          (params, results) )
+          { T.params; results } )
     | _ -> assert false
   in
   let types, _ =
@@ -484,7 +481,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
             id = id m.names.functions global_idx;
             typ = (typ, Some sign);
             locals =
-              (let offset = List.length (fst sign) in
+              (let offset = Array.length sign.params in
                List.mapi
                  (fun i v ->
                    let name = B.IntMap.find_opt (offset + i) local_names in

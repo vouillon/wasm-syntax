@@ -339,8 +339,7 @@ valtype:
 | t = tupletype { Tuple t }
 
 functype:
-| "(" FUNC r = params_and_results(")")
-  { let (p, res) = fst r in { params = Array.of_list p; results = Array.of_list res } }
+| "(" FUNC r = params_and_results(")") { fst r }
 
 params(cont):
 | c = cont { ([] , c) }
@@ -361,12 +360,15 @@ results(cont):
 
 params_and_results(cont):
 | r = params(results(cont))
-  { let (p, (r, c)) = r in ((p, r), c) }
+  { let (p, (r, c)) = r in
+    ({params = Array.of_list p; results = Array.of_list r}, c) }
 
 params_and_results_no_bindings(cont):
 | r = params_no_bindings(results(cont))
   { let (p, (r, c)) = r in
-    ({params = Array.of_list (List.map (fun t -> (None, t)) p); results = Array.of_list r }, c) }
+    ({params = Array.of_list (List.map (fun t -> (None, t)) p);
+      results = Array.of_list r },
+     c) }
 
 field:
 | "(" FIELD i = ID t = fieldtype ")" { [(Some i, t)] }
@@ -718,9 +720,9 @@ expr:
 
 typeuse(cont):
 | "(" TYPE i = idx ")" rem = params_and_results(cont)
-  { let ((params, results) as s, r) = rem in
-    (match params, results with
-     | [], [] -> Some i, None
+  { let (s, r) = rem in
+    (match s with
+     | {params = [||]; results = [||]} -> Some i, None
      | _ -> Some i, Some s),
     r }
 | rem = params_and_results(cont) { let (s, r) = rem in (None, Some s), r }

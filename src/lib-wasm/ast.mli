@@ -569,11 +569,7 @@ module Text : sig
   module Types : module type of Make_types (X)
   include module type of Make_types (X)
 
-  type typeuse_no_bindings = idx option * functype option
-
-  type typeuse =
-    idx option * ((name option * valtype) list * valtype list) option
-
+  type typeuse = idx option * functype option
   type tabletype = { limits : (limits, location) annotated; reftype : reftype }
 
   include module type of Make_instructions (struct
@@ -584,7 +580,7 @@ module Text : sig
     type heaptype = Make_types(X).heaptype
     type reftype = Make_types(X).reftype
     type valtype = Make_types(X).valtype
-    type nonrec typeuse = typeuse_no_bindings
+    type nonrec typeuse = typeuse
     type int32_t = string
     type int64_t = string
     type float_t = string

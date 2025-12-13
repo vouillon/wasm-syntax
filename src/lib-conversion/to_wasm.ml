@@ -155,9 +155,13 @@ let typeuse typ sign =
   let type_info =
     Option.map
       (fun (s : funsig) ->
-        let params = List.map (fun (id, t) -> (id, valtype t)) s.named_params in
-        let results = List.map valtype s.results in
-        (params, results))
+        let params =
+          Array.map
+            (fun (id, t) -> (id, valtype t))
+            (Array.of_list s.named_params)
+        in
+        let results = Array.map valtype (Array.of_list s.results) in
+        { Text.params; results })
       sign
   in
   (idx, type_info)

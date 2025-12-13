@@ -569,18 +569,14 @@ module Text = struct
   module Types = Make_types (X)
   include Types
 
-  type typeuse_no_bindings = idx option * functype option
-
-  type typeuse =
-    idx option * ((name option * valtype) list * valtype list) option
-
+  type typeuse = idx option * functype option
   type tabletype = { limits : (limits, location) annotated; reftype : reftype }
 
   include Make_instructions (struct
     include X
     include Types
 
-    type nonrec typeuse = typeuse_no_bindings
+    type nonrec typeuse = typeuse
     type int32_t = string
     type int64_t = string
     type float_t = string
