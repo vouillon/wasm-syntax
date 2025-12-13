@@ -346,7 +346,7 @@ legacy_catch_all:
 
 plaininstr:
 | NULL { with_loc $sloc Null }
-| "_" {with_loc $sloc Pop }
+| "_" {with_loc $sloc Hole }
 | x = ident { with_loc $sloc (Get x) } %prec prec_ident
 | "(" l = instr ")" { l }
 | "(" i = instr "," l = separated_list(",", instr) ")"

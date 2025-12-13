@@ -30,7 +30,7 @@ let rec map_instr f instr =
                 catches;
             catch_all = Option.map (List.map (map_instr f)) catch_all;
           }
-    | ( Unreachable | Nop | Pop | Null | Get _ | String _ | Int _ | Float _
+    | ( Unreachable | Nop | Hole | Null | Get _ | String _ | Int _ | Float _
       | StructDefault _ ) as x ->
         x
     | Set (idx, v) -> Set (idx, map_instr f v)

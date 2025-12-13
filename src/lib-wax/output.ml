@@ -423,7 +423,7 @@ let array_instr pp nm f =
 let get_prec (i : _ Ast.instr) =
   match i.desc with
   | Block _ | Loop _ | If _ | Try _ | TryTable _ -> Atom
-  | Unreachable | Nop | Pop | Null | Get _ | String _ | Int _ | Float _
+  | Unreachable | Nop | Hole | Null | Get _ | String _ | Int _ | Float _
   | Struct _ | StructDefault _ | Array _ | ArrayDefault _ | ArrayFixed _
   | ArrayGet _ | ArraySet _ | Sequence _ ->
       Atom
@@ -445,13 +445,13 @@ let get_prec (i : _ Ast.instr) =
 let is_block (i : _ Ast.instr) =
   match i.desc with
   | Block _ | Loop _ | If _ | Try _ | TryTable _ -> true
-  | Call _ | Unreachable | Nop | Pop | Null | Get _ | Set _ | Tee _ | TailCall _
-  | String _ | Int _ | Float _ | Cast _ | Test _ | NonNull _ | Struct _
-  | StructDefault _ | StructGet _ | StructSet _ | Array _ | ArrayDefault _
-  | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _ | Let _ | Br _
-  | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
-  | Br_on_cast_fail _ | Throw _ | ThrowRef _ | Return _ | Sequence _ | Select _
-    ->
+  | Call _ | Unreachable | Nop | Hole | Null | Get _ | Set _ | Tee _
+  | TailCall _ | String _ | Int _ | Float _ | Cast _ | Test _ | NonNull _
+  | Struct _ | StructDefault _ | StructGet _ | StructSet _ | Array _
+  | ArrayDefault _ | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _
+  | Let _ | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _
+  | Br_on_cast _ | Br_on_cast_fail _ | Throw _ | ThrowRef _ | Return _
+  | Sequence _ | Select _ ->
       false
 
 let rec starts_with_block_prec prec (i : 'a Ast.instr) =
@@ -471,7 +471,7 @@ let rec starts_with_block_prec prec (i : 'a Ast.instr) =
         let _, left, _ = prec_op op in
         starts_with_block_prec left i
     | Select (i, _, _) -> starts_with_block_prec Select i
-    | Unreachable | Nop | Pop | Null | Get _ | Set _ | Tee _ | TailCall _
+    | Unreachable | Nop | Hole | Null | Get _ | Set _ | Tee _ | TailCall _
     | String _ | Int _ | Float _ | Struct _ | StructDefault _ | Array _
     | ArrayDefault _ | ArrayFixed _ | Let _ | Br _ | Br_if _ | Br_table _
     | Br_on_null _ | Br_on_non_null _ | Br_on_cast _ | Br_on_cast_fail _
@@ -634,7 +634,7 @@ let rec instr prec pp (i : _ instr) =
               punctuation pp "]"))
   | Unreachable -> keyword pp "unreachable"
   | Nop -> operator pp "nop"
-  | Pop -> operator pp "_"
+  | Hole -> operator pp "_"
   | Get x -> identifier pp x.desc
   | Set (x, i) ->
       box pp ~indent:indent_level (fun () ->

@@ -87,7 +87,7 @@ type 'info instr_desc =
     }
   | Unreachable
   | Nop
-  | Pop
+  | Hole
   | Null
   | Get of ident
   | Set of ident option * 'info instr

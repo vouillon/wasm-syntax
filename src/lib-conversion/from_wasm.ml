@@ -299,7 +299,7 @@ module Stack = struct
   type 'a t = stack -> stack * 'a
 
   let rec complete n cur =
-    if n = 0 then cur else complete (n - 1) (Ast.no_loc Ast.Pop :: cur)
+    if n = 0 then cur else complete (n - 1) (Ast.no_loc Ast.Hole :: cur)
 
   let rec grab_rec n stack cur =
     if n = 0 then (stack, cur)
@@ -323,7 +323,7 @@ module Stack = struct
   let pop stack =
     match stack with
     | (true, i) :: rem -> (rem, i)
-    | _ -> (stack, Ast.no_loc Ast.Pop)
+    | _ -> (stack, Ast.no_loc Ast.Hole)
 
   let try_pop stack =
     match stack with (true, i) :: rem -> (rem, Some i) | _ -> (stack, None)
@@ -432,7 +432,7 @@ let int_un_op i0 sz (op : Src.int_un_op) =
   let e ty =
     match e' with
     | Some e -> e
-    | None -> Ast.no_loc (Ast.Cast (Ast.no_loc Ast.Pop, Valtype ty))
+    | None -> Ast.no_loc (Ast.Cast (Ast.no_loc Ast.Hole, Valtype ty))
   in
   Stack.push 1
     (match op with
@@ -502,7 +502,7 @@ let float_un_op i0 sz (op : Src.float_un_op) =
   let e ty =
     match e' with
     | Some e -> e
-    | None -> Ast.no_loc (Ast.Cast (Ast.no_loc Ast.Pop, Valtype ty))
+    | None -> Ast.no_loc (Ast.Cast (Ast.no_loc Ast.Hole, Valtype ty))
   in
   Stack.push 1
     (match op with
@@ -673,7 +673,7 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   | Nop -> Stack.push 0 (with_loc Nop)
   | Pop _ ->
       let* () = Stack.consume 1 in
-      Stack.push 1 (with_loc Pop)
+      Stack.push 1 (with_loc Hole)
   | Drop ->
       let* e = Stack.pop in
       Stack.push 0 (with_loc (Set (None, e)))

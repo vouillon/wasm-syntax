@@ -722,7 +722,7 @@ let pop_args ctx args =
 
 let rec grab_parameters ctx acc i =
   match i.desc with
-  | Pop ->
+  | Hole ->
       let* v = pop_any ctx i in
       return (v :: acc)
   | BinOp (_, l, r) | Array (_, l, r) | ArrayGet (l, r) ->
@@ -1100,9 +1100,9 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
   | Nop ->
       (* ZZZ Only at top_level *)
       return_statement i Nop [||]
-  | Pop ->
+  | Hole ->
       let* ty = pop_parameter in
-      return_expression i Pop ty
+      return_expression i Hole ty
   | Null -> return_expression i Null (UnionFind.make Null)
   | Get idx as desc ->
       let ty =
@@ -2264,7 +2264,7 @@ let rec check_constant_instruction ctx i =
         | Le _ | Ge _ ),
         _,
         _ )
-  | Block _ | Loop _ | If _ | TryTable _ | Try _ | Unreachable | Nop | Pop
+  | Block _ | Loop _ | If _ | TryTable _ | Try _ | Unreachable | Nop | Hole
   | Set _ | Tee _ | Call _ | TailCall _ | Cast _ | Test _ | NonNull _
   | StructGet _ | StructSet _ | ArrayGet _ | ArraySet _ | Let _ | Br _ | Br_if _
   | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _

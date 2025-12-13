@@ -285,7 +285,7 @@ let rec instruction ret ctx i : location Text.instr list =
         []
   | Unreachable -> folded loc Unreachable []
   | Nop -> folded loc Nop []
-  | Pop -> []
+  | Hole -> []
   | Null -> folded loc (RefNull (heaptype (expr_reftype i).typ)) []
   | Get idx ->
       if StringMap.mem idx.desc ctx.locals then
