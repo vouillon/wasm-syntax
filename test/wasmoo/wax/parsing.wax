@@ -75,7 +75,9 @@ const tbl_names_block: i32 = 16;
 fn strlen(s: &string, p: i32) -> i32 {
     let i: i32;
     i = p;
-    'loop: loop { if s[i] as i32_u != 0 { i = i + 1; br 'loop; } }
+    'loop: loop {
+        if s[i] as i32_u != 0 { i = i + 1; br 'loop; }
+    } /* 'loop */
     i - p;
 }
 fn token_name(vnames: &eq, number: i32) -> &eq {

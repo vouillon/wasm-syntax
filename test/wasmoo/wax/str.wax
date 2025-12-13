@@ -446,7 +446,7 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
                                                     in_bitset
                                                         (set, s[pos] as i32_u);
                                             }
-                                        }
+                                        } /* 'loop */
                                         br 'continue;
                                     } /* 'GOTO */
                                     pc = pc + (instr >>s 8);

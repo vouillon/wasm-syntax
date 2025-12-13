@@ -63,14 +63,15 @@ type catch =
   | CatchAllRef of label
 
 type 'info instr_desc =
-  | Block of label option * functype * 'info instr list
-  | Loop of label option * functype * 'info instr list
-  | If of
-      label option
-      * functype
-      * 'info instr
-      * 'info instr list
-      * 'info instr list option
+  | Block of { label : label option; typ : functype; block : 'info instr list }
+  | Loop of { label : label option; typ : functype; block : 'info instr list }
+  | If of {
+      label : label option;
+      typ : functype;
+      cond : 'info instr;
+      if_block : 'info instr list;
+      else_block : 'info instr list option;
+    }
   | TryTable of {
       label : label option;
       typ : functype;

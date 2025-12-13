@@ -589,24 +589,24 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   match i.desc with
   | Block { label; typ; block } ->
       let label, ctx = push_label ctx ~loop:false label typ in
-      let body = Stack.run (instructions ctx block) in
+      let block = Stack.run (instructions ctx block) in
       let inputs, outputs = blocktype_arity ctx typ in
       let* () = Stack.consume inputs in
       Stack.push
         (if inputs > 0 then 0 else outputs)
-        (with_loc (Block (label (), blocktype ctx typ, body)))
+        (with_loc (Block { label = label (); typ = blocktype ctx typ; block }))
   | Loop { label; typ; block } ->
       let label, ctx = push_label ctx ~loop:true label typ in
-      let body = Stack.run (instructions ctx block) in
+      let block = Stack.run (instructions ctx block) in
       let inputs, outputs = blocktype_arity ctx typ in
       let* () = Stack.consume inputs in
       Stack.push
         (if inputs > 0 then 0 else outputs)
-        (with_loc (Loop (label (), blocktype ctx typ, body)))
+        (with_loc (Loop { label = label (); typ = blocktype ctx typ; block }))
   | If { label; typ; if_block; else_block } ->
       let label, ctx = push_label ctx ~loop:false label typ in
-      let if_body = Stack.run (instructions ctx if_block) in
-      let else_body =
+      let if_block = Stack.run (instructions ctx if_block) in
+      let else_block =
         if else_block = [] then None
         else Some (Stack.run (instructions ctx else_block))
       in
@@ -615,7 +615,15 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       let* () = Stack.consume inputs in
       Stack.push
         (if inputs > 0 then 0 else outputs)
-        (with_loc (If (label (), blocktype ctx typ, cond, if_body, else_body)))
+        (with_loc
+           (If
+              {
+                label = label ();
+                typ = blocktype ctx typ;
+                cond;
+                if_block;
+                else_block;
+              }))
   | TryTable { label = labl; typ; block; catches } ->
       let labl, block_ctx = push_label ctx ~loop:false labl typ in
       let block = Stack.run (instructions block_ctx block) in

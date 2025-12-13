@@ -214,26 +214,26 @@ let push ret label =
 let rec instruction ret ctx i : location Text.instr list =
   let _, loc = i.info in
   match i.desc with
-  | Block (label, typ, body) ->
+  | Block { label; typ; block = body } ->
       let inner_ctx = { ctx with locals = ctx.locals } in
       let block =
         List.concat_map (instruction (push ret label) inner_ctx) body
       in
       folded loc (Block { label; typ = blocktype typ; block }) []
-  | Loop (label, typ, body) ->
+  | Loop { label; typ; block = body } ->
       let inner_ctx = { ctx with locals = ctx.locals } in
       let block =
         List.concat_map (instruction (push ret label) inner_ctx) body
       in
       folded loc (Loop { label; typ = blocktype typ; block }) []
-  | If (label, typ, cond, then_, else_) ->
+  | If { label; typ; cond; if_block; else_block } ->
       let cond_code = instruction ret ctx cond in
       let then_ctx = { ctx with locals = ctx.locals } in
       let if_block =
-        List.concat_map (instruction (push ret label) then_ctx) then_
+        List.concat_map (instruction (push ret label) then_ctx) if_block
       in
       let else_block =
-        match else_ with
+        match else_block with
         | Some e ->
             let else_ctx = { ctx with locals = ctx.locals } in
             List.concat_map (instruction (push ret label) else_ctx) e

@@ -317,11 +317,13 @@ let long_block l =
     else
       match l with
       | [] -> n
-      | { desc = Block (_, _, l); _ } :: rem -> loop rem (loop l (n - 2))
-      | { desc = Loop (_, _, l); _ } :: rem -> loop rem (loop l (n - 2))
-      | { desc = If (_, _, _, l1, l2); _ } :: rem ->
-          let n = loop l1 (n - 2) in
-          let n = match l2 with None -> n | Some l2 -> loop l2 (n - 1) in
+      | { desc = Block { block = l; _ }; _ } :: rem -> loop rem (loop l (n - 2))
+      | { desc = Loop { block = l; _ }; _ } :: rem -> loop rem (loop l (n - 2))
+      | { desc = If { cond = l1; if_block = l2; else_block = l3; _ }; _ } :: rem
+        ->
+          let n = loop [ l1 ] (n - 2) in
+          let n = loop l2 n in
+          let n = match l3 with None -> n | Some l2 -> loop l2 (n - 1) in
           loop rem n
       | { desc = Try { block = l; catches; catch_all; _ }; _ } :: rem ->
           let n = loop l (n - 2) in
@@ -488,28 +490,28 @@ let array_element_precedence nm first i =
 let rec instr prec pp (i : _ instr) =
   parentheses prec (get_prec i) pp @@ fun () ->
   match i.desc with
-  | Block (label, bt, l) ->
-      block pp label (if need_blocktype bt then Some "do" else None) bt l
-  | Loop (label, bt, l) -> block pp label (Some "loop") bt l
-  | If (label, bt, i, l1, l2) ->
+  | Block { label; typ; block = l } ->
+      block pp label (if need_blocktype typ then Some "do" else None) typ l
+  | Loop { label; typ; block = l } -> block pp label (Some "loop") typ l
+  | If { label; typ; cond; if_block; else_block } ->
       hvbox pp (fun () ->
           box pp (fun () ->
               block_label pp label;
               keyword pp "if";
               indent pp indent_level (fun () ->
                   space pp ();
-                  instr Instruction pp i;
-                  if need_blocktype bt then (
+                  instr Instruction pp cond;
+                  if need_blocktype typ then (
                     space pp ();
                     box pp ~indent:indent_level (fun () ->
                         punctuation pp "=>";
                         space pp ();
-                        blocktype pp bt)));
+                        blocktype pp typ)));
               space pp ();
               punctuation pp "{");
-          block_contents pp l1;
-          match l2 with
-          | Some l2 ->
+          block_contents pp if_block;
+          match else_block with
+          | Some else_block ->
               hvbox pp (fun () ->
                   box pp (fun () ->
                       punctuation pp "}";
@@ -517,17 +519,17 @@ let rec instr prec pp (i : _ instr) =
                       keyword pp "else";
                       space pp ();
                       punctuation pp "{");
-                  block_contents pp l2;
+                  block_contents pp else_block;
                   punctuation pp "}")
           | None -> punctuation pp "}")
-  | Try { label; typ = bt; block = l; catches; catch_all } ->
+  | Try { label; typ; block = l; catches; catch_all } ->
       hvbox pp (fun () ->
           box pp (fun () ->
               block_label pp label;
               keyword pp "try";
               space pp ();
-              if need_blocktype bt then (
-                blocktype pp bt;
+              if need_blocktype typ then (
+                blocktype pp typ;
                 space pp ());
               punctuation pp "{");
           block_contents pp l;

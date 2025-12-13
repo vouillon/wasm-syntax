@@ -3,16 +3,19 @@ open Ast
 let rec map_instr f instr =
   let desc =
     match instr.desc with
-    | Block (label, ft, instrs) ->
-        Block (label, ft, List.map (map_instr f) instrs)
-    | Loop (label, ft, instrs) -> Loop (label, ft, List.map (map_instr f) instrs)
-    | If (label, ft, cond, then_, else_) ->
+    | Block { label; typ; block = instrs } ->
+        Block { label; typ; block = List.map (map_instr f) instrs }
+    | Loop { label; typ; block = instrs } ->
+        Loop { label; typ; block = List.map (map_instr f) instrs }
+    | If { label; typ; cond; if_block; else_block } ->
         If
-          ( label,
-            ft,
-            map_instr f cond,
-            List.map (map_instr f) then_,
-            Option.map (List.map (map_instr f)) else_ )
+          {
+            label;
+            typ;
+            cond = map_instr f cond;
+            if_block = List.map (map_instr f) if_block;
+            else_block = Option.map (List.map (map_instr f)) else_block;
+          }
     | TryTable { label; typ; block; catches } ->
         TryTable { label; typ; block = List.map (map_instr f) block; catches }
     | Try { label; typ; block; catches; catch_all } ->

@@ -325,16 +325,16 @@ legacy_catch_all:
 
 %inline blockinstr:
 | b = block
-  { let (label, l) = b in with_loc $sloc (Block(label, blocktype None, l)) }
+  { let (label, l) = b in with_loc $sloc (Block{label; typ = blocktype None; block = l}) }
 | label = block_label DO bt = option(blocktype) "{" l = delimited_instr_list "}"
-  { with_loc $sloc (Block(label, blocktype bt, l)) }
+  { with_loc $sloc (Block{label; typ = blocktype bt; block = l}) }
 | label = block_label LOOP bt = option(blocktype)
   "{" l = delimited_instr_list "}"
-  { with_loc $sloc (Loop(label, blocktype bt, l)) }
+  { with_loc $sloc (Loop{label; typ = blocktype bt; block = l}) }
 | label = block_label IF e = instr bt = option("=>" bt = blocktype { bt })
   "{" l1 = delimited_instr_list "}"
   l2 = option(ELSE  "{" l = delimited_instr_list "}" { l })
-  { with_loc $sloc (If(label, blocktype bt, e, l1, l2)) }
+  { with_loc $sloc (If{label; typ = blocktype bt; cond = e; if_block = l1; else_block = l2}) }
 | label = block_label TRY bt = option(blocktype) "{" l = delimited_instr_list "}"
   CATCH "[" catches = separated_list(",", catch) "]"
   { with_loc $sloc (TryTable {label; typ = blocktype bt; catches; block = l}) }

@@ -735,7 +735,7 @@ let rec grab_parameters ctx acc i =
   | Call (f, args) | TailCall (f, args) ->
       let* acc = grab_parameters ctx acc f in
       grab_parameters_from_list ctx acc args
-  | If (_, _, i, _, _)
+  | If { cond = i; _ }
   | Let (_, Some i)
   | Set (_, i)
   | Tee (_, i)
@@ -994,36 +994,41 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
 *)
   if false then Format.eprintf "%a@." Output.instr i;
   match i.desc with
-  | Block (label, bt, instrs) ->
-      let { params; results } = bt in
+  | Block { label; typ; block = instrs } ->
       (*ZZZ Blocks take argument from the stack *)
-      assert (params = [||]);
-      let*! results = array_map_opt (internalize ctx) results in
+      assert (typ.params = [||]);
+      let*! results = array_map_opt (internalize ctx) typ.results in
       let instrs' = block ctx i.info label [||] results results instrs in
-      return_statement i (Block (label, bt, instrs')) results
-  | Loop (label, bt, instrs) ->
-      let { params; results } = bt in
-      assert (params = [||]);
-      let*! results = array_map_opt (internalize ctx) results in
+      return_statement i (Block { label; typ; block = instrs' }) results
+  | Loop { label; typ; block = instrs } ->
+      assert (typ.params = [||]);
+      let*! results = array_map_opt (internalize ctx) typ.results in
       let instrs' = block ctx i.info label [||] results [||] instrs in
-      return_statement i (Loop (label, bt, instrs')) results
-  | If (label, bt, i', if_block, else_block) ->
-      let* i' = instruction ctx i' in
-      let { params; results } = bt in
-      assert (params = [||]);
+      return_statement i (Loop { label; typ; block = instrs' }) results
+  | If { label; typ; cond; if_block; else_block } ->
+      let* cond' = instruction ctx cond in
+      assert (typ.params = [||]);
       (*ZZZ*)
-      let*! results = array_map_opt (internalize ctx) results in
+      let*! results = array_map_opt (internalize ctx) typ.results in
       let if_block' = block ctx i.info label [||] results results if_block in
       let else_block' =
         Option.map
           (fun b -> block ctx i.info label [||] results results b)
           else_block
       in
-      return_statement i (If (label, bt, i', if_block', else_block')) results
-  | TryTable { label; typ = bt; block = body; catches } ->
-      let { params; results } = bt in
-      assert (params = [||]);
-      let*! results = array_map_opt (internalize ctx) results in
+      return_statement i
+        (If
+           {
+             label;
+             typ;
+             cond = cond';
+             if_block = if_block';
+             else_block = else_block';
+           })
+        results
+  | TryTable { label; typ; block = body; catches } ->
+      assert (typ.params = [||]);
+      let*! results = array_map_opt (internalize ctx) typ.results in
       let body' = block ctx i.info label [||] results results body in
       let check_catch types label =
         let params = branch_target ctx label in
@@ -1061,12 +1066,11 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
               check_catch [| ref_exn |] label)
         catches;
       return_statement i
-        (TryTable { label; typ = bt; block = body'; catches })
+        (TryTable { label; typ; block = body'; catches })
         results
-  | Try { label; typ = bt; block = body; catches; catch_all } ->
-      let { params; results } = bt in
-      assert (params = [||]);
-      let*! results = array_map_opt (internalize ctx) results in
+  | Try { label; typ; block = body; catches; catch_all } ->
+      assert (typ.params = [||]);
+      let*! results = array_map_opt (internalize ctx) typ.results in
       let body' = block ctx i.info label [||] results results body in
       let catches =
         List.filter_map
@@ -1088,7 +1092,7 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
           catch_all
       in
       return_statement i
-        (Try { label; typ = bt; block = body'; catches; catch_all })
+        (Try { label; typ; block = body'; catches; catch_all })
         results
   | Unreachable ->
       (* ZZZ Only at top_level *)
@@ -2003,48 +2007,44 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
 *)
   if false then Format.eprintf "%a@." Output.instr i;
   match i.desc with
-  | Block (label, bt, instrs) ->
+  | Block { label; typ; block = instrs } ->
       (*ZZZ Blocks take argument from the stack *)
-      let { params; results } = bt in
       (*ZZZ Grab the arguments from the stack before internalizing the types;
        push the right number of values in case of failure *)
       let*! params =
-        array_map_opt (fun (_, typ) -> internalize ctx typ) params
+        array_map_opt (fun (_, typ) -> internalize ctx typ) typ.params
       in
-      let*! results = array_map_opt (internalize ctx) results in
+      let*! results = array_map_opt (internalize ctx) typ.results in
       let* () = pop_args ctx params in
       let instrs' = block ctx i.info label params results results instrs in
-      return_statement i (Block (label, bt, instrs')) results
-  | Loop (label, bt, instrs) ->
-      let { params; results } = bt in
+      return_statement i (Block { label; typ; block = instrs' }) results
+  | Loop { label; typ; block = instrs } ->
       let*! params =
-        array_map_opt (fun (_, typ) -> internalize ctx typ) params
+        array_map_opt (fun (_, typ) -> internalize ctx typ) typ.params
       in
-      let*! results = array_map_opt (internalize ctx) results in
+      let*! results = array_map_opt (internalize ctx) typ.results in
       let* () = pop_args ctx params in
       let instrs' = block ctx i.info label params results params instrs in
-      return_statement i (Loop (label, bt, instrs')) results
-  | If (label, bt, i', if_block, else_block) ->
-      let* i' = toplevel_instruction ctx i' in
-      let { params; results } = bt in
+      return_statement i (Loop { label; typ; block = instrs' }) results
+  | If { label; typ; cond; if_block; else_block } ->
+      let* cond = toplevel_instruction ctx cond in
       let*! params =
-        array_map_opt (fun (_, typ) -> internalize ctx typ) params
+        array_map_opt (fun (_, typ) -> internalize ctx typ) typ.params
       in
-      let*! results = array_map_opt (internalize ctx) results in
+      let*! results = array_map_opt (internalize ctx) typ.results in
       let* () = pop_args ctx params in
-      let if_block' = block ctx i.info label params results results if_block in
-      let else_block' =
+      let if_block = block ctx i.info label params results results if_block in
+      let else_block =
         Option.map
           (fun b -> block ctx i.info label params results results b)
           else_block
       in
-      return_statement i (If (label, bt, i', if_block', else_block')) results
-  | TryTable { label; typ = bt; block = body; catches } ->
-      let { params; results } = bt in
+      return_statement i (If { label; typ; cond; if_block; else_block }) results
+  | TryTable { label; typ; block = body; catches } ->
       let*! params =
-        array_map_opt (fun (_, typ) -> internalize ctx typ) params
+        array_map_opt (fun (_, typ) -> internalize ctx typ) typ.params
       in
-      let*! results = array_map_opt (internalize ctx) results in
+      let*! results = array_map_opt (internalize ctx) typ.results in
       let* () = pop_args ctx params in
       let body' = block ctx i.info label params results results body in
       let check_catch types label =
@@ -2083,14 +2083,13 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
               check_catch [| ref_exn |] label)
         catches;
       return_statement i
-        (TryTable { label; typ = bt; block = body'; catches })
+        (TryTable { label; typ; block = body'; catches })
         results
-  | Try { label; typ = bt; block = body; catches; catch_all } ->
-      let { params; results } = bt in
+  | Try { label; typ; block = body; catches; catch_all } ->
       let*! params =
-        array_map_opt (fun (_, typ) -> internalize ctx typ) params
+        array_map_opt (fun (_, typ) -> internalize ctx typ) typ.params
       in
-      let*! results = array_map_opt (internalize ctx) results in
+      let*! results = array_map_opt (internalize ctx) typ.results in
       let* () = pop_args ctx params in
       let body' = block ctx i.info label params results results body in
       let catches =
@@ -2113,7 +2112,7 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
           catch_all
       in
       return_statement i
-        (Try { label; typ = bt; block = body'; catches; catch_all })
+        (Try { label; typ; block = body'; catches; catch_all })
         results
   | Unreachable | TailCall _ | Br _ | Br_table _ | Throw _ | ThrowRef _
   | Return _ ->

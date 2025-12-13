@@ -196,7 +196,9 @@ fn readstr(s: &intern_state) -> &string {
     let src: &string;
     src = s.src;
     pos = s.pos;
-    'loop: loop { if src[pos + len] as i32_u { len = len + 1; br 'loop; } }
+    'loop: loop {
+        if src[pos + len] as i32_u { len = len + 1; br 'loop; }
+    } /* 'loop */
     res = [string|0; len];
     res.copy(0, src, pos, len);
     s.pos = pos + (len + 1);
