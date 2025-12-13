@@ -17,7 +17,7 @@
         (local.get $arg)))
   )
   (global $OUT_OF_MEMORY_EXN i32 (i32.const 0))
-  (func (export "caml_raise_out_of_memory") 
+  (func (export "caml_raise_out_of_memory")
     (return_call $caml_raise_constant
       (array.get $block (global.get $caml_global_data)
         (global.get $OUT_OF_MEMORY_EXN)))
@@ -49,25 +49,25 @@
       (local.get 0))
   )
   (data $index_out_of_bounds "index out of bounds")
-  (func (export "caml_bound_error") 
+  (func (export "caml_bound_error")
     (return_call $caml_invalid_argument
       (array.new_data $string $index_out_of_bounds (i32.const 0)
         (i32.const 19)))
   )
   (global $END_OF_FILE_EXN i32 (i32.const 4))
-  (func (export "caml_raise_end_of_file") 
+  (func (export "caml_raise_end_of_file")
     (return_call $caml_raise_constant
       (array.get $block (global.get $caml_global_data)
         (global.get $END_OF_FILE_EXN)))
   )
   (global $ZERO_DIVIDE_EXN i32 (i32.const 5))
-  (func (export "caml_raise_zero_divide") 
+  (func (export "caml_raise_zero_divide")
     (return_call $caml_raise_constant
       (array.get $block (global.get $caml_global_data)
         (global.get $ZERO_DIVIDE_EXN)))
   )
   (global $NOT_FOUND_EXN i32 (i32.const 6))
-  (func (export "caml_raise_not_found") 
+  (func (export "caml_raise_not_found")
     (return_call $caml_raise_constant
       (array.get $block (global.get $caml_global_data)
         (global.get $NOT_FOUND_EXN)))

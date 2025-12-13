@@ -1,5 +1,5 @@
 (module
-  (import "fail" "caml_bound_error" (func $caml_bound_error ))
+  (import "fail" "caml_bound_error" (func $caml_bound_error))
   (import "fail" "caml_invalid_argument"
     (func $caml_invalid_argument (param $arg (ref eq)))
   )

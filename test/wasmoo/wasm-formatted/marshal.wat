@@ -3,7 +3,7 @@
   (import "fail" "caml_invalid_argument"
     (func $caml_invalid_argument (param (ref eq)))
   )
-  (import "fail" "caml_raise_end_of_file" (func $caml_raise_end_of_file ))
+  (import "fail" "caml_raise_end_of_file" (func $caml_raise_end_of_file))
   (import "obj" "double_array_tag" (global $double_array_tag i32))
   (import "string" "caml_string_concat"
     (func $caml_string_concat (param (ref eq) (ref eq)) (result (ref eq)))
@@ -32,7 +32,7 @@
     (func $caml_flush_if_unbuffered (param (ref eq)))
   )
   (import "custom" "caml_init_custom_operations"
-    (func $caml_init_custom_operations )
+    (func $caml_init_custom_operations)
   )
   (import "custom" "caml_find_custom_operations"
     (func $caml_find_custom_operations

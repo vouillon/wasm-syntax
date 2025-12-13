@@ -119,7 +119,7 @@
       (call $caml_ml_output (global.get $caml_stderr) (local.get $s)
         (ref.i31 (i32.const 0)) (ref.i31 (array.len (local.get $s)))))
   )
-  (func $output_nl 
+  (func $output_nl
     (drop
       (call $caml_ml_output (global.get $caml_stderr)
         (array.new_fixed $string 0) (ref.i31 (i32.const 0))

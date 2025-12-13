@@ -105,7 +105,7 @@
     (ref.null $custom_operations)
   )
   (global $initialized (mut i32) (i32.const 0))
-  (func (export "caml_init_custom_operations") 
+  (func (export "caml_init_custom_operations")
     (if (global.get $initialized) (then (return)))
     (call $caml_register_custom_operations (global.get $int32_ops))
     (call $caml_register_custom_operations (global.get $nativeint_ops))

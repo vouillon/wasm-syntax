@@ -2,7 +2,7 @@
   (import "io" "caml_getblock"
     (func $caml_getblock (param (ref eq) (ref $string) i32 i32) (result i32))
   )
-  (import "fail" "caml_raise_end_of_file" (func $caml_raise_end_of_file ))
+  (import "fail" "caml_raise_end_of_file" (func $caml_raise_end_of_file))
   (type $string (array (mut i8)))
   (type $int_array (array (mut i32)))
   (type $context

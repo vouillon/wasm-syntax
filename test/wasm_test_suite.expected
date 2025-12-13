@@ -14,10 +14,6 @@ Validation should have failed (non-empty tag result type):
 Validation should have failed (non-empty tag result type):
   (module (import "" "" (tag (result i32))))
 ==== core/func.wast ====
-File "wasm-test-suite/core/func.wast", line 428, characters 25-26:
-Error: The type index 1 is not bound.
-  428 |   (func $void->f64 (type 1) (f64.const 0))  ;; (result f64)
-                                 ^
-
+Fatal error: exception File "src/lib-wasm/text_to_binary.ml", line 626, characters 28-34: Assertion failed
 ==== core/stack.wast ====
 Fatal error: exception Invalid_argument("index out of bounds")

@@ -24,7 +24,7 @@
   (import "fail" "caml_raise_sys_error"
     (func $caml_raise_sys_error (param (ref eq)))
   )
-  (import "fail" "caml_raise_not_found" (func $caml_raise_not_found ))
+  (import "fail" "caml_raise_not_found" (func $caml_raise_not_found))
   (import "bindings" "argv" (func $argv (result (ref extern))))
   (import "bindings" "system"
     (func $system (param anyref) (result (ref eq)))

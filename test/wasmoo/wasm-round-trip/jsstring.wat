@@ -39,7 +39,7 @@
   (global $buffer (mut (ref $wstring))
     (array.new $wstring (i32.const 0) (i32.const 0))
   )
-  (func $init 
+  (func $init
     (global.set $text_converters_available
       (i32.ne (i32.const 0)
         (call $compare_strings

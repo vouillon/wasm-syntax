@@ -1,5 +1,5 @@
 (module
-  (import "fail" "caml_raise_end_of_file" (func $caml_raise_end_of_file ))
+  (import "fail" "caml_raise_end_of_file" (func $caml_raise_end_of_file))
   (import "jslib" "wrap" (func $wrap (param anyref) (result (ref eq))))
   (import "jslib" "unwrap" (func $unwrap (param (ref eq)) (result anyref)))
   (import "jslib" "caml_jsstring_of_string"

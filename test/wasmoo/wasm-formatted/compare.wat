@@ -169,7 +169,7 @@
           (br $loop))))
     (i32.sub (local.get $l1) (local.get $l2))
   )
-  (func $clear_compare_stack 
+  (func $clear_compare_stack
     (local $stack (ref $compare_stack)) (local $n i32) (local $res i32)
     (local.set $stack (global.get $default_compare_stack))
     (local.set $n (struct.get $compare_stack 0 (local.get $stack)))

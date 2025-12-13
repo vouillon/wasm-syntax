@@ -81,10 +81,8 @@
   (import "bindings" "ta_blit_to_string"
     (func $ta_blit_to_string (param (ref extern) i32 (ref $string) i32 i32))
   )
-  (import "fail" "caml_bound_error" (func $caml_bound_error ))
-  (import "fail" "caml_raise_out_of_memory"
-    (func $caml_raise_out_of_memory )
-  )
+  (import "fail" "caml_bound_error" (func $caml_bound_error))
+  (import "fail" "caml_raise_out_of_memory" (func $caml_raise_out_of_memory))
   (import "fail" "caml_invalid_argument"
     (func $caml_invalid_argument (param (ref eq)))
   )
