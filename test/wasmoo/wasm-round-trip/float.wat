@@ -772,28 +772,28 @@
     (local.set $a5 (f64.const 1.061405429))
     (local.set $p (f64.const 0.3275911))
     (local.set $t
-      (f64.add (f64.div (f64.const 1.) (f64.const 1.))
-        (f64.mul (local.get $p) (f64.abs (local.get $x)))))
+      (f64.div (f64.const 1.)
+        (f64.add (f64.const 1.)
+          (f64.mul (local.get $p) (f64.abs (local.get $x))))))
     (local.set $y
       (f64.sub (f64.const 1.)
         (f64.mul
-          (f64.mul
-            (f64.add
-              (f64.mul
-                (f64.add
-                  (f64.mul
-                    (f64.add
-                      (f64.mul
-                        (f64.add (f64.mul (local.get $a5) (local.get $t))
-                          (local.get $a4))
-                        (local.get $t))
-                      (local.get $a3))
-                    (local.get $t))
-                  (local.get $a2))
-                (local.get $t))
-              (local.get $a1))
-            (local.get $t))
-          (call $exp (f64.neg (f64.mul (local.get $x) (local.get $x)))))))
+          (f64.add
+            (f64.mul
+              (f64.add
+                (f64.mul
+                  (f64.add
+                    (f64.mul
+                      (f64.add (f64.mul (local.get $a5) (local.get $t))
+                        (local.get $a4))
+                      (local.get $t))
+                    (local.get $a3))
+                  (local.get $t))
+                (local.get $a2))
+              (local.get $t))
+            (local.get $a1))
+          (f64.mul (local.get $t)
+            (call $exp (f64.neg (f64.mul (local.get $x) (local.get $x))))))))
     (f64.copysign (local.get $y) (local.get $x))
   )
   (func $caml_erfc_float (export "caml_erfc_float")
@@ -952,29 +952,29 @@
         (struct.new $float
           (f64.add (f64.mul (local.get $x) (local.get $y)) (local.get $z)))))
     (local.set $x
-      (f64.mul
-        (local.tee $x_11
-          (f64.sub (local.get $x)
-            (local.tee $x_10
-              (f64.sub
-                (local.tee $x_10
-                  (f64.mul (local.get $x) (f64.const 0x8000001.)))
-                (f64.sub (local.get $x_10) (local.get $x))))))
-        (local.tee $x_13
-          (f64.sub
+      (f64.sub
+        (f64.mul
+          (local.tee $x_11
+            (f64.sub (local.get $x)
+              (local.tee $x_10
+                (f64.sub
+                  (local.tee $x_10
+                    (f64.mul (local.get $x) (f64.const 0x8000001.)))
+                  (f64.sub (local.get $x_10) (local.get $x))))))
+          (local.tee $x_13
             (f64.sub (local.get $y)
               (local.tee $x_12
                 (f64.sub
                   (local.tee $x_12
                     (f64.mul (local.get $y) (f64.const 0x8000001.)))
-                  (f64.sub (local.get $x_12) (local.get $y)))))
+                  (f64.sub (local.get $x_12) (local.get $y)))))))
+        (f64.sub
+          (f64.sub
             (f64.sub
-              (f64.sub
-                (f64.sub
-                  (local.tee $x_14 (f64.mul (local.get $y) (local.get $x)))
-                  (f64.mul (local.get $x_10) (local.get $x_12)))
-                (f64.mul (local.get $x_11) (local.get $x_12)))
-              (f64.mul (local.get $x_10) (local.get $x_13)))))))
+              (local.tee $x_14 (f64.mul (local.get $y) (local.get $x)))
+              (f64.mul (local.get $x_10) (local.get $x_12)))
+            (f64.mul (local.get $x_11) (local.get $x_12)))
+          (f64.mul (local.get $x_10) (local.get $x_13)))))
     (block $l_2
       (block $l_3
         (br_if $l_3

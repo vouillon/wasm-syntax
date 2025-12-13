@@ -304,7 +304,7 @@ let prec_op op =
   (* out, left, right *)
   match op with
   | Add | Sub -> (Addition, Addition, Multiplication)
-  | Mul | Div _ | Rem _ -> (Multiplication, Multiplication, Branch)
+  | Mul | Div _ | Rem _ -> (Multiplication, Multiplication, Cast)
   | And -> (LogicalAnd, LogicalAnd, Shift)
   | Or -> (LogicalOr, LogicalOr, LogicalXor)
   | Xor -> (LogicalXor, LogicalXor, LogicalAnd)
