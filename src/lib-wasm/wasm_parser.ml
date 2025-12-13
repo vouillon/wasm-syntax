@@ -131,7 +131,8 @@ let skip_section (ch : ch) { pos; size; _ } =
 let heaptype ch =
   let i = sint ch in
   match i + 128 with
-  | 0X73 -> NoFunc
+  | 0x74 -> NoExn
+  | 0x73 -> NoFunc
   | 0x72 -> NoExtern
   | 0x71 -> None_
   | 0x70 -> Func
@@ -141,8 +142,9 @@ let heaptype ch =
   | 0x6C -> I31
   | 0x6B -> Struct
   | 0x6A -> Array
+  | 0x69 -> Exn
   | _ ->
-      if i < 0 then failwith (Printf.sprintf "Unknown heaptype %x@." i);
+      if i < 0 then failwith (Printf.sprintf "Unknown heaptype %x" i);
       Type i
 
 let nullable typ = { nullable = true; typ }

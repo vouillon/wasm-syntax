@@ -1327,12 +1327,12 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop ctx loc (Ref { nullable = true; typ = Type ty }) in
       let n =
         match idx'.desc with
-        | Id id -> List.assoc id fields
+        | Id id -> List.assoc id fields (*ZZZ*)
         | Num n -> Uint32.to_int n
       in
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct fields ->
-          (*ZZZ*)
+          (*ZZZ signage + validate n*)
           ignore signage;
           push (Some loc) (unpack_type fields.(n))
       | _ ->

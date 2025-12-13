@@ -7,6 +7,7 @@ TODO:
 - Check the _ make sense (check that underscores are properly placed)
 - we need to decide on an order to visit subexpression in structs
 - fix typeuse validation (add a type if not already present)
+  + typeuse when converting to binary
 - error messages
 - locations on the heap when push several values?
 - more methods rather than global functions (no ambiguity)?

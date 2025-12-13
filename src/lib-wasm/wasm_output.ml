@@ -209,8 +209,8 @@ module Encoder = struct
     | TryTable { typ; block; catches; _ } ->
         byte b 0x1F;
         (match typ with Some t -> blocktype b t | None -> byte b 0x40);
-        List.iter
-          (fun c ->
+        vec
+          (fun b c ->
             match c with
             | Catch (tag, label) ->
                 byte b 0x00;
@@ -226,7 +226,7 @@ module Encoder = struct
             | CatchAllRef label ->
                 byte b 0x03;
                 uint b label)
-          catches;
+          b catches;
         List.iter (instr ~source_map_t b) block;
         byte b 0x0B
     | Try { typ; block; catches; catch_all; _ } ->

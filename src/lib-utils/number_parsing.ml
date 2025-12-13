@@ -2,12 +2,12 @@
 
 let parse_custom_nan s is_double =
   let len = String.length s in
-  let has_sign = len > 0 && s.[0] = '-' in
+  let has_sign = len > 0 && (s.[0] = '-' || s.[0] = '+') in
   let offset = if has_sign then 1 else 0 in
   if len > offset + 4 && String.sub s offset 4 = "nan:" then
     let payload_str = String.sub s (offset + 4) (len - (offset + 4)) in
     let payload = Int64.of_string payload_str in
-    let sign_bit = if has_sign then 1L else 0L in
+    let sign_bit = if s.[0] = '-' then 1L else 0L in
     if is_double then
       let exponent = 0x7FFL in
       let bits =

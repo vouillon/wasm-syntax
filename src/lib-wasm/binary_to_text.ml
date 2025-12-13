@@ -51,29 +51,40 @@ let functype type_names (f : B.functype) : T.functype =
     results = Array.map (valtype type_names) f.results;
   }
 
-let comptype type_names (c : B.comptype) : T.comptype =
-  match c with
-  | Func ft -> Func (functype type_names ft)
-  | Struct fa -> Struct (Array.map (fun f -> (None, fieldtype type_names f)) fa)
-  | Array ft -> Array (fieldtype type_names ft)
+let field_name (names : B.names) s_idx f_idx =
+  match B.IntMap.find_opt s_idx names.fields with
+  | None -> None
+  | Some field_map ->
+      Option.map (fun nm -> Ast.no_loc nm) (B.IntMap.find_opt f_idx field_map)
 
-let subtype type_names (s : B.subtype) : T.subtype =
+let comptype (names : B.names) s_idx (c : B.comptype) : T.comptype =
+  match c with
+  | Func ft -> Func (functype names.types ft)
+  | Struct fa ->
+      Struct
+        (Array.mapi
+           (fun f_idx f ->
+             (field_name names s_idx f_idx, fieldtype names.types f))
+           fa)
+  | Array ft -> Array (fieldtype names.types ft)
+
+let subtype (names : B.names) idx (s : B.subtype) : T.subtype =
   {
-    typ = comptype type_names s.typ;
-    supertype = Option.map (index ~map:type_names) s.supertype;
+    typ = comptype names idx s.typ;
+    supertype = Option.map (index ~map:names.types) s.supertype;
     final = s.final;
   }
 
-let rectype type_names index r =
+let rectype (names : B.names) index r =
   Array.mapi
     (fun i s ->
       let idx = index + i in
       let name =
-        match B.IntMap.find_opt idx type_names with
+        match B.IntMap.find_opt idx names.types with
         | Some s -> Some (no_loc s)
         | None -> None
       in
-      (name, subtype type_names s))
+      (name, subtype names idx s))
     r
 
 let globaltype type_names g = muttype (valtype type_names) g
@@ -100,15 +111,15 @@ let catch (names : B.names) stack (c : B.catch) : T.catch =
   | CatchAll label -> CatchAll (get_label_reference stack label)
   | CatchAllRef label -> CatchAllRef (get_label_reference stack label)
 
-let field_index (names : B.names) s_idx f_idx =
-  match B.IntMap.find_opt s_idx names.fields with
-  | Some field_map -> index ~map:field_map f_idx
-  | None -> numeric_index f_idx
-
 let get_label_name label_names label_counter =
   let idx = !label_counter in
   incr label_counter;
   B.IntMap.find_opt idx label_names
+
+let field_index (names : B.names) s_idx f_idx =
+  match B.IntMap.find_opt s_idx names.fields with
+  | Some field_map -> index ~map:field_map f_idx
+  | None -> numeric_index f_idx
 
 let rec instr (names : B.names) local_names label_names label_counter stack
     (i : 'info B.instr) =
@@ -385,7 +396,7 @@ let module_ (m : _ B.module_) : _ T.module_ =
   in
   let types, _ =
     List.fold_left
-      (fun (acc, i) r -> (rectype m.names.types i r :: acc, i + Array.length r))
+      (fun (acc, i) r -> (rectype m.names i r :: acc, i + Array.length r))
       ([], 0) m.types
   in
   let types = List.rev types in
