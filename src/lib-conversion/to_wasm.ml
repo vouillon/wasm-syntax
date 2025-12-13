@@ -154,13 +154,9 @@ let typeuse typ sign =
   let idx = Option.map index typ in
   let type_info =
     Option.map
-      (fun (s : funsig) ->
-        let params =
-          Array.map
-            (fun (id, t) -> (id, valtype t))
-            (Array.of_list s.named_params)
-        in
-        let results = Array.map valtype (Array.of_list s.results) in
+      (fun s ->
+        let params = Array.map (fun (id, t) -> (id, valtype t)) s.params in
+        let results = Array.map valtype s.results in
         { Text.params; results })
       sign
   in
@@ -883,7 +879,7 @@ let module_ fields =
               let namespace = Namespace.make () in
               let allocated_locals = ref [] in
               let locals =
-                List.fold_left
+                Array.fold_left
                   (fun locals (id, _) ->
                     match id with
                     | Some id ->
@@ -891,9 +887,7 @@ let module_ fields =
                         StringMap.add id.desc wasm_name locals
                     | None -> locals)
                   StringMap.empty
-                  (match sign with
-                  | Some sign -> sign.named_params
-                  | None -> [])
+                  (match sign with Some sign -> sign.params | None -> [||])
               in
               let ctx =
                 {

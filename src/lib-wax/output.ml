@@ -147,32 +147,28 @@ let print_typed_pat pp (pat, opt_typ) =
           valtype pp t)
         opt_typ)
 
-let functype pp { params; results } =
+let raw_functype pp { params; results } =
+  print_paren_list
+    (fun pp (id, t) ->
+      match id with
+      | None -> valtype pp t
+      | Some _ -> print_typed_pat pp (id, Some t))
+    pp (Array.to_list params);
+  if results <> [||] then (
+    space pp ();
+    operator pp "->";
+    space pp ();
+    tuple false pp (Array.to_list results))
+
+let functype pp ty =
   box pp ~indent:indent_level (fun () ->
       keyword pp "fn";
-      print_paren_list
-        (fun pp (id, ty) ->
-          match id with
-          | None -> valtype pp ty
-          | Some _ -> print_typed_pat pp (id, Some ty))
-        pp (Array.to_list params);
-      if results <> [||] then (
-        space pp ();
-        punctuation pp "->";
-        space pp ();
-        tuple false pp (Array.to_list results)))
+      raw_functype pp ty)
 
-let blocktype pp { params; results } =
-  match (params, results) with
-  | [||], [| ty |] -> valtype pp ty
-  | _ ->
-      box pp ~indent:indent_level (fun () ->
-          tuple true pp (List.map snd (Array.to_list params));
-          if results <> [||] then (
-            space pp ();
-            operator pp "->";
-            space pp ();
-            tuple false pp (Array.to_list results)))
+let blocktype pp typ =
+  match typ with
+  | { params = [||]; results = [| ty |] } -> valtype pp ty
+  | _ -> box pp ~indent:indent_level (fun () -> raw_functype pp typ)
 
 let packedtype pp t = type_ pp (match t with I8 -> "i8" | I16 -> "i16")
 
@@ -878,19 +874,9 @@ let fundecl ~tag pp (name, typ, sign) =
       space pp ())
     typ;
   Option.iter
-    (fun { named_params; results } ->
+    (fun ty ->
       cut pp ();
-      print_paren_list
-        (fun pp (id, t) ->
-          match id with
-          | None -> valtype pp t
-          | Some _ -> print_typed_pat pp (id, Some t))
-        pp named_params;
-      if results <> [] then (
-        space pp ();
-        operator pp "->";
-        space pp ();
-        tuple false pp results))
+      raw_functype pp ty)
     sign
 
 let print_attribute pp (name, i) =

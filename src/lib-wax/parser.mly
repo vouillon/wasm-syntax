@@ -222,15 +222,14 @@ casttype:
 
 
 resulttype:
-| "(" ")" { [] }
-| t = valtype { [t] }
-| "(" l = separated_nonempty_list(",", valtype) ")" { l }
+| "(" ")" { [||] }
+| t = valtype { [|t|] }
+| "(" l = separated_nonempty_list(",", valtype) ")" { Array.of_list l }
 
 functype:
-| FN "(" named_params = funcparams ")"
+| FN "(" params = funcparams ")"
   results = option ("->" r = resulttype {r})
-  { {params = Array.of_list (named_params);
-     results = Array.of_list (Option.value ~default:[] results)} }
+  { {params; results = Option.value ~default:[||] results} }
 
 storagetype:
 | t = IDENT
@@ -276,14 +275,14 @@ funcparam:
 
 funcparams:
 | l = separated_list(",", f = funcparam { f })
-  { l }
+  { Array.of_list l }
 
 fundecl:
 | FN name = ident
   t = ioption(":" t = ident { t } )
-  sign = option ("(" named_params = funcparams ")"
+  sign = option ("(" params = funcparams ")"
                  results = option("->" r = resulttype {r})
-                 { {named_params; results = Option.value ~default:[] results} })
+                 { {params; results = Option.value ~default:[||] results} })
   { (name, t, sign) }
 
 func:
@@ -294,18 +293,18 @@ func:
 tag:
 | TAG name = ident
   t = ioption(":" t = ident { t } )
-  sign = option ("(" named_params = funcparams ")"
+  sign = option ("(" params = funcparams ")"
                  results = option("->" r = resulttype {r})
-                 { {named_params; results = Option.value ~default:[] results} })
+                 { {params; results = Option.value ~default:[||] results} })
   { (name, t, sign) }
 
 %inline block_label: l = ioption(l = label ":" { l }) { l }
 
 blocktype:
 | "(" params = separated_list(",", valtype) ")"
-  result = option("->" result = resulttype {result})
+  results = option("->" results = resulttype {results})
   { {params = Array.of_list (List.map (fun t -> (None, t)) params);
-     results = Array.of_list (Option.value ~default:[] result)} }
+     results = Option.value ~default:[||] results} }
 | t = valtype { {params = [||]; results = [|t|] } }
 
 %inline block:

@@ -1,6 +1,6 @@
 (*
 TODO:
-- get rid of funsig / revise the AST
+- revise the AST
 - Fix grab logic: count number of holes, type, check hole order
 - Check that import correspond to a declaration
 - In binary_to_text, we need to make sure names are unique
@@ -2315,15 +2315,15 @@ let functions ctx fields =
           in
           let locals = ref StringMap.empty in
           (match sign with
-          | Some { named_params; _ } ->
-              List.iter
+          | Some { params; _ } ->
+              Array.iter
                 (fun (id, typ) ->
                   match id with
                   | Some id ->
                       let>@ typ = internalize_valtype ctx typ in
                       locals := StringMap.add id.desc typ !locals
                   | None -> ())
-                named_params
+                params
           | _ -> ());
           if false then Format.eprintf "=== %s@." name.desc;
           let ctx =
@@ -2354,10 +2354,7 @@ let functions ctx fields =
 
 let funsig _ctx sign =
   (*ZZZ Check signature (unique names) *)
-  {
-    params = Array.of_list sign.named_params;
-    results = Array.of_list sign.results;
-  }
+  sign
 
 let fundecl ctx name typ sign =
   if Tbl.exists ctx.diagnostics ctx.functions name then None

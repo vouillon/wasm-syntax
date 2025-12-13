@@ -985,17 +985,16 @@ let typeuse ctx ((typ, sign) : Src.typeuse) =
     | _, Some { params; results } ->
         Some
           {
-            Ast.named_params =
-              Array.to_list
-                (Array.map
-                   (fun (id, t) ->
-                     ( Option.map
-                         (fun id ->
-                           { id with Ast.desc = Namespace.add ns id.Ast.desc })
-                         id,
-                       valtype ctx t ))
-                   params);
-            results = Array.to_list (Array.map (fun t -> valtype ctx t) results);
+            Ast.params =
+              Array.map
+                (fun (id, t) ->
+                  ( Option.map
+                      (fun id ->
+                        { id with Ast.desc = Namespace.add ns id.Ast.desc })
+                      id,
+                    valtype ctx t ))
+                params;
+            results = Array.map (fun t -> valtype ctx t) results;
           } )
 
 let string_of_name (nm : Src.name) =
@@ -1061,25 +1060,23 @@ let modulefield ctx export_tbl (f : (_ Src.modulefield, _) Ast.annotated) =
         let sign =
           match typ with
           | _, Some { params; results } ->
-              let named_params =
-                Array.to_list
-                  (Array.map
-                     (fun (id, t) ->
-                       let name =
-                         Sequence.register' ctx.locals export_tbl None id []
-                       in
-                       ( Some
-                           (match id with
-                           | None -> Ast.no_loc name
-                           | Some id -> { id with Ast.desc = name }),
-                         valtype ctx t ))
-                     params)
+              let params =
+                Array.map
+                  (fun (id, t) ->
+                    let name =
+                      Sequence.register' ctx.locals export_tbl None id []
+                    in
+                    ( Some
+                        (match id with
+                        | None -> Ast.no_loc name
+                        | Some id -> { id with Ast.desc = name }),
+                      valtype ctx t ))
+                  params
               in
               Sequence.consume_currents ctx.locals;
               {
-                Ast.named_params;
-                results =
-                  Array.to_list (Array.map (fun t -> valtype ctx t) results);
+                Ast.params;
+                results = Array.map (fun t -> valtype ctx t) results;
               }
           | Some idx, None -> (
               match (lookup_type ctx Type idx).typ with
@@ -1099,9 +1096,8 @@ let modulefield ctx export_tbl (f : (_ Src.modulefield, _) Ast.annotated) =
                   in
                   Sequence.consume_currents ctx.locals;
                   {
-                    Ast.named_params = Array.to_list params;
-                    results =
-                      Array.to_list (Array.map (fun t -> valtype ctx t) results);
+                    Ast.params;
+                    results = Array.map (fun t -> valtype ctx t) results;
                   }
               | Struct _ | Array _ -> assert false)
           | None, None -> assert false (* Should not happen *)
