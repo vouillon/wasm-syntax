@@ -112,7 +112,10 @@
     (local $l i32)
     (local.set $l (i31.get_s (ref.cast (ref i31) (local.get $len))))
     (if (i32.lt_s (local.get $l) (i32.const 0))
-      (then (call $caml_invalid_argument (array.new_fixed $string 0))))
+      (then
+        (call $caml_invalid_argument
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111)))))
     (array.new $string (i32.const 0) (local.get $l))
   )
   (func $caml_blit_string (export "caml_blit_string")

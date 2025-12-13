@@ -97,7 +97,10 @@
     (local.set $names (ref.cast (ref $string) (local.get $vnames)))
     (loop $loop
       (if (i32.eqz (array.get_u $string (local.get $names) (local.get $i)))
-        (then (return (array.new_fixed $string 0))))
+        (then
+          (return
+            (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+              (i32.const 111)))))
       (if (i32.ne (local.get $number) (i32.const 0))
         (then
           (local.set $i
@@ -122,13 +125,14 @@
   (func $output_nl
     (drop
       (call $caml_ml_output (global.get $caml_stderr)
-        (array.new_fixed $string 0) (ref.i31 (i32.const 0))
+        (array.new_fixed $string 1 (i32.const 10)) (ref.i31 (i32.const 0))
         (ref.i31 (i32.const 1))))
     (drop (call $caml_ml_flush (global.get $caml_stderr)))
   )
   (func $output_int (param $x i32)
     (call $output
-      (call $caml_format_int (array.new_fixed $string 0)
+      (call $caml_format_int
+        (array.new_fixed $string 2 (i32.const 37) (i32.const 100))
         (ref.i31 (local.get $x))))
   )
   (func $print_token
@@ -136,9 +140,13 @@
     (local $b (ref $block)) (local $v (ref eq))
     (if (ref.test (ref i31) (local.get $tok))
       (then
-        (call $output (array.new_fixed $string 0))
+        (call $output
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111)))
         (call $output_int (local.get $state))
-        (call $output (array.new_fixed $string 0))
+        (call $output
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111)))
         (call $output
           (call $token_name
             (array.get $block (local.get $tables)
@@ -146,9 +154,13 @@
             (i31.get_u (ref.cast (ref i31) (local.get $tok)))))
         (call $output_nl))
       (else
-        (call $output (array.new_fixed $string 0))
+        (call $output
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111)))
         (call $output_int (local.get $state))
-        (call $output (array.new_fixed $string 0))
+        (call $output
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111)))
         (local.set $b (ref.cast (ref $block) (local.get $tok)))
         (call $output
           (call $token_name
@@ -157,7 +169,7 @@
             (i31.get_u
               (ref.cast (ref i31)
                 (array.get $block (local.get $b) (i32.const 0))))))
-        (call $output (array.new_fixed $string 0))
+        (call $output (array.new_fixed $string 1 (i32.const 40)))
         (local.set $v (array.get $block (local.get $b) (i32.const 1)))
         (if (ref.test (ref i31) (local.get $v))
           (then
@@ -169,10 +181,13 @@
                 (if (ref.test (ref $float) (local.get $v))
                   (then
                     (call $output
-                      (call $caml_format_float (array.new_fixed $string 0)
+                      (call $caml_format_float
+                        (array.new_fixed $string 2 (i32.const 37)
+                          (i32.const 103))
                         (local.get $v))))
-                  (else (call $output (array.new_fixed $string 0))))))))
-        (call $output (array.new_fixed $string 0))
+                  (else
+                    (call $output (array.new_fixed $string 1 (i32.const 95)))))))))
+        (call $output (array.new_fixed $string 1 (i32.const 41)))
         (call $output_nl)))
   )
   (func $caml_parse_engine (export "caml_parse_engine")
@@ -412,7 +427,10 @@
                                         (if (global.get $caml_parser_trace)
                                           (then
                                             (call $output
-                                              (array.new_fixed $string 0))
+                                              (array.new_fixed $string 3
+                                                (i32.const 102)
+                                                (i32.const 111)
+                                                (i32.const 111)))
                                             (call $output_int
                                               (local.get $state1))
                                             (call $output_nl)))
@@ -421,7 +439,9 @@
                                         (br $next)))))))
                             (if (global.get $caml_parser_trace)
                               (then
-                                (call $output (array.new_fixed $string 0))
+                                (call $output
+                                  (array.new_fixed $string 3 (i32.const 102)
+                                    (i32.const 111) (i32.const 111)))
                                 (call $output_int (local.get $state1))
                                 (call $output_nl)))
                             (if
@@ -433,7 +453,10 @@
                               (then
                                 (if (global.get $caml_parser_trace)
                                   (then
-                                    (call $output (array.new_fixed $string 0))
+                                    (call $output
+                                      (array.new_fixed $string 3
+                                        (i32.const 102) (i32.const 111)
+                                        (i32.const 111)))
                                     (call $output_nl)))
                                 (return
                                   (ref.i31 (global.get $RAISE_PARSE_ERROR)))))
@@ -451,7 +474,9 @@
                                 (ref.i31 (global.get $RAISE_PARSE_ERROR)))))
                           (if (global.get $caml_parser_trace)
                             (then
-                              (call $output (array.new_fixed $string 0))
+                              (call $output
+                                (array.new_fixed $string 3 (i32.const 102)
+                                  (i32.const 111) (i32.const 111)))
                               (call $output_nl)))
                           (array.set $block (local.get $env)
                             (global.get $env_curr_char)
@@ -466,9 +491,13 @@
                           (i32.sub (local.get $errflag) (i32.const 1))))))
                   (if (global.get $caml_parser_trace)
                     (then
-                      (call $output (array.new_fixed $string 0))
+                      (call $output
+                        (array.new_fixed $string 3 (i32.const 102)
+                          (i32.const 111) (i32.const 111)))
                       (call $output_int (local.get $state))
-                      (call $output (array.new_fixed $string 0))
+                      (call $output
+                        (array.new_fixed $string 3 (i32.const 102)
+                          (i32.const 111) (i32.const 111)))
                       (call $output_int
                         (call $get (local.get $tbl_table_2) (local.get $n2)))
                       (call $output_nl)))
@@ -514,9 +543,13 @@
                 (br $next))
               (if (global.get $caml_parser_trace)
                 (then
-                  (call $output (array.new_fixed $string 0))
+                  (call $output
+                    (array.new_fixed $string 3 (i32.const 102)
+                      (i32.const 111) (i32.const 111)))
                   (call $output_int (local.get $state))
-                  (call $output (array.new_fixed $string 0))
+                  (call $output
+                    (array.new_fixed $string 3 (i32.const 102)
+                      (i32.const 111) (i32.const 111)))
                   (call $output_int (local.get $n))
                   (call $output_nl)))
               (local.set $m (call $get (local.get $tbl_len_2) (local.get $n)))

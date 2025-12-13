@@ -446,7 +446,9 @@
                   (br_if $next_item (i32.eqz (local.get $res)))
                   (return (local.get $res)))
                 (call $clear_compare_stack)
-                (call $caml_invalid_argument (array.new_fixed $string 0))
+                (call $caml_invalid_argument
+                  (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+                    (i32.const 111)))
                 (ref.i31 (i32.const 0))))
             (drop
               (block $v1_not_js (result (ref eq))
@@ -479,14 +481,18 @@
                   (br_if $heterogeneous (ref.i31 (i32.const 0))
                     (i32.eqz (call $caml_is_closure (local.get $v2)))))
                 (call $clear_compare_stack)
-                (call $caml_invalid_argument (array.new_fixed $string 0))))
+                (call $caml_invalid_argument
+                  (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+                    (i32.const 111)))))
             (if (call $caml_is_continuation (local.get $v1))
               (then
                 (drop
                   (br_if $heterogeneous (ref.i31 (i32.const 0))
                     (i32.eqz (call $caml_is_continuation (local.get $v2)))))
                 (call $clear_compare_stack)
-                (call $caml_invalid_argument (array.new_fixed $string 0))))
+                (call $caml_invalid_argument
+                  (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+                    (i32.const 111)))))
             (ref.i31 (i32.const 0))))
         (local.set $t1
           (i31.get_u
@@ -510,7 +516,9 @@
         (if (i32.eqz (local.get $res))
           (then
             (call $clear_compare_stack)
-            (call $caml_invalid_argument (array.new_fixed $string 0))))
+            (call $caml_invalid_argument
+              (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+                (i32.const 111)))))
         (return (local.get $res)))
       (if (call $compare_stack_is_not_empty (local.get $stack))
         (then

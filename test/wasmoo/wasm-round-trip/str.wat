@@ -510,7 +510,10 @@
     (local.set $pos (i31.get_s (ref.cast (ref i31) (local.get $vpos))))
     (local.set $len (array.len (local.get $s)))
     (if (i32.gt_u (local.get $pos) (local.get $len))
-      (then (call $caml_invalid_argument (array.new_fixed $string 0))))
+      (then
+        (call $caml_invalid_argument
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111)))))
     (loop $loop
       (local.set $res
         (call $re_match (local.get $re) (local.get $s) (local.get $pos)
@@ -530,7 +533,10 @@
     (local.set $pos (i31.get_s (ref.cast (ref i31) (local.get $vpos))))
     (local.set $len (array.len (local.get $s)))
     (if (i32.gt_u (local.get $pos) (local.get $len))
-      (then (call $caml_invalid_argument (array.new_fixed $string 0))))
+      (then
+        (call $caml_invalid_argument
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111)))))
     (loop $loop
       (local.set $res
         (call $re_match (local.get $re) (local.get $s) (local.get $pos)
@@ -550,7 +556,10 @@
     (local.set $pos (i31.get_s (ref.cast (ref i31) (local.get $vpos))))
     (local.set $len (array.len (local.get $s)))
     (if (i32.gt_u (local.get $pos) (local.get $len))
-      (then (call $caml_invalid_argument (array.new_fixed $string 0))))
+      (then
+        (call $caml_invalid_argument
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111)))))
     (local.set $res
       (call $re_match (local.get $re) (local.get $s) (local.get $pos)
         (i32.const 0)))
@@ -567,7 +576,10 @@
     (local.set $pos (i31.get_s (ref.cast (ref i31) (local.get $vpos))))
     (local.set $len (array.len (local.get $s)))
     (if (i32.gt_u (local.get $pos) (local.get $len))
-      (then (call $caml_invalid_argument (array.new_fixed $string 0))))
+      (then
+        (call $caml_invalid_argument
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111)))))
     (local.set $res
       (call $re_match (local.get $re) (local.get $s) (local.get $pos)
         (i32.const 1)))
@@ -597,7 +609,10 @@
               (local.set $len (i32.add (local.get $len) (i32.const 1)))
               (br $loop)))
           (if (i32.eq (local.get $i) (local.get $l))
-            (then (call $caml_failwith (array.new_fixed $string 0))))
+            (then
+              (call $caml_failwith
+                (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+                  (i32.const 111)))))
           (local.set $c
             (array.get_u $string (local.get $repl) (local.get $i)))
           (local.set $i (i32.add (local.get $i) (i32.const 1)))
@@ -614,7 +629,10 @@
           (if
             (i32.gt_u (i32.add (local.get $c) (i32.const 1))
               (array.len (local.get $groups)))
-            (then (call $caml_failwith (array.new_fixed $string 0))))
+            (then
+              (call $caml_failwith
+                (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+                  (i32.const 111)))))
           (local.set $start
             (i31.get_s
               (ref.cast (ref i31)
@@ -626,7 +644,10 @@
                 (array.get $block (local.get $groups)
                   (i32.add (local.get $c) (i32.const 2))))))
           (if (i32.eq (local.get $start) (i32.const -1))
-            (then (call $caml_failwith (array.new_fixed $string 0))))
+            (then
+              (call $caml_failwith
+                (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+                  (i32.const 111)))))
           (local.set $len
             (i32.add (local.get $len)
               (i32.sub (local.get $end) (local.get $start))))
@@ -668,7 +689,10 @@
           (if
             (i32.gt_u (i32.add (local.get $c) (i32.const 1))
               (array.len (local.get $groups)))
-            (then (call $caml_failwith (array.new_fixed $string 0))))
+            (then
+              (call $caml_failwith
+                (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+                  (i32.const 111)))))
           (local.set $start
             (i31.get_s
               (ref.cast (ref i31)

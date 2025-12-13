@@ -138,8 +138,9 @@
   (func $caml_sys_get_config (export "caml_sys_get_config")
     (param $x (ref eq)) (result (ref eq))
     (array.new_fixed $block 4 (ref.i31 (i32.const 0))
-      (array.new_fixed $string 0) (ref.i31 (i32.const 32))
-      (ref.i31 (i32.const 0)))
+      (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+        (i32.const 111))
+      (ref.i31 (i32.const 32)) (ref.i31 (i32.const 0)))
   )
   (func $caml_sys_isatty (export "caml_sys_isatty")
     (param $x (ref eq)) (result (ref eq))
@@ -176,7 +177,8 @@
       (call $caml_string_of_jsstring
         (call $caml_js_meth_call
           (call $wrap (any.convert_extern (local.get $exn)))
-          (array.new_fixed $string 0)
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111))
           (array.new_fixed $block 1 (ref.i31 (i32.const 0))))))
   )
 )

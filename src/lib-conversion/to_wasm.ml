@@ -714,8 +714,13 @@ let rec instruction ret ctx i : location Text.instr list =
         | Some typ -> Some [ valtype typ ]
       in
       folded loc (Select typ) (code_then @ code_else @ code_cond)
-  | String (Some idx, _) ->
-      folded loc (ArrayNewFixed (index idx, Uint32.zero)) []
+  | String (Some idx, s) ->
+      folded loc
+        (ArrayNewFixed (index idx, Uint32.of_int (String.length s)))
+        (String.fold_right
+           (fun c rem ->
+             folded loc (Const (I32 (Int.to_string (Char.code c)))) [] @ rem)
+           s [])
   | String (None, _) -> assert false
 
 let import attributes =

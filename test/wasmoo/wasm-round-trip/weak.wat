@@ -242,7 +242,10 @@
     (local $len i32) (local $res (ref $block))
     (local.set $len (i31.get_s (ref.cast (ref i31) (local.get $vlen))))
     (if (i32.lt_s (local.get $len) (i32.const 0))
-      (then (call $caml_invalid_argument (array.new_fixed $string 0))))
+      (then
+        (call $caml_invalid_argument
+          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
+            (i32.const 111)))))
     (local.set $res
       (array.new $block (global.get $caml_ephe_none)
         (i32.add (local.get $len) (global.get $caml_ephe_key_offset))))

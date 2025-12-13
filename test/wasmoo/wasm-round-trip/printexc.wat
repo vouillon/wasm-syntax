@@ -90,7 +90,9 @@
               (if (ref.test (ref i31) (local.get $v))
                 (then
                   (call $add_string (local.get $buf)
-                    (call $caml_format_int (array.new_fixed $string 0)
+                    (call $caml_format_int
+                      (array.new_fixed $string 2 (i32.const 37)
+                        (i32.const 100))
                       (ref.cast (ref i31) (local.get $v)))))
                 (else
                   (if (ref.test (ref $string) (local.get $v))
