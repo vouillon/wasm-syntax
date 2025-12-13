@@ -1,17 +1,17 @@
 (*
 TODO:
 - revise the AST
-- Fix grab logic: count number of holes, type, check hole order
 - Check that import correspond to a declaration
-- In binary_to_text, we need to make sure names are unique
-- Check the _ make sense (check that underscores are properly placed)
-- we need to decide on an order to visit subexpression in structs
 - fix typeuse validation (add a type if not already present)
   + typeuse when converting to binary
 - error messages
 - locations on the heap when push several values?
 - more methods rather than global functions (no ambiguity)?
   rotl(..), rotr(..), min(..), max(..), copysign(..)
+
+Examples of hole orders:
+  bad: (_ + _) + _, _+ (1 + _), 1 + (_ + _)
+  good : _ + (_ + _), _ * (_ + 1)
 
 Optimizations
 - move lets at more appropriate places
@@ -320,16 +320,17 @@ let array_mapi_opt f arr =
   with Short_circuit -> None
 
 let functype d ctx { params; results } =
-  ignore
-    (Array.fold_left
-       (fun s (name_opt, _) ->
-         match name_opt with
-         | None -> s
-         | Some name ->
-             if StringSet.mem name.desc s then
-               Error.duplicated_parameter d ~location:name.info name;
-             StringSet.add name.desc s)
-       StringSet.empty params);
+  let _ : StringSet.t =
+    Array.fold_left
+      (fun s (name_opt, _) ->
+        match name_opt with
+        | None -> s
+        | Some name ->
+            if StringSet.mem name.desc s then
+              Error.duplicated_parameter d ~location:name.info name;
+            StringSet.add name.desc s)
+      StringSet.empty params
+  in
   let*@ params = array_map_opt (fun (_, ty) -> valtype d ctx ty) params in
   let+@ results = array_map_opt (fun ty -> valtype d ctx ty) results in
   { Internal.params; results }
@@ -353,13 +354,14 @@ let comptype d ctx (ty : comptype) =
       let+@ ty = functype d ctx ty in
       (Func ty : Internal.comptype)
   | Struct fields ->
-      ignore
-        (Array.fold_left
-           (fun s (name, _) ->
-             if StringSet.mem name.desc s then
-               Error.duplicated_field d ~location:name.info name;
-             StringSet.add name.desc s)
-           StringSet.empty fields);
+      let _ : StringSet.t =
+        Array.fold_left
+          (fun s (name, _) ->
+            if StringSet.mem name.desc s then
+              Error.duplicated_field d ~location:name.info name;
+            StringSet.add name.desc s)
+          StringSet.empty fields
+      in
       let+@ fields = array_map_opt (fun (_, ty) -> fieldtype d ctx ty) fields in
       (Struct fields : Internal.comptype)
   | Array field ->
@@ -692,6 +694,12 @@ let pop_any ctx i st =
       Error.empty_stack ctx.diagnostics ~location:i.info;
       (st, UnionFind.make Unknown)
 
+let rec pop_many ctx i n accu =
+  if n = 0 then return accu
+  else
+    let* ty = pop_any ctx i in
+    pop_many ctx i (n - 1) (ty :: accu)
+
 (*ZZZ This is for block parameters and return values:
   there should be n .. on the stack, but there are ...
   (with type)
@@ -719,84 +727,6 @@ let pop_args ctx args =
       let* () = rem in
       pop ctx ty)
     args (return ())
-
-let rec grab_parameters ctx acc i =
-  match i.desc with
-  | Hole ->
-      let* v = pop_any ctx i in
-      return (v :: acc)
-  | BinOp (_, l, r) | Array (_, l, r) | ArrayGet (l, r) ->
-      let* acc = grab_parameters ctx acc r in
-      grab_parameters ctx acc l
-  | ArraySet (t, i, v) ->
-      let* acc = grab_parameters ctx acc v in
-      let* acc = grab_parameters ctx acc i in
-      grab_parameters ctx acc t
-  | Call (f, args) | TailCall (f, args) ->
-      let* acc = grab_parameters ctx acc f in
-      grab_parameters_from_list ctx acc args
-  | If { cond = i; _ }
-  | Let (_, Some i)
-  | Set (_, i)
-  | Tee (_, i)
-  | UnOp (_, i)
-  | Cast (i, _)
-  | Test (i, _)
-  | NonNull i
-  | Br (_, Some i)
-  | Br_if (_, i)
-  | Br_table (_, i)
-  | Br_on_null (_, i)
-  | Br_on_non_null (_, i)
-  | Br_on_cast (_, _, i)
-  | Br_on_cast_fail (_, _, i)
-  | ArrayDefault (_, i)
-  | ThrowRef i
-  | Return (Some i)
-  | StructGet (i, _) ->
-      grab_parameters ctx acc i
-  | StructSet (i1, _, i2) ->
-      let* acc = grab_parameters ctx acc i2 in
-      grab_parameters ctx acc i1
-  | Sequence l | ArrayFixed (_, l) | Throw (_, l) ->
-      grab_parameters_from_list ctx acc l
-  | Struct (name_opt, l) ->
-      let fields =
-        match name_opt with
-        | Some name -> (
-            match lookup_struct_type ctx name with
-            | Some fields ->
-                let field_map =
-                  List.fold_left
-                    (fun acc (name, instr) -> StringMap.add name.desc instr acc)
-                    StringMap.empty l
-                in
-                (* Reorder fields according to definition *)
-                Array.map
-                  (fun (name, _) -> StringMap.find name.desc field_map)
-                  fields
-                |> Array.to_list
-            | None -> List.map snd l)
-        | None -> List.map snd l
-      in
-      grab_parameters_from_list ctx acc fields
-  | Select (c, t, e) ->
-      let* acc = grab_parameters ctx acc e in
-      let* acc = grab_parameters ctx acc t in
-      grab_parameters ctx acc c
-  | Block _ | Loop _ | TryTable _ | Try _ | StructDefault _ | String _ | Int _
-  | Float _ | Get _ | Null | Unreachable | Nop
-  | Let (_, None)
-  | Br (_, None)
-  | Return None ->
-      return acc
-
-and grab_parameters_from_list ctx acc l =
-  match l with
-  | [] -> return acc
-  | i :: rem ->
-      let* acc = grab_parameters_from_list ctx acc rem in
-      grab_parameters ctx acc i
 
 let push loc ty st = (Cons (loc, ty, st), ())
 
@@ -913,6 +843,131 @@ let check_type ctx i ty =
   if not ok then
     Error.instruction_type_mismatch ctx.diagnostics ~location:(snd i.info) ty'
       ty
+
+let rec count_holes i =
+  match i.desc with
+  | Hole -> 1
+  | BinOp (_, l, r) | Array (_, l, r) | ArrayGet (l, r) ->
+      count_holes l + count_holes r
+  | ArraySet (t, i, v) -> count_holes t + count_holes i + count_holes v
+  | Call (f, args) | TailCall (f, args) ->
+      count_holes f + List.fold_left (fun acc i -> acc + count_holes i) 0 args
+  | If { cond = i; _ }
+  | Let (_, Some i)
+  | Set (_, i)
+  | Tee (_, i)
+  | UnOp (_, i)
+  | Cast (i, _)
+  | Test (i, _)
+  | NonNull i
+  | Br (_, Some i)
+  | Br_if (_, i)
+  | Br_table (_, i)
+  | Br_on_null (_, i)
+  | Br_on_non_null (_, i)
+  | Br_on_cast (_, _, i)
+  | Br_on_cast_fail (_, _, i)
+  | ArrayDefault (_, i)
+  | ThrowRef i
+  | Return (Some i)
+  | StructGet (i, _) ->
+      count_holes i
+  | StructSet (i1, _, i2) -> count_holes i1 + count_holes i2
+  | Struct (_, l) -> List.fold_left (fun acc (_, i) -> acc + count_holes i) 0 l
+  | Sequence l | ArrayFixed (_, l) | Throw (_, l) ->
+      List.fold_left (fun acc i -> acc + count_holes i) 0 l
+  | Select (c, t, e) -> count_holes c + count_holes t + count_holes e
+  | Block _ | Loop _ | TryTable _ | Try _ | StructDefault _ | String _ | Int _
+  | Float _ | Get _ | Null | Unreachable | Nop
+  | Let (_, None)
+  | Br (_, None)
+  | Return None ->
+      0
+
+let rec check_hole_order_rec ctx i n =
+  match i.desc with
+  | Hole -> n - 1
+  | Cast (i, _) when UnionFind.find (expression_type ctx i) = Unknown ->
+      (* Casts in unreachable code should be ignored: they are here to
+         guide the translation but are not emitted. *)
+      check_hole_order_rec ctx i n
+  | _ when n <= 0 -> n
+  | _ ->
+      let n =
+        match i.desc with
+        | Block _ | Loop _ | TryTable _ | Try _ | StructDefault _ | String _
+        | Int _ | Float _ | Get _ | Null | Unreachable | Nop
+        | Let (_, None)
+        | Br (_, None)
+        | Return None ->
+            raise Exit
+        | BinOp (_, l, r) | Array (_, l, r) | ArrayGet (l, r) ->
+            n |> check_hole_order_rec ctx l |> check_hole_order_rec ctx r
+        | ArraySet (t, i, v) ->
+            n |> check_hole_order_rec ctx t |> check_hole_order_rec ctx i
+            |> check_hole_order_rec ctx v
+        | Call (f, args) | TailCall (f, args) ->
+            n |> check_hole_order_in_list ctx args |> check_hole_order_rec ctx f
+        | If { cond = i; _ }
+        | Let (_, Some i)
+        | Set (_, i)
+        | Tee (_, i)
+        | UnOp (_, i)
+        | Cast (i, _)
+        | Test (i, _)
+        | NonNull i
+        | Br (_, Some i)
+        | Br_if (_, i)
+        | Br_table (_, i)
+        | Br_on_null (_, i)
+        | Br_on_non_null (_, i)
+        | Br_on_cast (_, _, i)
+        | Br_on_cast_fail (_, _, i)
+        | ArrayDefault (_, i)
+        | ThrowRef i
+        | Return (Some i)
+        | StructGet (i, _) ->
+            check_hole_order_rec ctx i n
+        | StructSet (i1, _, i2) ->
+            n |> check_hole_order_rec ctx i1 |> check_hole_order_rec ctx i2
+        | Sequence l | ArrayFixed (_, l) | Throw (_, l) ->
+            check_hole_order_in_list ctx l n
+        | Struct (_, l) ->
+            let fields =
+              match UnionFind.find (expression_type ctx i) with
+              | Valtype { typ = Ref { typ = Type t; _ }; _ } -> (
+                  match lookup_struct_type ctx t with
+                  | Some fields ->
+                      let field_map =
+                        List.fold_left
+                          (fun acc (name, instr) ->
+                            StringMap.add name.desc instr acc)
+                          StringMap.empty l
+                      in
+                      (* Reorder fields according to definition *)
+                      Array.map
+                        (fun (name, _) -> StringMap.find name.desc field_map)
+                        fields
+                      |> Array.to_list
+                  | None -> List.map snd l)
+              | _ -> List.map snd l
+            in
+            check_hole_order_in_list ctx fields n
+        | Select (c, t, e) ->
+            n |> check_hole_order_rec ctx c |> check_hole_order_rec ctx t
+            |> check_hole_order_rec ctx e
+        | Hole -> assert false
+      in
+      if n > 0 then raise Exit else n
+
+and check_hole_order_in_list ctx l n =
+  List.fold_left (fun n i -> check_hole_order_rec ctx i n) n l
+
+let check_hole_order ctx l n =
+  try
+    let _ : int = check_hole_order_rec ctx l n in
+    true
+  with Exit -> false
 
 let pop_parameter st = match st with [] -> assert false | x :: r -> (r, x)
 
@@ -1290,7 +1345,7 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
       match ty with
       | None -> assert false (*ZZZ*)
       | Some ty ->
-          ignore (lookup_array_type ctx ty);
+          let _ : _ option = lookup_array_type ctx ty in
           let*! typ =
             internalize ctx (Ref { nullable = false; typ = Type ty })
           in
@@ -2116,14 +2171,22 @@ and toplevel_instruction ctx i : stack -> stack * 'b =
         results
   | Unreachable | TailCall _ | Br _ | Br_table _ | Throw _ | ThrowRef _
   | Return _ ->
-      let* args = grab_parameters ctx [] i in
+      let count = count_holes i in
+      let* args = pop_many ctx i count [] in
       let args, res = instruction ctx i args in
+      (* Should not fail *)
       assert (args = []);
+      if not (check_hole_order ctx res count) then assert false;
       return res |> unreachable
   | _ ->
-      let* args = grab_parameters ctx [] i in
+      let count = count_holes i in
+      let* args = pop_many ctx i count [] in
       let args, res = instruction ctx i args in
+      (* Should not fail *)
       assert (args = []);
+      if not (check_hole_order ctx res count) then (
+        Format.eprintf "%d %a@." count Output.instr i;
+        assert false);
       return res
 
 and block_contents ctx l =
@@ -2391,7 +2454,9 @@ let f diagnostics fields =
   List.iter
     (fun (field : (_ modulefield, _) annotated) ->
       match field.desc with
-      | Type rectype -> ignore (add_type diagnostics type_context rectype)
+      | Type rectype ->
+          let _ : int option = add_type diagnostics type_context rectype in
+          ()
       | _ -> ())
     fields;
   let ctx =

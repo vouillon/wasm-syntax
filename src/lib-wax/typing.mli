@@ -1,6 +1,7 @@
 (** Type checking and validation for Wax modules. *)
 
 type typed_module_annotation = Ast.storagetype option array * Ast.location
+type module_context
 
 val f :
   Utils.Diagnostic.context ->
