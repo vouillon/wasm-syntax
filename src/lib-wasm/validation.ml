@@ -419,10 +419,10 @@ let lookup_func_type ctx idx =
 
 let lookup_struct_type ctx idx =
   let ctx = ctx.modul in
-  let*@ ty = resolve_type_index ctx.diagnostics ctx.types idx in
+  let*@ ty, field_map = get_type_info ctx.diagnostics ctx.types idx in
   let def = Types.get_subtype ctx.subtyping_info ty in
   match def.typ with
-  | Struct fields -> Some (ty, fields)
+  | Struct fields -> Some (ty, field_map, fields)
   | _ ->
       Error.expected_struct_type ctx.diagnostics ~location:idx.info idx;
       None
@@ -1303,7 +1303,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       in
       push (Some loc) (Ref ty)
   | StructNew idx ->
-      let*! ty, fields = lookup_struct_type ctx idx in
+      let*! ty, _, fields = lookup_struct_type ctx idx in
       let* () =
         pop_args ctx loc
           (Array.map
@@ -1313,48 +1313,30 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       in
       push (Some loc) (Ref { nullable = false; typ = Type ty })
   | StructNewDefault idx ->
-      let*! ty, fields = lookup_struct_type ctx idx in
+      let*! ty, _, fields = lookup_struct_type ctx idx in
       assert (Array.for_all field_has_default fields);
       push (Some loc) (Ref { nullable = false; typ = Type ty })
-  | StructGet (signage, idx, idx') -> (
-      let*! ty, fields =
-        get_type_info ctx.modul.diagnostics ctx.modul.types idx
-      in
+  | StructGet (signage, idx, idx') ->
+      let*! ty, field_map, fields = lookup_struct_type ctx idx in
       let* () = pop ctx loc (Ref { nullable = true; typ = Type ty }) in
       let n =
         match idx'.desc with
-        | Id id -> List.assoc id fields (*ZZZ*)
+        | Id id -> List.assoc id field_map (*ZZZ*)
         | Num n -> Uint32.to_int n
       in
-      match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
-      | Struct fields ->
-          (*ZZZ signage + validate n*)
-          ignore signage;
-          push (Some loc) (unpack_type fields.(n))
-      | _ ->
-          Error.expected_struct_type ctx.modul.diagnostics ~location:idx.info
-            idx;
-          unreachable)
+      (*ZZZ signage + validate n*)
+      ignore signage;
+      push (Some loc) (unpack_type fields.(n))
   | StructSet (idx, idx') ->
-      let*! ty, fields =
-        get_type_info ctx.modul.diagnostics ctx.modul.types idx
-      in
+      let*! ty, field_map, fields = lookup_struct_type ctx idx in
       let n =
         match idx'.desc with
-        | Id id -> List.assoc id fields
+        | Id id -> List.assoc id field_map (*ZZZ*)
         | Num n -> Uint32.to_int n
       in
-      let* () =
-        match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
-        | Struct fields ->
-            (*ZZZ*)
-            assert fields.(n).mut;
-            pop ctx loc (unpack_type fields.(n))
-        | _ ->
-            Error.expected_struct_type ctx.modul.diagnostics ~location:idx.info
-              idx;
-            unreachable
-      in
+      (*ZZZ*)
+      assert fields.(n).mut;
+      let* () = pop ctx loc (unpack_type fields.(n)) in
       pop ctx loc (Ref { nullable = true; typ = Type ty })
   | ArrayNew idx ->
       let*! ty, field = lookup_array_type ctx idx in
