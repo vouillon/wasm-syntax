@@ -277,7 +277,6 @@ let unop op = match op with Neg -> "-" | Pos -> "+" | Not -> "!"
 type prec =
   | Instruction
   | Branch
-  | Let
   | Assignement
   | Select
   | Comparison
@@ -288,10 +287,10 @@ type prec =
   | Addition
   | Multiplication
   | Cast
-  | UnaryOp
-  | Call
-  | FieldAccess
-  | Block
+  | UnaryPrefix
+  | UnaryPostfix
+  | CallAndFieldAccess
+  | Atom
 
 let parentheses expected actual pp g =
   if expected > actual then (
@@ -390,7 +389,7 @@ let call_instr instr pp ?prefix i l =
           keyword pp s;
           space pp ())
         prefix;
-      instr Call pp i;
+      instr CallAndFieldAccess pp i;
       cut pp ();
       print_paren_list (instr Instruction) pp l)
 
@@ -421,20 +420,21 @@ let array_instr pp nm f =
 
 let get_prec (i : _ Ast.instr) =
   match i.desc with
-  | Block _ | Loop _ | If _ | Try _ | TryTable _ -> Block
+  | Block _ | Loop _ | If _ | Try _ | TryTable _ -> Atom
   | Unreachable | Nop | Pop | Null | Get _ | String _ | Int _ | Float _
   | Struct _ | StructDefault _ | Array _ | ArrayDefault _ | ArrayFixed _
   | ArrayGet _ | ArraySet _ | Sequence _ ->
-      Block
+      Atom
   | Set _ | Tee _ -> Assignement
-  | Call _ | TailCall _ -> Call
+  | Call _ | TailCall _ -> CallAndFieldAccess
   | Cast _ | Test _ -> Cast
-  | NonNull _ | UnOp _ -> UnaryOp
-  | StructGet _ | StructSet _ -> FieldAccess
+  | NonNull _ -> UnaryPostfix
+  | UnOp _ -> UnaryPrefix
+  | StructGet _ | StructSet _ -> CallAndFieldAccess
   | BinOp (op, _, _) ->
       let out, _, _ = prec_op op in
       out
-  | Let _ -> Let
+  | Let _ -> Instruction
   | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _ | Br_on_cast _
   | Br_on_cast_fail _ | Throw _ | ThrowRef _ | Return _ ->
       Branch
@@ -459,11 +459,12 @@ let rec starts_with_block_prec prec (i : 'a Ast.instr) =
     match i.desc with
     | Block _ | Loop _ | If _ | Try _ | TryTable _ -> true
     | Call (i, _) | ArrayGet (i, _) | ArraySet (i, _, _) ->
-        starts_with_block_prec Call i
+        starts_with_block_prec CallAndFieldAccess i
     | Cast (i, _) | Test (i, _) -> starts_with_block_prec Cast i
-    | NonNull i | UnOp (_, i) -> starts_with_block_prec UnaryOp i
+    | NonNull i -> starts_with_block_prec UnaryPostfix i
+    | UnOp (_, i) -> starts_with_block_prec UnaryPrefix i
     | StructGet (i, _) | StructSet (i, _, _) ->
-        starts_with_block_prec FieldAccess i
+        starts_with_block_prec CallAndFieldAccess i
     | BinOp (op, i, _) ->
         let _, left, _ = prec_op op in
         starts_with_block_prec left i
@@ -662,7 +663,7 @@ let rec instr prec pp (i : _ instr) =
               space pp ();
               casttype pp t))
   | NonNull i ->
-      instr UnaryOp pp i;
+      instr UnaryPostfix pp i;
       operator pp "!"
   | Test (i, t) ->
       box pp ~indent:indent_level (fun () ->
@@ -679,12 +680,12 @@ let rec instr prec pp (i : _ instr) =
             pp l)
   | StructDefault nm -> struct_instr pp nm (fun () -> punctuation pp "..")
   | StructGet (i, s) ->
-      instr FieldAccess pp i;
+      instr CallAndFieldAccess pp i;
       operator pp ".";
       identifier pp s.desc
   | StructSet (i, s, i') ->
       box pp ~indent:indent_level (fun () ->
-          instr FieldAccess pp i;
+          instr CallAndFieldAccess pp i;
           operator pp ".";
           identifier pp s.desc;
           space pp ();
@@ -706,7 +707,7 @@ let rec instr prec pp (i : _ instr) =
       array_instr pp nm (fun () -> list_commasep (instr Instruction) pp l)
   | ArrayGet (i1, i2) ->
       box pp ~indent:indent_level (fun () ->
-          instr Call pp i1;
+          instr CallAndFieldAccess pp i1;
           cut pp ();
           box pp (fun () ->
               operator pp "[";
@@ -714,7 +715,7 @@ let rec instr prec pp (i : _ instr) =
               operator pp "]"))
   | ArraySet (i1, i2, i3) ->
       box pp ~indent:indent_level (fun () ->
-          instr Call pp i1;
+          instr CallAndFieldAccess pp i1;
           cut pp ();
           box pp (fun () ->
               operator pp "[";
@@ -734,7 +735,7 @@ let rec instr prec pp (i : _ instr) =
           instr right pp i')
   | UnOp (op, i) ->
       operator pp (unop op);
-      instr UnaryOp pp i
+      instr UnaryPrefix pp i
   | Let (l, i) ->
       box pp ~indent:indent_level (fun () ->
           keyword pp "let";
@@ -806,13 +807,13 @@ let rec instr prec pp (i : _ instr) =
   | Sequence l -> print_paren_list (instr Instruction) pp l
   | Select (i1, i2, i3) ->
       box pp ~indent:indent_level (fun () ->
-          instr Select pp i1;
+          instr Comparison pp i1;
           cut pp ();
           operator pp "?";
-          instr Select pp i2;
+          instr Assignement pp i2;
           cut pp ();
           operator pp ":";
-          instr Select pp i3)
+          instr Assignement pp i3)
   | Null -> keyword pp "null"
 
 and block pp label kind bt (l : _ instr list) =
@@ -836,7 +837,7 @@ and block pp label kind bt (l : _ instr list) =
 and deliminated_instr pp (i : _ instr) =
   if is_block i then instr Instruction pp i
   else (
-    instr (if starts_with_block i then Block else Instruction) pp i;
+    instr (if starts_with_block i then Atom else Instruction) pp i;
     punctuation pp ";")
 
 and block_contents pp (l : _ instr list) =

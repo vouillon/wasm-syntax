@@ -325,26 +325,26 @@ fn caml_ml_input_int(vch: &eq) -> &eq {
 fn caml_ml_pos_in(vch: &eq) -> &eq {
     let ch: &channel;
     ch = vch as &channel;
-    ((get_fd_offset(ch.fd)).offset as i32 - (ch.max - ch.curr)) as &i31;
+    (get_fd_offset(ch.fd).offset as i32 - (ch.max - ch.curr)) as &i31;
 }
 #[export = "caml_ml_pos_in_64"]
 fn caml_ml_pos_in_64(vch: &eq) -> &eq {
     let ch: &channel;
     ch = vch as &channel;
     caml_copy_int64
-        ((get_fd_offset(ch.fd)).offset - (ch.max - ch.curr) as i64_s);
+        (get_fd_offset(ch.fd).offset - (ch.max - ch.curr) as i64_s);
 }
 #[export = "caml_ml_pos_out"]
 fn caml_ml_pos_out(vch: &eq) -> &eq {
     let ch: &channel;
     ch = vch as &channel;
-    ((get_fd_offset(ch.fd)).offset as i32 + ch.curr) as &i31;
+    (get_fd_offset(ch.fd).offset as i32 + ch.curr) as &i31;
 }
 #[export = "caml_ml_pos_out_64"]
 fn caml_ml_pos_out_64(vch: &eq) -> &eq {
     let ch: &channel;
     ch = vch as &channel;
-    caml_copy_int64((get_fd_offset(ch.fd)).offset + ch.curr as i64_s);
+    caml_copy_int64(get_fd_offset(ch.fd).offset + ch.curr as i64_s);
 }
 fn caml_seek_in(ch: &channel, dest: i64) -> &eq {
     let fd: i32;
@@ -560,5 +560,5 @@ fn caml_ml_get_channel_fd(x: &eq) -> i32 { (x as &channel).fd; }
 fn caml_ml_set_channel_fd(x: &eq, x_2: i32) { (x as &channel).fd = x_2; }
 #[export = "caml_ml_get_channel_offset"]
 fn caml_ml_get_channel_offset(ch: &eq) -> i64 {
-    (get_fd_offset((ch as &channel).fd)).offset;
+    get_fd_offset((ch as &channel).fd).offset;
 }

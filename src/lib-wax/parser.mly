@@ -72,8 +72,8 @@
 
 %nonassoc prec_ident (* {a|...} *) prec_block
 %right prec_branch
-%right "?" ":"
 %right ":=" "="
+%right "?" ":"
 %nonassoc "==" "!=" "<" "<u" "<s" ">" ">u" ">s" "<=" "<=u" "<=s" ">=" ">=u" ">=s"
 %left "|"
 %left "^"

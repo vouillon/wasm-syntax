@@ -416,7 +416,7 @@ fn bigarray_serialize(s: &eq, v: &eq) -> (i32, i32) {
         } /* 'float64 */
         'loop: loop {
             if i <u len {
-                caml_serialize_int_8(s, (ta_get_f64(data, i)).to_bits);
+                caml_serialize_int_8(s, ta_get_f64(data, i).to_bits);
                 i = i + 1;
                 br 'loop;
             }
@@ -551,8 +551,7 @@ fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
             'loop: loop {
                 if i <u len {
                     ta_set_f32
-                        (data, i,
-                         (caml_deserialize_int_4(s)).from_bits as f64);
+                        (data, i, caml_deserialize_int_4(s).from_bits as f64);
                     i = i + 1;
                     br 'loop;
                 }
@@ -561,7 +560,7 @@ fn bigarray_deserialize(s: &eq) -> (&eq, i32) {
         } /* 'float64 */
         'loop: loop {
             if i <u len {
-                ta_set_f64(data, i, (caml_deserialize_int_8(s)).from_bits);
+                ta_set_f64(data, i, caml_deserialize_int_8(s).from_bits);
                 i = i + 1;
                 br 'loop;
             }

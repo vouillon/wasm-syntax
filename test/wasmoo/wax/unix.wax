@@ -29,7 +29,7 @@ fn unix_gmtime(x: &eq) -> &eq { gmtime((x as &float).f); }
 #[export = "unix_localtime"]
 fn unix_localtime(x: &eq) -> &eq { localtime((x as &float).f); }
 #[export = "unix_time"]
-fn unix_time(x: &eq) -> &eq { {float| f: (gettimeofday()).floor }; }
+fn unix_time(x: &eq) -> &eq { {float| f: gettimeofday().floor }; }
 #[export = "unix_mktime"]
 fn unix_mktime(x: &eq) -> &eq {
     let tm: &block;
