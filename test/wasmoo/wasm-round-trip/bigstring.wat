@@ -4,8 +4,9 @@
   (import "jslib" "caml_js_get"
     (func $caml_js_get (param (ref eq) (ref eq)) (result (ref eq)))
   )
-  (import "bigarray" "caml_ba_to_typed_array"
-    (func $caml_ba_to_typed_array (param (ref eq)) (result (ref eq)))
+  (func $caml_ba_to_typed_array (export "bigstring_to_typed_array")
+    (import "bigarray" "caml_ba_to_typed_array")
+    (param (ref eq)) (result (ref eq))
   )
   (import "bigarray" "caml_ba_from_typed_array"
     (func $caml_ba_from_typed_array (param (ref eq)) (result (ref eq)))
@@ -193,6 +194,7 @@
   )
   (func $caml_bigstring_blit_bytes_to_ba
     (export "caml_bigstring_blit_bytes_to_ba")
+    (export "caml_bigstring_blit_string_to_ba")
     (param $str1 (ref eq)) (param $vpos1 (ref eq)) (param $ba2 (ref eq))
     (param $vpos2 (ref eq)) (param $vlen (ref eq)) (result (ref eq))
     (local $pos1 i32) (local $pos2 i32) (local $len i32)

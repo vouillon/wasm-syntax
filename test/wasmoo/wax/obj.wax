@@ -1,18 +1,21 @@
-#[import = ("fail", "caml_failwith")] fn caml_failwith(_: &eq)
-#[import = ("custom", "caml_is_custom")] fn caml_is_custom(_: &eq) -> i32
-#[import = ("custom", "caml_dup_custom")] fn caml_dup_custom(_: &eq) -> &eq
+#[import = ("fail", "caml_failwith")]
+fn caml_failwith(&eq)
+#[import = ("custom", "caml_is_custom")]
+fn caml_is_custom(&eq) -> i32
+#[import = ("custom", "caml_dup_custom")]
+fn caml_dup_custom(&eq) -> &eq
 #[import = ("effect", "caml_is_continuation")]
-fn caml_is_continuation(_: &eq) -> i32
+fn caml_is_continuation(&eq) -> i32
 #[import = ("effect", "caml_trampoline_ref")]
 let caml_trampoline_ref: &?function_1
 type block = [mut &eq]
 type string = [mut i8]
 type float = { f: f64 }
 type float_array = [mut f64]
-type function_1 = fn(_: &eq, _: &eq) -> &eq
+type function_1 = fn(&eq, &eq) -> &eq
 type closure = open { f: &function_1 }
 type closure_last_arg: closure = open { f: &function_1 }
-type function_2 = fn(_: &eq, _: &eq, _: &eq) -> &eq
+type function_2 = fn(&eq, &eq, &eq) -> &eq
 type cps_closure = open { f: &function_2 }
 type cps_closure_last_arg: cps_closure = open { f: &function_2 }
 type int_array = [mut i32]
@@ -26,14 +29,14 @@ type dummy_closure_2: closure_2 = {
     f_2: &function_2,
     f_3: mut &?closure_2
 }
-type function_3 = fn(_: &eq, _: &eq, _: &eq, _: &eq) -> &eq
+type function_3 = fn(&eq, &eq, &eq, &eq) -> &eq
 type closure_3: closure = open { f: &function_1, f_2: &function_3 }
 type dummy_closure_3: closure_3 = {
     f: &function_1,
     f_2: &function_3,
     f_3: mut &?closure_3
 }
-type function_4 = fn(_: &eq, _: &eq, _: &eq, _: &eq, _: &eq) -> &eq
+type function_4 = fn(&eq, &eq, &eq, &eq, &eq) -> &eq
 type closure_4: closure = open { f: &function_1, f_2: &function_4 }
 type dummy_closure_4: closure_4 = {
     f: &function_1,
@@ -45,15 +48,21 @@ type cps_dummy_closure: cps_closure_last_arg = {
     f_2: mut &?cps_closure
 }
 const forcing_tag: i32 = 244;
-#[export = "cont_tag"] const cont_tag: i32 = 245;
-#[export = "lazy_tag"] const lazy_tag: i32 = 246;
+#[export = "cont_tag"]
+const cont_tag: i32 = 245;
+#[export = "lazy_tag"]
+const lazy_tag: i32 = 246;
 const closure_tag: i32 = 247;
-#[export = "object_tag"] const object_tag: i32 = 248;
-#[export = "forward_tag"] const forward_tag: i32 = 250;
-#[export = "abstract_tag"] const abstract_tag: i32 = 251;
+#[export = "object_tag"]
+const object_tag: i32 = 248;
+#[export = "forward_tag"]
+const forward_tag: i32 = 250;
+#[export = "abstract_tag"]
+const abstract_tag: i32 = 251;
 const string_tag: i32 = 252;
 const float_tag: i32 = 253;
-#[export = "double_array_tag"] const double_array_tag: i32 = 254;
+#[export = "double_array_tag"]
+const double_array_tag: i32 = 254;
 const custom_tag: i32 = 255;
 #[export = "caml_is_closure"]
 fn caml_is_closure(v: &eq) -> i32 { v is &closure | v is &cps_closure; }

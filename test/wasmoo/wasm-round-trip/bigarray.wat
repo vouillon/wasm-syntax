@@ -1841,7 +1841,7 @@
     (ref.i31 (i32.const 0))
   )
   (func $caml_string_of_array (export "caml_string_of_array")
-    (param $x (ref eq)) (result (ref eq))
+    (export "caml_bytes_of_array") (param $x (ref eq)) (result (ref eq))
     (local $a (ref extern)) (local $len i32) (local $s (ref $string))
     (local.set $a
       (ref.as_non_null (extern.convert_any (call $unwrap (local.get $x)))))
@@ -1852,6 +1852,7 @@
     (local.get $s)
   )
   (func $caml_uint8_array_of_string (export "caml_uint8_array_of_string")
+    (export "caml_uint8_array_of_bytes")
     (param $x (ref eq)) (result (ref eq))
     (local $ta (ref extern)) (local $len i32) (local $s (ref $string))
     (local.set $s (ref.cast (ref $string) (local.get $x)))

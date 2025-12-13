@@ -1,4 +1,5 @@
-#[import = ("fail", "caml_failwith")] fn caml_failwith(_: &eq)
+#[import = ("fail", "caml_failwith")]
+fn caml_failwith(&eq)
 type block = [mut &eq]
 type string = [mut i8]
 fn get(a: &eq, i: i32) -> i32 {

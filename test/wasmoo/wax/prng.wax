@@ -1,9 +1,9 @@
 #[import = ("bindings", "ta_get_i32")]
-fn ta_get_i32(_: &extern, _: i32) -> i32
+fn ta_get_i32(&extern, i32) -> i32
 #[import = ("bindings", "ta_set_i32")]
-fn ta_set_i32(_: &extern, _: i32, _: i32)
+fn ta_set_i32(&extern, i32, i32)
 #[import = ("bigarray", "caml_ba_get_data")]
-fn caml_ba_get_data(_: &eq) -> &extern
+fn caml_ba_get_data(&eq) -> &extern
 #[export = "caml_lxm_next"]
 fn caml_lxm_next(v: &eq) -> i64 {
     let data: &extern;

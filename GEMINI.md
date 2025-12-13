@@ -89,6 +89,10 @@ The CLI supports the following flows:
     * `output.ml` / `.mli` - Wax Pretty-printing (AST traversal).
 * `test/` - **Immutable** regression test suite (Source + `.expected` files).
 
+## Documentation
+* **Project Documentation:** Located in `docs/`. This is an `mdbook` project containing the official documentation.
+* **API Documentation:** OCaml interface files (`.mli`) contain developer documentation for modules.
+
 ## AST Reference (Condensed)
 
 ### 1. Wax AST (`wax/ast.ml`)

@@ -1,5 +1,5 @@
 type block = [mut &eq]
-type function_1 = fn(_: &eq, _: &eq) -> &eq
+type function_1 = fn(&eq, &eq) -> &eq
 type closure = open { f: &function_1 }
 #[export = "caml_atomic_cas"]
 fn caml_atomic_cas(ref: &eq, o: &eq, n: &eq) -> &eq {
@@ -48,8 +48,10 @@ fn caml_ml_domain_unique_token_2(x: &eq) -> &eq {
 fn caml_ml_domain_set_name(x: &eq) -> &eq { 0 as &i31; }
 #[export = "caml_recommended_domain_count"]
 fn caml_recommended_domain_count(x: &eq) -> &eq { 1 as &i31; }
-#[export = "caml_domain_id"] let caml_domain_id: i32 = 0;
-#[export = "caml_domain_latest_id"] let caml_domain_latest_id: i32 = 1;
+#[export = "caml_domain_id"]
+let caml_domain_id: i32 = 0;
+#[export = "caml_domain_latest_id"]
+let caml_domain_latest_id: i32 = 1;
 #[export = "caml_ml_domain_id"]
 #[export = "caml_ml_domain_index"]
 fn caml_ml_domain_id(x: &eq) -> &eq { caml_domain_id as &i31; }

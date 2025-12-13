@@ -1,36 +1,50 @@
-#[import = ("bindings", "ta_length")] fn ta_length(_: &extern) -> i32
+#[import = ("bindings", "ta_length")]
+fn ta_length(&extern) -> i32
 #[import = ("bindings", "ta_get_i32")]
-fn ta_get_i32(_: &extern, _: i32) -> i32
-#[import = ("bindings", "random_seed")] fn random_seed() -> &extern
-#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
-#[import = ("jslib", "wrap")] fn wrap(_: &?any) -> &eq
+fn ta_get_i32(&extern, i32) -> i32
+#[import = ("bindings", "random_seed")]
+fn random_seed() -> &extern
+#[import = ("jslib", "unwrap")]
+fn unwrap(&eq) -> &?any
+#[import = ("jslib", "wrap")]
+fn wrap(&?any) -> &eq
 #[import = ("jslib", "caml_jsstring_of_string")]
-fn caml_jsstring_of_string(_: &eq) -> &eq
+fn caml_jsstring_of_string(&eq) -> &eq
 #[import = ("jslib", "caml_string_of_jsstring")]
-fn caml_string_of_jsstring(_: &eq) -> &eq
+fn caml_string_of_jsstring(&eq) -> &eq
 #[import = ("jslib", "caml_js_to_string_array")]
 fn caml_js_to_string_array(a: &extern) -> &eq
 #[import = ("jslib", "caml_js_meth_call")]
-fn caml_js_meth_call(_: &eq, _: &eq, _: &eq) -> &eq
-#[import = ("fail", "caml_raise_sys_error")] fn caml_raise_sys_error(_: &eq)
-#[import = ("fail", "caml_raise_not_found")] fn caml_raise_not_found()
-#[import = ("bindings", "argv")] fn argv() -> &extern
-#[import = ("bindings", "system")] fn system(_: &?any) -> &eq
-#[import = ("bindings", "getenv")] fn getenv(_: &?any) -> &?any
-#[import = ("bindings", "time")] fn time() -> f64
-#[import = ("bindings", "array_length")] fn array_length(_: &extern) -> i32
+fn caml_js_meth_call(&eq, &eq, &eq) -> &eq
+#[import = ("fail", "caml_raise_sys_error")]
+fn caml_raise_sys_error(&eq)
+#[import = ("fail", "caml_raise_not_found")]
+fn caml_raise_not_found()
+#[import = ("bindings", "argv")]
+fn argv() -> &extern
+#[import = ("bindings", "system")]
+fn system(&?any) -> &eq
+#[import = ("bindings", "getenv")]
+fn getenv(&?any) -> &?any
+#[import = ("bindings", "time")]
+fn time() -> f64
+#[import = ("bindings", "array_length")]
+fn array_length(&extern) -> i32
 #[import = ("bindings", "array_get")]
-fn array_get(_: &extern, _: i32) -> &?any
+fn array_get(&extern, i32) -> &?any
 #[import = ("fail", "javascript_exception")]
-tag javascript_exception(_: &?extern)
-#[import = ("jsstring", "jsstring_test")] fn jsstring_test(_: &?any) -> i32
+tag javascript_exception(&?extern)
+#[import = ("jsstring", "jsstring_test")]
+fn jsstring_test(&?any) -> i32
 type block = [mut &eq]
 type string = [mut i8]
 type float = { f: f64 }
-#[export = "ocaml_exit"] tag ocaml_exit(_: i32)
+#[export = "ocaml_exit"]
+tag ocaml_exit(i32)
 #[export = "caml_sys_exit"]
 fn caml_sys_exit(x: &eq) -> &eq { throw ocaml_exit (x as &i31 as i32_s); }
 #[export = "caml_sys_getenv"]
+#[export = "caml_sys_unsafe_getenv"]
 fn caml_sys_getenv(x: &eq) -> &eq {
     let res: &?any;
     res = getenv(unwrap(caml_jsstring_of_string(x)));
@@ -44,6 +58,7 @@ fn caml_sys_executable_name(x: &eq) -> &eq {
     (caml_js_to_string_array(argv()) as &block)[1];
 }
 #[export = "caml_sys_time"]
+#[export = "caml_sys_time_include_children"]
 fn caml_sys_time(x: &eq) -> &eq { {float| f: time() * 0.001 }; }
 #[export = "caml_sys_system_command"]
 fn caml_sys_system_command(x: &eq) -> &eq {

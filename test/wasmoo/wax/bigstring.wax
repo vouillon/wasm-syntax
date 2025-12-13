@@ -1,34 +1,42 @@
-#[import = ("jslib", "wrap")] fn wrap(_: &?any) -> &eq
-#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
-#[import = ("jslib", "caml_js_get")] fn caml_js_get(_: &eq, _: &eq) -> &eq
+#[import = ("jslib", "wrap")]
+fn wrap(&?any) -> &eq
+#[import = ("jslib", "unwrap")]
+fn unwrap(&eq) -> &?any
+#[import = ("jslib", "caml_js_get")]
+fn caml_js_get(&eq, &eq) -> &eq
 #[import = ("bigarray", "caml_ba_to_typed_array")]
-fn caml_ba_to_typed_array(_: &eq) -> &eq
+#[export = "bigstring_to_typed_array"]
+fn caml_ba_to_typed_array(&eq) -> &eq
 #[import = ("bigarray", "caml_ba_from_typed_array")]
-fn caml_ba_from_typed_array(_: &eq) -> &eq
+fn caml_ba_from_typed_array(&eq) -> &eq
 #[import = ("bigarray", "caml_ba_sub")]
-fn caml_ba_sub(_: &eq, _: &eq, _: &eq) -> &eq
+fn caml_ba_sub(&eq, &eq, &eq) -> &eq
 #[import = ("bigarray", "caml_ba_fill")]
-fn caml_ba_fill(_: &eq, _: &eq) -> &eq
+fn caml_ba_fill(&eq, &eq) -> &eq
 #[import = ("bigarray", "caml_ba_get_data")]
-fn caml_ba_get_data(_: &eq) -> &extern
-#[import = ("bindings", "ta_create")] fn ta_create(_: i32, _: &?any) -> &?any
+fn caml_ba_get_data(&eq) -> &extern
+#[import = ("bindings", "ta_create")]
+fn ta_create(i32, &?any) -> &?any
 #[import = ("bindings", "ta_get_ui8")]
-fn ta_get_ui8(_: &extern, _: i32) -> i32
+fn ta_get_ui8(&extern, i32) -> i32
 #[import = ("bindings", "ta_get32_ui8")]
-fn ta_get32_ui8(_: &extern, _: i32) -> i32
+fn ta_get32_ui8(&extern, i32) -> i32
 #[import = ("bindings", "ta_set_ui8")]
-fn ta_set_ui8(_: &extern, _: i32, _: &i31)
+fn ta_set_ui8(&extern, i32, &i31)
 #[import = ("bindings", "ta_subarray")]
-fn ta_subarray(_: &extern, _: i32, _: i32) -> &extern
-#[import = ("bindings", "ta_set")] fn ta_set(_: &extern, _: &extern, _: i32)
-#[import = ("bindings", "ta_length")] fn ta_length(_: &extern) -> i32
-#[import = ("bindings", "ta_bytes")] fn ta_bytes(_: &?any) -> &?any
+fn ta_subarray(&extern, i32, i32) -> &extern
+#[import = ("bindings", "ta_set")]
+fn ta_set(&extern, &extern, i32)
+#[import = ("bindings", "ta_length")]
+fn ta_length(&extern) -> i32
+#[import = ("bindings", "ta_bytes")]
+fn ta_bytes(&?any) -> &?any
 #[import = ("bindings", "ta_blit_from_string")]
-fn ta_blit_from_string(_: &string, _: i32, _: &extern, _: i32, _: i32)
+fn ta_blit_from_string(&string, i32, &extern, i32, i32)
 #[import = ("bindings", "ta_blit_to_string")]
-fn ta_blit_to_string(_: &extern, _: i32, _: &string, _: i32, _: i32)
+fn ta_blit_to_string(&extern, i32, &string, i32, i32)
 #[import = ("hash", "caml_hash_mix_int")]
-fn caml_hash_mix_int(_: i32, _: i32) -> i32
+fn caml_hash_mix_int(i32, i32) -> i32
 type string = [mut i8]
 #[export = "caml_hash_mix_bigstring"]
 fn caml_hash_mix_bigstring(h: i32, b: &eq) -> i32 {
@@ -150,6 +158,7 @@ fn caml_bigstring_memchr(s: &eq, vc: &eq, vpos: &eq, vlen: &eq) -> &eq {
     -1 as &i31;
 }
 #[export = "caml_bigstring_blit_bytes_to_ba"]
+#[export = "caml_bigstring_blit_string_to_ba"]
 fn caml_bigstring_blit_bytes_to_ba
 (str1: &eq, vpos1: &eq, ba2: &eq, vpos2: &eq, vlen: &eq) -> &eq {
     let pos1: i32;

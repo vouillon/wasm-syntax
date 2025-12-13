@@ -1,26 +1,33 @@
 #[import = ("hash", "caml_string_hash")]
-fn caml_string_hash(_: &eq, _: &eq) -> &eq
+fn caml_string_hash(&eq, &eq) -> &eq
 #[import = ("string", "caml_string_equal")]
-fn caml_string_equal(_: &eq, _: &eq) -> &eq
+fn caml_string_equal(&eq, &eq) -> &eq
 #[import = ("jslib", "caml_string_of_jsstring")]
-fn caml_string_of_jsstring(_: &eq) -> &eq
+fn caml_string_of_jsstring(&eq) -> &eq
 #[import = ("jslib", "caml_jsstring_of_string")]
-fn caml_jsstring_of_string(_: &eq) -> &eq
-#[import = ("jslib", "wrap")] fn wrap(_: &?any) -> &eq
-#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
+fn caml_jsstring_of_string(&eq) -> &eq
+#[import = ("jslib", "wrap")]
+fn wrap(&?any) -> &eq
+#[import = ("jslib", "unwrap")]
+fn unwrap(&eq) -> &?any
 #[import = ("obj", "caml_callback_1")]
-fn caml_callback_1(_: &eq, _: &eq) -> &eq
+fn caml_callback_1(&eq, &eq) -> &eq
 #[import = ("obj", "caml_callback_2")]
-fn caml_callback_2(_: &eq, _: &eq, _: &eq) -> &eq
-#[import = ("bindings", "write")] fn write(_: i32, _: &?any)
+fn caml_callback_2(&eq, &eq, &eq) -> &eq
+#[import = ("bindings", "write")]
+fn write(i32, &?any)
 #[import = ("string", "caml_string_concat")]
-fn caml_string_concat(_: &eq, _: &eq) -> &eq
+fn caml_string_concat(&eq, &eq) -> &eq
 #[import = ("printexc", "caml_format_exception")]
-fn caml_format_exception(_: &eq) -> &eq
-#[import = ("sys", "ocaml_exit")] tag ocaml_exit(_: i32)
-#[import = ("fail", "ocaml_exception")] tag ocaml_exception(_: &eq)
-#[import = ("bindings", "exit")] fn exit(_: i32)
-#[import = ("bindings", "throw")] fn throw_2(_: &?extern)
+fn caml_format_exception(&eq) -> &eq
+#[import = ("sys", "ocaml_exit")]
+tag ocaml_exit(i32)
+#[import = ("fail", "ocaml_exception")]
+tag ocaml_exception(&eq)
+#[import = ("bindings", "exit")]
+fn exit(i32)
+#[import = ("bindings", "throw")]
+fn throw_2(&?extern)
 type block = [mut &eq]
 type string = [mut i8]
 type assoc = { f: &string, f_2: mut &eq, f_3: mut &?assoc }

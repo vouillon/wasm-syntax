@@ -1,18 +1,21 @@
-#[import = ("obj", "object_tag")] const object_tag: i32
-#[import = ("obj", "forward_tag")] const forward_tag: i32
-#[import = ("jsstring", "jsstring_test")] fn jsstring_test(_: &?any) -> i32
+#[import = ("obj", "object_tag")]
+const object_tag: i32
+#[import = ("obj", "forward_tag")]
+const forward_tag: i32
+#[import = ("jsstring", "jsstring_test")]
+fn jsstring_test(&?any) -> i32
 #[import = ("jsstring", "jsstring_hash")]
-fn jsstring_hash(_: i32, _: &?any) -> i32
+fn jsstring_hash(i32, &?any) -> i32
 type block = [mut &eq]
 type string = [mut i8]
 type float = { f: f64 }
 type js = { f: &?any }
-type compare = fn(_: &eq, _: &eq, _: i32) -> i32
-type hash = fn(_: &eq) -> i32
+type compare = fn(&eq, &eq, i32) -> i32
+type hash = fn(&eq) -> i32
 type fixed_length = { bsize_32: i32, bsize_64: i32 }
-type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
-type deserialize = fn(_: &eq) -> (&eq, i32)
-type dup = fn(_: &eq) -> &eq
+type serialize = fn(&eq, &eq) -> (i32, i32)
+type deserialize = fn(&eq) -> (&eq, i32)
+type dup = fn(&eq) -> &eq
 type custom_operations = {
     id: &string,
     compare: &?compare,

@@ -1,7 +1,9 @@
 type float = { f: f64 }
 type block = [mut &eq]
-#[export = "caml_gc_minor"] fn caml_gc_minor(x: &eq) -> &eq { 0 as &i31; }
-#[export = "caml_gc_major"] fn caml_gc_major(x: &eq) -> &eq { 0 as &i31; }
+#[export = "caml_gc_minor"]
+fn caml_gc_minor(x: &eq) -> &eq { 0 as &i31; }
+#[export = "caml_gc_major"]
+fn caml_gc_major(x: &eq) -> &eq { 0 as &i31; }
 #[export = "caml_gc_full_major"]
 fn caml_gc_full_major(x: &eq) -> &eq { 0 as &i31; }
 #[export = "caml_gc_compaction"]
@@ -13,6 +15,7 @@ fn caml_gc_counters(x: &eq) -> &eq {
     [block|0 as &i31, f, f, f];
 }
 #[export = "caml_gc_stat"]
+#[export = "caml_gc_quick_stat"]
 fn caml_gc_stat(x: &eq) -> &eq {
     let f: &eq;
     f = {float| f: 0. };
@@ -36,7 +39,8 @@ fn caml_gc_stat(x: &eq) -> &eq {
         0 as &i31,
         0 as &i31];
 }
-#[export = "caml_gc_set"] fn caml_gc_set(x: &eq) -> &eq { 0 as &i31; }
+#[export = "caml_gc_set"]
+fn caml_gc_set(x: &eq) -> &eq { 0 as &i31; }
 #[export = "caml_gc_get"]
 fn caml_gc_get(x: &eq) -> &eq {
     [block|

@@ -1,23 +1,29 @@
-#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
+#[import = ("jslib", "unwrap")]
+fn unwrap(&eq) -> &?any
 #[import = ("bindings", "format_float")]
-fn format_float(_: i32, _: i32, _: i32, _: f64) -> &?any
-#[import = ("bindings", "identity")] fn parse_float(_: &?any) -> f64
-#[import = ("Math", "exp")] fn exp(_: f64) -> f64
-#[import = ("fail", "caml_failwith")] fn caml_failwith(_: &eq)
+fn format_float(i32, i32, i32, f64) -> &?any
+#[import = ("bindings", "identity")]
+fn parse_float(&?any) -> f64
+#[import = ("Math", "exp")]
+fn exp(f64) -> f64
+#[import = ("fail", "caml_failwith")]
+fn caml_failwith(&eq)
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(_: &eq)
-#[import = ("ints", "lowercase_hex_table")] const lowercase_hex_table: &chars
+fn caml_invalid_argument(&eq)
+#[import = ("ints", "lowercase_hex_table")]
+const lowercase_hex_table: &chars
 #[import = ("jsstring", "jsstring_of_string")]
-fn jsstring_of_string(_: &string) -> &?any
+fn jsstring_of_string(&string) -> &?any
 #[import = ("jsstring", "string_of_jsstring")]
-fn string_of_jsstring(_: &?any) -> &string
+fn string_of_jsstring(&?any) -> &string
 type float = { f: f64 }
 type string = [mut i8]
 type block = [mut &eq]
 type chars = [i8]
 const infinity: &chars = chars#"infinity";
 const nan_2: &chars = chars#"nan";
-#[export = "Double_val"] fn Double_val(x: &eq) -> f64 { (x as &float).f; }
+#[export = "Double_val"]
+fn Double_val(x: &eq) -> f64 { (x as &float).f; }
 #[export = "caml_hexstring_of_float"]
 fn caml_hexstring_of_float(x: &eq, x_2: &eq, x_3: &eq) -> &eq {
     let b: i64;

@@ -52,7 +52,7 @@
     (throw $ocaml_exit (i31.get_s (ref.cast (ref i31) (local.get $x))))
   )
   (func $caml_sys_getenv (export "caml_sys_getenv")
-    (param $x (ref eq)) (result (ref eq))
+    (export "caml_sys_unsafe_getenv") (param $x (ref eq)) (result (ref eq))
     (local $res anyref)
     (local.set $res
       (call $getenv
@@ -72,6 +72,7 @@
       (i32.const 1))
   )
   (func $caml_sys_time (export "caml_sys_time")
+    (export "caml_sys_time_include_children")
     (param $x (ref eq)) (result (ref eq))
     (struct.new $float (f64.mul (call $time) (f64.const 0.001)))
   )

@@ -1,25 +1,37 @@
-#[import = ("jslib", "log_str")] fn log_str(_: &string)
-#[import = ("bindings", "getcwd")] fn getcwd() -> &?any
-#[import = ("bindings", "chdir")] fn chdir(_: &?any)
-#[import = ("bindings", "mkdir")] fn mkdir(_: &?any, _: i32)
-#[import = ("bindings", "unlink")] fn unlink(_: &?any)
-#[import = ("bindings", "readdir")] fn readdir(_: &?any) -> &extern
-#[import = ("bindings", "file_exists")] fn file_exists(_: &?any) -> &eq
-#[import = ("bindings", "is_directory")] fn is_directory(_: &?any) -> &eq
-#[import = ("bindings", "rename")] fn rename(_: &?any, _: &?any)
-#[import = ("jslib", "wrap")] fn wrap(_: &?any) -> &eq
-#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
+#[import = ("jslib", "log_str")]
+fn log_str(&string)
+#[import = ("bindings", "getcwd")]
+fn getcwd() -> &?any
+#[import = ("bindings", "chdir")]
+fn chdir(&?any)
+#[import = ("bindings", "mkdir")]
+fn mkdir(&?any, i32)
+#[import = ("bindings", "unlink")]
+fn unlink(&?any)
+#[import = ("bindings", "readdir")]
+fn readdir(&?any) -> &extern
+#[import = ("bindings", "file_exists")]
+fn file_exists(&?any) -> &eq
+#[import = ("bindings", "is_directory")]
+fn is_directory(&?any) -> &eq
+#[import = ("bindings", "rename")]
+fn rename(&?any, &?any)
+#[import = ("jslib", "wrap")]
+fn wrap(&?any) -> &eq
+#[import = ("jslib", "unwrap")]
+fn unwrap(&eq) -> &?any
 #[import = ("jslib", "caml_string_of_jsstring")]
-fn caml_string_of_jsstring(_: &eq) -> &eq
+fn caml_string_of_jsstring(&eq) -> &eq
 #[import = ("jslib", "caml_jsstring_of_string")]
-fn caml_jsstring_of_string(_: &eq) -> &eq
+fn caml_jsstring_of_string(&eq) -> &eq
 #[import = ("jslib", "caml_js_to_string_array")]
 fn caml_js_to_string_array(a: &extern) -> &eq
-#[import = ("fail", "caml_raise_sys_error")] fn caml_raise_sys_error(_: &eq)
+#[import = ("fail", "caml_raise_sys_error")]
+fn caml_raise_sys_error(&eq)
 #[import = ("fail", "javascript_exception")]
-tag javascript_exception(_: &?extern)
+tag javascript_exception(&?extern)
 #[import = ("sys", "caml_handle_sys_error")]
-fn caml_handle_sys_error(_: &?extern)
+fn caml_handle_sys_error(&?extern)
 type string = [mut i8]
 #[export = "caml_sys_getcwd"]
 fn caml_sys_getcwd(x: &eq) -> &eq {
@@ -92,7 +104,8 @@ fn caml_read_file_content(x: &eq) -> &eq {
     caml_raise_no_such_file(x);
     0 as &i31;
 }
-#[export = "caml_fs_init"] fn caml_fs_init() -> &eq { 0 as &i31; }
+#[export = "caml_fs_init"]
+fn caml_fs_init() -> &eq { 0 as &i31; }
 #[export = "caml_sys_is_directory"]
 fn caml_sys_is_directory(name: &eq) -> &eq {
     try &eq {

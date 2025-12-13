@@ -1,5 +1,5 @@
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(_: &eq)
+fn caml_invalid_argument(&eq)
 type block = [mut &eq]
 type string = [mut i8]
 type float = { f: f64 }

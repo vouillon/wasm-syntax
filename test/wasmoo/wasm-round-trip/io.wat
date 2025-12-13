@@ -651,6 +651,7 @@
           (br $loop))))
   )
   (func $caml_ml_output (export "caml_ml_output")
+    (export "caml_ml_output_bytes")
     (param $ch (ref eq)) (param $s (ref eq)) (param $vpos (ref eq))
     (param $vlen (ref eq)) (result (ref eq))
     (local $pos i32) (local $len i32) (local $written i32)

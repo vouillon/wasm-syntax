@@ -1,106 +1,123 @@
-#[import = ("bindings", "ta_create")] fn ta_create(_: i32, _: i32) -> &extern
+#[import = ("bindings", "ta_create")]
+fn ta_create(i32, i32) -> &extern
 #[import = ("bindings", "ta_normalize")]
-fn ta_normalize(_: &extern) -> &extern
-#[import = ("bindings", "ta_kind")] fn ta_kind(_: &extern) -> i32
-#[import = ("bindings", "ta_length")] fn ta_length(_: &extern) -> i32
+fn ta_normalize(&extern) -> &extern
+#[import = ("bindings", "ta_kind")]
+fn ta_kind(&extern) -> i32
+#[import = ("bindings", "ta_length")]
+fn ta_length(&extern) -> i32
 #[import = ("bindings", "ta_get_f64")]
-fn ta_get_f64(_: &extern, _: i32) -> f64
+fn ta_get_f64(&extern, i32) -> f64
 #[import = ("bindings", "ta_get_f32")]
-fn ta_get_f32(_: &extern, _: i32) -> f64
+fn ta_get_f32(&extern, i32) -> f64
 #[import = ("bindings", "ta_get_i32")]
-fn ta_get_i32(_: &extern, _: i32) -> i32
+fn ta_get_i32(&extern, i32) -> i32
 #[import = ("bindings", "ta_get_i16")]
-fn ta_get_i16(_: &extern, _: i32) -> i32
+fn ta_get_i16(&extern, i32) -> i32
 #[import = ("bindings", "ta_get_ui16")]
-fn ta_get_ui16(_: &extern, _: i32) -> i32
-#[import = ("bindings", "ta_get_i8")] fn ta_get_i8(_: &extern, _: i32) -> i32
+fn ta_get_ui16(&extern, i32) -> i32
+#[import = ("bindings", "ta_get_i8")]
+fn ta_get_i8(&extern, i32) -> i32
 #[import = ("bindings", "ta_get_ui8")]
-fn ta_get_ui8(_: &extern, _: i32) -> i32
+fn ta_get_ui8(&extern, i32) -> i32
 #[import = ("bindings", "ta_get32_ui8")]
-fn ta_get32_ui8(_: &extern, _: i32) -> i32
+fn ta_get32_ui8(&extern, i32) -> i32
 #[import = ("bindings", "ta_get16_ui8")]
-fn ta_get16_ui8(_: &extern, _: i32) -> i32
+fn ta_get16_ui8(&extern, i32) -> i32
 #[import = ("bindings", "ta_set_f64")]
-fn ta_set_f64(_: &extern, _: i32, _: f64)
+fn ta_set_f64(&extern, i32, f64)
 #[import = ("bindings", "ta_set_f32")]
-fn ta_set_f32(_: &extern, _: i32, _: f64)
+fn ta_set_f32(&extern, i32, f64)
 #[import = ("bindings", "ta_set_i32")]
-fn ta_set_i32(_: &extern, _: i32, _: i32)
+fn ta_set_i32(&extern, i32, i32)
 #[import = ("bindings", "ta_set_i16")]
-fn ta_set_i16(_: &extern, _: i32, _: &i31)
+fn ta_set_i16(&extern, i32, &i31)
 #[import = ("bindings", "ta_set_ui16")]
-fn ta_set_ui16(_: &extern, _: i32, _: &i31)
+fn ta_set_ui16(&extern, i32, &i31)
 #[import = ("bindings", "ta_set_i8")]
-fn ta_set_i8(_: &extern, _: i32, _: &i31)
+fn ta_set_i8(&extern, i32, &i31)
 #[import = ("bindings", "ta_set_ui8")]
-fn ta_set_ui8(_: &extern, _: i32, _: &i31)
+fn ta_set_ui8(&extern, i32, &i31)
 #[import = ("bindings", "ta_set16_ui8")]
-fn ta_set16_ui8(_: &extern, _: i32, _: &i31)
+fn ta_set16_ui8(&extern, i32, &i31)
 #[import = ("bindings", "ta_set32_ui8")]
-fn ta_set32_ui8(_: &extern, _: i32, _: i32)
-#[import = ("bindings", "ta_fill")] fn ta_fill_int(_: &extern, _: i32)
-#[import = ("bindings", "ta_fill")] fn ta_fill_float(_: &extern, _: f64)
-#[import = ("bindings", "ta_blit")] fn ta_blit(_: &extern, _: &extern)
+fn ta_set32_ui8(&extern, i32, i32)
+#[import = ("bindings", "ta_fill")]
+fn ta_fill_int(&extern, i32)
+#[import = ("bindings", "ta_fill")]
+fn ta_fill_float(&extern, f64)
+#[import = ("bindings", "ta_blit")]
+fn ta_blit(&extern, &extern)
 #[import = ("bindings", "ta_subarray")]
-fn ta_subarray(_: &extern, _: i32, _: i32) -> &extern
+fn ta_subarray(&extern, i32, i32) -> &extern
 #[import = ("bindings", "ta_blit_from_string")]
-fn ta_blit_from_string(_: &string, _: i32, _: &extern, _: i32, _: i32)
+fn ta_blit_from_string(&string, i32, &extern, i32, i32)
 #[import = ("bindings", "ta_blit_to_string")]
-fn ta_blit_to_string(_: &extern, _: i32, _: &string, _: i32, _: i32)
-#[import = ("fail", "caml_bound_error")] fn caml_bound_error()
+fn ta_blit_to_string(&extern, i32, &string, i32, i32)
+#[import = ("fail", "caml_bound_error")]
+fn caml_bound_error()
 #[import = ("fail", "caml_raise_out_of_memory")]
 fn caml_raise_out_of_memory()
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(_: &eq)
-#[import = ("fail", "caml_failwith")] fn caml_failwith(_: &eq)
-#[import = ("jslib", "wrap")] fn wrap(_: &?any) -> &eq
-#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
-#[import = ("int32", "caml_copy_int32")] fn caml_copy_int32(_: i32) -> &eq
-#[import = ("int32", "Int32_val")] fn Int32_val(_: &eq) -> i32
+fn caml_invalid_argument(&eq)
+#[import = ("fail", "caml_failwith")]
+fn caml_failwith(&eq)
+#[import = ("jslib", "wrap")]
+fn wrap(&?any) -> &eq
+#[import = ("jslib", "unwrap")]
+fn unwrap(&eq) -> &?any
+#[import = ("int32", "caml_copy_int32")]
+fn caml_copy_int32(i32) -> &eq
+#[import = ("int32", "Int32_val")]
+fn Int32_val(&eq) -> i32
 #[import = ("int32", "caml_copy_nativeint")]
-fn caml_copy_nativeint(_: i32) -> &eq
-#[import = ("int64", "caml_copy_int64")] fn caml_copy_int64(_: i64) -> &eq
-#[import = ("int64", "Int64_val")] fn Int64_val(_: &eq) -> i64
-#[import = ("obj", "double_array_tag")] const double_array_tag: i32
-#[import = ("compare", "unordered")] const unordered: i32
+fn caml_copy_nativeint(i32) -> &eq
+#[import = ("int64", "caml_copy_int64")]
+fn caml_copy_int64(i64) -> &eq
+#[import = ("int64", "Int64_val")]
+fn Int64_val(&eq) -> i64
+#[import = ("obj", "double_array_tag")]
+const double_array_tag: i32
+#[import = ("compare", "unordered")]
+const unordered: i32
 #[import = ("hash", "caml_hash_mix_int")]
-fn caml_hash_mix_int(_: i32, _: i32) -> i32
+fn caml_hash_mix_int(i32, i32) -> i32
 #[import = ("hash", "caml_hash_mix_int64")]
-fn caml_hash_mix_int64(_: i32, _: i64) -> i32
+fn caml_hash_mix_int64(i32, i64) -> i32
 #[import = ("hash", "caml_hash_mix_double")]
-fn caml_hash_mix_double(_: i32, _: f64) -> i32
+fn caml_hash_mix_double(i32, f64) -> i32
 #[import = ("hash", "caml_hash_mix_float")]
-fn caml_hash_mix_float(_: i32, _: f32) -> i32
+fn caml_hash_mix_float(i32, f32) -> i32
 #[import = ("marshal", "caml_serialize_int_1")]
-fn caml_serialize_int_1(_: &eq, _: i32)
+fn caml_serialize_int_1(&eq, i32)
 #[import = ("marshal", "caml_serialize_int_2")]
-fn caml_serialize_int_2(_: &eq, _: i32)
+fn caml_serialize_int_2(&eq, i32)
 #[import = ("marshal", "caml_serialize_int_4")]
-fn caml_serialize_int_4(_: &eq, _: i32)
+fn caml_serialize_int_4(&eq, i32)
 #[import = ("marshal", "caml_serialize_int_8")]
-fn caml_serialize_int_8(_: &eq, _: i64)
+fn caml_serialize_int_8(&eq, i64)
 #[import = ("marshal", "caml_deserialize_uint_1")]
-fn caml_deserialize_uint_1(_: &eq) -> i32
+fn caml_deserialize_uint_1(&eq) -> i32
 #[import = ("marshal", "caml_deserialize_sint_1")]
-fn caml_deserialize_sint_1(_: &eq) -> i32
+fn caml_deserialize_sint_1(&eq) -> i32
 #[import = ("marshal", "caml_deserialize_uint_2")]
-fn caml_deserialize_uint_2(_: &eq) -> i32
+fn caml_deserialize_uint_2(&eq) -> i32
 #[import = ("marshal", "caml_deserialize_sint_2")]
-fn caml_deserialize_sint_2(_: &eq) -> i32
+fn caml_deserialize_sint_2(&eq) -> i32
 #[import = ("marshal", "caml_deserialize_int_4")]
-fn caml_deserialize_int_4(_: &eq) -> i32
+fn caml_deserialize_int_4(&eq) -> i32
 #[import = ("marshal", "caml_deserialize_int_8")]
-fn caml_deserialize_int_8(_: &eq) -> i64
+fn caml_deserialize_int_8(&eq) -> i64
 type block = [mut &eq]
 type string = [mut i8]
 type float = { f: f64 }
 type float_array = [mut f64]
-type compare = fn(_: &eq, _: &eq, _: i32) -> i32
-type hash = fn(_: &eq) -> i32
+type compare = fn(&eq, &eq, i32) -> i32
+type hash = fn(&eq) -> i32
 type fixed_length = { bsize_32: i32, bsize_64: i32 }
-type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
-type deserialize = fn(_: &eq) -> (&eq, i32)
-type dup = fn(_: &eq) -> &eq
+type serialize = fn(&eq, &eq) -> (i32, i32)
+type deserialize = fn(&eq) -> (&eq, i32)
+type dup = fn(&eq) -> &eq
 type custom_operations = {
     id: &string,
     compare: &?compare,
@@ -1531,6 +1548,7 @@ fn caml_ba_uint8_set64(vba: &eq, i: &eq, d: i64) -> &eq {
     0 as &i31;
 }
 #[export = "caml_string_of_array"]
+#[export = "caml_bytes_of_array"]
 fn caml_string_of_array(x: &eq) -> &eq {
     let a: &extern;
     let len: i32;
@@ -1542,6 +1560,7 @@ fn caml_string_of_array(x: &eq) -> &eq {
     s;
 }
 #[export = "caml_uint8_array_of_string"]
+#[export = "caml_uint8_array_of_bytes"]
 fn caml_uint8_array_of_string(x: &eq) -> &eq {
     let ta: &extern;
     let len: i32;

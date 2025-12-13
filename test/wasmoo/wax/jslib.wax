@@ -1,74 +1,99 @@
-#[import = ("bindings", "log")] fn log_js(_: &?any)
-#[import = ("bindings", "identity")] fn to_float(_: &?any) -> f64
-#[import = ("bindings", "identity")] fn from_float(_: f64) -> &?any
-#[import = ("bindings", "identity")] fn to_bool(_: &?any) -> i32
-#[import = ("bindings", "identity")] fn to_int32(_: &?any) -> i32
-#[import = ("bindings", "identity")] fn from_int32(_: i32) -> &?any
-#[import = ("bindings", "from_bool")] fn from_bool(_: i32) -> &?any
-#[import = ("bindings", "get")] fn get(_: &extern, _: &?any) -> &?any
-#[import = ("bindings", "set")] fn set(_: &?any, _: &?any, _: &?any)
-#[import = ("bindings", "delete")] fn delete(_: &?any, _: &?any)
+#[import = ("bindings", "log")]
+fn log_js(&?any)
+#[import = ("bindings", "identity")]
+fn to_float(&?any) -> f64
+#[import = ("bindings", "identity")]
+fn from_float(f64) -> &?any
+#[import = ("bindings", "identity")]
+fn to_bool(&?any) -> i32
+#[import = ("bindings", "identity")]
+fn to_int32(&?any) -> i32
+#[import = ("bindings", "identity")]
+fn from_int32(i32) -> &?any
+#[import = ("bindings", "from_bool")]
+fn from_bool(i32) -> &?any
+#[import = ("bindings", "get")]
+fn get(&extern, &?any) -> &?any
+#[import = ("bindings", "set")]
+fn set(&?any, &?any, &?any)
+#[import = ("bindings", "delete")]
+fn delete(&?any, &?any)
 #[import = ("bindings", "instanceof")]
-fn instanceof(_: &?any, _: &?any) -> i32
-#[import = ("bindings", "typeof")] fn typeof(_: &?any) -> &?any
-#[import = ("bindings", "equals")] fn equals(_: &?any, _: &?any) -> i32
+fn instanceof(&?any, &?any) -> i32
+#[import = ("bindings", "typeof")]
+fn typeof(&?any) -> &?any
+#[import = ("bindings", "equals")]
+fn equals(&?any, &?any) -> i32
 #[import = ("bindings", "strict_equals")]
-fn strict_equals(_: &?any, _: &?any) -> i32
+fn strict_equals(&?any, &?any) -> i32
 #[import = ("bindings", "fun_call")]
-fn fun_call(_: &?any, _: &?any, _: &?any) -> &?any
+fn fun_call(&?any, &?any, &?any) -> &?any
 #[import = ("bindings", "meth_call")]
-fn meth_call(_: &?any, _: &?any, _: &?any) -> &?any
-#[import = ("bindings", "new")] fn new(_: &?any, _: &?any) -> &?any
-#[import = ("bindings", "new_obj")] fn new_obj() -> &?any
-#[import = ("bindings", "new_array")] fn new_array(_: i32) -> &extern
-#[import = ("bindings", "global_this")] const global_this: &?any
-#[import = ("bindings", "iter_props")] fn iter_props(_: &?any, _: &?any)
-#[import = ("bindings", "array_length")] fn array_length(_: &extern) -> i32
+fn meth_call(&?any, &?any, &?any) -> &?any
+#[import = ("bindings", "new")]
+fn new(&?any, &?any) -> &?any
+#[import = ("bindings", "new_obj")]
+fn new_obj() -> &?any
+#[import = ("bindings", "new_array")]
+fn new_array(i32) -> &extern
+#[import = ("bindings", "global_this")]
+const global_this: &?any
+#[import = ("bindings", "iter_props")]
+fn iter_props(&?any, &?any)
+#[import = ("bindings", "array_length")]
+fn array_length(&extern) -> i32
 #[import = ("bindings", "array_get")]
-fn array_get(_: &extern, _: i32) -> &?any
+fn array_get(&extern, i32) -> &?any
 #[import = ("bindings", "array_set")]
-fn array_set(_: &extern, _: i32, _: &?any)
-#[import = ("bindings", "wrap_callback")] fn wrap_callback(_: &eq) -> &?any
+fn array_set(&extern, i32, &?any)
+#[import = ("bindings", "wrap_callback")]
+fn wrap_callback(&eq) -> &?any
 #[import = ("bindings", "wrap_callback_args")]
-fn wrap_callback_args(_: &eq) -> &?any
+fn wrap_callback_args(&eq) -> &?any
 #[import = ("bindings", "wrap_callback_strict")]
-fn wrap_callback_strict(_: i32, _: &eq) -> &?any
+fn wrap_callback_strict(i32, &eq) -> &?any
 #[import = ("bindings", "wrap_callback_unsafe")]
-fn wrap_callback_unsafe(_: &eq) -> &?any
+fn wrap_callback_unsafe(&eq) -> &?any
 #[import = ("bindings", "wrap_meth_callback")]
-fn wrap_meth_callback(_: &eq) -> &?any
+fn wrap_meth_callback(&eq) -> &?any
 #[import = ("bindings", "wrap_meth_callback_args")]
-fn wrap_meth_callback_args(_: &eq) -> &?any
+fn wrap_meth_callback_args(&eq) -> &?any
 #[import = ("bindings", "wrap_meth_callback_strict")]
-fn wrap_meth_callback_strict(_: i32, _: &eq) -> &?any
+fn wrap_meth_callback_strict(i32, &eq) -> &?any
 #[import = ("bindings", "wrap_meth_callback_unsafe")]
-fn wrap_meth_callback_unsafe(_: &eq) -> &?any
+fn wrap_meth_callback_unsafe(&eq) -> &?any
 #[import = ("bindings", "wrap_fun_arguments")]
-fn wrap_fun_arguments(_: &?any) -> &?any
-#[import = ("fail", "caml_failwith_tag")] fn caml_failwith_tag() -> &eq
+fn wrap_fun_arguments(&?any) -> &?any
+#[import = ("fail", "caml_failwith_tag")]
+fn caml_failwith_tag() -> &eq
 #[import = ("stdlib", "caml_named_value")]
-fn caml_named_value(_: &string) -> &?eq
+fn caml_named_value(&string) -> &?eq
 #[import = ("obj", "caml_callback_1")]
-fn caml_callback_1(_: &eq, _: &eq) -> &eq
-#[import = ("obj", "caml_is_closure")] fn caml_is_closure(_: &eq) -> i32
-#[import = ("obj", "caml_is_last_arg")] fn caml_is_last_arg(_: &eq) -> i32
+fn caml_callback_1(&eq, &eq) -> &eq
+#[import = ("obj", "caml_is_closure")]
+fn caml_is_closure(&eq) -> i32
+#[import = ("obj", "caml_is_last_arg")]
+fn caml_is_last_arg(&eq) -> i32
 #[import = ("jsstring", "jsstring_of_string")]
-fn jsstring_of_string(_: &string) -> &?any
+fn jsstring_of_string(&string) -> &?any
 #[import = ("jsstring", "string_of_jsstring")]
-fn string_of_jsstring(_: &?any) -> &string
-#[import = ("int32", "caml_copy_int32")] fn caml_copy_int32(_: i32) -> &eq
-#[import = ("int32", "Int32_val")] fn Int32_val(_: &eq) -> i32
+fn string_of_jsstring(&?any) -> &string
+#[import = ("int32", "caml_copy_int32")]
+fn caml_copy_int32(i32) -> &eq
+#[import = ("int32", "Int32_val")]
+fn Int32_val(&eq) -> i32
 #[import = ("int32", "caml_copy_nativeint")]
-fn caml_copy_nativeint(_: i32) -> &eq
-#[import = ("int32", "Nativeint_val")] fn Nativeint_val(_: &eq) -> i32
+fn caml_copy_nativeint(i32) -> &eq
+#[import = ("int32", "Nativeint_val")]
+fn Nativeint_val(&eq) -> i32
 type block = [mut &eq]
 type float = { f: f64 }
 type float_array = [mut f64]
 type string = [mut i8]
 type js = { f: &?any }
-type function_1 = fn(_: &eq, _: &eq) -> &eq
+type function_1 = fn(&eq, &eq) -> &eq
 type closure = open { f: &function_1 }
-type function_2 = fn(_: &eq, _: &eq, _: &eq) -> &eq
+type function_2 = fn(&eq, &eq, &eq) -> &eq
 type cps_closure = open { f: &function_2 }
 #[export = "wrap"]
 fn wrap(x: &?any) -> &eq {
@@ -338,6 +363,7 @@ fn caml_callback(f: &eq, count: i32, args: &extern, kind: i32) -> &?any {
     become unwrap(acc);
 }
 #[export = "caml_jsstring_of_string"]
+#[export = "caml_js_from_string"]
 fn caml_jsstring_of_string(x: &eq) -> &eq {
     let s: &string;
     s = x as &string;
@@ -384,6 +410,7 @@ fn caml_jsbytes_of_string(x: &eq) -> &eq {
     return {js| f: jsstring_of_string(s') };
 }
 #[export = "caml_string_of_jsstring"]
+#[export = "caml_js_to_string"]
 fn caml_string_of_jsstring(s: &eq) -> &eq {
     become string_of_jsstring((s as &js).f);
 }

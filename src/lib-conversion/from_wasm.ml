@@ -1,6 +1,3 @@
-(*ZZZ
-collect exports
-*)
 open Wax
 module Src = Wasm.Ast.Text
 module Uint32 = Utils.Uint32
@@ -26,24 +23,33 @@ module Sequence = struct
       default;
     }
 
-  let register' seq (id : Src.name option) exports =
+  let register' seq export_tbl (kind : Src.exportable option)
+      (id : Src.name option) exports =
+    let idx = Uint32.of_int seq.last_index in
     let name =
       let name =
         match (id, exports) with
         | (Some nm, _ | None, nm :: _)
           when Lexer.is_valid_identifier nm.Ast.desc ->
             nm.Ast.desc
-        | _ -> seq.default
+        | _ -> (
+            match kind with
+            | None -> seq.default
+            | Some kind -> (
+                match Hashtbl.find_opt export_tbl (kind, Src.Num idx) with
+                | Some (nm :: _) when Lexer.is_valid_identifier nm.Ast.desc ->
+                    nm.Ast.desc
+                | _ -> seq.default))
       in
       Namespace.add seq.namespace name
     in
-    let idx = Uint32.of_int seq.last_index in
     seq.last_index <- seq.last_index + 1;
     Hashtbl.add seq.index_mapping idx name;
     Option.iter (fun id -> Hashtbl.add seq.label_mapping id.Ast.desc name) id;
     name
 
-  let register seq id exports = ignore (register' seq id exports)
+  let register seq export_tbl kind id exports =
+    ignore (register' seq export_tbl kind id exports)
 
   let get seq (idx : Src.idx) =
     {
@@ -119,10 +125,11 @@ type ctx = {
   memories : Sequence.t;
   tables : Sequence.t;
   tags : Sequence.t;
-  locals : Sequence.t;
-  labels : LabelStack.t;
   type_defs : Src.subtype Tbl.t;
   function_types : Src.typeuse Tbl.t;
+  exports : (Src.exportable * string, Src.name list) Hashtbl.t;
+  locals : Sequence.t;
+  labels : LabelStack.t;
   tag_types : Src.typeuse Tbl.t;
   label_arities : (string option * int) list;
   return_arity : int;
@@ -137,6 +144,8 @@ let idx ctx kind i =
   | `Type -> Sequence.get ctx.types i
   | `Global -> Sequence.get ctx.globals i
   | `Func -> Sequence.get ctx.functions i
+  | `Mem -> Sequence.get ctx.memories i
+  | `Table -> Sequence.get ctx.tables i
   | `Tag -> Sequence.get ctx.tags i
   | `Local -> Sequence.get ctx.locals i
 
@@ -234,14 +243,15 @@ let lookup_type (type typ) ctx (kind : typ kind) idx : typ =
   | Func -> get ctx.functions ctx.function_types idx
   | Tag -> get ctx.tags ctx.tag_types idx
 
-let register_type (type typ) ctx (kind : typ kind) idx exports (typ : typ) =
-  let register seq tbl idx =
-    Tbl.add tbl (Sequence.register' seq idx exports) typ
+let register_type (type typ) ctx export_tbl (kind : typ kind) idx exports
+    (typ : typ) =
+  let register seq tbl kind idx =
+    Tbl.add tbl (Sequence.register' seq export_tbl kind idx exports) typ
   in
   match kind with
   | Type -> assert false
-  | Func -> register ctx.functions ctx.function_types idx
-  | Tag -> register ctx.tags ctx.tag_types idx
+  | Func -> register ctx.functions ctx.function_types (Some Func) idx
+  | Tag -> register ctx.tags ctx.tag_types (Some Tag) idx
 
 let functype_no_bindings_arity { Src.params; results } =
   (Array.length params, Array.length results)
@@ -988,7 +998,11 @@ let typeuse ctx ((typ, sign) : Src.typeuse) =
 let string_of_name (nm : Src.name) =
   { nm with desc = Ast.String (None, nm.desc) }
 
-let exports e = List.map (fun nm -> ("export", string_of_name nm)) e
+let exports ctx kind name e =
+  List.map
+    (fun nm -> ("export", string_of_name nm))
+    (e
+    @ try Hashtbl.find ctx.exports (kind, name.Ast.desc) with Not_found -> [])
 
 let import module_ name =
   ( "import",
@@ -996,7 +1010,7 @@ let import module_ name =
 
 let single_expression l = match l with [ e ] -> e | _ -> assert false
 
-let modulefield ctx (f : (_ Src.modulefield, _) Ast.annotated) =
+let modulefield ctx export_tbl (f : (_ Src.modulefield, _) Ast.annotated) =
   let desc : _ Ast.modulefield option =
     match f.desc with
     | Types t -> Some (Type (rectype ctx t))
@@ -1018,7 +1032,9 @@ let modulefield ctx (f : (_ Src.modulefield, _) Ast.annotated) =
               let named_params =
                 List.map
                   (fun (id, t) ->
-                    let name = Sequence.register' ctx.locals id [] in
+                    let name =
+                      Sequence.register' ctx.locals export_tbl None id []
+                    in
                     ( Some
                         (match id with
                         | None -> Ast.no_loc name
@@ -1037,7 +1053,9 @@ let modulefield ctx (f : (_ Src.modulefield, _) Ast.annotated) =
                   let params =
                     Array.map
                       (fun (id, t) ->
-                        let name = Sequence.register' ctx.locals id [] in
+                        let name =
+                          Sequence.register' ctx.locals export_tbl None id []
+                        in
                         ( Some
                             (match id with
                             | None -> Ast.no_loc name
@@ -1055,89 +1073,77 @@ let modulefield ctx (f : (_ Src.modulefield, _) Ast.annotated) =
           | None, None -> assert false (* Should not happen *)
         in
         let typ = Option.map (fun i -> idx ctx `Type i) (fst typ) in
-        List.iter (fun (id, _) -> Sequence.register ctx.locals id []) locals;
+        List.iter
+          (fun (id, _) -> Sequence.register ctx.locals export_tbl None id [])
+          locals;
         let locals = bind_locals ctx locals in
+        let name = Sequence.get_current ctx.functions in
         Some
           (Func
              {
-               name = Sequence.get_current ctx.functions;
+               name;
                typ;
                sign = Some sign;
                body = (label (), locals @ Stack.run (instructions ctx instrs));
-               attributes = exports e;
+               attributes = exports ctx Func name e;
              })
-    | Import { module_; name; desc; exports = e; _ } -> (
+    | Import { module_; name = nm; desc; exports = e; _ } -> (
         match desc with
         | Func typ ->
             let typ, sign = typeuse ctx typ in
+            let name = Sequence.get_current ctx.functions in
             Some
               (Fundecl
                  {
-                   name = Sequence.get_current ctx.functions;
+                   name;
                    typ;
                    sign;
-                   attributes = import module_ name :: exports e;
+                   attributes = import module_ nm :: exports ctx Func name e;
                  })
         | Tag typ ->
             let typ, sign = typeuse ctx typ in
+            let name = Sequence.get_current ctx.tags in
             Some
               (Tag
                  {
-                   name = Sequence.get_current ctx.tags;
+                   name;
                    typ;
                    sign;
-                   attributes = import module_ name :: exports e;
+                   attributes = import module_ nm :: exports ctx Tag name e;
                  })
         | Global typ ->
             let typ' = globaltype ctx typ in
+            let name = Sequence.get_current ctx.globals in
             Some
               (GlobalDecl
                  {
-                   name = Sequence.get_current ctx.globals;
+                   name;
                    mut = typ'.mut;
                    typ = typ'.typ;
-                   attributes = import module_ name :: exports e;
+                   attributes = import module_ nm :: exports ctx Global name e;
                  })
         | Memory _ | Table _ -> None (*ZZZ*))
     | Global { typ; init; exports = e; _ } ->
         let typ' = globaltype ctx typ in
+        let name = Sequence.get_current ctx.globals in
         Some
           (Global
              {
-               name = Sequence.get_current ctx.globals;
+               name;
                mut = typ'.mut;
                typ = Some typ'.typ;
                def = single_expression (Stack.run (instructions ctx init));
-               attributes = exports e;
+               attributes = exports ctx Global name e;
              })
     | Tag { typ; exports = e; _ } ->
         let typ, sign = typeuse ctx typ in
-        Some
-          (Tag
-             {
-               name = Sequence.get_current ctx.tags;
-               typ;
-               sign;
-               attributes = exports e;
-             })
+        let name = Sequence.get_current ctx.tags in
+        Some (Tag { name; typ; sign; attributes = exports ctx Tag name e })
     | Memory _ | Table _ | Start _ | Export _ | Elem _ | Data _ -> None
   in
   Option.map (fun desc -> { f with desc }) desc
 
-(*
-    | Memory of {
-        id : id option;
-        limits : limits;
-        init : string option;
-        exports : string list;
-      }
-    | Tag of { id : id option; typ : typeuse; exports : string list }
-    | Export of { name : string; kind : exportable; index : idx }
-    | Start of idx
-    | Elem of { id : id option; typ : reftype; init : expr list }
-    | Data of { id : id option; init : string; mode : datamode }
-*)
-let register_names ctx fields =
+let register_names ctx export_tbl fields =
   List.iter
     (fun (field : (_ Src.modulefield, _) Ast.annotated) ->
       match field.desc with
@@ -1145,14 +1151,19 @@ let register_names ctx fields =
           (* ZZZ Check for non-import fields *)
           match desc with
           | Func _ -> ()
-          | Memory _ -> Sequence.register ctx.memories id exports
-          | Table _ -> Sequence.register ctx.tables id exports
-          | Global _ -> Sequence.register ctx.globals id exports
-          | Tag ty -> register_type ctx Tag id exports ty)
+          | Memory _ ->
+              Sequence.register ctx.memories export_tbl
+                (Some (Memory : Src.exportable))
+                id exports
+          | Table _ ->
+              Sequence.register ctx.tables export_tbl (Some Table) id exports
+          | Global _ ->
+              Sequence.register ctx.globals export_tbl (Some Global) id exports
+          | Tag ty -> register_type ctx export_tbl Tag id exports ty)
       | Types rectype ->
           Array.iter
             (fun (id, ty) ->
-              let name = Sequence.register' ctx.types id [] in
+              let name = Sequence.register' ctx.types export_tbl None id [] in
               Tbl.add ctx.type_defs name ty;
               match (ty : Src.subtype).typ with
               | Func _ | Array _ -> ()
@@ -1160,18 +1171,23 @@ let register_names ctx fields =
                   let seq = Sequence.make (Namespace.make ()) "f" in
                   let fields =
                     Array.map
-                      (fun t -> Sequence.register' seq (get_annot t) [])
+                      (fun t ->
+                        Sequence.register' seq export_tbl None (get_annot t) [])
                       l
                   in
                   Hashtbl.replace ctx.struct_fields name
                     (seq, Array.to_list fields))
             rectype
-      | Global { id; exports; _ } -> Sequence.register ctx.globals id exports
+      | Global { id; exports; _ } ->
+          Sequence.register ctx.globals export_tbl (Some Global) id exports
       | Func _ | Export _ | Start _ -> ()
       | Elem _ | Data _ -> () (*ZZZ*)
-      | Memory { id; exports; _ } -> Sequence.register ctx.memories id exports
-      | Table { id; exports; _ } -> Sequence.register ctx.tables id exports
-      | Tag { id; exports; typ; _ } -> register_type ctx Tag id exports typ)
+      | Memory { id; exports; _ } ->
+          Sequence.register ctx.memories export_tbl (Some Memory) id exports
+      | Table { id; exports; _ } ->
+          Sequence.register ctx.tables export_tbl (Some Table) id exports
+      | Tag { id; exports; typ; _ } ->
+          register_type ctx export_tbl Tag id exports typ)
     fields;
   List.iter
     (fun (field : (_ Src.modulefield, _) Ast.annotated) ->
@@ -1179,13 +1195,29 @@ let register_names ctx fields =
       | Import { id; desc; exports; _ } -> (
           (* ZZZ Check for non-import fields *)
           match desc with
-          | Func typ -> register_type ctx Func id exports typ
+          | Func typ -> register_type ctx export_tbl Func id exports typ
           | Memory _ | Table _ | Global _ | Tag _ -> ())
-      | Func { id; exports; typ; _ } -> register_type ctx Func id exports typ
+      | Func { id; exports; typ; _ } ->
+          register_type ctx export_tbl Func id exports typ
       | Types _ | Global _ | Export _ | Start _ | Elem _ | Data _ | Memory _
       | Table _ | Tag _ ->
           ())
     fields
+
+let collect_exports fields =
+  let tbl = Hashtbl.create 16 in
+  let lst = ref [] in
+  List.iter
+    (fun (field : (_ Src.modulefield, _) Ast.annotated) ->
+      match field.desc with
+      | Export { name; kind; index } ->
+          lst := (kind, index, name) :: !lst;
+          let k = (kind, index.Ast.desc) in
+          Hashtbl.replace tbl k
+            (name :: (try Hashtbl.find tbl k with Not_found -> []))
+      | _ -> ())
+    fields;
+  (tbl, !lst)
 
 let module_ (_, fields) =
   let ctx =
@@ -1196,34 +1228,42 @@ let module_ (_, fields) =
       struct_fields = Hashtbl.create 16;
       globals = Sequence.make common_namespace "x";
       functions = Sequence.make common_namespace "f";
-      locals = Sequence.make common_namespace "x";
       memories = Sequence.make (Namespace.make ()) "m";
       tables = Sequence.make (Namespace.make ()) "m";
-      labels = LabelStack.make ();
       tags = Sequence.make (Namespace.make ()) "t";
       type_defs = Tbl.make ();
       function_types = Tbl.make ();
       tag_types = Tbl.make ();
+      exports = Hashtbl.create 16;
+      locals = Sequence.make common_namespace "x";
+      labels = LabelStack.make ();
       label_arities = [];
       return_arity = 0;
     }
   in
-  register_names ctx fields;
-  List.filter_map (fun f -> modulefield ctx f) fields
-
-(*
-- Collect exports to associate them to the corresponding module field
-
-- get existing type names
-- scan types, allocating new types + build array of type definitions
-  rename if not valid identifier
-  + mapping name -> index / index -> name / name -> new_name
-- get existing function names
-- get existing names for other components; rename if already used
-- build mappings: name -> new_name / index -> name
-- get existing local names
-
-
-List of reserved names:
-- all keywords
-*)
+  let export_tbl, export_lst = collect_exports fields in
+  register_names ctx export_tbl fields;
+  List.iter
+    (fun (kind, index, name) ->
+      let k =
+        ( kind,
+          (idx ctx
+             (match (kind : Src.exportable) with
+             | Func -> `Func
+             | Memory -> `Mem
+             | Table -> `Table
+             | Tag -> `Tag
+             | Global -> `Global)
+             index)
+            .desc )
+      in
+      let l =
+        name
+        ::
+        (match Hashtbl.find_opt ctx.exports k with
+        | None -> []
+        | Some l -> l)
+      in
+      Hashtbl.replace ctx.exports k l)
+    export_lst;
+  List.filter_map (fun f -> modulefield ctx export_tbl f) fields

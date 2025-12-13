@@ -42,6 +42,15 @@ wax [OPTIONS] [INPUT]
     - Values: `always`, `never`, `auto`.
     - Default: `auto` (colors enabled only if output is a TTY).
 
+
+- **`--fold`**
+    - Fold instructions into nested S-expressions.
+    - Applies typically to Wasm Text output.
+
+- **`--unfold`**
+    - Unfold instructions into flat instruction lists.
+    - Applies typically to Wasm Text output.
+
 - **`--source-map-file`** *FILE*
     - Generate a source map file.
 

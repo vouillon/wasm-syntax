@@ -47,6 +47,8 @@ You can also build the documentation locally using `mdbook build docs`.
 *   `-v`, `--validate`: Perform validation (type checking for Wax, well-formedness for Wasm Text). Validation is disabled by default.
 *   `-s`, `--strict-validate`: Perform strict reference validation (for Wasm Text). This overrides the default relaxed reference validation behavior.
 *   `--color`: Color output: `always`, `never`, or `auto` (default). `auto` colors only if output is a TTY.
+*   `--fold`: Fold instructions into nested S-expressions (for Wasm Text output).
+*   `--unfold`: Unfold instructions into flat instruction lists (for Wasm Text output).
 
 ## Example
 

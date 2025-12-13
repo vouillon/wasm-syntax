@@ -1,23 +1,24 @@
 #[import = ("ints", "parse_int")]
-fn parse_int(_: &eq, _: i32, _: &string) -> i32
+fn parse_int(&eq, i32, &string) -> i32
 #[import = ("ints", "format_int")]
-fn format_int(_: &eq, _: i32, _: i32) -> &eq
-#[import = ("fail", "caml_failwith")] fn caml_failwith(_: &eq)
+fn format_int(&eq, i32, i32) -> &eq
+#[import = ("fail", "caml_failwith")]
+fn caml_failwith(&eq)
 #[import = ("marshal", "caml_serialize_int_1")]
-fn caml_serialize_int_1(_: &eq, _: i32)
+fn caml_serialize_int_1(&eq, i32)
 #[import = ("marshal", "caml_serialize_int_4")]
-fn caml_serialize_int_4(_: &eq, _: i32)
+fn caml_serialize_int_4(&eq, i32)
 #[import = ("marshal", "caml_deserialize_uint_1")]
-fn caml_deserialize_uint_1(_: &eq) -> i32
+fn caml_deserialize_uint_1(&eq) -> i32
 #[import = ("marshal", "caml_deserialize_int_4")]
-fn caml_deserialize_int_4(_: &eq) -> i32
+fn caml_deserialize_int_4(&eq) -> i32
 type string = [mut i8]
-type compare = fn(_: &eq, _: &eq, _: i32) -> i32
-type hash = fn(_: &eq) -> i32
+type compare = fn(&eq, &eq, i32) -> i32
+type hash = fn(&eq) -> i32
 type fixed_length = { bsize_32: i32, bsize_64: i32 }
-type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
-type deserialize = fn(_: &eq) -> (&eq, i32)
-type dup = fn(_: &eq) -> &eq
+type serialize = fn(&eq, &eq) -> (i32, i32)
+type deserialize = fn(&eq) -> (&eq, i32)
+type dup = fn(&eq) -> &eq
 type custom_operations = {
     id: &string,
     compare: &?compare,
@@ -66,8 +67,11 @@ fn int32_dup(v: &eq) -> &eq {
 }
 #[export = "caml_copy_int32"]
 fn caml_copy_int32(i: i32) -> &eq { {int32| f: int32_ops, f_2: i }; }
-#[export = "Int32_val"] fn Int32_val(x: &eq) -> i32 { (x as &int32).f_2; }
+#[export = "Int32_val"]
+#[export = "Nativeint_val"]
+fn Int32_val(x: &eq) -> i32 { (x as &int32).f_2; }
 #[export = "caml_int32_bswap"]
+#[export = "caml_nativeint_bswap"]
 fn caml_int32_bswap(i: i32) -> i32 {
     rotr(i & 0x00FF00FF, 8) | rotl(i & 0xFF00FF00, 8);
 }
@@ -77,6 +81,7 @@ fn caml_int32_of_string(v: &eq) -> &eq {
     become caml_copy_int32(parse_int(v, 32, INT32_ERRMSG));
 }
 #[export = "caml_int32_compare"]
+#[export = "caml_nativeint_compare"]
 fn caml_int32_compare(i1: i32, i2: i32) -> &eq {
     ((i1 >s i2) - (i1 <s i2)) as &i31;
 }
@@ -111,6 +116,7 @@ fn caml_nativeint_of_string(v: &eq) -> &eq {
     become caml_copy_nativeint(parse_int(v, 32, NATIVEINT_ERRMSG));
 }
 #[export = "caml_int32_format"]
+#[export = "caml_nativeint_format"]
 fn caml_int32_format(x: &eq, x_2: &eq) -> &eq {
     become format_int(x, (x_2 as &int32).f_2, 0);
 }

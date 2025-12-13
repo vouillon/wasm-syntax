@@ -45,6 +45,7 @@ let hvbox pp ?indent f = Utils.Printer.hvbox pp.printer ?indent f
 let indent pp i f = Utils.Printer.indent pp.printer i f
 let space pp () = Utils.Printer.space pp.printer ()
 let cut pp () = Utils.Printer.cut pp.printer ()
+let newline pp () = Utils.Printer.newline pp.printer ()
 let punctuation pp s = print_styled pp Punctuation s
 let operator pp s = print_styled pp Operator s
 
@@ -150,7 +151,10 @@ let functype pp { params; results } =
   box pp ~indent:indent_level (fun () ->
       keyword pp "fn";
       print_paren_list
-        (fun pp (id, ty) -> print_typed_pat pp (id, Some ty))
+        (fun pp (id, ty) ->
+          match id with
+          | None -> valtype pp ty
+          | Some _ -> print_typed_pat pp (id, Some ty))
         pp (Array.to_list params);
       if results <> [||] then (
         space pp ();
@@ -877,7 +881,10 @@ let fundecl ~tag pp (name, typ, sign) =
     (fun { named_params; results } ->
       cut pp ();
       print_paren_list
-        (fun pp (id, t) -> print_typed_pat pp (id, Some t))
+        (fun pp (id, t) ->
+          match id with
+          | None -> valtype pp t
+          | Some _ -> print_typed_pat pp (id, Some t))
         pp named_params;
       if results <> [] then (
         space pp ();
@@ -901,7 +908,9 @@ let print_attributes pp attributes = List.iter (print_attribute pp) attributes
 
 let print_attr_prefix pp attributes_list content_fn =
   hvbox pp (fun () ->
-      print_attributes pp attributes_list;
+      if attributes_list <> [] then (
+        print_attributes pp attributes_list;
+        newline pp ());
       content_fn ())
 
 let modulefield pp field =

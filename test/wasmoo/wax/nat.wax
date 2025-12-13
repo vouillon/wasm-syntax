@@ -1,5 +1,7 @@
-#[export = "initialize_nat"] fn initialize_nat(x: &eq) -> &eq { 0 as &i31; }
-#[export = "create_nat"] fn create_nat(x: &eq) -> &eq { 0 as &i31; }
+#[export = "initialize_nat"]
+fn initialize_nat(x: &eq) -> &eq { 0 as &i31; }
+#[export = "create_nat"]
+fn create_nat(x: &eq) -> &eq { 0 as &i31; }
 #[export = "set_to_zero_nat"]
 fn set_to_zero_nat(x: &eq, x_2: &eq, x_3: &eq) -> &eq { 0 as &i31; }
 #[export = "set_digit_nat"]

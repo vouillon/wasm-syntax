@@ -1,10 +1,11 @@
-#[import = ("jslib", "unwrap")] fn unwrap(_: &eq) -> &?any
+#[import = ("jslib", "unwrap")]
+fn unwrap(&eq) -> &?any
 #[import = ("jslib", "caml_jsstring_of_string")]
-fn caml_jsstring_of_string(_: &eq) -> &eq
+fn caml_jsstring_of_string(&eq) -> &eq
 #[import = ("fail", "caml_is_special_exception")]
-fn caml_is_special_exception(_: &eq) -> i32
+fn caml_is_special_exception(&eq) -> i32
 #[import = ("ints", "caml_format_int")]
-fn caml_format_int(_: &eq, _: &eq) -> &eq
+fn caml_format_int(&eq, &eq) -> &eq
 type block = [mut &eq]
 type string = [mut i8]
 type buffer = { f: mut i32, f_2: &string }

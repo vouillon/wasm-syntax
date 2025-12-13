@@ -1,30 +1,38 @@
-#[import = ("fail", "caml_failwith")] fn caml_failwith(_: &eq)
+#[import = ("fail", "caml_failwith")]
+fn caml_failwith(&eq)
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(_: &eq)
-#[import = ("fail", "caml_raise_end_of_file")] fn caml_raise_end_of_file()
-#[import = ("obj", "double_array_tag")] const double_array_tag: i32
+fn caml_invalid_argument(&eq)
+#[import = ("fail", "caml_raise_end_of_file")]
+fn caml_raise_end_of_file()
+#[import = ("obj", "double_array_tag")]
+const double_array_tag: i32
 #[import = ("string", "caml_string_concat")]
-fn caml_string_concat(_: &eq, _: &eq) -> &eq
-#[import = ("obj", "caml_is_closure")] fn caml_is_closure(_: &eq) -> i32
+fn caml_string_concat(&eq, &eq) -> &eq
+#[import = ("obj", "caml_is_closure")]
+fn caml_is_closure(&eq) -> i32
 #[import = ("effect", "caml_is_continuation")]
-fn caml_is_continuation(_: &eq) -> i32
-#[import = ("bindings", "map_new")] fn map_new() -> &any
-#[import = ("bindings", "map_get")] fn map_get(_: &any, _: &eq) -> &?i31
-#[import = ("bindings", "map_set")] fn map_set(_: &any, _: &eq, _: &i31)
+fn caml_is_continuation(&eq) -> i32
+#[import = ("bindings", "map_new")]
+fn map_new() -> &any
+#[import = ("bindings", "map_get")]
+fn map_get(&any, &eq) -> &?i31
+#[import = ("bindings", "map_set")]
+fn map_set(&any, &eq, &i31)
 #[import = ("io", "caml_really_putblock")]
-fn caml_really_putblock(_: &eq, _: &string, _: i32, _: i32)
+fn caml_really_putblock(&eq, &string, i32, i32)
 #[import = ("io", "caml_really_getblock")]
-fn caml_really_getblock(_: &eq, _: &string, _: i32, _: i32) -> i32
+fn caml_really_getblock(&eq, &string, i32, i32) -> i32
 #[import = ("io", "caml_flush_if_unbuffered")]
-fn caml_flush_if_unbuffered(_: &eq)
+fn caml_flush_if_unbuffered(&eq)
 #[import = ("custom", "caml_init_custom_operations")]
 fn caml_init_custom_operations()
 #[import = ("custom", "caml_find_custom_operations")]
-fn caml_find_custom_operations(_: &string) -> &?custom_operations
+fn caml_find_custom_operations(&string) -> &?custom_operations
 #[import = ("version-dependent", "caml_marshal_header_size")]
 const caml_marshal_header_size: i32
 const input_val_from_string: &string = string#"input_val_from_string";
 #[export = "caml_input_value_from_bytes"]
+#[export = "caml_input_value_from_string"]
 fn caml_input_value_from_bytes(vstr: &eq, vofs: &eq) -> &eq {
     let str: &string;
     let ofs: i32;
@@ -67,12 +75,12 @@ type string = [mut i8]
 type float = { f: f64 }
 type float_array = [mut f64]
 type js = { f: &?any }
-type compare = fn(_: &eq, _: &eq, _: i32) -> i32
-type hash = fn(_: &eq) -> i32
+type compare = fn(&eq, &eq, i32) -> i32
+type hash = fn(&eq) -> i32
 type fixed_length = { bsize_32: i32, bsize_64: i32 }
-type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
-type deserialize = fn(_: &eq) -> (&eq, i32)
-type dup = fn(_: &eq) -> &eq
+type serialize = fn(&eq, &eq) -> (i32, i32)
+type deserialize = fn(&eq) -> (&eq, i32)
+type dup = fn(&eq) -> &eq
 type custom_operations = {
     id: &string,
     compare: &?compare,

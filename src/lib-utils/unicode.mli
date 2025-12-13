@@ -7,3 +7,8 @@ val terminal_width : ?offset:int -> string -> int
 *)
 
 val expand_tabs : ?offset:int -> string -> string
+(** [expand_tabs s] returns a copy of [s] where tab characters are replaced by
+    spaces, assuming a tab width of 8.
+
+    The optional argument [offset] (default 0) specifies the starting column
+    position. *)

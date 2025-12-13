@@ -1,5 +1,6 @@
 (*
 TODO:
+- get rid of funsig / revise the AST
 - do not differentiate strictly floats and ints
 - Fix grab logic: count number of holes, type, check hole order
 - Check that import correspond to a declaration

@@ -1,33 +1,39 @@
-#[import = ("fail", "caml_raise_constant")] fn caml_raise_constant(_: &eq)
+#[import = ("fail", "caml_raise_constant")]
+fn caml_raise_constant(&eq)
 #[import = ("fail", "caml_raise_with_arg")]
 fn caml_raise_with_arg(tag_2: &eq, arg: &eq)
-#[import = ("obj", "caml_fresh_oo_id")] fn caml_fresh_oo_id(_: &eq) -> &eq
-#[import = ("obj", "cont_tag")] const cont_tag: i32
+#[import = ("obj", "caml_fresh_oo_id")]
+fn caml_fresh_oo_id(&eq) -> &eq
+#[import = ("obj", "cont_tag")]
+const cont_tag: i32
 #[import = ("stdlib", "caml_named_value")]
-fn caml_named_value(_: &string) -> &?eq
-#[import = ("fail", "ocaml_exception")] tag ocaml_exception(_: &eq)
+fn caml_named_value(&string) -> &?eq
+#[import = ("fail", "ocaml_exception")]
+tag ocaml_exception(&eq)
 #[import = ("fail", "javascript_exception")]
-tag javascript_exception(_: &?extern)
+tag javascript_exception(&?extern)
 #[import = ("jslib", "caml_wrap_exception")]
-fn caml_wrap_exception(_: &?extern) -> &eq
-#[import = ("bindings", "start_fiber")] fn start_fiber(_: &eq)
+fn caml_wrap_exception(&?extern) -> &eq
+#[import = ("bindings", "start_fiber")]
+fn start_fiber(&eq)
 #[import = ("bindings", "suspend_fiber")]
 fn suspend_fiber(f: &?func, env: &?eq) -> &?any
-#[import = ("bindings", "resume_fiber")] fn resume_fiber(_: &?extern, _: &eq)
+#[import = ("bindings", "resume_fiber")]
+fn resume_fiber(&?extern, &eq)
 type block = [mut &eq]
 type string = [mut i8]
-type function_1 = fn(_: &eq, _: &eq) -> &eq
+type function_1 = fn(&eq, &eq) -> &eq
 type closure = open { f: &function_1 }
-type function_3 = fn(_: &eq, _: &eq, _: &eq, _: &eq) -> &eq
+type function_3 = fn(&eq, &eq, &eq, &eq) -> &eq
 type closure_3: closure = open { f: &function_1, f_2: &function_3 }
 type pair = { fst: &eq, snd: &eq }
 fn apply_pair(p: &pair) -> &eq {
     let f_3: &eq;
     become (f_3 as &closure).f(p.snd, f_3 := p.fst);
 }
-type cont_func = fn(_: &pair, _: &eq)
+type cont_func = fn(&pair, &eq)
 type cont = open { cont_func: &cont_func }
-type called_with_continuation = fn(_: &cont, _: &eq)
+type called_with_continuation = fn(&cont, &eq)
 type thunk = { f: &called_with_continuation, f_2: &eq }
 type cont_resume: cont = { cont_func: &cont_func, cont_resolver: &?extern }
 fn invoke_promise_resolver(p: &pair, x: &eq) {
@@ -250,8 +256,8 @@ fn caml_is_continuation(x: &eq) -> i32 {
         };
     0;
 }
-type function_2 = fn(_: &eq, _: &eq, _: &eq) -> &eq
-type function_4 = fn(_: &eq, _: &eq, _: &eq, _: &eq, _: &eq) -> &eq
+type function_2 = fn(&eq, &eq, &eq) -> &eq
+type function_4 = fn(&eq, &eq, &eq, &eq, &eq) -> &eq
 type cps_closure = open { f: &function_2 }
 type cps_closure_0 = open { f: &function_1 }
 type cps_closure_3: cps_closure = open { f: &function_2, f_2: &function_4 }

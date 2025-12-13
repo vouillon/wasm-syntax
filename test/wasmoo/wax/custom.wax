@@ -1,18 +1,20 @@
-#[import = ("int32", "int32_ops")] const int32_ops: &custom_operations
+#[import = ("int32", "int32_ops")]
+const int32_ops: &custom_operations
 #[import = ("int32", "nativeint_ops")]
 const nativeint_ops: &custom_operations
-#[import = ("int64", "int64_ops")] const int64_ops: &custom_operations
+#[import = ("int64", "int64_ops")]
+const int64_ops: &custom_operations
 #[import = ("bigarray", "bigarray_ops")]
 const bigarray_ops: &custom_operations
 #[import = ("string", "caml_string_equal")]
-fn caml_string_equal(_: &eq, _: &eq) -> &eq
+fn caml_string_equal(&eq, &eq) -> &eq
 type string = [mut i8]
-type compare = fn(_: &eq, _: &eq, _: i32) -> i32
-type hash = fn(_: &eq) -> i32
+type compare = fn(&eq, &eq, i32) -> i32
+type hash = fn(&eq) -> i32
 type fixed_length = { bsize_32: i32, bsize_64: i32 }
-type serialize = fn(_: &eq, _: &eq) -> (i32, i32)
-type deserialize = fn(_: &eq) -> (&eq, i32)
-type dup = fn(_: &eq) -> &eq
+type serialize = fn(&eq, &eq) -> (i32, i32)
+type deserialize = fn(&eq) -> (&eq, i32)
+type dup = fn(&eq) -> &eq
 type custom_operations = {
     id: &string,
     compare: &?compare,

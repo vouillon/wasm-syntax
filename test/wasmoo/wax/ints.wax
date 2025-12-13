@@ -1,6 +1,7 @@
-#[import = ("fail", "caml_failwith")] fn caml_failwith(_: &eq)
+#[import = ("fail", "caml_failwith")]
+fn caml_failwith(&eq)
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(_: &eq)
+fn caml_invalid_argument(&eq)
 type string = [mut i8]
 #[export = "caml_format_int"]
 fn caml_format_int(x: &eq, x_2: &eq) -> &eq {
