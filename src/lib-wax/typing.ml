@@ -12,9 +12,10 @@ TODO:
 - locations on the heap when push several values?
 - more methods rather than global functions (no ambiguity)?
   rotl(..), rotr(..), min(..), max(..), copysign(..)
+
+Optimizations
 - move lets at more appropriate places
 - remove redundant type annotations/casts
-- check constant expressions
 - option to tighten casts to any/extern / eliminate redundant casts
   and type annotations
 

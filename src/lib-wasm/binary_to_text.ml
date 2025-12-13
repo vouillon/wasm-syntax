@@ -361,7 +361,36 @@ let datamode (names : B.names) local_names (d : _ B.datamode) : _ T.datamode =
 
 let id map idx = Option.map Ast.no_loc (B.IntMap.find_opt idx map)
 
+let unique_names map =
+  let seen = Hashtbl.create 16 in
+  B.IntMap.filter
+    (fun _ name ->
+      if Hashtbl.mem seen name then false
+      else (
+        Hashtbl.add seen name ();
+        true))
+    map
+
+let unique_names_indirect map = B.IntMap.map unique_names map
+
+let make_names_unique (names : B.names) =
+  {
+    names with
+    functions = unique_names names.functions;
+    types = unique_names names.types;
+    tags = unique_names names.tags;
+    globals = unique_names names.globals;
+    tables = unique_names names.tables;
+    memories = unique_names names.memories;
+    data = unique_names names.data;
+    elem = unique_names names.elem;
+    locals = unique_names_indirect names.locals;
+    labels = unique_names_indirect names.labels;
+    fields = unique_names_indirect names.fields;
+  }
+
 let module_ (m : _ B.module_) : _ T.module_ =
+  let m = { m with names = make_names_unique m.names } in
   let all_subtypes =
     Array.concat
       (List.map

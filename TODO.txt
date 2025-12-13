@@ -44,9 +44,10 @@ syntaxic sugar:
 
 ====
 
-Keep strings as strings
+We are dropping duplicated names when converting from wasm to wat.
+We could put name annotations so as not to loose this information.
 
-Precedence tests (read and write text and check unchanged)
+Keep strings as strings
 
 allow comma at end of block
 
