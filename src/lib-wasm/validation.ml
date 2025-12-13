@@ -49,10 +49,21 @@ let print_string f s =
   let len, s = Output.escape_string s in
   Format.pp_print_as f len s
 
+let print_ident f id =
+  if Lexer.is_valid_identifier id then Format.fprintf f "$%s" id
+  else Format.fprintf f "$\"%s\"" (snd (Misc.escape_string id))
+
 let print_index f (idx : Ast.Text.idx) =
   match idx.desc with
   | Num n -> Format.fprintf f "%s" (Uint32.to_string n)
-  | Id id -> Format.fprintf f "$%s" id (*ZZZ print $"..." *)
+  | Id id -> print_ident f id
+
+let print_text f s =
+  Format.fprintf f "%a"
+    (Format.pp_print_list
+       ~pp_sep:(fun f () -> Format.pp_print_space f ())
+       Format.pp_print_string)
+    (String.split_on_char ' ' s)
 
 module Error = struct
   open Utils
@@ -68,9 +79,29 @@ module Error = struct
   let instruction_type_mismatch context ~location ty' ty =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f
-          "This instruction has type@ @[<2>%a@]@ but is expected to have type@ \
-           @[<2>%a@]."
-          print_valtype ty' print_valtype ty)
+          "This instruction is expected to have type@ @[<2>%a@]@ but has type@ \
+           @[<2>%a@]"
+          print_valtype ty print_valtype ty')
+
+  let expected_ref_type context ~location ~src_loc ty =
+    match src_loc with
+    | None ->
+        Diagnostic.report context ~location ~severity:Error
+          ~message:(fun f () ->
+            Format.fprintf f "Expected reference type but got type@ @[<2>%a@]."
+              print_valtype ty)
+    | Some location ->
+        Diagnostic.report context ~location ~severity:Error
+          ~message:(fun f () ->
+            Format.fprintf f
+              "This instruction should return a reference type but has type@ \
+               @[<2>%a@]."
+              print_valtype ty)
+
+  let table_type_mismatch context ~location idx ty =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The table %a@ %a@ @[%a@]." print_index idx print_text
+          "should contain functions but its elements have type" print_valtype ty)
 
   let type_mismatch context ~location ty' ty =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
@@ -133,6 +164,10 @@ module Error = struct
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "Only constant expressions are allowed here.")
 
+  let immutable_global context ~location idx =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The global %a should be mutable." print_index idx)
+
   let limit_too_large context ~location kind max =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f
@@ -162,10 +197,14 @@ module Error = struct
         Format.fprintf f
           "The type of the elements of this table must be nullable.")
 
-  let index_already_bound context ~location kind index =
-    (*ZZZ print $"..." *)
+  let uninitialized_local context ~location idx =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "The %s index $%s is already bound." kind
+        Format.fprintf f "The local variable %a has not been initialized."
+          print_index idx)
+
+  let index_already_bound context ~location kind index =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The %s index %a is already bound." kind print_ident
           index.Ast.desc)
 
   let expected_func_type context ~location idx =
@@ -183,11 +222,6 @@ module Error = struct
   let unsupported_tuple_type context ~location =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "Tuple types are not supported yet.")
-
-  let expected_ref_type context ~location ty =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "Expected reference type but got type@ @[<2>%a@]."
-          print_valtype ty)
 end
 
 let print_instr f i = Utils.Printer.run f (fun p -> Output.instr p i)
@@ -350,11 +384,11 @@ let subtype d ctx current { Ast.Text.typ; supertype; final } =
   let+@ supertype =
     match supertype with
     | None -> Some None
-    | Some ty ->
-        let+@ ty = resolve_type_index d ctx ty in
-        assert (ty > lnot current);
-        (*ZZZ*)
-        Some ty
+    | Some idx ->
+        let+@ i = resolve_type_index d ctx idx in
+        if i <= lnot current then
+          Error.unbound_index d ~location:idx.info "type" idx;
+        Some i
   in
   { typ; supertype; final }
 
@@ -454,11 +488,11 @@ type stack =
 
 let pop_any ctx loc st =
   match st with
-  | Unreachable -> (Unreachable, None)
-  | Cons (_, ty, r) -> (r, ty)
+  | Unreachable -> (Unreachable, (None, None))
+  | Cons (loc, ty, r) -> (r, (ty, loc))
   | Empty ->
       Error.empty_stack ctx.modul.diagnostics ~location:loc;
-      (st, None)
+      (st, (None, None))
 
 let pop ctx loc ty st =
   match st with
@@ -496,8 +530,7 @@ let get_local ctx ?(initialize = false) i =
   if initialize then
     ctx.initialized_locals <- IntSet.add idx ctx.initialized_locals
   else if not (IntSet.mem idx ctx.initialized_locals) then
-    failwith "uninitialized local";
-  (*ZZZ*)
+    Error.uninitialized_local ctx.modul.diagnostics ~location:i.info i;
   l
 
 let is_nullable ty =
@@ -842,7 +875,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       in
       unreachable
   | Br_on_null idx -> (
-      let* ty = pop_any ctx loc in
+      let* ty, loc' = pop_any ctx loc in
       match ty with
       | None -> return ()
       | Some (Ref { nullable = _; typ }) ->
@@ -851,10 +884,11 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           let* () = push_results params in
           push (Some loc) (Ref { nullable = false; typ })
       | Some ty ->
-          Error.expected_ref_type ctx.modul.diagnostics ~location:loc ty;
+          Error.expected_ref_type ctx.modul.diagnostics ~location:loc
+            ~src_loc:loc' ty;
           unreachable)
   | Br_on_non_null idx -> (
-      let* ty = pop_any ctx loc in
+      let* ty, loc' = pop_any ctx loc in
       match ty with
       | None -> return ()
       | Some (Ref { nullable = _; typ }) ->
@@ -865,7 +899,8 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           let* _ = pop_any ctx loc in
           return ()
       | Some ty ->
-          Error.expected_ref_type ctx.modul.diagnostics ~location:loc ty;
+          Error.expected_ref_type ctx.modul.diagnostics ~location:loc
+            ~src_loc:loc' ty;
           unreachable)
   | Br_on_cast (idx, ty1, ty2) ->
       let*! ty1 = reftype ctx.modul.diagnostics ctx.modul.types ty1 in
@@ -912,10 +947,13 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | CallIndirect (idx, tu) -> (
       let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
       let*! ty = typeuse' ctx.modul.diagnostics ctx.modul.types tu in
-      (*ZZZ*)
-      assert (
-        Types.val_subtype ctx.modul.subtyping_info (Ref typ.reftype)
-          (Ref { nullable = true; typ = Func }));
+      if
+        not
+          (Types.val_subtype ctx.modul.subtyping_info (Ref typ.reftype)
+             (Ref { nullable = true; typ = Func }))
+      then
+        Error.table_type_mismatch ctx.modul.diagnostics ~location:loc idx
+          (Ref typ.reftype);
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct _ | Array _ ->
           Error.expected_func_type ctx.modul.diagnostics ~location:loc idx;
@@ -949,10 +987,13 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | ReturnCallIndirect (idx, tu) -> (
       let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
       let*! ty = typeuse' ctx.modul.diagnostics ctx.modul.types tu in
-      (*ZZZ*)
-      assert (
-        Types.val_subtype ctx.modul.subtyping_info (Ref typ.reftype)
-          (Ref { nullable = true; typ = Func }));
+      if
+        not
+          (Types.val_subtype ctx.modul.subtyping_info (Ref typ.reftype)
+             (Ref { nullable = true; typ = Func }))
+      then
+        Error.table_type_mismatch ctx.modul.diagnostics ~location:loc idx
+          (Ref typ.reftype);
       match (Types.get_subtype ctx.modul.subtyping_info ty).typ with
       | Struct _ | Array _ ->
           Error.expected_func_type ctx.modul.diagnostics ~location:loc idx;
@@ -971,8 +1012,8 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       return ()
   | Select None -> (
       let* () = pop ctx loc I32 in
-      let* ty1 = pop_any ctx loc in
-      let* ty2 = pop_any ctx loc in
+      let* ty1, _ = pop_any ctx loc in
+      let* ty2, _ = pop_any ctx loc in
       match (ty1, ty2) with
       | None, None -> push_poly loc None
       | Some ty1, Some ty2 ->
@@ -1016,8 +1057,8 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       push (Some loc) ty.typ
   | GlobalSet idx ->
       let*! ty = Sequence.get ctx.modul.diagnostics ctx.modul.globals idx in
-      (*ZZZ*)
-      assert ty.mut;
+      if not ty.mut then
+        Error.immutable_global ctx.modul.diagnostics ~location:loc idx;
       pop ctx loc ty.typ
   | Load (idx, memarg, ty) ->
       let*! limits =
@@ -1277,20 +1318,22 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       assert ((not !validate_refs) || Hashtbl.mem ctx.modul.refs i);
       push (Some loc) (Ref { nullable = false; typ = Type i })
   | RefIsNull -> (
-      let* ty = pop_any ctx loc in
+      let* ty, loc' = pop_any ctx loc in
       match ty with
       | None -> return ()
       | Some (Ref _) -> push (Some loc) I32
       | Some ty ->
-          Error.expected_ref_type ctx.modul.diagnostics ~location:loc ty;
+          Error.expected_ref_type ctx.modul.diagnostics ~location:loc
+            ~src_loc:loc' ty;
           unreachable)
   | RefAsNonNull -> (
-      let* ty = pop_any ctx loc in
+      let* ty, loc' = pop_any ctx loc in
       match ty with
       | None -> return ()
       | Some (Ref ty) -> push (Some loc) (Ref { ty with nullable = false })
       | Some ty ->
-          Error.expected_ref_type ctx.modul.diagnostics ~location:loc ty;
+          Error.expected_ref_type ctx.modul.diagnostics ~location:loc
+            ~src_loc:loc' ty;
           unreachable)
   | RefEq ->
       let* () = pop ctx loc (Ref { nullable = true; typ = Eq }) in
@@ -1498,7 +1541,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop ctx loc F32 in
       push (Some loc) F64
   | ExternConvertAny ->
-      let* ty = pop_any ctx loc in
+      let* ty, _ = pop_any ctx loc in
       Option.iter
         (fun ty ->
           (*ZZZ*)
@@ -1508,7 +1551,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         ty;
       push (Some loc) (Ref { nullable = is_nullable ty; typ = Extern })
   | AnyConvertExtern ->
-      let* ty = pop_any ctx loc in
+      let* ty, _ = pop_any ctx loc in
       Option.iter
         (fun ty ->
           (*ZZZ*)

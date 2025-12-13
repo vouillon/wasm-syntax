@@ -42,3 +42,13 @@ Function arguments are before the function itself
   7 │   f; _(1);
              ^
   [128]
+
+Select condition is considered after the two branches
+
+  $ wax bad5.wax -o /dev/null
+  File "bad5.wax", line 2, characters 7-8:
+  Error: This expression occurs before a hole '_'.
+  1 │ fn k (x: i32) -> i32 {
+  2 │   x; _?1:2
+             ^
+  [128]

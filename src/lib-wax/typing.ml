@@ -958,8 +958,8 @@ let rec check_hole_order_rec ctx i n =
             in
             check_hole_order_in_list ctx fields n
         | Select (c, t, e) ->
-            n |> check_hole_order_rec ctx c |> check_hole_order_rec ctx t
-            |> check_hole_order_rec ctx e
+            n |> check_hole_order_rec ctx t |> check_hole_order_rec ctx e
+            |> check_hole_order_rec ctx c
         | Hole -> assert false
       in
       if n = 0 then 0

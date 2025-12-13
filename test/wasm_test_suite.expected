@@ -4,7 +4,6 @@ Error: The type index 0 is not bound.
 1060 │   (func (export "call_in_table") (param i32) (result i32)
 1061 │     (call_indirect (type 0) (local.get 0)))
                                 ^
-
 ==== core/exceptions/tag.wast ====
 Validation should have failed (non-empty tag result type):
   (module (tag (result i32)))
