@@ -236,7 +236,7 @@ fn caml_js_to_array(x: &eq) -> &eq {
     l = array_length(a);
     if l {
         if array_get(a, 0) is &float {
-            fa = [float_array| 0.; l];
+            fa = [float_array|0.; l];
             i = 0;
             'loop: loop {
                 if i <u l {
@@ -248,7 +248,7 @@ fn caml_js_to_array(x: &eq) -> &eq {
             return fa;
         }
     }
-    a' = [block| 0 as &i31; l + 1];
+    a' = [block|0 as &i31; l + 1];
     i = 0;
     'loop: loop {
         if i <u l { a'[i + 1] = wrap(array_get(a, i)); i = i + 1; br 'loop; }
@@ -261,7 +261,7 @@ fn caml_js_to_string_array(a: &extern) -> &eq {
     let l: i32;
     let i: i32;
     l = array_length(a);
-    a' = [block| 0 as &i31; l + 1];
+    a' = [block|0 as &i31; l + 1];
     i = 0;
     'loop: loop {
         if i <u l {
@@ -363,7 +363,7 @@ fn caml_jsbytes_of_string(x: &eq) -> &eq {
         }
     } /* 'count */
     if !n { return {js| f: jsstring_of_string(s) }; }
-    s' = [string| 0; i + n];
+    s' = [string|0; i + n];
     i = 0;
     n = 0;
     'fill: loop {
@@ -407,7 +407,7 @@ fn caml_string_of_jsbytes(s: &eq) -> &eq {
         }
     } /* 'count */
     if !n { return s'; }
-    s'' = [string| 0; i - n];
+    s'' = [string|0; i - n];
     i = 0;
     n = 0;
     'fill: loop {
@@ -469,7 +469,7 @@ fn caml_list_of_js_array(x: &eq) -> &eq {
     l = 0 as &i31;
     'loop: loop {
         if i <u len {
-            l = [block| 0 as &i31, wrap(array_get(a, i)), l];
+            l = [block|0 as &i31, wrap(array_get(a, i)), l];
             i = i + 1;
             br 'loop;
         }
@@ -483,13 +483,11 @@ fn caml_wrap_exception(x: &?extern) -> &eq {
     exn = x as &?any;
     'undef: {
         return
-            [block|
-                0 as &i31,
+            [block|0 as &i31,
                 br_on_null 'undef caml_named_value(jsError),
                 wrap(exn)];
     }
-    [block|
-        0 as &i31,
+    [block|0 as &i31,
         caml_failwith_tag(),
         caml_string_of_jsstring
             (wrap
@@ -503,7 +501,7 @@ fn caml_js_error_option_of_exception(x: &eq) -> &eq {
     exn = x as &block;
     if exn[0] == 0 as &i31 {
         if exn[1] == caml_named_value(jsError) {
-            return [block| 0 as &i31, exn[2]];
+            return [block|0 as &i31, exn[2]];
         }
     }
     0 as &i31;

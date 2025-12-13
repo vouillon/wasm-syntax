@@ -4,12 +4,7 @@ let caml_custom_event_index: i32 = 0;
 fn caml_runtime_events_user_register(evname: &eq, evtag: &eq, evtype: &eq) ->
 &eq {
     caml_custom_event_index = caml_custom_event_index + 1;
-    [block|
-        0 as &i31,
-        caml_custom_event_index as &i31,
-        evname,
-        evtag,
-        evtype];
+    [block|0 as &i31, caml_custom_event_index as &i31, evname, evtag, evtype];
 }
 #[export = "caml_runtime_events_user_resolve"]
 fn caml_runtime_events_user_resolve(x: &eq, x_2: &eq, x_3: &eq) -> &eq {

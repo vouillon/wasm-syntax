@@ -48,7 +48,7 @@ fn caml_hexstring_of_float(x: &eq, x_2: &eq, x_3: &eq) -> &eq {
             if exp_2 == 0x7FF {
                 txt = if !m => &chars { infinity; } else { nan_2; };
                 len = txt.length;
-                s = [string| 0; i + len];
+                s = [string|0; i + len];
                 s.copy(i, txt, 0, len);
                 br 'sign s;
             }
@@ -76,7 +76,7 @@ fn caml_hexstring_of_float(x: &eq, x_2: &eq, x_3: &eq) -> &eq {
             'count: loop { j = j + 1; d = d /u 10; br_if 'count d; }
             len = i + prec + (6 + j);
             if !prec { len = len - 1; }
-            s = [string| 0; len];
+            s = [string|0; len];
             if exp_2 >=s 0 { d = exp_2; } else { d = 0 - exp_2; }
             'write: loop {
                 len = len - 1;
@@ -184,7 +184,7 @@ fn caml_format_float(x: &eq, x_2: &eq) -> &eq {
                         inf_2;
                     } else { negative = 0; i = sign_style != 0; nan_2; };
                 len = txt.length;
-                s = [string| 0; i + len];
+                s = [string|0; i + len];
                 s.copy(i, txt, 0, len);
                 br 'sign s;
             }
@@ -333,7 +333,7 @@ fn caml_float_of_string(x: &eq) -> &eq {
         }
     } /* 'count */
     if j {
-        s' = [string| 0; len - j];
+        s' = [string|0; len - j];
         i = 0;
         j = 0;
         'copy: loop {
@@ -479,7 +479,7 @@ fn caml_modf_float(x: &eq) -> &eq {
             f = copysign(f, x_2);
         } else { i = x_2; f = copysign(0., x_2); }
     } else { i = x_2; f = x_2; }
-    [block| 0 as &i31, {float| f: f }, {float| f: i }];
+    [block|0 as &i31, {float| f: f }, {float| f: i }];
 }
 fn ldexp(x: f64, n: i32) -> f64 {
     if n >s 1023 {
@@ -529,7 +529,7 @@ fn caml_frexp_float(x: &eq) -> &eq {
     frexp((x as &float).f);
     e = _;
     m = _;
-    [block| 0 as &i31, {float| f: m }, e as &i31];
+    [block|0 as &i31, {float| f: m }, e as &i31];
 }
 #[export = "caml_signbit_float"]
 fn caml_signbit_float(x: f64) -> &eq { (x.to_bits >>u 63) as i32 as &i31; }

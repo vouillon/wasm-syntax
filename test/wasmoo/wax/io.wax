@@ -109,7 +109,7 @@ fn get_fd_offset(fd: i32) -> &fd_offset { map_get(get_fd_offsets(), fd); }
 const IO_BUFFER_SIZE: i32 = 65536;
 type open_flags = [i8]
 const sys_open_flags: &open_flags =
-    [open_flags| 1, 2, 6, 8, 16, 32, 0, 0, 64];
+    [open_flags|1, 2, 6, 8, 16, 32, 0, 0, 64];
 fn convert_flag_list(vflags: &eq) -> i32 {
     let flags: i32;
     let cons: &block;

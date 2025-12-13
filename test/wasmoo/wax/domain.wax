@@ -27,7 +27,7 @@ fn caml_atomic_exchange(ref: &eq, v: &eq) -> &eq {
     b[1] = v;
     r;
 }
-let caml_domain_dls: &eq = [block| 0 as &i31];
+let caml_domain_dls: &eq = [block|0 as &i31];
 #[export = "caml_domain_dls_set"]
 fn caml_domain_dls_set(a: &eq) -> &eq { caml_domain_dls = a; 0 as &i31; }
 #[export = "caml_domain_dls_compare_and_set"]
@@ -39,7 +39,7 @@ fn caml_domain_dls_compare_and_set(old: &eq, new: &eq) -> &eq {
 }
 #[export = "caml_domain_dls_get"]
 fn caml_domain_dls_get(x: &eq) -> &eq { caml_domain_dls; }
-const caml_ml_domain_unique_token: &eq = [block| 0 as &i31];
+const caml_ml_domain_unique_token: &eq = [block|0 as &i31];
 #[export = "caml_ml_domain_unique_token"]
 fn caml_ml_domain_unique_token_2(x: &eq) -> &eq {
     caml_ml_domain_unique_token;

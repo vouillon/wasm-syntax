@@ -138,7 +138,7 @@ fn format_int64_default(d: i64) -> &eq {
     if d <s 0 { negative = 1; i = 1; d = 0 - d; }
     n = d;
     'count: loop { i = i + 1; n = n /u 10; br_if 'count n != 0; }
-    s = [string| 0; i];
+    s = [string|0; i];
     'write: loop {
         i = i - 1;
         s[i] = 48 + (d %u 10) as i32;
@@ -184,7 +184,7 @@ fn caml_int64_format(x: &eq, x_2: &eq) -> &eq {
         }
     }
     chars = uppercase?uppercase_hex_table:lowercase_hex_table;
-    s = [string| 0; i];
+    s = [string|0; i];
     'write: loop {
         i = i - 1;
         s[i] = chars[(d %u base) as i32] as i32_u;

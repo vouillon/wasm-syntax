@@ -21,7 +21,7 @@
 
    (type $block (array (mut (ref eq))))
    (type $string (array (mut i8)))
-   (type $float (struct (field f64)))
+   (type $float (struct (field $f f64)))
    (type $float_array (array (mut f64)))
 
    (data $Array_make "Array.make")
@@ -41,7 +41,7 @@
       (if (i32.eqz (local.get $sz)) (then (return (global.get $empty_array))))
       (drop (block $not_float (result (ref eq))
          (local.set $f
-            (struct.get $float 0
+            (struct.get $float $f
                (br_on_cast_fail $not_float (ref eq) (ref $float)
                   (local.get $v))))
          (return (array.new $float_array (local.get $f) (local.get $sz)))))
@@ -62,7 +62,7 @@
                                (i32.const 0) (i32.const 10)))))
       (if (i32.eqz (local.get $sz)) (then (return (global.get $empty_array))))
       (local.set $f
-         (struct.get $float 0
+         (struct.get $float $f
             (ref.cast (ref $float) (local.get $v))))
       (array.new $float_array (local.get $f) (local.get $sz)))
 
@@ -96,7 +96,7 @@
                      (array.new $float_array (f64.const 0) (local.get $size)))
                   (loop $loop
                      (array.set $float_array (local.get $res) (local.get $i)
-                        (struct.get $float 0
+                        (struct.get $float $f
                            (ref.cast (ref $float)
                               (array.get $block (local.get $init)
                                  (i32.add (local.get $i) (i32.const 1))))))
@@ -116,7 +116,7 @@
       (result (ref eq))
       (array.set $float_array (ref.cast (ref $float_array) (local.get $a))
          (i31.get_s (ref.cast (ref i31) (local.get $i)))
-         (struct.get $float 0 (ref.cast (ref $float) (local.get $v))))
+         (struct.get $float $f (ref.cast (ref $float) (local.get $v))))
       (ref.i31 (i32.const 0)))
 
    (func (export "caml_array_sub")
@@ -387,7 +387,7 @@
             (array.fill $float_array
                (ref.cast (ref $float_array) (local.get $a))
                (i31.get_u (ref.cast (ref i31) (local.get $i)))
-               (struct.get $float 0 (ref.cast (ref $float) (local.get $v)))
+               (struct.get $float $f (ref.cast (ref $float) (local.get $v)))
                (local.get $len))))
       (ref.i31 (i32.const 0)))
 
@@ -401,7 +401,7 @@
             (array.fill $float_array
                (ref.cast (ref $float_array) (local.get $a))
                (i31.get_u (ref.cast (ref i31) (local.get $i)))
-               (struct.get $float 0 (ref.cast (ref $float) (local.get $v)))
+               (struct.get $float $f (ref.cast (ref $float) (local.get $v)))
                (local.get $len))))
       (ref.i31 (i32.const 0)))
 )

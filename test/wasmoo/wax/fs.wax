@@ -78,7 +78,7 @@ fn caml_raise_no_such_file(vname: &eq) {
     let len: i32;
     name = vname as &string;
     len = name.length;
-    msg = [string| 0; len + 27];
+    msg = [string|0; len + 27];
     msg.copy(0, name, 0, len);
     msg;
     len;

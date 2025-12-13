@@ -84,7 +84,7 @@ fn caml_create_bytes(len: &eq) -> &eq {
     let l: i32;
     l = len as &i31 as i32_s;
     if l <s 0 { caml_invalid_argument(string#"foo"); }
-    [string| 0; l];
+    [string|0; l];
 }
 #[export = "caml_blit_string"]
 fn caml_blit_string(v1: &eq, i1: &eq, v2: &eq, i2: &eq, n: &eq) -> &eq {
@@ -193,7 +193,7 @@ fn caml_string_concat(vs1: &eq, vs2: &eq) -> &eq {
     s2 = vs2 as &string;
     l1 = s1.length;
     l2 = s2.length;
-    s = [string| 0; l1 + l2];
+    s = [string|0; l1 + l2];
     s.copy(0, s1, 0, l1);
     s.copy(l1, s2, 0, l2);
     s;

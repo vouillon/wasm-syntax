@@ -12,8 +12,7 @@ fn caml_alloc_tm
 (sec: i32, min: i32, hour: i32, mday: i32, mon: i32, year: i32, wday: i32,
  yday: i32, isdst: i32)
 -> &eq {
-    [block|
-        0 as &i31,
+    [block|0 as &i31,
         sec as &i31,
         min as &i31,
         hour as &i31,
@@ -41,7 +40,7 @@ fn unix_mktime(x: &eq) -> &eq {
              tm[4] as &i31 as i32_s, tm[3] as &i31 as i32_s,
              tm[2] as &i31 as i32_s, tm[1] as &i31 as i32_s)
             / 1000.;
-    [block| 0 as &i31, {float| f: t }, localtime(t)];
+    [block|0 as &i31, {float| f: t }, localtime(t)];
 }
 #[export = "unix_inet_addr_of_string"]
 fn unix_inet_addr_of_string(x: &eq) -> &eq { 0 as &i31; }

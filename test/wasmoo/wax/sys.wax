@@ -64,7 +64,7 @@ fn caml_sys_random_seed(x: &eq) -> &eq {
     let n: i32;
     r = random_seed();
     n = ta_length(r);
-    a = [block| 0 as &i31; n + 1];
+    a = [block|0 as &i31; n + 1];
     i = 0;
     'loop: loop {
         if i <u n {
@@ -91,7 +91,7 @@ fn caml_sys_const_ostype_win32(x: &eq) -> &eq { 0 as &i31; }
 fn caml_sys_const_ostype_cygwin(x: &eq) -> &eq { 0 as &i31; }
 #[export = "caml_sys_get_config"]
 fn caml_sys_get_config(x: &eq) -> &eq {
-    [block| 0 as &i31, string#"foo", 32 as &i31, 0 as &i31];
+    [block|0 as &i31, string#"foo", 32 as &i31, 0 as &i31];
 }
 #[export = "caml_sys_isatty"]
 fn caml_sys_isatty(x: &eq) -> &eq { 0 as &i31; }
@@ -116,5 +116,5 @@ fn caml_handle_sys_error(exn: &?extern) {
     caml_raise_sys_error
         (caml_string_of_jsstring
              (caml_js_meth_call
-                  (wrap(exn as &?any), string#"foo", [block| 0 as &i31])));
+                  (wrap(exn as &?any), string#"foo", [block|0 as &i31])));
 }

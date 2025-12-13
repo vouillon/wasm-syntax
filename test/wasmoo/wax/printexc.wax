@@ -39,7 +39,7 @@ fn caml_format_exception(x: &eq) -> &eq {
     let s: &string;
     exn = x as &block;
     if exn[0] == 0 as &i31 => &eq {
-        buf = {buffer| f: 0, f_2: [string| 0; 256] };
+        buf = {buffer| f: 0, f_2: [string|0; 256] };
         add_string(buf, (exn[1] as &block)[1]);
         bucket =
             'continue: do &block {
@@ -79,7 +79,7 @@ fn caml_format_exception(x: &eq) -> &eq {
             } /* 'loop */
             add_char(buf, 41);
         }
-        s = [string| 0; buf.f];
+        s = [string|0; buf.f];
         s.copy(0, buf.f_2, 0, buf.f);
         s;
     } else { exn[1]; }

@@ -27,7 +27,7 @@ type assoc = { f: &string, f_2: mut &eq, f_3: mut &?assoc }
 type assoc_array = [mut &?assoc]
 const Named_value_size: i32 = 13;
 const named_value_table: &assoc_array =
-    [assoc_array| null as &?assoc; Named_value_size];
+    [assoc_array|null as &?assoc; Named_value_size];
 fn find_named_value(s: &eq, l: &?assoc) -> &?assoc {
     let a: &assoc;
     'tail: do &?assoc {
@@ -95,7 +95,7 @@ fn caml_unregister_named_value(name: &eq) -> &eq {
     0 as &i31;
 }
 #[export = "caml_global_data"]
-let caml_global_data: &block = [block| 0 as &i31; 12];
+let caml_global_data: &block = [block|0 as &i31; 12];
 #[export = "caml_register_global"]
 fn caml_register_global(x: &eq, v: &eq, x_2: &eq) -> &eq {
     let i: i32;

@@ -48,14 +48,14 @@ fn caml_input_value(ch: &eq) -> &eq {
     let buf: &string;
     let s: &intern_state;
     let h: &marshal_header;
-    header = [string| 0; 20];
+    header = [string|0; 20];
     r = caml_really_getblock(ch, header, 0, 20);
     if !r { caml_raise_end_of_file(); }
     if r <u 20 { caml_failwith(string#"foo"); }
     s = get_intern_state(header, 0);
     h = parse_header(s, input_value);
     len = h.data_len;
-    buf = [string| 0; len];
+    buf = [string|0; len];
     if caml_really_getblock(ch, buf, 0, len) <u len {
         caml_failwith(string#"foo");
     }
@@ -189,7 +189,7 @@ fn readstr(s: &intern_state) -> &string {
     src = s.src;
     pos = s.pos;
     'loop: loop { if src[pos + len] as i32_u { len = len + 1; br 'loop; } }
-    res = [string| 0; len];
+    res = [string|0; len];
     res.copy(0, src, pos, len);
     s.pos = pos + (len + 1);
     res;
@@ -225,7 +225,7 @@ fn readfloats(s: &intern_state, code: i32, len: i32) -> &eq {
     code =
         (code == CODE_DOUBLE_ARRAY8_BIG) | (code == CODE_DOUBLE_ARRAY32_BIG)
             ?CODE_DOUBLE_BIG:CODE_DOUBLE_LITTLE;
-    dest = [float_array| 0.; len];
+    dest = [float_array|0.; len];
     'loop: loop {
         if i <u len { dest[i] = readfloat(s, code); i = i + 1; br 'loop; }
     } /* 'loop */
@@ -315,10 +315,10 @@ fn intern_rec(s: &intern_state, h: &marshal_header) -> &eq {
     let str: &string;
     let v: &eq;
     caml_init_custom_operations();
-    res = [block| 0 as &i31];
+    res = [block|0 as &i31];
     sp = {stack_item| blk: res, pos: 0, next: null as &?stack_item };
     size = h.num_objects;
-    if size { s.obj_table = [block| 0 as &i31; size]; }
+    if size { s.obj_table = [block|0 as &i31; size]; }
     v = 0 as &i31;
     'exit: {
         'loop: loop {
@@ -503,13 +503,13 @@ fn intern_rec(s: &intern_state, h: &marshal_header) -> &eq {
                         register_object(s, v);
                         br 'done;
                     } /* 'read_string */
-                    str = [string| 0; len];
+                    str = [string|0; len];
                     readblock(s, str);
                     v = str;
                     register_object(s, v);
                     br 'done;
                 } /* 'read_block */
-                b = [block| 0 as &i31; size + 1];
+                b = [block|0 as &i31; size + 1];
                 b[0] = tag_2 as &i31;
                 if size {
                     register_object(s, b);
@@ -613,7 +613,7 @@ fn reserve_extern_output(s: &extern_state, required: i32) -> i32 {
     last = s.output_last;
     last.end = s.pos;
     if required >s SIZE_EXTERN_OUTPUT_BLOCK >>u 1 { extra = required; }
-    buf = [string| 0; SIZE_EXTERN_OUTPUT_BLOCK + extra];
+    buf = [string|0; SIZE_EXTERN_OUTPUT_BLOCK + extra];
     blk = {output_block| next: null as &?output_block, end: 0, data: buf };
     last.next = blk;
     s.output_last = blk;
@@ -945,7 +945,7 @@ fn extern_value
     s = init_extern_state(flags, output, pos, user_provided_output);
     extern_rec(s, v);
     len = extern_output_length(s, pos);
-    header = [string| 0; 20];
+    header = [string|0; 20];
     store32(header, 0, Intext_magic_number_small);
     store32(header, 4, len);
     store32(header, 8, s.obj_counter);
@@ -968,13 +968,13 @@ fn caml_output_value_to_string(v: &eq, flags: &eq) -> &eq {
         {output_block|
             next: null as &?output_block,
             end: SIZE_EXTERN_OUTPUT_BLOCK,
-            data: [string| 0; SIZE_EXTERN_OUTPUT_BLOCK]
+            data: [string|0; SIZE_EXTERN_OUTPUT_BLOCK]
         };
     extern_value(flags, blk, 0, 0, v);
     st = _;
     buf = _;
     sz = _;
-    res = [string| 0; sz + 20];
+    res = [string|0; sz + 20];
     res.copy(0, buf, 0, 20);
     pos = 20;
     'loop: loop {
@@ -1026,7 +1026,7 @@ fn caml_output_value(ch: &eq, v: &eq, flags: &eq) -> &eq {
         {output_block|
             next: null as &?output_block,
             end: SIZE_EXTERN_OUTPUT_BLOCK,
-            data: [string| 0; SIZE_EXTERN_OUTPUT_BLOCK]
+            data: [string|0; SIZE_EXTERN_OUTPUT_BLOCK]
         };
     extern_value(flags, blk, 0, 0, v);
     st = _;

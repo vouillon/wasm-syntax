@@ -6,8 +6,7 @@ type block = [mut &eq]
 type char_table = [i8]
 type int_array = [mut i32]
 const re_word_letters: &char_table =
-    [char_table|
-        0x00,
+    [char_table|0x00,
         0x00,
         0x00,
         0x00,
@@ -84,9 +83,9 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
     normtable = re[3] as &string;
     numgroups = re[4] as &i31 as i32_s;
     numregisters = re[5] as &i31 as i32_s;
-    group_start = [int_array| -1; numgroups];
-    group_end = [int_array| -1; numgroups];
-    re_register = [int_array| -1; numregisters];
+    group_start = [int_array|-1; numgroups];
+    group_end = [int_array|-1; numgroups];
+    re_register = [int_array|-1; numregisters];
     pc = 1;
     group_start[0] = pos;
     'reject: {
@@ -494,7 +493,7 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
             } /* 'continue */
         } /* 'ACCEPT */
         group_end[0] = pos;
-        res = [block| 0 as &i31; (numgroups << 1) + 1];
+        res = [block|0 as &i31; (numgroups << 1) + 1];
         i = 0;
         'loop: loop {
             if i <u numgroups {
@@ -530,7 +529,7 @@ fn re_search_forward(re: &eq, vs: &eq, vpos: &eq) -> &eq {
         pos = pos + 1;
         br_if 'loop pos <=u len;
     } /* 'loop */
-    [block| 0 as &i31];
+    [block|0 as &i31];
 }
 #[export = "re_search_backward"]
 fn re_search_backward(re: &eq, vs: &eq, vpos: &eq) -> &eq {
@@ -548,7 +547,7 @@ fn re_search_backward(re: &eq, vs: &eq, vpos: &eq) -> &eq {
         pos = pos - 1;
         br_if 'loop pos >=s 0;
     } /* 'loop */
-    [block| 0 as &i31];
+    [block|0 as &i31];
 }
 #[export = "re_string_match"]
 fn re_string_match(re: &eq, vs: &eq, vpos: &eq) -> &eq {
@@ -562,7 +561,7 @@ fn re_string_match(re: &eq, vs: &eq, vpos: &eq) -> &eq {
     if pos >u len { caml_invalid_argument(string#"foo"); }
     res = re_match(re, s, pos, 0);
     if res is &block { return res; }
-    [block| 0 as &i31];
+    [block|0 as &i31];
 }
 #[export = "re_partial_match"]
 fn re_partial_match(re: &eq, vs: &eq, vpos: &eq) -> &eq {
@@ -576,7 +575,7 @@ fn re_partial_match(re: &eq, vs: &eq, vpos: &eq) -> &eq {
     if pos >u len { caml_invalid_argument(string#"foo"); }
     res = re_match(re, s, pos, 1);
     if res is &block { return res; }
-    [block| 0 as &i31];
+    [block|0 as &i31];
 }
 #[export = "re_replacement_text"]
 fn re_replacement_text(vrepl: &eq, vgroups: &eq, vorig: &eq) -> &eq {
@@ -615,7 +614,7 @@ fn re_replacement_text(vrepl: &eq, vgroups: &eq, vorig: &eq) -> &eq {
             br 'loop;
         }
     } /* 'loop */
-    res = [string| 0; len];
+    res = [string|0; len];
     i = 0;
     'loop: loop {
         if i <u l {
