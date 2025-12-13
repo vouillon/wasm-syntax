@@ -168,8 +168,7 @@ let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
          print_underline ~at_end:true 0 (Unicode.terminal_width err_part));
       curr_pos := next_eol + 1;
       incr current_line
-  done;
-  Format.eprintf "@."
+  done
 
 let output_error ~theme ~source ~location:{ Ast.loc_start; loc_end } ~severity
     msg =

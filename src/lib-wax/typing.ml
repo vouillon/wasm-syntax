@@ -180,6 +180,10 @@ module Error = struct
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "The %s %a is not bound." kind print_name x)
 
+  let before_hole context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "This expression occurs before a hole '_'.")
+
   let unsupported_tuple_type context ~location =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "Tuple types are not supported yet.")
@@ -900,7 +904,7 @@ let rec check_hole_order_rec ctx i n =
         | Let (_, None)
         | Br (_, None)
         | Return None ->
-            raise Exit
+            n
         | BinOp (_, l, r) | Array (_, l, r) | ArrayGet (l, r) ->
             n |> check_hole_order_rec ctx l |> check_hole_order_rec ctx r
         | ArraySet (t, i, v) ->
@@ -958,7 +962,10 @@ let rec check_hole_order_rec ctx i n =
             |> check_hole_order_rec ctx e
         | Hole -> assert false
       in
-      if n > 0 then raise Exit else n
+      if n = 0 then 0
+      else (
+        Error.before_hole ctx.diagnostics ~location:(snd i.info);
+        raise Exit)
 
 and check_hole_order_in_list ctx l n =
   List.fold_left (fun n i -> check_hole_order_rec ctx i n) n l
