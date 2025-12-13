@@ -65,7 +65,7 @@
           (i31.get_s
             (ref.cast (ref i31)
               (array.get $block (local.get $tm) (i32.const 1)))))
-        (f64.const 1000.)))
+        (f64.const 1000)))
     (array.new_fixed $block 3 (ref.i31 (i32.const 0))
       (struct.new $float (local.get $t)) (call $localtime (local.get $t)))
   )

@@ -47,7 +47,7 @@
     (if (i32.lt_s (local.get $sz) (i32.const 0))
       (then (call $caml_invalid_argument (array.new_fixed $string 0))))
     (if (i32.eqz (local.get $sz)) (then (return (global.get $empty_array))))
-    (array.new $float_array (f64.const 0.) (local.get $sz))
+    (array.new $float_array (f64.const 0) (local.get $sz))
   )
   (func $caml_array_of_uniform_array (export "caml_array_of_uniform_array")
     (param $vinit (ref eq)) (result (ref eq))
@@ -63,7 +63,7 @@
           (then
             (local.set $size (i32.sub (local.get $size) (i32.const 1)))
             (local.set $res
-              (array.new $float_array (f64.const 0.) (local.get $size)))
+              (array.new $float_array (f64.const 0) (local.get $size)))
             (loop $loop
               (array.set $float_array (local.get $res) (local.get $i)
                 (struct.get $float $f
@@ -112,7 +112,7 @@
           (local.get $len))
         (return (local.get $a2))))
     (local.set $fa1 (ref.cast (ref $float_array) (local.get $a)))
-    (local.set $fa2 (array.new $float_array (f64.const 0.) (local.get $len)))
+    (local.set $fa2 (array.new $float_array (f64.const 0) (local.get $len)))
     (array.copy $float_array $float_array (local.get $fa2) (i32.const 0)
       (local.get $fa1) (i31.get_u (ref.cast (ref i31) (local.get $i)))
       (local.get $len))
@@ -126,7 +126,7 @@
     (local.set $len (i31.get_u (ref.cast (ref i31) (local.get $vlen))))
     (if (i32.eqz (local.get $len)) (then (return (global.get $empty_array))))
     (local.set $fa1 (ref.cast (ref $float_array) (local.get $a)))
-    (local.set $fa2 (array.new $float_array (f64.const 0.) (local.get $len)))
+    (local.set $fa2 (array.new $float_array (f64.const 0) (local.get $len)))
     (array.copy $float_array $float_array (local.get $fa2) (i32.const 0)
       (local.get $fa1) (i31.get_u (ref.cast (ref i31) (local.get $i)))
       (local.get $len))
@@ -135,7 +135,7 @@
   (func $caml_floatarray_dup (param $a (ref $float_array)) (result (ref eq))
     (local $a' (ref $float_array)) (local $len i32)
     (local.set $len (array.len (local.get $a)))
-    (local.set $a' (array.new $float_array (f64.const 0.) (local.get $len)))
+    (local.set $a' (array.new $float_array (f64.const 0) (local.get $len)))
     (array.copy $float_array $float_array (local.get $a') (i32.const 0)
       (local.get $a) (i32.const 0) (local.get $len))
     (local.get $a')
@@ -179,7 +179,7 @@
         (local.set $l1 (array.len (local.get $fa1)))
         (local.set $l2 (array.len (local.get $fa2)))
         (local.set $fa
-          (array.new $float_array (f64.const 0.)
+          (array.new $float_array (f64.const 0)
             (i32.add (local.get $l1) (local.get $l2))))
         (array.copy $float_array $float_array (local.get $fa) (i32.const 0)
           (local.get $fa1) (i32.const 0) (local.get $l1))
@@ -201,7 +201,7 @@
         (local.set $l1 (array.len (local.get $fa1)))
         (local.set $l2 (array.len (local.get $fa2)))
         (local.set $fa
-          (array.new $float_array (f64.const 0.)
+          (array.new $float_array (f64.const 0)
             (i32.add (local.get $l1) (local.get $l2))))
         (array.copy $float_array $float_array (local.get $fa) (i32.const 0)
           (local.get $fa1) (i32.const 0) (local.get $l1))
@@ -244,7 +244,7 @@
     (if (result (ref eq)) (local.get $isfloat)
       (then
         (local.set $fa
-          (array.new $float_array (f64.const 0.) (local.get $len)))
+          (array.new $float_array (f64.const 0) (local.get $len)))
         (local.set $l (local.get $x))
         (local.set $i (i32.const 0))
         (loop $fill

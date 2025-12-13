@@ -291,7 +291,7 @@
         (i32.or
           (i32.eq (local.get $code) (global.get $CODE_DOUBLE_ARRAY8_BIG))
           (i32.eq (local.get $code) (global.get $CODE_DOUBLE_ARRAY32_BIG)))))
-    (local.set $dest (array.new $float_array (f64.const 0.) (local.get $len)))
+    (local.set $dest (array.new $float_array (f64.const 0) (local.get $len)))
     (loop $loop
       (if (i32.lt_u (local.get $i) (local.get $len))
         (then

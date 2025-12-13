@@ -15,8 +15,8 @@ let () =
         printf "  (deps ../wasm-source/%s)\n" file;
         printf "  (action\n";
         printf
-          "   (run wax --input-format wat --format wat -o %%{target} \
-           ../wasm-source/%s)))\n"
+          "   (run wax --validate --input-format wat --format wat -o \
+           %%{target} ../wasm-source/%s)))\n"
           file;
         printf " (rule\n";
         printf "  (alias runtest)\n";
@@ -32,7 +32,7 @@ let () =
         printf "  (deps ../wasm-source/%s)\n" file;
         printf " (action\n";
         printf
-          "  (run wax --input-format wat --format wax -o %%{target} \
+          "  (run wax --validate --input-format wat --format wax -o %%{target} \
            ../wasm-source/%s)))\n"
           file;
         printf " (rule\n";
@@ -49,7 +49,7 @@ let () =
         printf "  (deps ../wax/%s.wax.gen)\n" base;
         printf " (action\n";
         printf
-          "  (run wax --input-format wax --format wat -o %%{target} \
+          "  (run wax --validate --input-format wax --format wat -o %%{target} \
            ../wax/%s.wax.gen)))\n"
           base;
         printf " (rule\n";

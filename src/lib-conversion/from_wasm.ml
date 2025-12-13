@@ -365,6 +365,21 @@ let is_integer =
   in
   fun s -> Re.execp int_re s
 
+let is_negative n = n.[0] = '-'
+
+let remove_sign n =
+  if n.[0] = '-' || n.[0] = '+' then String.sub n 1 (String.length n - 1) else n
+
+let integer i n : _ Ast.instr =
+  let e : _ Ast.instr = { i with desc = Int (remove_sign n) } in
+  if is_negative n then { i with desc = UnOp (Neg, e) } else e
+
+let float i n =
+  if is_integer n then integer i n
+  else
+    let e : _ Ast.instr = { i with desc = Float (remove_sign n) } in
+    if is_negative n then { i with desc = UnOp (Neg, e) } else e
+
 let sequence_opt l =
   match l with
   | [] -> None
@@ -846,12 +861,8 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       let* args = Stack.grab ctx.return_arity in
       Stack.push_poly (with_loc (Return (sequence_opt args)))
   | TupleMake _ -> return ()
-  | Const (I32 n) | Const (I64 n) ->
-      Stack.push 1 (with_loc (Int n)) (*ZZZ Negative ints / floats *)
-  | Const (F32 f) | Const (F64 f) ->
-      let f = if is_integer f then f ^ "." else f in
-      (*ZZZ ???*)
-      Stack.push 1 (with_loc (Float f))
+  | Const (I32 n) | Const (I64 n) -> Stack.push 1 (integer i n)
+  | Const (F32 f) | Const (F64 f) -> Stack.push 1 (float i f)
   | RefI31 ->
       let* e = Stack.pop in
       Stack.push 1

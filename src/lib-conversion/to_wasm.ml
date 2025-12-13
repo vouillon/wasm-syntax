@@ -376,6 +376,8 @@ let rec instruction ret ctx i : location Text.instr list =
       match expr_valtype i with
       | I32 -> folded loc (Const (I32 s)) []
       | I64 -> folded loc (Const (I64 s)) []
+      | F32 -> folded loc (Const (F32 s)) []
+      | F64 -> folded loc (Const (F64 s)) []
       | _ -> assert false)
   | Float s -> (
       match expr_valtype i with

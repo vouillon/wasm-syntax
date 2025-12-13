@@ -41,7 +41,7 @@ fn caml_floatarray_create(n: &eq) -> &eq {
     sz = n as &i31 as i32_s;
     if sz <s 0 { caml_invalid_argument(string#"foo"); }
     if !sz { return empty_array; }
-    [float_array|0.; sz];
+    [float_array|0; sz];
 }
 #[export = "caml_array_of_uniform_array"]
 fn caml_array_of_uniform_array(vinit: &eq) -> &eq {
@@ -54,7 +54,7 @@ fn caml_array_of_uniform_array(vinit: &eq) -> &eq {
     if size != 1 {
         if init[1] is &float {
             size = size - 1;
-            res = [float_array|0.; size];
+            res = [float_array|0; size];
             'loop: loop {
                 res[i] = (init[i + 1] as &float).f;
                 i = i + 1;
@@ -92,7 +92,7 @@ fn caml_array_sub(a: &eq, i: &eq, vlen: &eq) -> &eq {
             return a2;
         } /* 'not_block */;
     fa1 = a as &float_array;
-    fa2 = [float_array|0.; len];
+    fa2 = [float_array|0; len];
     fa2.copy(0, fa1, i as &i31 as i32_u, len);
     fa2;
 }
@@ -104,7 +104,7 @@ fn caml_floatarray_sub(a: &eq, i: &eq, vlen: &eq) -> &eq {
     len = vlen as &i31 as i32_u;
     if !len { return empty_array; }
     fa1 = a as &float_array;
-    fa2 = [float_array|0.; len];
+    fa2 = [float_array|0; len];
     fa2.copy(0, fa1, i as &i31 as i32_u, len);
     fa2;
 }
@@ -112,7 +112,7 @@ fn caml_floatarray_dup(a: &float_array) -> &eq {
     let a': &float_array;
     let len: i32;
     len = a.length;
-    a' = [float_array|0.; len];
+    a' = [float_array|0; len];
     a'.copy(0, a, 0, len);
     a';
 }
@@ -147,7 +147,7 @@ fn caml_array_append(va1: &eq, va2: &eq) -> &eq {
             fa2 = br_on_cast_fail 'a2_not_float_array &float_array va2;
             l1 = fa1.length;
             l2 = fa2.length;
-            fa = [float_array|0.; l1 + l2];
+            fa = [float_array|0; l1 + l2];
             fa.copy(0, fa1, 0, l1);
             fa.copy(l1, fa2, 0, l2);
             return fa;
@@ -167,7 +167,7 @@ fn caml_floatarray_append(va1: &eq, va2: &eq) -> &eq {
             fa2 = br_on_cast_fail 'a2_not_float_array &float_array va2;
             l1 = fa1.length;
             l2 = fa2.length;
-            fa = [float_array|0.; l1 + l2];
+            fa = [float_array|0; l1 + l2];
             fa.copy(0, fa1, 0, l1);
             fa.copy(l1, fa2, 0, l2);
             return fa;
@@ -210,7 +210,7 @@ fn caml_array_concat(x: &eq) -> &eq {
             } /* 'exit */;
     }
     if isfloat => &eq {
-        fa = [float_array|0.; len];
+        fa = [float_array|0; len];
         l = x;
         i = 0;
         'fill: loop {

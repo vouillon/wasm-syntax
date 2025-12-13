@@ -358,7 +358,7 @@
                         (i32.ge_u (local.get $exp) (i32.const 0x80000000)))))
                   (br $parse))
                 (if (i32.or (local.get $negative) (i64.eqz (local.get $m)))
-                  (then (return (f64.const 0.)))
+                  (then (return (f64.const 0)))
                   (else (return (f64.const inf))))))
             (if
               (i32.and (i32.ge_u (local.get $c) (i32.const 48))
@@ -416,7 +416,7 @@
         (then (local.set $f (call $ldexp (local.get $f) (local.get $exp)))))
       (return (local.get $f)))
     (call $caml_failwith (array.new_fixed $string 0))
-    (f64.const 0.)
+    (f64.const 0)
   )
   (func $on_whitespace (param $s (ref $string)) (param $i i32) (result i32)
     (local $c i32)
@@ -629,9 +629,9 @@
     (if (f64.ne (local.get $x) (local.get $x)) (then (return (local.get $x))))
     (if (f64.ne (local.get $y) (local.get $y)) (then (return (local.get $y))))
     (if (f64.eq (local.get $x) (local.get $y)) (then (return (local.get $y))))
-    (if (result f64) (f64.eq (local.get $x) (f64.const 0.))
+    (if (result f64) (f64.eq (local.get $x) (f64.const 0))
       (then
-        (if (result f64) (f64.ge (local.get $y) (f64.const 0.))
+        (if (result f64) (f64.ge (local.get $y) (f64.const 0))
           (then (return (f64.const 0x1p-1074)))
           (else (return (f64.neg (f64.const 0x1p-1074))))))
       (else
@@ -655,7 +655,7 @@
             (then (i32.const 0))
             (else (i32.const 3))))
         (else
-          (if (result i32) (f64.eq (local.get $a) (f64.const 0.))
+          (if (result i32) (f64.eq (local.get $a) (f64.const 0))
             (then (i32.const 2))
             (else
               (if (result i32) (f64.eq (local.get $a) (local.get $a))
@@ -668,7 +668,7 @@
     (local.set $x_2
       (struct.get $float $f (ref.cast (ref $float) (local.get $x))))
     (local.set $a (f64.abs (local.get $x_2)))
-    (if (f64.ge (local.get $a) (f64.const 0.))
+    (if (f64.ge (local.get $a) (f64.const 0))
       (then
         (if (f64.lt (local.get $a) (f64.const inf))
           (then
@@ -678,7 +678,7 @@
             (local.set $f (f64.copysign (local.get $f) (local.get $x_2))))
           (else
             (local.set $i (local.get $x_2))
-            (local.set $f (f64.copysign (f64.const 0.) (local.get $x_2))))))
+            (local.set $f (f64.copysign (f64.const 0) (local.get $x_2))))))
       (else (local.set $i (local.get $x_2)) (local.set $f (local.get $x_2))))
     (array.new_fixed $block 3 (ref.i31 (i32.const 0))
       (struct.new $float (local.get $f)) (struct.new $float (local.get $i)))
@@ -730,7 +730,7 @@
         (i32.wrap_i64 (i64.shr_u (local.get $y) (i64.const 52)))))
     (if (i32.eqz (local.get $e))
       (then
-        (if (f64.ne (local.get $x) (f64.const 0.))
+        (if (f64.ne (local.get $x) (f64.const 0))
           (then
             (call $frexp (f64.mul (local.get $x) (f64.const 0x1p64)))
             (local.set $e)
@@ -771,11 +771,11 @@
     (local.set $a5 (f64.const 1.061405429))
     (local.set $p (f64.const 0.3275911))
     (local.set $t
-      (f64.div (f64.const 1.)
-        (f64.add (f64.const 1.)
+      (f64.div (f64.const 1)
+        (f64.add (f64.const 1)
           (f64.mul (local.get $p) (f64.abs (local.get $x))))))
     (local.set $y
-      (f64.sub (f64.const 1.)
+      (f64.sub (f64.const 1)
         (f64.mul
           (f64.add
             (f64.mul
@@ -797,7 +797,7 @@
   )
   (func $caml_erfc_float (export "caml_erfc_float")
     (param $x f64) (result f64)
-    (f64.sub (f64.const 1.) (call $erf (local.get $x)))
+    (f64.sub (f64.const 1) (call $erf (local.get $x)))
   )
   (func $caml_fma_float (export "caml_fma_float")
     (param $vx (ref eq)) (param $vy (ref eq)) (param $vz (ref eq))
@@ -847,16 +847,16 @@
           (struct.new $float
             (f64.add (f64.add (local.get $x) (local.get $z)) (local.get $y)))))
       (block $cont
-        (br_if $cont (f64.eq (local.get $y) (f64.const 0.)))
-        (br_if $cont (f64.eq (local.get $x) (f64.const 0.)))
-        (br_if $cont (f64.ne (local.get $z) (f64.const 0.)))
+        (br_if $cont (f64.eq (local.get $y) (f64.const 0)))
+        (br_if $cont (f64.eq (local.get $x) (f64.const 0)))
+        (br_if $cont (f64.ne (local.get $z) (f64.const 0)))
         (return (struct.new $float (f64.mul (local.get $x) (local.get $y)))))
       (block $cont
         (block $then
           (br_if $then (i64.eq (local.get $x_5) (i64.const 2047)))
           (br_if $then (i64.eq (local.get $x_3) (i64.const 2047)))
-          (br_if $then (f64.eq (local.get $y) (f64.const 0.)))
-          (br_if $then (f64.eq (local.get $x) (f64.const 0.)))
+          (br_if $then (f64.eq (local.get $y) (f64.const 0)))
+          (br_if $then (f64.eq (local.get $x) (f64.const 0)))
           (br_if $cont (i64.ne (local.get $x_7) (i64.const 2047))))
         (return
           (struct.new $float
@@ -942,11 +942,11 @@
       (local.set $x_8 (i32.const 0))
       (local.set $x_9 (i32.const 0)))
     (block $cont
-      (br_if $cont (f64.ne (local.get $z) (f64.const 0.)))
+      (br_if $cont (f64.ne (local.get $z) (f64.const 0)))
       (br_if $cont
         (i32.eqz
-          (i32.or (f64.eq (local.get $y) (f64.const 0.))
-            (f64.eq (local.get $x) (f64.const 0.)))))
+          (i32.or (f64.eq (local.get $y) (f64.const 0))
+            (f64.eq (local.get $x) (f64.const 0)))))
       (return
         (struct.new $float
           (f64.add (f64.mul (local.get $x) (local.get $y)) (local.get $z)))))
@@ -958,14 +958,14 @@
               (local.tee $x_10
                 (f64.sub
                   (local.tee $x_10
-                    (f64.mul (local.get $x) (f64.const 0x8000001.)))
+                    (f64.mul (local.get $x) (f64.const 0x8000001)))
                   (f64.sub (local.get $x_10) (local.get $x))))))
           (local.tee $x_13
             (f64.sub (local.get $y)
               (local.tee $x_12
                 (f64.sub
                   (local.tee $x_12
-                    (f64.mul (local.get $y) (f64.const 0x8000001.)))
+                    (f64.mul (local.get $y) (f64.const 0x8000001)))
                   (f64.sub (local.get $x_12) (local.get $y)))))))
         (f64.sub
           (f64.sub
@@ -978,8 +978,8 @@
       (block $l_3
         (br_if $l_3
           (f64.ne (local.tee $y (f64.add (local.get $z) (local.get $x_14)))
-            (f64.const 0.)))
-        (br_if $l_2 (f64.eq (local.get $x) (f64.const 0.))))
+            (f64.const 0)))
+        (br_if $l_2 (f64.eq (local.get $x) (f64.const 0))))
       (block $cont
         (br_if $cont
           (f64.eq
@@ -1015,7 +1015,7 @@
                       (f64.sub (local.get $y)
                         (f64.sub (local.get $x) (local.get $x_12)))))
                   (local.tee $y (f64.add (local.get $x_10) (local.get $y))))))
-            (f64.const 0.)))
+            (f64.const 0)))
         (br_if $cont
           (i32.and
             (i32.wrap_i64
@@ -1025,8 +1025,8 @@
           (f64.reinterpret_i64
             (i64.add
               (select (i64.const 1) (i64.sub (i64.const 0) (i64.const 1))
-                (i32.xor (f64.lt (local.get $y) (f64.const 0.))
-                  (f64.gt (local.get $z) (f64.const 0.))))
+                (i32.xor (f64.lt (local.get $y) (f64.const 0))
+                  (f64.gt (local.get $z) (f64.const 0))))
               (local.get $x_3)))))
       (local.set $y (f64.add (local.get $x) (local.get $y)))
       (block $cont
@@ -1049,18 +1049,18 @@
   )
   (func $caml_round (export "caml_round") (param $x f64) (result f64)
     (local $y f64)
-    (if (result f64) (f64.ge (local.get $x) (f64.const 0.))
+    (if (result f64) (f64.ge (local.get $x) (f64.const 0))
       (then
         (local.set $y (f64.floor (local.get $x)))
         (if (result f64)
           (f64.ge (f64.sub (local.get $x) (local.get $y)) (f64.const 0.5))
-          (then (f64.add (local.get $y) (f64.const 1.)))
+          (then (f64.add (local.get $y) (f64.const 1)))
           (else (local.get $y))))
       (else
         (local.set $y (f64.ceil (local.get $x)))
         (if (result f64)
           (f64.ge (f64.sub (local.get $y) (local.get $x)) (f64.const 0.5))
-          (then (f64.sub (local.get $y) (f64.const 1.)))
+          (then (f64.sub (local.get $y) (f64.const 1)))
           (else (local.get $y)))))
   )
 )

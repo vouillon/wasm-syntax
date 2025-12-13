@@ -76,7 +76,7 @@ fn caml_alloc_dummy(size: &eq) -> &eq {
 }
 #[export = "caml_alloc_dummy_float"]
 fn caml_alloc_dummy_float(size: &eq) -> &eq {
-    [float_array|0.; size as &i31 as i32_u];
+    [float_array|0; size as &i31 as i32_u];
 }
 #[export = "caml_update_dummy"]
 fn caml_update_dummy(dummy: &eq, newval: &eq) -> &eq {
@@ -150,7 +150,7 @@ fn caml_obj_dup(x: &eq) -> &eq {
         'not_float_array: do &eq {
             forig = br_on_cast_fail 'not_float_array &float_array x;
             len = forig.length;
-            fres = [float_array|0.; len];
+            fres = [float_array|0; len];
             fres.copy(0, forig, 0, len);
             return fres;
         } /* 'not_float_array */;

@@ -339,7 +339,7 @@
             (call $array_get (local.get $a) (i32.const 0)))
           (then
             (local.set $fa
-              (array.new $float_array (f64.const 0.) (local.get $l)))
+              (array.new $float_array (f64.const 0) (local.get $l)))
             (local.set $i (i32.const 0))
             (loop $loop
               (if (i32.lt_u (local.get $i) (local.get $l))

@@ -233,7 +233,7 @@ fn readfloats(s: &intern_state, code: i32, len: i32) -> &eq {
     code =
         (code == CODE_DOUBLE_ARRAY8_BIG) | (code == CODE_DOUBLE_ARRAY32_BIG)
             ?CODE_DOUBLE_BIG:CODE_DOUBLE_LITTLE;
-    dest = [float_array|0.; len];
+    dest = [float_array|0; len];
     'loop: loop {
         if i <u len { dest[i] = readfloat(s, code); i = i + 1; br 'loop; }
     } /* 'loop */

@@ -261,7 +261,7 @@ fn caml_js_to_array(x: &eq) -> &eq {
     l = array_length(a);
     if l {
         if array_get(a, 0) is &float {
-            fa = [float_array|0.; l];
+            fa = [float_array|0; l];
             i = 0;
             'loop: loop {
                 if i <u l {

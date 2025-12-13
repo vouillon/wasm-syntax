@@ -1,7 +1,6 @@
 (*
 TODO:
 - get rid of funsig / revise the AST
-- do not differentiate strictly floats and ints
 - Fix grab logic: count number of holes, type, check hole order
 - Check that import correspond to a declaration
 - In binary_to_text, we need to make sure names are unique
@@ -1334,6 +1333,7 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
          - when converting to Wasm, we add precise types, so some
            casts used to resolve ambiguities become unnecessary.
          ZZZ Handle select instruction better
+         ZZZ Do not do it when just formatting the code
       *)
       let unnecessary_cast =
         UnionFind.find ty' <> Unknown && subtype ctx ty' ty

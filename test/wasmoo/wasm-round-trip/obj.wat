@@ -111,7 +111,7 @@
   )
   (func $caml_alloc_dummy_float (export "caml_alloc_dummy_float")
     (param $size (ref eq)) (result (ref eq))
-    (array.new $float_array (f64.const 0.)
+    (array.new $float_array (f64.const 0)
       (i31.get_u (ref.cast (ref i31) (local.get $size))))
   )
   (func $caml_update_dummy (export "caml_update_dummy")
@@ -198,7 +198,7 @@
             (local.get $x)))
         (local.set $len (array.len (local.get $forig)))
         (local.set $fres
-          (array.new $float_array (f64.const 0.) (local.get $len)))
+          (array.new $float_array (f64.const 0) (local.get $len)))
         (array.copy $float_array $float_array (local.get $fres) (i32.const 0)
           (local.get $forig) (i32.const 0) (local.get $len))
         (return (local.get $fres))))
