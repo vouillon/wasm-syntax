@@ -273,15 +273,15 @@ fn caml_getblock(vch: &eq, s: &string, pos: i32, len: i32) -> i32 {
 }
 #[export = "caml_really_getblock"]
 fn caml_really_getblock(ch: &eq, s: &string, pos: i32, len: i32) -> i32 {
-    let read_2: i32;
+    let read: i32;
     let n: i32;
     n = len;
     'loop: loop {
         if n {
-            read_2 = caml_getblock(ch, s, pos, n);
-            if !read_2 { return len - n; }
-            pos = pos + read_2;
-            n = n - read_2;
+            read = caml_getblock(ch, s, pos, n);
+            if !read { return len - n; }
+            pos = pos + read;
+            n = n - read;
             br 'loop;
         }
     } /* 'loop */

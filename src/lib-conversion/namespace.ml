@@ -76,6 +76,10 @@ let add ns x =
       ns.existing_names <- ns.existing_names |> StringMap.add x 1;
       x
 
+let reserve ns x =
+  if not (StringMap.mem x ns.existing_names) then
+    ns.existing_names <- ns.existing_names |> StringMap.add x 1
+
 let dup { existing_names } = { existing_names }
 
 let make ?(kind = `Regular) () =

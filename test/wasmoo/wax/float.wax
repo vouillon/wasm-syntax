@@ -30,7 +30,7 @@ fn caml_hexstring_of_float(x: &eq, x_2: &eq, x_3: &eq) -> &eq {
     let prec: i32;
     let style: i32;
     let sign: i32;
-    let exp_2: i32;
+    let exp: i32;
     let m: i64;
     let i: i32;
     let j: i32;
@@ -46,21 +46,21 @@ fn caml_hexstring_of_float(x: &eq, x_2: &eq, x_3: &eq) -> &eq {
     style = x_3 as &i31 as i32_s;
     b = (x as &float).f.to_bits;
     sign = (b >>u 63) as i32;
-    exp_2 = (b >>u 52) as i32 & 0x7FF;
+    exp = (b >>u 52) as i32 & 0x7FF;
     m = b & (1 << 52) - 1;
     i = sign | (style != 45);
     s =
         'sign: do &string {
-            if exp_2 == 0x7FF {
+            if exp == 0x7FF {
                 txt = if !m => &chars { infinity; } else { nan_2; };
                 len = txt.length;
                 s = [string|0; i + len];
                 s.copy(i, txt, 0, len);
                 br 'sign s;
             }
-            if !exp_2 {
-                if m != 0 { exp_2 = -1022; }
-            } else { exp_2 = exp_2 - 1023; m = m | 1 << 52; }
+            if !exp {
+                if m != 0 { exp = -1022; }
+            } else { exp = exp - 1023; m = m | 1 << 52; }
             if (prec >=s 0) & (prec <s 13) {
                 unit = 1 << (52 - (prec << 2)) as i64_s;
                 half = unit >>u 1;
@@ -77,20 +77,20 @@ fn caml_hexstring_of_float(x: &eq, x_2: &eq, x_3: &eq) -> &eq {
                 if frac != 0 { j = j + 1; frac = frac << 4; br 'prec; }
             } /* 'prec */
             if prec <s j { prec = j; }
-            if exp_2 >=s 0 { d = exp_2; } else { d = 0 - exp_2; }
+            if exp >=s 0 { d = exp; } else { d = 0 - exp; }
             j = 0;
             'count: loop { j = j + 1; d = d /u 10; br_if 'count d; }
             len = i + prec + (6 + j);
             if !prec { len = len - 1; }
             s = [string|0; len];
-            if exp_2 >=s 0 { d = exp_2; } else { d = 0 - exp_2; }
+            if exp >=s 0 { d = exp; } else { d = 0 - exp; }
             'write: loop {
                 len = len - 1;
                 s[len] = 48 + d %u 10;
                 d = d /u 10;
                 br_if 'write d;
             }
-            s[len - 1] = exp_2 >=s 0?43:45;
+            s[len - 1] = exp >=s 0?43:45;
             s[i] = 48;
             s[i + 1] = 120;
             s[i + 2] = (m >>u 52) as i32 + 48;
@@ -163,7 +163,7 @@ fn caml_format_float(x: &eq, x_2: &eq) -> &eq {
     let conversion: i32;
     let uppercase: i32;
     let negative: i32;
-    let exp_2: i32;
+    let exp: i32;
     let m: i64;
     let i: i32;
     let len: i32;
@@ -182,8 +182,8 @@ fn caml_format_float(x: &eq, x_2: &eq) -> &eq {
     i = negative | (sign_style != 0);
     s =
         'sign: do &string {
-            exp_2 = (b >>u 52) as i32 & 0x7FF;
-            if exp_2 == 0x7FF {
+            exp = (b >>u 52) as i32 & 0x7FF;
+            if exp == 0x7FF {
                 m = b << 12;
                 txt =
                     if !m => &chars {
@@ -225,7 +225,7 @@ fn caml_float_of_hex(s: &string, i: i32) -> f64 {
     let f: f64;
     let negative: i32;
     let dec_point: i32;
-    let exp_2: i32;
+    let exp: i32;
     let adj: i32;
     let n_bits: i32;
     let m_bits: i32;
@@ -261,8 +261,8 @@ fn caml_float_of_hex(s: &string, i: i32) -> f64 {
                         'parse_exponent: loop {
                             br_if 'error (c <u 48) | (c >u 57);
                             d = c - 48;
-                            exp_2 = exp_2 * 10 + d;
-                            br_if 'overflow exp_2 <u d;
+                            exp = exp * 10 + d;
+                            br_if 'overflow exp <u d;
                             if i != len {
                                 c = s[i] as i32_u;
                                 i = i + 1;
@@ -270,9 +270,9 @@ fn caml_float_of_hex(s: &string, i: i32) -> f64 {
                             }
                         } /* 'parse_exponent */
                         if negative {
-                            br_if 'overflow exp_2 >u 0x80000000;
-                            exp_2 = 0 - exp_2;
-                        } else { br_if 'overflow exp_2 >=u 0x80000000; }
+                            br_if 'overflow exp >u 0x80000000;
+                            exp = 0 - exp;
+                        } else { br_if 'overflow exp >=u 0x80000000; }
                         br 'parse;
                     } /* 'overflow */
                     if negative | !m { return 0.; } else { return inf; }
@@ -301,14 +301,14 @@ fn caml_float_of_hex(s: &string, i: i32) -> f64 {
         f = m as f64_s;
         adj = x_bits;
         if dec_point >=s 0 { adj = adj + (dec_point - n_bits); }
-        if (adj >s 0) & (exp_2 >s 0x7fffffff) {
-            exp_2 = 0x7fffffff;
+        if (adj >s 0) & (exp >s 0x7fffffff) {
+            exp = 0x7fffffff;
         } else {
-            if (adj <s 0) & (exp_2 <s 0x80000000) {
-                exp_2 = 0x80000000;
-            } else { exp_2 = exp_2 + adj; }
+            if (adj <s 0) & (exp <s 0x80000000) {
+                exp = 0x80000000;
+            } else { exp = exp + adj; }
         }
-        if exp_2 { f = ldexp(f, exp_2); }
+        if exp { f = ldexp(f, exp); }
         return f;
     } /* 'error */
     caml_failwith(string#"foo");

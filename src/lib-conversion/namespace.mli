@@ -18,3 +18,9 @@ val add : t -> string -> string
 (** [add t name] registers [name] in the namespace [t]. If [name] is already
     taken or reserved, a unique suffix is appended (e.g., "name_1", "name_2").
     Returns the unique name that was actually registered. *)
+
+val reserve : t -> string -> unit
+(** [reserve t name] reserves [name] in the namespace [t]. If [name] is already
+    taken or reserved, nothing happens. If it is free, it is marked as taken.
+    This is useful to prevent subsequent [add] calls from generating this name.
+*)

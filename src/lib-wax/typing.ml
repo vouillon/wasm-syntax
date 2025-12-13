@@ -15,12 +15,9 @@ TODO:
   rotl(..), rotr(..), min(..), max(..), copysign(..)
 - move lets at more appropriate places
 - remove redundant type annotations/casts
-- take into account that locals can shadow globals to get better local names
-  (if a global is not used in a function, we can reuse its name)
 - check constant expressions
 - option to tighten casts to any/extern / eliminate redundant casts
   and type annotations
-- framework for dealing with errors (that can handle several errors)
 
 Comments
 - process the flow of tokens

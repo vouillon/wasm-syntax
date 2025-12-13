@@ -324,18 +324,18 @@
   (func $caml_really_getblock (export "caml_really_getblock")
     (param $ch (ref eq)) (param $s (ref $string)) (param $pos i32)
     (param $len i32) (result i32)
-    (local $read_2 i32) (local $n i32)
+    (local $read i32) (local $n i32)
     (local.set $n (local.get $len))
     (loop $loop
       (if (local.get $n)
         (then
-          (local.set $read_2
+          (local.set $read
             (call $caml_getblock (local.get $ch) (local.get $s)
               (local.get $pos) (local.get $n)))
-          (if (i32.eqz (local.get $read_2))
+          (if (i32.eqz (local.get $read))
             (then (return (i32.sub (local.get $len) (local.get $n)))))
-          (local.set $pos (i32.add (local.get $pos) (local.get $read_2)))
-          (local.set $n (i32.sub (local.get $n) (local.get $read_2)))
+          (local.set $pos (i32.add (local.get $pos) (local.get $read)))
+          (local.set $n (i32.sub (local.get $n) (local.get $read)))
           (br $loop))))
     (local.get $len)
   )

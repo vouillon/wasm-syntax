@@ -117,7 +117,6 @@ module Tbl = struct
 end
 
 type ctx = {
-  common_namespace : Namespace.t;
   types : Sequence.t;
   struct_fields : (string, Sequence.t * string list) Hashtbl.t;
   globals : Sequence.t;
@@ -998,6 +997,30 @@ let typeuse ctx ((typ, sign) : Src.typeuse) =
 let string_of_name (nm : Src.name) =
   { nm with desc = Ast.String (None, nm.desc) }
 
+let rec reserve_globals_in_instr ctx ns (i : _ Src.instr) =
+  match i.desc with
+  | Block { block; _ } | Loop { block; _ } | TryTable { block; _ } ->
+      reserve_globals_in_instrs ctx ns block
+  | If { if_block; else_block; _ } ->
+      reserve_globals_in_instrs ctx ns if_block;
+      reserve_globals_in_instrs ctx ns else_block
+  | Try { block; catches; catch_all; _ } ->
+      reserve_globals_in_instrs ctx ns block;
+      List.iter
+        (fun (_, block) -> reserve_globals_in_instrs ctx ns block)
+        catches;
+      Option.iter
+        (fun block -> reserve_globals_in_instrs ctx ns block)
+        catch_all
+  | Folded (i, l) ->
+      reserve_globals_in_instrs ctx ns l;
+      reserve_globals_in_instr ctx ns i
+  | GlobalGet x | GlobalSet x -> Namespace.reserve ns (idx ctx `Global x).desc
+  | _ -> ()
+
+and reserve_globals_in_instrs ctx ns l =
+  List.iter (reserve_globals_in_instr ctx ns) l
+
 let exports ctx kind name e =
   List.map
     (fun nm -> ("export", string_of_name nm))
@@ -1018,9 +1041,14 @@ let modulefield ctx export_tbl (f : (_ Src.modulefield, _) Ast.annotated) =
         let label, labels = LabelStack.push (LabelStack.make ()) None in
         let ctx =
           let return_arity = snd (typeuse_arity ctx typ) in
+          let local_namespace =
+            let ns = Namespace.make () in
+            reserve_globals_in_instrs ctx ns instrs;
+            ns
+          in
           {
             ctx with
-            locals = Sequence.make (Namespace.dup ctx.common_namespace) "x";
+            locals = Sequence.make local_namespace "x";
             labels;
             label_arities = [ (None, return_arity) ];
             return_arity;
@@ -1223,10 +1251,9 @@ let module_ (_, fields) =
   let ctx =
     let common_namespace = Namespace.make () in
     {
-      common_namespace;
       types = Sequence.make (Namespace.make ~kind:`Type ()) "t";
       struct_fields = Hashtbl.create 16;
-      globals = Sequence.make common_namespace "x";
+      globals = Sequence.make common_namespace "g";
       functions = Sequence.make common_namespace "f";
       memories = Sequence.make (Namespace.make ()) "m";
       tables = Sequence.make (Namespace.make ()) "m";
