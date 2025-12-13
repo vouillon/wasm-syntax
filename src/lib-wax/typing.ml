@@ -1,7 +1,6 @@
 (*
 TODO:
 - do not differentiate strictly floats and ints
-- [i|j] is ambiguous
 - Fix grab logic: count number of holes, type, check hole order
 - Check that import correspond to a declaration
 - Check the _ make sense (check that underscores are properly placed)

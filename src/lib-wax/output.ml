@@ -414,9 +414,7 @@ let struct_instr pp nm f =
 
 let array_instr pp nm f =
   print_container pp ~opening:"[" ~closing:"]" ~indent:indent_level nm
-    (fun () ->
-      space pp ();
-      f ())
+    (fun () -> f ())
 
 let get_prec (i : _ Ast.instr) =
   match i.desc with
@@ -477,6 +475,13 @@ let rec starts_with_block_prec prec (i : 'a Ast.instr) =
         false
 
 let starts_with_block i = starts_with_block_prec Instruction i
+
+let array_element_precedence nm first i =
+  if nm = None && first then
+    match i.desc with
+    | BinOp (Or, { desc = Get _; _ }, _) -> Atom
+    | _ -> Instruction
+  else Instruction
 
 let rec instr prec pp (i : _ instr) =
   parentheses prec (get_prec i) pp @@ fun () ->
@@ -694,7 +699,7 @@ let rec instr prec pp (i : _ instr) =
           instr Instruction pp i')
   | Array (nm, i, n) ->
       array_instr pp nm (fun () ->
-          instr Instruction pp i;
+          instr (array_element_precedence nm true i) pp i;
           punctuation pp ";";
           space pp ();
           instr Instruction pp n)
@@ -704,7 +709,12 @@ let rec instr prec pp (i : _ instr) =
           space pp ();
           instr Instruction pp n)
   | ArrayFixed (nm, l) ->
-      array_instr pp nm (fun () -> list_commasep (instr Instruction) pp l)
+      array_instr pp nm (fun () ->
+          list_commasep
+            (fun ctx (first, i) ->
+              instr (array_element_precedence nm first i) ctx i)
+            pp
+            (List.mapi (fun n i -> (n = 0, i)) l))
   | ArrayGet (i1, i2) ->
       box pp ~indent:indent_level (fun () ->
           instr CallAndFieldAccess pp i1;
