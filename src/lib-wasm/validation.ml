@@ -353,6 +353,7 @@ let subtype d ctx current { Ast.Text.typ; supertype; final } =
     | Some ty ->
         let+@ ty = resolve_type_index d ctx ty in
         assert (ty > lnot current);
+        (*ZZZ*)
         Some ty
   in
   { typ; supertype; final }
@@ -557,21 +558,19 @@ let blocktype ctx (ty : Ast.Text.blocktype option) =
   | Some (Typeuse (_, Some { params; results })) ->
       let*@ params =
         array_map_opt
-          (fun (_, ty) -> valtype ctx.diagnostics ctx.types ty)
+          (fun (_, ty) -> valtype ctx.modul.diagnostics ctx.modul.types ty)
           params
       in
       let+@ results =
-        array_map_opt (valtype ctx.diagnostics ctx.types) results
+        array_map_opt (valtype ctx.modul.diagnostics ctx.modul.types) results
       in
       (params, results)
-  | Some (Typeuse (Some idx, None)) -> (
-      let+@ ty = resolve_type_index ctx.diagnostics ctx.types idx in
-      match (Types.get_subtype ctx.subtyping_info ty).typ with
-      | Func { params; results } -> (params, results)
-      | _ -> assert false)
+  | Some (Typeuse (Some idx, None)) ->
+      let+@ _, { params; results } = lookup_func_type ctx idx in
+      (params, results)
   | Some (Typeuse (None, None)) -> assert false (* Should not happen *)
   | Some (Valtype ty) ->
-      let+@ ty = valtype ctx.diagnostics ctx.types ty in
+      let+@ ty = valtype ctx.modul.diagnostics ctx.modul.types ty in
       ([||], [| ty |])
 
 let pop_args ctx loc args =
@@ -741,24 +740,24 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   let loc = i.info in
   match i.desc with
   | Block { label; typ; block = b } ->
-      let*! params, results = blocktype ctx.modul typ in
+      let*! params, results = blocktype ctx typ in
       let* () = pop_args ctx loc params in
       block ctx loc label params results results b;
       push_results results
   | Loop { label; typ; block = b } ->
-      let*! params, results = blocktype ctx.modul typ in
+      let*! params, results = blocktype ctx typ in
       let* () = pop_args ctx loc params in
       block ctx loc label params results params b;
       push_results results
   | If { label; typ; if_block; else_block } ->
-      let*! params, results = blocktype ctx.modul typ in
+      let*! params, results = blocktype ctx typ in
       let* () = pop ctx loc I32 in
       let* () = pop_args ctx loc params in
       block ctx loc label params results results if_block;
       block ctx loc label params results results else_block;
       push_results results
   | TryTable { label; typ; block = b; catches } ->
-      let*! params, results = blocktype ctx.modul typ in
+      let*! params, results = blocktype ctx typ in
       let* () = pop_args ctx loc params in
       block ctx loc label params results results b;
       List.iter
@@ -795,7 +794,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         catches;
       push_results results
   | Try { label; typ; block = b; catches; catch_all } ->
-      let*! params, results = blocktype ctx.modul typ in
+      let*! params, results = blocktype ctx typ in
       let* () = pop_args ctx loc params in
       block ctx loc label params results results b;
       List.iter
@@ -913,6 +912,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | CallIndirect (idx, tu) -> (
       let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
       let*! ty = typeuse' ctx.modul.diagnostics ctx.modul.types tu in
+      (*ZZZ*)
       assert (
         Types.val_subtype ctx.modul.subtyping_info (Ref typ.reftype)
           (Ref { nullable = true; typ = Func }));
@@ -949,6 +949,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | ReturnCallIndirect (idx, tu) -> (
       let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
       let*! ty = typeuse' ctx.modul.diagnostics ctx.modul.types tu in
+      (*ZZZ*)
       assert (
         Types.val_subtype ctx.modul.subtyping_info (Ref typ.reftype)
           (Ref { nullable = true; typ = Func }));
@@ -980,6 +981,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
             Format.eprintf "%a@." print_valtype ty1;
           if not (number_or_vec ty2) then
             Format.eprintf "%a@." print_valtype ty2;
+          (*ZZZ*)
           assert (number_or_vec ty1);
           assert (number_or_vec ty2);
           if ty1 <> ty2 then
@@ -998,7 +1000,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
           let* () = pop ctx loc typ in
           let* () = pop ctx loc typ in
           push (Some loc) typ
-      | _ -> assert false)
+      | _ -> (*ZZZ*) assert false)
   | LocalGet i ->
       let*! ty = get_local ctx i in
       push (Some loc) ty
@@ -1014,8 +1016,8 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       push (Some loc) ty.typ
   | GlobalSet idx ->
       let*! ty = Sequence.get ctx.modul.diagnostics ctx.modul.globals idx in
-      assert ty.mut;
       (*ZZZ*)
+      assert ty.mut;
       pop ctx loc ty.typ
   | Load (idx, memarg, ty) ->
       let*! limits =
@@ -1202,6 +1204,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop ctx loc V128 in
       push (Some loc) V128
   | VecShuffle lanes ->
+      (*ZZZ*)
       assert (String.for_all (fun l -> Char.code l < 32) lanes);
       let* () = pop ctx loc V128 in
       let* () = pop ctx loc V128 in
@@ -1234,6 +1237,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | TableCopy (idx, idx') ->
       let*! ty = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx in
       let*! ty' = Sequence.get ctx.modul.diagnostics ctx.modul.tables idx' in
+      (*ZZZ*)
       assert (
         Types.val_subtype ctx.modul.subtyping_info (Ref ty'.reftype)
           (Ref ty.reftype));
@@ -1253,6 +1257,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
         Sequence.get ctx.modul.diagnostics ctx.modul.tables idx
       in
       let*! typ = Sequence.get ctx.modul.diagnostics ctx.modul.elem idx' in
+      (*ZZZ*)
       assert (
         Types.val_subtype ctx.modul.subtyping_info (Ref typ)
           (Ref tabletype.reftype));
@@ -1268,6 +1273,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       push (Some loc) (Ref { nullable = true; typ })
   | RefFunc idx ->
       let*! i = Sequence.get ctx.modul.diagnostics ctx.modul.functions idx in
+      (*ZZZ*)
       assert ((not !validate_refs) || Hashtbl.mem ctx.modul.refs i);
       push (Some loc) (Ref { nullable = false; typ = Type i })
   | RefIsNull -> (
@@ -1314,6 +1320,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       push (Some loc) (Ref { nullable = false; typ = Type ty })
   | StructNewDefault idx ->
       let*! ty, _, fields = lookup_struct_type ctx idx in
+      (*ZZZ*)
       assert (Array.for_all field_has_default fields);
       push (Some loc) (Ref { nullable = false; typ = Type ty })
   | StructGet (signage, idx, idx') ->
@@ -1345,6 +1352,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       push (Some loc) (Ref { nullable = false; typ = Type ty })
   | ArrayNewDefault idx ->
       let*! ty, field = lookup_array_type ctx idx in
+      (*ZZZ*)
       assert (field_has_default field);
       let* () = pop ctx loc I32 in
       push (Some loc) (Ref { nullable = false; typ = Type ty })
@@ -1355,6 +1363,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | ArrayNewData (idx, idx') ->
       let*! ty, field = lookup_array_type ctx idx in
       ignore (Sequence.get ctx.modul.diagnostics ctx.modul.data idx');
+      (*ZZZ*)
       assert (
         match field.typ with
         | Packed _ | Value (I32 | I64 | F32 | F64 | V128) -> true
@@ -1365,6 +1374,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | ArrayNewElem (idx, idx') ->
       let*! ty, field = lookup_array_type ctx idx in
       let*! ty' = Sequence.get ctx.modul.diagnostics ctx.modul.elem idx' in
+      (*ZZZ*)
       assert (
         match field.typ with
         | Packed _ -> false
@@ -1380,6 +1390,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       push (Some loc) (unpack_type field)
   | ArraySet idx ->
       let*! ty, field = lookup_array_type ctx idx in
+      (*ZZZ*)
       assert field.mut;
       let* () = pop ctx loc (unpack_type field) in
       let* () = pop ctx loc I32 in
@@ -1389,6 +1400,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       push (Some loc) I32
   | ArrayFill idx ->
       let*! ty, field = lookup_array_type ctx idx in
+      (*ZZZ*)
       assert field.mut;
       let* () = pop ctx loc I32 in
       let* () = pop ctx loc (unpack_type field) in
@@ -1397,6 +1409,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | ArrayCopy (idx1, idx2) ->
       let*! ty1, field1 = lookup_array_type ctx idx1 in
       let*! ty2, field2 = lookup_array_type ctx idx2 in
+      (*ZZZ*)
       assert field1.mut;
       assert (storage_subtype ctx.modul.subtyping_info field1.typ field2.typ);
       let* () = pop ctx loc I32 in
@@ -1407,6 +1420,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | ArrayInitData (idx, idx') ->
       let*! ty, field = lookup_array_type ctx idx in
       ignore (Sequence.get ctx.modul.diagnostics ctx.modul.data idx');
+      (*ZZZ*)
       assert field.mut;
       assert (
         match field.typ with
@@ -1419,6 +1433,7 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
   | ArrayInitElem (idx, idx') ->
       let*! ty, field = lookup_array_type ctx idx in
       let*! ty' = Sequence.get ctx.modul.diagnostics ctx.modul.elem idx' in
+      (*ZZZ*)
       assert field.mut;
       assert (
         match field.typ with
@@ -1546,6 +1561,7 @@ let rec check_constant_instruction ctx (i : _ Ast.Text.instr) =
   match i.desc with
   | GlobalGet idx ->
       let*? ty = Sequence.get ctx.diagnostics ctx.globals idx in
+      (*ZZZ*)
       assert (not ty.mut)
   | RefFunc i ->
       let*? ty = Sequence.get ctx.diagnostics ctx.functions i in
@@ -1773,9 +1789,11 @@ let check_type_definitions ctx =
     let ty = Types.get_subtype ctx.subtyping_info i in
     let*? j = ty.supertype in
     let ty' = Types.get_subtype ctx.subtyping_info j in
+    (*ZZZ*)
     assert (not ty'.final);
     match (ty.typ, ty'.typ) with
     | Func { params; results }, Func { params = params'; results = results' } ->
+        (*ZZZ*)
         assert (Array.length params = Array.length params');
         assert (Array.length results = Array.length results');
         Array.iter2
@@ -1884,7 +1902,7 @@ let functions ctx fields =
             let+@ typ = typeuse ctx.diagnostics ctx.types typ in
             match (Types.get_subtype ctx.subtyping_info typ).typ with
             | Func typ -> typ
-            | _ -> assert false
+            | _ -> assert false (*ZZZ*)
           in
           let return_types = func_typ.results in
           let locals = Sequence.make "local" in
@@ -2297,6 +2315,7 @@ let check_syntax diagnostics (_, lst) =
          | _, (Types _ | Export _ | Start _ | Elem _ | Data _) ->
              can_import)
        None lst);
+  (*ZZZ*)
   assert (
     List.length
       (List.filter
