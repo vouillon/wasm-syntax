@@ -98,8 +98,7 @@
     (param $x i32) (param $s i32) (param $t i32) (result i32)
     (call $xx
       (i32.xor (local.get $c)
-        (i32.or (local.get $b)
-          (i32.xor (local.get $d) (i32.sub (i32.const 0) (i32.const 1)))))
+        (i32.or (local.get $b) (i32.xor (local.get $d) (i32.const -1))))
       (local.get $a) (local.get $b) (local.get $x) (local.get $s)
       (local.get $t))
   )

@@ -53,10 +53,8 @@
         (array.set $block (local.get $lexbuf) (global.get $lex_start_pos)
           (local.get $vpos))
         (array.set $block (local.get $lexbuf) (global.get $lex_last_action)
-          (ref.i31 (i32.sub (i32.const 0) (i32.const 1)))))
-      (else
-        (local.set $state
-          (i32.sub (i32.sub (i32.const 0) (i32.const 1)) (local.get $state)))))
+          (ref.i31 (i32.const -1))))
+      (else (local.set $state (i32.sub (i32.const -1) (local.get $state)))))
     (local.set $lex_base_2
       (ref.cast (ref $string)
         (array.get $block (local.get $tbl) (global.get $lex_base))))
@@ -78,11 +76,7 @@
     (loop $loop
       (local.set $base (call $get (local.get $lex_base_2) (local.get $state)))
       (if (i32.lt_s (local.get $base) (i32.const 0))
-        (then
-          (return
-            (ref.i31
-              (i32.sub (i32.sub (i32.const 0) (i32.const 1))
-                (local.get $base))))))
+        (then (return (ref.i31 (i32.sub (i32.const -1) (local.get $base))))))
       (local.set $backtrk
         (call $get (local.get $lex_backtrk_2) (local.get $state)))
       (if (i32.ge_s (local.get $backtrk) (i32.const 0))
@@ -108,10 +102,7 @@
                 (global.get $lex_eof_reached))
               (ref.i31 (i32.const 0)))
             (then
-              (return
-                (ref.i31
-                  (i32.sub (i32.sub (i32.const 0) (i32.const 1))
-                    (local.get $state)))))
+              (return (ref.i31 (i32.sub (i32.const -1) (local.get $state)))))
             (else (local.set $c (i32.const 256)))))
         (else
           (local.set $pos
@@ -142,9 +133,7 @@
           (local.set $action
             (array.get $block (local.get $lexbuf)
               (global.get $lex_last_action)))
-          (if
-            (ref.eq (local.get $action)
-              (ref.i31 (i32.sub (i32.const 0) (i32.const 1))))
+          (if (ref.eq (local.get $action) (ref.i31 (i32.const -1)))
             (then (call $caml_failwith (array.new_fixed $string 0))))
           (return (local.get $action))))
       (if (i32.eq (local.get $c) (i32.const 256))
@@ -180,7 +169,7 @@
   (func $run_tag
     (param $s (ref $string)) (param $i i32) (param $lexbuf (ref $block))
     (return_call $run_mem (local.get $s) (local.get $i) (local.get $lexbuf)
-      (ref.i31 (i32.sub (i32.const 0) (i32.const 1))))
+      (ref.i31 (i32.const -1)))
   )
   (func $caml_new_lex_engine (export "caml_new_lex_engine")
     (param $vtbl (ref eq)) (param $start_state (ref eq))
@@ -215,10 +204,8 @@
         (array.set $block (local.get $lexbuf) (global.get $lex_start_pos)
           (local.get $vpos))
         (array.set $block (local.get $lexbuf) (global.get $lex_last_action)
-          (ref.i31 (i32.sub (i32.const 0) (i32.const 1)))))
-      (else
-        (local.set $state
-          (i32.sub (i32.sub (i32.const 0) (i32.const 1)) (local.get $state)))))
+          (ref.i31 (i32.const -1))))
+      (else (local.set $state (i32.sub (i32.const -1) (local.get $state)))))
     (local.set $lex_code_2
       (ref.cast (ref $string)
         (array.get $block (local.get $tbl) (global.get $lex_code))))
@@ -260,10 +247,7 @@
             (call $get (local.get $lex_base_code_2) (local.get $state)))
           (call $run_tag (local.get $lex_code_2) (local.get $pc_off)
             (local.get $lexbuf))
-          (return
-            (ref.i31
-              (i32.sub (i32.sub (i32.const 0) (i32.const 1))
-                (local.get $base))))))
+          (return (ref.i31 (i32.sub (i32.const -1) (local.get $base))))))
       (local.set $backtrk
         (call $get (local.get $lex_backtrk_2) (local.get $state)))
       (if (i32.ge_s (local.get $backtrk) (i32.const 0))
@@ -293,10 +277,7 @@
                 (global.get $lex_eof_reached))
               (ref.i31 (i32.const 0)))
             (then
-              (return
-                (ref.i31
-                  (i32.sub (i32.sub (i32.const 0) (i32.const 1))
-                    (local.get $state)))))
+              (return (ref.i31 (i32.sub (i32.const -1) (local.get $state)))))
             (else (local.set $c (i32.const 256)))))
         (else
           (local.set $pos
@@ -328,9 +309,7 @@
           (local.set $action
             (array.get $block (local.get $lexbuf)
               (global.get $lex_last_action)))
-          (if
-            (ref.eq (local.get $action)
-              (ref.i31 (i32.sub (i32.const 0) (i32.const 1))))
+          (if (ref.eq (local.get $action) (ref.i31 (i32.const -1)))
             (then (call $caml_failwith (array.new_fixed $string 0))))
           (return (local.get $action))))
       (local.set $base_code

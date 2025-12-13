@@ -137,8 +137,7 @@
           (local.set $i (i32.add (local.get $i) (i32.const 1)))
           (br_if $loop (i32.eq (local.get $c1) (local.get $c2)))
           (return
-            (select (result (ref i31))
-              (ref.i31 (i32.sub (i32.const 0) (i32.const 1)))
+            (select (result (ref i31)) (ref.i31 (i32.const -1))
               (ref.i31 (i32.const 1))
               (i32.lt_u (local.get $c1) (local.get $c2)))))))
     (ref.i31 (i32.const 0))
@@ -166,8 +165,7 @@
           (local.set $i (i32.add (local.get $i) (i32.const 1)))
           (br_if $loop (i32.eq (local.get $c1) (local.get $c2)))
           (return
-            (select (result (ref i31))
-              (ref.i31 (i32.sub (i32.const 0) (i32.const 1)))
+            (select (result (ref i31)) (ref.i31 (i32.const -1))
               (ref.i31 (i32.const 1))
               (i32.lt_u (local.get $c1) (local.get $c2)))))))
     (ref.i31 (i32.const 0))
@@ -190,7 +188,7 @@
           (local.set $len (i32.sub (local.get $len) (i32.const 1)))
           (local.set $pos (i32.add (local.get $pos) (i32.const 1)))
           (br $loop))))
-    (ref.i31 (i32.sub (i32.const 0) (i32.const 1)))
+    (ref.i31 (i32.const -1))
   )
   (func $caml_bigstring_blit_bytes_to_ba
     (export "caml_bigstring_blit_bytes_to_ba")

@@ -227,8 +227,7 @@
       (struct.new $channel (global.get $channel_ops) (call $custom_next_id)
         (i31.get_u (ref.cast (ref i31) (local.get $fd)))
         (call $ta_new (global.get $IO_BUFFER_SIZE)) (i32.const 0)
-        (i32.sub (i32.const 0) (i32.const 1)) (global.get $IO_BUFFER_SIZE)
-        (i32.const 0)))
+        (i32.const -1) (global.get $IO_BUFFER_SIZE) (i32.const 0)))
     (call $register_channel (local.get $res))
     (if (ref.eq (local.get $fd) (ref.i31 (i32.const 2)))
       (then (global.set $caml_stderr (local.get $res))))
@@ -242,10 +241,9 @@
     (struct.set $channel $max (local.get $ch) (i32.const 0))
     (struct.set $channel $size (local.get $ch) (i32.const 0))
     (local.set $fd (struct.get $channel $fd (local.get $ch)))
-    (if (i32.ne (local.get $fd) (i32.sub (i32.const 0) (i32.const 1)))
+    (if (i32.ne (local.get $fd) (i32.const -1))
       (then
-        (struct.set $channel $fd (local.get $ch)
-          (i32.sub (i32.const 0) (i32.const 1)))
+        (struct.set $channel $fd (local.get $ch) (i32.const -1))
         (call $unregister_channel (local.get $ch))
         (call $release_fd_offset (local.get $fd))
         (try
@@ -576,9 +574,7 @@
     (param $vch (ref eq)) (result (ref eq))
     (local $ch (ref $channel))
     (local.set $ch (ref.cast (ref $channel) (local.get $vch)))
-    (if
-      (i32.ne (struct.get $channel $fd (local.get $ch))
-        (i32.sub (i32.const 0) (i32.const 1)))
+    (if (i32.ne (struct.get $channel $fd (local.get $ch)) (i32.const -1))
       (then (call $caml_flush (local.get $ch))))
     (ref.i31 (i32.const 0))
   )
@@ -719,9 +715,7 @@
       (then (struct.set $channel $unbuffered (local.get $ch) (i32.const 0)))
       (else
         (struct.set $channel $unbuffered (local.get $ch) (i32.const 1))
-        (if
-          (i32.ne (struct.get $channel $fd (local.get $ch))
-            (i32.sub (i32.const 0) (i32.const 1)))
+        (if (i32.ne (struct.get $channel $fd (local.get $ch)) (i32.const -1))
           (then (call $caml_flush (local.get $ch))))))
     (ref.i31 (i32.const 0))
   )

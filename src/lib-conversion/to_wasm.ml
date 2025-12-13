@@ -596,6 +596,17 @@ let rec instruction ret ctx i : location Text.instr list =
       | _ ->
           let opcode = binop i op operand_type in
           folded loc opcode (code_a @ code_b))
+  | UnOp (Neg, ({ desc = Int n; _ } as a)) ->
+      let n = "-" ^ n in
+      folded loc
+        (Const
+           (match expr_opt_valtype a with
+           | Some I32 | None -> I32 n
+           | Some I64 -> I64 n
+           | Some F32 -> F32 n
+           | Some F64 -> F64 n
+           | _ -> assert false))
+        []
   | UnOp (op, a) -> (
       let operand_type = expr_opt_valtype a in
       match (op, operand_type) with

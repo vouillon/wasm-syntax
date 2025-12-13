@@ -455,12 +455,11 @@
                               (call $output_nl)))
                           (array.set $block (local.get $env)
                             (global.get $env_curr_char)
-                            (ref.i31 (i32.sub (i32.const 0) (i32.const 1))))
+                            (ref.i31 (i32.const -1)))
                           (local.set $cmd (global.get $loop_2))
                           (br $next))))
                     (array.set $block (local.get $env)
-                      (global.get $env_curr_char)
-                      (ref.i31 (i32.sub (i32.const 0) (i32.const 1))))
+                      (global.get $env_curr_char) (ref.i31 (i32.const -1)))
                     (if (i32.gt_s (local.get $errflag) (i32.const 0))
                       (then
                         (local.set $errflag

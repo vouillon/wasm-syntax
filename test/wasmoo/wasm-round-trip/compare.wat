@@ -62,7 +62,7 @@
     (array.new $block (ref.i31 (i32.const 0)) (i32.const 0))
   )
   (global $default_compare_stack (ref $compare_stack)
-    (struct.new $compare_stack (i32.sub (i32.const 0) (i32.const 1))
+    (struct.new $compare_stack (i32.const -1)
       (array.new $block_array (global.get $dummy_block) (i32.const 8))
       (array.new $block_array (global.get $dummy_block) (i32.const 8))
       (array.new $int_array (i32.const 0) (i32.const 8)))
@@ -166,7 +166,7 @@
           (if (i32.ne (local.get $c1) (local.get $c2))
             (then
               (if (i32.le_u (local.get $c1) (local.get $c2))
-                (then (return (i32.sub (i32.const 0) (i32.const 1))))
+                (then (return (i32.const -1)))
                 (else (return (i32.const 1))))))
           (local.set $i (i32.add (local.get $i) (i32.const 1)))
           (br $loop))))
@@ -190,8 +190,7 @@
     (param $v1 (ref eq)) (param $v2 (ref eq)) (param $total i32) (result i32)
     (local $stack (ref $compare_stack)) (local $n i32) (local $res i32)
     (local.set $stack (global.get $default_compare_stack))
-    (struct.set $compare_stack $f (local.get $stack)
-      (i32.sub (i32.const 0) (i32.const 1)))
+    (struct.set $compare_stack $f (local.get $stack) (i32.const -1))
     (local.set $res
       (call $do_compare_val (local.get $stack) (local.get $v1)
         (local.get $v2) (local.get $total)))
@@ -256,7 +255,7 @@
                           (struct.get $custom $f (local.get $c2))))))
                   (br_if $next_item (i32.eqz (local.get $res)))
                   (return (local.get $res)))))
-            (return (i32.sub (i32.const 0) (i32.const 1)))))
+            (return (i32.const -1))))
         (if (ref.test (ref i31) (local.get $v2))
           (then
             (drop
@@ -355,7 +354,7 @@
                     (br_on_cast_fail $heterogeneous (ref eq) (ref $float)
                       (local.get $v2))))
                 (if (f64.lt (local.get $f1) (local.get $f2))
-                  (then (return (i32.sub (i32.const 0) (i32.const 1)))))
+                  (then (return (i32.const -1))))
                 (if (f64.gt (local.get $f1) (local.get $f2))
                   (then (return (i32.const 1))))
                 (if (f64.ne (local.get $f1) (local.get $f2))
@@ -365,7 +364,7 @@
                     (if (f64.eq (local.get $f1) (local.get $f1))
                       (then (return (i32.const 1))))
                     (if (f64.eq (local.get $f2) (local.get $f2))
-                      (then (return (i32.sub (i32.const 0) (i32.const 1)))))))
+                      (then (return (i32.const -1))))))
                 (br $next_item)))
             (drop
               (block $v1_not_string (result (ref eq))
@@ -402,7 +401,7 @@
                         (array.get $float_array (local.get $fa2)
                           (local.get $i)))
                       (if (f64.lt (local.get $f1) (local.get $f2))
-                        (then (return (i32.sub (i32.const 0) (i32.const 1)))))
+                        (then (return (i32.const -1))))
                       (if (f64.gt (local.get $f1) (local.get $f2))
                         (then (return (i32.const 1))))
                       (if (f64.ne (local.get $f1) (local.get $f2))
@@ -412,8 +411,7 @@
                           (if (f64.eq (local.get $f1) (local.get $f1))
                             (then (return (i32.const 1))))
                           (if (f64.eq (local.get $f2) (local.get $f2))
-                            (then
-                              (return (i32.sub (i32.const 0) (i32.const 1)))))))
+                            (then (return (i32.const -1))))))
                       (local.set $i (i32.add (local.get $i) (i32.const 1)))
                       (br $float_array))))
                 (br $next_item)))
@@ -528,7 +526,7 @@
     (local.set $res
       (call $compare_val (local.get $v1) (local.get $v2) (i32.const 1)))
     (if (i32.lt_s (local.get $res) (i32.const 0))
-      (then (return (ref.i31 (i32.sub (i32.const 0) (i32.const 1))))))
+      (then (return (ref.i31 (i32.const -1)))))
     (if (i32.gt_s (local.get $res) (i32.const 0))
       (then (return (ref.i31 (i32.const 1)))))
     (ref.i31 (i32.const 0))

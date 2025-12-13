@@ -121,8 +121,7 @@
     (if (i32.eqz (local.get $len))
       (then (call $caml_failwith (local.get $errmsg))))
     (local.set $threshold
-      (i64.div_u (i64.sub (i64.const 0) (i64.const 1))
-        (i64.extend_i32_u (local.get $base))))
+      (i64.div_u (i64.const -1) (i64.extend_i32_u (local.get $base))))
     (local.set $d
       (call $parse_digit (array.get_u $string (local.get $s) (local.get $i))))
     (if (i32.ge_u (local.get $d) (local.get $base))

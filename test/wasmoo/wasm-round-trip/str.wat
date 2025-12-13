@@ -77,14 +77,11 @@
       (i31.get_s
         (ref.cast (ref i31) (array.get $block (local.get $re) (i32.const 5)))))
     (local.set $group_start
-      (array.new $int_array (i32.sub (i32.const 0) (i32.const 1))
-        (local.get $numgroups)))
+      (array.new $int_array (i32.const -1) (local.get $numgroups)))
     (local.set $group_end
-      (array.new $int_array (i32.sub (i32.const 0) (i32.const 1))
-        (local.get $numgroups)))
+      (array.new $int_array (i32.const -1) (local.get $numgroups)))
     (local.set $re_register
-      (array.new $int_array (i32.sub (i32.const 0) (i32.const 1))
-        (local.get $numregisters)))
+      (array.new $int_array (i32.const -1) (local.get $numregisters)))
     (local.set $pc (i32.const 1))
     (array.set $int_array (local.get $group_start) (i32.const 0)
       (local.get $pos))
@@ -484,10 +481,10 @@
               (then
                 (array.set $block (local.get $res)
                   (i32.add (local.get $j) (i32.const 1))
-                  (ref.i31 (i32.sub (i32.const 0) (i32.const 1))))
+                  (ref.i31 (i32.const -1)))
                 (array.set $block (local.get $res)
                   (i32.add (local.get $j) (i32.const 2))
-                  (ref.i31 (i32.sub (i32.const 0) (i32.const 1)))))
+                  (ref.i31 (i32.const -1))))
               (else
                 (array.set $block (local.get $res)
                   (i32.add (local.get $j) (i32.const 1))
@@ -628,8 +625,7 @@
               (ref.cast (ref i31)
                 (array.get $block (local.get $groups)
                   (i32.add (local.get $c) (i32.const 2))))))
-          (if
-            (i32.eq (local.get $start) (i32.sub (i32.const 0) (i32.const 1)))
+          (if (i32.eq (local.get $start) (i32.const -1))
             (then (call $caml_failwith (array.new_fixed $string 0))))
           (local.set $len
             (i32.add (local.get $len)

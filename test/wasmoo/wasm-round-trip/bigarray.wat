@@ -1578,7 +1578,7 @@
           (if (i32.ne (local.get $i1) (local.get $i2))
             (then
               (return
-                (select (i32.sub (i32.const 0) (i32.const 1)) (i32.const 1)
+                (select (i32.const -1) (i32.const 1)
                   (i32.lt_u (local.get $i1) (local.get $i2))))))
           (local.set $i (i32.add (local.get $i) (i32.const 1)))
           (br $loop))))
@@ -1607,8 +1607,7 @@
                           (call $ta_get_i32 (local.get $d2)
                             (i32.add (local.get $i) (i32.const 1))))
                         (if (i32.lt_s (local.get $i1) (local.get $i2))
-                          (then
-                            (return (i32.sub (i32.const 0) (i32.const 1)))))
+                          (then (return (i32.const -1))))
                         (if (i32.gt_s (local.get $i1) (local.get $i2))
                           (then (return (i32.const 1))))
                         (local.set $i1
@@ -1616,8 +1615,7 @@
                         (local.set $i2
                           (call $ta_get_i32 (local.get $d2) (local.get $i)))
                         (if (i32.lt_u (local.get $i1) (local.get $i2))
-                          (then
-                            (return (i32.sub (i32.const 0) (i32.const 1)))))
+                          (then (return (i32.const -1))))
                         (if (i32.gt_u (local.get $i1) (local.get $i2))
                           (then (return (i32.const 1))))
                         (local.set $i (i32.add (local.get $i) (i32.const 2)))
@@ -1631,7 +1629,7 @@
                       (local.set $i2
                         (call $ta_get_i32 (local.get $d2) (local.get $i)))
                       (if (i32.lt_s (local.get $i1) (local.get $i2))
-                        (then (return (i32.sub (i32.const 0) (i32.const 1)))))
+                        (then (return (i32.const -1))))
                       (if (i32.gt_s (local.get $i1) (local.get $i2))
                         (then (return (i32.const 1))))
                       (local.set $i (i32.add (local.get $i) (i32.const 1)))
@@ -1645,7 +1643,7 @@
                     (local.set $i2
                       (call $ta_get_ui16 (local.get $d2) (local.get $i)))
                     (if (i32.lt_s (local.get $i1) (local.get $i2))
-                      (then (return (i32.sub (i32.const 0) (i32.const 1)))))
+                      (then (return (i32.const -1))))
                     (if (i32.gt_s (local.get $i1) (local.get $i2))
                       (then (return (i32.const 1))))
                     (local.set $i (i32.add (local.get $i) (i32.const 1)))
@@ -1659,7 +1657,7 @@
                   (local.set $i2
                     (call $ta_get_i16 (local.get $d2) (local.get $i)))
                   (if (i32.lt_s (local.get $i1) (local.get $i2))
-                    (then (return (i32.sub (i32.const 0) (i32.const 1)))))
+                    (then (return (i32.const -1))))
                   (if (i32.gt_s (local.get $i1) (local.get $i2))
                     (then (return (i32.const 1))))
                   (local.set $i (i32.add (local.get $i) (i32.const 1)))
@@ -1673,7 +1671,7 @@
                 (local.set $i2
                   (call $ta_get_ui8 (local.get $d2) (local.get $i)))
                 (if (i32.lt_s (local.get $i1) (local.get $i2))
-                  (then (return (i32.sub (i32.const 0) (i32.const 1)))))
+                  (then (return (i32.const -1))))
                 (if (i32.gt_s (local.get $i1) (local.get $i2))
                   (then (return (i32.const 1))))
                 (local.set $i (i32.add (local.get $i) (i32.const 1)))
@@ -1685,7 +1683,7 @@
               (local.set $i1 (call $ta_get_i8 (local.get $d1) (local.get $i)))
               (local.set $i2 (call $ta_get_i8 (local.get $d2) (local.get $i)))
               (if (i32.lt_s (local.get $i1) (local.get $i2))
-                (then (return (i32.sub (i32.const 0) (i32.const 1)))))
+                (then (return (i32.const -1))))
               (if (i32.gt_s (local.get $i1) (local.get $i2))
                 (then (return (i32.const 1))))
               (local.set $i (i32.add (local.get $i) (i32.const 1)))
@@ -1697,7 +1695,7 @@
             (local.set $f1 (call $ta_get_f64 (local.get $d1) (local.get $i)))
             (local.set $f2 (call $ta_get_f64 (local.get $d2) (local.get $i)))
             (if (f64.lt (local.get $f1) (local.get $f2))
-              (then (return (i32.sub (i32.const 0) (i32.const 1)))))
+              (then (return (i32.const -1))))
             (if (f64.gt (local.get $f1) (local.get $f2))
               (then (return (i32.const 1))))
             (if (f64.ne (local.get $f1) (local.get $f2))
@@ -1707,7 +1705,7 @@
                 (if (f64.eq (local.get $f1) (local.get $f1))
                   (then (return (i32.const 1))))
                 (if (f64.eq (local.get $f2) (local.get $f2))
-                  (then (return (i32.sub (i32.const 0) (i32.const 1)))))))
+                  (then (return (i32.const -1))))))
             (local.set $i (i32.add (local.get $i) (i32.const 1)))
             (br $loop))))
       (return (i32.const 0)))
@@ -1717,7 +1715,7 @@
           (local.set $f1 (call $ta_get_f32 (local.get $d1) (local.get $i)))
           (local.set $f2 (call $ta_get_f32 (local.get $d2) (local.get $i)))
           (if (f64.lt (local.get $f1) (local.get $f2))
-            (then (return (i32.sub (i32.const 0) (i32.const 1)))))
+            (then (return (i32.const -1))))
           (if (f64.gt (local.get $f1) (local.get $f2))
             (then (return (i32.const 1))))
           (if (f64.ne (local.get $f1) (local.get $f2))
@@ -1727,7 +1725,7 @@
               (if (f64.eq (local.get $f1) (local.get $f1))
                 (then (return (i32.const 1))))
               (if (f64.eq (local.get $f2) (local.get $f2))
-                (then (return (i32.sub (i32.const 0) (i32.const 1)))))))
+                (then (return (i32.const -1))))))
           (local.set $i (i32.add (local.get $i) (i32.const 1)))
           (br $loop))))
     (return (i32.const 0))

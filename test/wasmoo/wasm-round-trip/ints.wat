@@ -22,9 +22,7 @@
       (then
         (local.set $c (array.get_u $string (local.get $s) (i32.const 0)))
         (if (i32.eq (local.get $c) (i32.const 45))
-          (then
-            (local.set $sign (i32.sub (i32.const 0) (i32.const 1)))
-            (local.set $i (i32.const 1)))
+          (then (local.set $sign (i32.const -1)) (local.set $i (i32.const 1)))
           (else
             (if (i32.eq (local.get $c) (i32.const 43))
               (then (local.set $i (i32.const 1))))))))
@@ -86,7 +84,7 @@
       (i32.and (i32.ge_u (local.get $c) (i32.const 97))
         (i32.le_u (local.get $c) (i32.const 122)))
       (then (return (i32.sub (local.get $c) (i32.const 87)))))
-    (return (i32.sub (i32.const 0) (i32.const 1)))
+    (return (i32.const -1))
   )
   (func $parse_int (export "parse_int")
     (param $v (ref eq)) (param $nbits i32) (param $errmsg (ref $string))
@@ -103,8 +101,7 @@
     (local.set $sign)
     (local.set $signedness)
     (local.set $i)
-    (local.set $threshold
-      (i32.div_u (i32.sub (i32.const 0) (i32.const 1)) (local.get $base)))
+    (local.set $threshold (i32.div_u (i32.const -1) (local.get $base)))
     (if (i32.ge_s (local.get $i) (local.get $len))
       (then (call $caml_failwith (local.get $errmsg))))
     (local.set $d
