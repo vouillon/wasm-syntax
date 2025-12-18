@@ -233,6 +233,9 @@ casttype:
          raise (Wasm.Parsing.Syntax_error
                   ($sloc, Printf.sprintf "Identifier '%s' is not a cast type.\n" t )) }
 | t = reftype { Valtype (Ref t) }
+(*
+| functype { assert false }
+*)
 
 
 resulttype:

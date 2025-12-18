@@ -491,7 +491,9 @@ let rec instr prec pp (i : _ instr) =
   parentheses prec (get_prec i) pp @@ fun () ->
   match i.desc with
   | Block { label; typ; block = l } ->
-      block pp label (if need_blocktype typ then Some "do" else None) typ l
+      block pp label
+        (if true || need_blocktype typ then Some "do" else None)
+        typ l
   | Loop { label; typ; block = l } -> block pp label (Some "loop") typ l
   | If { label; typ; cond; if_block; else_block } ->
       hvbox pp (fun () ->

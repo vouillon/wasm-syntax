@@ -1,6 +1,5 @@
 (*
 TODO:
-- revise the AST
 - Check that import correspond to a declaration
 - fix typeuse validation (add a type if not already present)
   + typeuse when converting to binary
@@ -8,10 +7,6 @@ TODO:
 - locations on the heap when push several values?
 - more methods rather than global functions (no ambiguity)?
   rotl(..), rotr(..), min(..), max(..), copysign(..)
-
-Examples of hole orders:
-  bad: (_ + _) + _, _+ (1 + _), 1 + (_ + _)
-  good : _ + (_ + _), _ * (_ + 1)
 
 Optimizations
 - move lets at more appropriate places
@@ -37,7 +32,6 @@ Syntax changes:
 - names in result type (symmetry with params)
 - no need to have func type for tags (declaration tag : ty)
 - we may not need Sequence (change branch expressions instead)
-- what should the syntax of throw tag be (parentheses around parameters?)
 
 Syntax ideas:
 - dispatch foo ['a 'b ... else 'c] { 'a { } 'b { } ... }
@@ -46,6 +40,7 @@ Syntax ideas:
 Misc:
 - blocks in an expression context return one value;
   otherwise, no value by default
+  (or infer return type when no type is given?)
 
 Explicit types?
    fn(..)->(..)
