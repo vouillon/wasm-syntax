@@ -1,17 +1,12 @@
 type comment =
   | Comment of {
-      loc : Ast.location;
       kind : [ `Line | `Block ];
       at_start_of_line : bool;
       content : string;
       prev_token_end : int;
     }
-  | Annotation of {
-      loc : Ast.location;
-      at_start_of_line : bool;
-      prev_token_end : int;
-    }
-  | BlankLine of Lexing.position
+  | Annotation of { at_start_of_line : bool; prev_token_end : int }
+  | BlankLine of { prev_token_end : int }
 
 type associated = {
   before : comment list;
@@ -38,28 +33,27 @@ let make () =
 
 let add_comment ctx cmd = ctx.comments <- cmd :: ctx.comments
 
-let report_comment ctx loc kind content =
+let report_comment ctx kind content =
   add_comment ctx
     (Comment
        {
-         loc;
          kind;
          at_start_of_line = ctx.at_start_of_line;
          content;
          prev_token_end = ctx.prev_token_end;
        })
 
-let report_annotation ctx loc =
+let report_annotation ctx =
   add_comment ctx
     (Annotation
        {
-         loc;
          at_start_of_line = ctx.at_start_of_line;
          prev_token_end = ctx.prev_token_end;
        })
 
-let report_newline ctx pos =
-  if ctx.at_start_of_line then add_comment ctx (BlankLine pos);
+let report_newline ctx =
+  if ctx.at_start_of_line then
+    add_comment ctx (BlankLine { prev_token_end = ctx.prev_token_end });
   ctx.at_start_of_line <- true
 
 let report_token ctx pos =
@@ -95,7 +89,7 @@ let with_pos ctx info desc =
   { Ast.desc; info }
 
 let associate ctx =
-  let tbl = Hashtbl.create 16 in
+  let tbl = Hashtbl.create (List.length ctx.locations) in
   let comments = List.rev ctx.comments in
   let locs =
     List.sort
@@ -109,9 +103,10 @@ let associate ctx =
       ctx.locations
   in
   let pos_of_comment = function
-    | Comment { loc; _ } | Annotation { loc; _ } ->
-        loc.Ast.loc_start.Lexing.pos_cnum
-    | BlankLine pos -> pos.Lexing.pos_cnum
+    | Comment { prev_token_end; _ }
+    | Annotation { prev_token_end; _ }
+    | BlankLine { prev_token_end; _ } ->
+        prev_token_end
   in
   let split_before threshold comments =
     let rec aux acc = function
@@ -138,7 +133,8 @@ let associate ctx =
       | (Annotation { prev_token_end; _ } as c) :: rest
         when prev_token_end = parent_end ->
           aux (c :: acc) rest
-      | l -> (List.rev acc, l)
+      | BlankLine _ :: rest -> (List.rev acc, rest)
+      | rest -> (List.rev acc, rest)
     in
     aux [] comments
   in
@@ -161,19 +157,24 @@ let associate ctx =
         let within_candidates, rem3 =
           split_before loc.Ast.loc_end.Lexing.pos_cnum rem2
         in
-        let after, rem4 = get_after loc.Ast.loc_end.Lexing.pos_cnum rem3 in
-        let final_after =
+        let steal_candidate =
           match List.rev children with
           | last_child :: _
             when last_child.Ast.loc_end.Lexing.pos_cnum
-                 = loc.Ast.loc_end.Lexing.pos_cnum -> (
+                 = loc.Ast.loc_end.Lexing.pos_cnum ->
+              Some last_child
+          | _ -> None
+        in
+        let final_after, rem4 =
+          match steal_candidate with
+          | Some last_child -> (
               match Hashtbl.find_opt tbl last_child with
               | Some assoc ->
                   let stolen = assoc.after in
                   Hashtbl.replace tbl last_child { assoc with after = [] };
-                  stolen @ after
-              | None -> after)
-          | _ -> after
+                  (stolen, rem3)
+              | None -> get_after loc.Ast.loc_end.Lexing.pos_cnum rem3)
+          | None -> get_after loc.Ast.loc_end.Lexing.pos_cnum rem3
         in
         Hashtbl.add tbl loc
           { before; within = within_candidates; after = final_after };

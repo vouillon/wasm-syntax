@@ -201,14 +201,14 @@ let rec token_with_comments lexbuf =
 
 let rec token ctx lexbuf =
   match token_with_comments lexbuf with
-  | LINE_COMMENT (loc, kind, content) ->
-      Utils.Comment.report_comment ctx loc kind content;
+  | LINE_COMMENT (_loc, kind, content) ->
+      Utils.Comment.report_comment ctx kind content;
       token ctx lexbuf
-  | BLOCK_COMMENT (loc, kind, content) ->
-      Utils.Comment.report_comment ctx loc kind content;
+  | BLOCK_COMMENT (_loc, kind, content) ->
+      Utils.Comment.report_comment ctx kind content;
       token ctx lexbuf
-  | NEWLINE pos ->
-      Utils.Comment.report_newline ctx pos;
+  | NEWLINE _pos ->
+      Utils.Comment.report_newline ctx;
       token ctx lexbuf
   | t ->
       let _start, end_ = Sedlexing.lexing_bytes_positions lexbuf in
