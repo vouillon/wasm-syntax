@@ -13,11 +13,18 @@ type comment =
     }
   | BlankLine of Lexing.position
 
+type associated = {
+  before : comment list;
+  within : comment list;
+  after : comment list;
+}
+
 type context = {
   mutable comments : comment list;
   mutable at_start_of_line : bool;
   mutable last_loc : Ast.location option;
   mutable prev_token_end : int;
+  mutable locations : Ast.location list;
 }
 
 let make () =
@@ -26,6 +33,7 @@ let make () =
     at_start_of_line = true;
     last_loc = None;
     prev_token_end = 0;
+    locations = [];
   }
 
 let add_comment ctx cmd = ctx.comments <- cmd :: ctx.comments
@@ -83,4 +91,93 @@ let check_loc ctx (loc : Ast.location) =
 let with_pos ctx info desc =
   check_loc ctx info;
   ctx.last_loc <- Some info;
+  ctx.locations <- info :: ctx.locations;
   { Ast.desc; info }
+
+let associate ctx =
+  let tbl = Hashtbl.create 16 in
+  let comments = List.rev ctx.comments in
+  let locs =
+    List.sort
+      (fun a b ->
+        let c =
+          compare a.Ast.loc_start.Lexing.pos_cnum
+            b.Ast.loc_start.Lexing.pos_cnum
+        in
+        if c <> 0 then c
+        else compare b.Ast.loc_end.Lexing.pos_cnum a.Ast.loc_end.Lexing.pos_cnum)
+      ctx.locations
+  in
+  let pos_of_comment = function
+    | Comment { loc; _ } | Annotation { loc; _ } ->
+        loc.Ast.loc_start.Lexing.pos_cnum
+    | BlankLine pos -> pos.Lexing.pos_cnum
+  in
+  let split_before threshold comments =
+    let rec aux acc = function
+      | c :: rest when pos_of_comment c < threshold -> aux (c :: acc) rest
+      | rest -> (List.rev acc, rest)
+    in
+    aux [] comments
+  in
+  let get_after parent_end comments =
+    let rec aux acc = function
+      | (Comment { prev_token_end; kind = `Line; at_start_of_line = false; _ }
+         as c)
+        :: rest
+        when prev_token_end = parent_end ->
+          (List.rev (c :: acc), rest)
+      | (Comment { prev_token_end; kind = `Line; at_start_of_line = true; _ } as
+         c)
+        :: rest
+        when prev_token_end = parent_end ->
+          (List.rev acc, c :: rest)
+      | (Comment { prev_token_end; _ } as c) :: rest
+        when prev_token_end = parent_end ->
+          aux (c :: acc) rest
+      | (Annotation { prev_token_end; _ } as c) :: rest
+        when prev_token_end = parent_end ->
+          aux (c :: acc) rest
+      | l -> (List.rev acc, l)
+    in
+    aux [] comments
+  in
+  let rec process locs comments =
+    match locs with
+    | [] -> comments
+    | loc :: rest_locs ->
+        let is_child l =
+          l.Ast.loc_end.Lexing.pos_cnum <= loc.Ast.loc_end.Lexing.pos_cnum
+        in
+        let rec span acc = function
+          | l :: rs when is_child l -> span (l :: acc) rs
+          | rs -> (List.rev acc, rs)
+        in
+        let children, siblings = span [] rest_locs in
+        let before, rem1 =
+          split_before loc.Ast.loc_start.Lexing.pos_cnum comments
+        in
+        let rem2 = process children rem1 in
+        let within_candidates, rem3 =
+          split_before loc.Ast.loc_end.Lexing.pos_cnum rem2
+        in
+        let after, rem4 = get_after loc.Ast.loc_end.Lexing.pos_cnum rem3 in
+        let final_after =
+          match List.rev children with
+          | last_child :: _
+            when last_child.Ast.loc_end.Lexing.pos_cnum
+                 = loc.Ast.loc_end.Lexing.pos_cnum -> (
+              match Hashtbl.find_opt tbl last_child with
+              | Some assoc ->
+                  let stolen = assoc.after in
+                  Hashtbl.replace tbl last_child { assoc with after = [] };
+                  stolen @ after
+              | None -> after)
+          | _ -> after
+        in
+        Hashtbl.add tbl loc
+          { before; within = within_candidates; after = final_after };
+        process siblings rem4
+  in
+  ignore (process locs comments);
+  tbl

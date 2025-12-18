@@ -1,6 +1,30 @@
 (** Parsing context for collecting comments and annotations. *)
 
+type comment =
+  | Comment of {
+      loc : Ast.location;
+      kind : [ `Line | `Block ];
+      at_start_of_line : bool;
+      content : string;
+      prev_token_end : int;
+    }
+  | Annotation of {
+      loc : Ast.location;
+      at_start_of_line : bool;
+      prev_token_end : int;
+    }
+  | BlankLine of Lexing.position
+
 type context
+
+type associated = {
+  before : comment list;
+  within : comment list;
+  after : comment list;
+}
+
+val associate : context -> (Ast.location, associated) Hashtbl.t
+(** [associate ctx] associates comments to locations. *)
 
 val make : unit -> context
 (** Create a new comment context. *)
