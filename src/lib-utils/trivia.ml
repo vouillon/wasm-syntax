@@ -1,21 +1,16 @@
-type comment =
-  | Comment of {
-      kind : [ `Line | `Block ];
-      at_start_of_line : bool;
-      content : string;
-      prev_token_end : int;
-    }
-  | Annotation of { at_start_of_line : bool; prev_token_end : int }
-  | BlankLine of { prev_token_end : int }
+type position = Line_start | Inline
+type kind = Line_comment | Block_comment | Annotation
+type t = Item of { content : string; kind : kind } | Blank_line
+type entry = { anchor : int; trivia : t; position : position }
 
 type associated = {
-  before : comment list;
-  within : comment list;
-  after : comment list;
+  before : entry list;
+  within : entry list;
+  after : entry list;
 }
 
 type context = {
-  mutable comments : comment list;
+  mutable comments : entry list;
   mutable at_start_of_line : bool;
   mutable last_loc : Ast.location option;
   mutable prev_token_end : int;
@@ -31,29 +26,35 @@ let make () =
     locations = [];
   }
 
-let add_comment ctx cmd = ctx.comments <- cmd :: ctx.comments
+let add_entry ctx entry = ctx.comments <- entry :: ctx.comments
 
 let report_comment ctx kind content =
-  add_comment ctx
-    (Comment
-       {
-         kind;
-         at_start_of_line = ctx.at_start_of_line;
-         content;
-         prev_token_end = ctx.prev_token_end;
-       })
+  let kind =
+    match kind with `Line -> Line_comment | `Block -> Block_comment
+  in
+  add_entry ctx
+    {
+      anchor = ctx.prev_token_end;
+      trivia = Item { content; kind };
+      position = (if ctx.at_start_of_line then Line_start else Inline);
+    }
 
 let report_annotation ctx =
-  add_comment ctx
-    (Annotation
-       {
-         at_start_of_line = ctx.at_start_of_line;
-         prev_token_end = ctx.prev_token_end;
-       })
+  add_entry ctx
+    {
+      anchor = ctx.prev_token_end;
+      trivia = Item { content = ""; kind = Annotation };
+      position = (if ctx.at_start_of_line then Line_start else Inline);
+    }
 
 let report_newline ctx =
   if ctx.at_start_of_line then
-    add_comment ctx (BlankLine { prev_token_end = ctx.prev_token_end });
+    add_entry ctx
+      {
+        anchor = ctx.prev_token_end;
+        trivia = Blank_line;
+        position = Line_start;
+      };
   ctx.at_start_of_line <- true
 
 let report_token ctx pos =
@@ -102,39 +103,36 @@ let associate ctx =
         else compare b.Ast.loc_end.Lexing.pos_cnum a.Ast.loc_end.Lexing.pos_cnum)
       ctx.locations
   in
-  let pos_of_comment = function
-    | Comment { prev_token_end; _ }
-    | Annotation { prev_token_end; _ }
-    | BlankLine { prev_token_end; _ } ->
-        prev_token_end
-  in
+  let pos_of_entry e = e.anchor in
   let split_before threshold comments =
     let rec aux acc = function
-      | c :: rest when pos_of_comment c < threshold -> aux (c :: acc) rest
+      | c :: rest when pos_of_entry c < threshold -> aux (c :: acc) rest
       | rest -> (List.rev acc, rest)
     in
     aux [] comments
   in
   let get_after parent_end comments =
     let rec aux acc = function
-      | (Comment { prev_token_end; kind = `Line; at_start_of_line = false; _ }
+      | ({ anchor; trivia = Item { kind = Line_comment; _ }; position = Inline }
          as c)
         :: rest
-        when prev_token_end = parent_end ->
+        when anchor = parent_end ->
           (List.rev (c :: acc), rest)
-      | (Comment { prev_token_end; kind = `Line; at_start_of_line = true; _ } as
-         c)
+      | ({
+           anchor;
+           trivia = Item { kind = Line_comment; _ };
+           position = Line_start;
+         } as c)
         :: rest
-        when prev_token_end = parent_end ->
+        when anchor = parent_end ->
           (List.rev acc, c :: rest)
-      | (Comment { prev_token_end; _ } as c) :: rest
-        when prev_token_end = parent_end ->
+      | ({ anchor; trivia = Item _; _ } as c) :: rest when anchor = parent_end
+        ->
           aux (c :: acc) rest
-      | (Annotation { prev_token_end; _ } as c) :: rest
-        when prev_token_end = parent_end ->
-          aux (c :: acc) rest
-      | BlankLine _ :: rest -> (List.rev acc, rest)
-      | rest -> (List.rev acc, rest)
+      | ({ anchor; trivia = Blank_line; _ } as c) :: rest
+        when anchor = parent_end ->
+          (List.rev acc, c :: rest)
+      | l -> (List.rev acc, l)
     in
     aux [] comments
   in

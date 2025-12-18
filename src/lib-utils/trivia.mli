@@ -1,28 +1,22 @@
 (** Parsing context for collecting comments and annotations. *)
 
-type comment =
-  | Comment of {
-      kind : [ `Line | `Block ];
-      at_start_of_line : bool;
-      content : string;
-      prev_token_end : int;
-    }
-  | Annotation of { at_start_of_line : bool; prev_token_end : int }
-  | BlankLine of { prev_token_end : int }
-
+type position = Line_start | Inline
+type kind = Line_comment | Block_comment | Annotation
+type t = Item of { content : string; kind : kind } | Blank_line
+type entry = { anchor : int; trivia : t; position : position }
 type context
 
 type associated = {
-  before : comment list;
-  within : comment list;
-  after : comment list;
+  before : entry list;
+  within : entry list;
+  after : entry list;
 }
 
 val associate : context -> (Ast.location, associated) Hashtbl.t
-(** [associate ctx] associates comments to locations. *)
+(** [associate ctx] associates trivia to locations. *)
 
 val make : unit -> context
-(** Create a new comment context. *)
+(** Create a new trivia context. *)
 
 val report_comment : context -> [ `Line | `Block ] -> string -> unit
 (** [report_comment ctx kind content] reports a comment. *)

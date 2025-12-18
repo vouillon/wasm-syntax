@@ -6,7 +6,7 @@ end) (Tokens : sig
   type token
 end) (Parser : sig
   module Make (_ : sig
-    type t = Utils.Comment.context
+    type t = Utils.Trivia.context
 
     val context : t
   end) : sig
@@ -21,7 +21,7 @@ end) (Parser : sig
   end
 end) (Fast_parser : sig
   module Make (_ : sig
-    type t = Utils.Comment.context
+    type t = Utils.Trivia.context
 
     val context : t
   end) : sig
@@ -34,7 +34,7 @@ end) (Fast_parser : sig
 end) (Parser_messages : sig
   val message : int -> string
 end) (Lexer : sig
-  val token : Utils.Comment.context -> Sedlexing.lexbuf -> Tokens.token
+  val token : Utils.Trivia.context -> Sedlexing.lexbuf -> Tokens.token
 end) =
 struct
   module E = MenhirLib.ErrorReports
@@ -65,7 +65,7 @@ struct
     (token, startp, endp)
 
   module Inner (Context : sig
-    type t = Utils.Comment.context
+    type t = Utils.Trivia.context
 
     val context : t
   end) =
@@ -135,9 +135,9 @@ struct
   end
 
   let parse_from_string ?color ~filename text =
-    let ctx = Utils.Comment.make () in
+    let ctx = Utils.Trivia.make () in
     let module Context = struct
-      type t = Utils.Comment.context
+      type t = Utils.Trivia.context
 
       let context = ctx
     end in

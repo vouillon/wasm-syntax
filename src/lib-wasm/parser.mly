@@ -192,7 +192,7 @@ ZZZ
 %token INPUT
 %token OUTPUT
 
-%parameter <Context : sig type t = Utils.Comment.context val context : t end>
+%parameter <Context : sig type t = Utils.Trivia.context val context : t end>
 
 %{
 module Uint32 = Utils.Uint32
@@ -209,7 +209,7 @@ let lane_width : [ `I8 | `I16 | `I32 | `I64 ] -> Uint64.t = function
   | `I64 -> Uint64.of_int 8
 
 let with_loc loc desc =
-  Utils.Comment.with_pos Context.context {loc_start = fst loc; loc_end = snd loc} desc
+  Utils.Trivia.with_pos Context.context {loc_start = fst loc; loc_end = snd loc} desc
 
 let map_fst f (x, y) = (f x, y)
 

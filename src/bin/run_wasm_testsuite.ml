@@ -146,7 +146,7 @@ type script =
 
 module Script_parser = struct
   module Make (Context : sig
-    type t = Utils.Comment.context
+    type t = Utils.Trivia.context
 
     val context : t
   end) =
@@ -165,7 +165,7 @@ end
 
 module Fast_script_parser = struct
   module Make (Context : sig
-    type t = Utils.Comment.context
+    type t = Utils.Trivia.context
 
     val context : t
   end) =

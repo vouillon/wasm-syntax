@@ -176,7 +176,7 @@ let rec token_with_comments ctx lexbuf =
                "An identifier cannot be the empty string" ));
       ID s
   | newline ->
-      Utils.Comment.report_newline ctx;
+      Utils.Trivia.report_newline ctx;
       token_with_comments ctx lexbuf (* Skip standalone newlines in Wat *)
   | linecomment ->
       let loc_start, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
@@ -886,17 +886,17 @@ let rec token_with_comments ctx lexbuf =
 let rec token ctx lexbuf =
   match token_with_comments ctx lexbuf with
   | LINE_COMMENT (_loc, kind, content) ->
-      Utils.Comment.report_comment ctx kind content;
+      Utils.Trivia.report_comment ctx kind content;
       token ctx lexbuf
   | BLOCK_COMMENT (_loc, kind, content) ->
-      Utils.Comment.report_comment ctx kind content;
+      Utils.Trivia.report_comment ctx kind content;
       token ctx lexbuf
   | ANNOTATION _loc ->
-      Utils.Comment.report_annotation ctx;
+      Utils.Trivia.report_annotation ctx;
       token ctx lexbuf
   | t ->
       let _start, end_ = Sedlexing.lexing_bytes_positions lexbuf in
-      Utils.Comment.report_token ctx end_.pos_cnum;
+      Utils.Trivia.report_token ctx end_.pos_cnum;
       t
 
 let is_valid_identifier s =

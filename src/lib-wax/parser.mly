@@ -97,7 +97,7 @@
                             (IDENT < PIPE)
 *)
 
-%parameter <Context : sig type t val context : Utils.Comment.context end>
+%parameter <Context : sig type t val context : Utils.Trivia.context end>
 
 %{
 open Ast
@@ -152,7 +152,7 @@ let storagetype_tbl =
      "v128", Value V128]
 
 let with_loc loc desc =
-   Utils.Comment.with_pos Context.context {loc_start = fst loc; loc_end = snd loc} desc
+   Utils.Trivia.with_pos Context.context {loc_start = fst loc; loc_end = snd loc} desc
 
 let blocktype bt = Option.value ~default:{params = [||]; results = [||]} bt
 %}
