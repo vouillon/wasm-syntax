@@ -4,31 +4,59 @@ type comment =
       kind : [ `Line | `Block ];
       at_start_of_line : bool;
       content : string;
+      prev_token_end : int;
     }
-  | Annotation of { loc : Ast.location; at_start_of_line : bool }
+  | Annotation of {
+      loc : Ast.location;
+      at_start_of_line : bool;
+      prev_token_end : int;
+    }
   | BlankLine of Lexing.position
 
 type context = {
   mutable comments : comment list;
   mutable at_start_of_line : bool;
   mutable last_loc : Ast.location option;
+  mutable prev_token_end : int;
 }
 
-let make () = { comments = []; at_start_of_line = true; last_loc = None }
+let make () =
+  {
+    comments = [];
+    at_start_of_line = true;
+    last_loc = None;
+    prev_token_end = 0;
+  }
+
 let add_comment ctx cmd = ctx.comments <- cmd :: ctx.comments
 
 let report_comment ctx loc kind content =
   add_comment ctx
-    (Comment { loc; kind; at_start_of_line = ctx.at_start_of_line; content })
+    (Comment
+       {
+         loc;
+         kind;
+         at_start_of_line = ctx.at_start_of_line;
+         content;
+         prev_token_end = ctx.prev_token_end;
+       })
 
 let report_annotation ctx loc =
-  add_comment ctx (Annotation { loc; at_start_of_line = ctx.at_start_of_line })
+  add_comment ctx
+    (Annotation
+       {
+         loc;
+         at_start_of_line = ctx.at_start_of_line;
+         prev_token_end = ctx.prev_token_end;
+       })
 
 let report_newline ctx pos =
   if ctx.at_start_of_line then add_comment ctx (BlankLine pos);
   ctx.at_start_of_line <- true
 
-let report_token ctx = ctx.at_start_of_line <- false
+let report_token ctx pos =
+  ctx.at_start_of_line <- false;
+  ctx.prev_token_end <- pos
 
 let check_loc ctx (loc : Ast.location) =
   if false then

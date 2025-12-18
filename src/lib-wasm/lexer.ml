@@ -896,7 +896,8 @@ let rec token ctx lexbuf =
       Utils.Comment.report_annotation ctx loc;
       token ctx lexbuf
   | t ->
-      Utils.Comment.report_token ctx;
+      let _start, end_ = Sedlexing.lexing_bytes_positions lexbuf in
+      Utils.Comment.report_token ctx end_.pos_cnum;
       t
 
 let is_valid_identifier s =

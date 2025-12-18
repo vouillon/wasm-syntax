@@ -15,9 +15,9 @@ val report_annotation : context -> Ast.location -> unit
 val report_newline : context -> Lexing.position -> unit
 (** [report_newline ctx pos] reports a newline at [pos]. *)
 
-val report_token : context -> unit
-(** [report_token ctx] records that a meaningful token has been encountered on
-    the current line. *)
+val report_token : context -> int -> unit
+(** [report_token ctx pos] records that a meaningful token ending at byte [pos]
+    has been encountered on the current line. *)
 
 val with_pos : context -> Ast.location -> 'a -> ('a, Ast.location) Ast.annotated
 (** [with_pos ctx loc v] wraps [v] with location [loc]. *)
