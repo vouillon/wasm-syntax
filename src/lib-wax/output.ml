@@ -806,13 +806,16 @@ let rec instr prec pp (i : _ instr) =
               space pp ();
               instr Branch pp i)
             i)
-  | Throw (tag, l) ->
+  | Throw (tag, i) ->
       box pp ~indent:indent_level (fun () ->
           keyword pp "throw";
           space pp ();
           identifier pp tag.desc;
-          space pp ();
-          print_paren_list (instr Instruction) pp l)
+          Option.iter
+            (fun i ->
+              space pp ();
+              instr Branch pp i)
+            i)
   | ThrowRef i ->
       box pp ~indent:indent_level (fun () ->
           keyword pp "throw_ref";

@@ -8,10 +8,10 @@ type string = [mut i8]
 #[export = "ocaml_exception"]
 tag ocaml_exception(&eq)
 #[export = "caml_raise_constant"]
-fn caml_raise_constant(x: &eq) { throw ocaml_exception (x); }
+fn caml_raise_constant(x: &eq) { throw ocaml_exception x; }
 #[export = "caml_raise_with_arg"]
 fn caml_raise_with_arg(tag_2: &eq, arg: &eq) {
-    throw ocaml_exception ([block|0 as &i31, tag_2, arg]);
+    throw ocaml_exception [block|0 as &i31, tag_2, arg];
 }
 const OUT_OF_MEMORY_EXN: i32 = 0;
 #[export = "caml_raise_out_of_memory"]

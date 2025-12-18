@@ -872,19 +872,21 @@ let rec count_holes i =
   | Br_on_cast (_, _, i)
   | Br_on_cast_fail (_, _, i)
   | ArrayDefault (_, i)
+  | Throw (_, Some i)
   | ThrowRef i
   | Return (Some i)
   | StructGet (i, _) ->
       count_holes i
   | StructSet (i1, _, i2) -> count_holes i1 + count_holes i2
   | Struct (_, l) -> List.fold_left (fun acc (_, i) -> acc + count_holes i) 0 l
-  | Sequence l | ArrayFixed (_, l) | Throw (_, l) ->
+  | Sequence l | ArrayFixed (_, l) ->
       List.fold_left (fun acc i -> acc + count_holes i) 0 l
   | Select (c, t, e) -> count_holes c + count_holes t + count_holes e
   | Block _ | Loop _ | TryTable _ | Try _ | StructDefault _ | String _ | Int _
   | Float _ | Get _ | Null | Unreachable | Nop
   | Let (_, None)
   | Br (_, None)
+  | Throw (_, None)
   | Return None ->
       0
 
@@ -903,6 +905,7 @@ let rec check_hole_order_rec ctx i n =
         | Int _ | Float _ | Get _ | Null | Unreachable | Nop
         | Let (_, None)
         | Br (_, None)
+        | Throw (_, None)
         | Return None ->
             n
         | BinOp (_, l, r) | Array (_, l, r) | ArrayGet (l, r) ->
@@ -928,14 +931,14 @@ let rec check_hole_order_rec ctx i n =
         | Br_on_cast (_, _, i)
         | Br_on_cast_fail (_, _, i)
         | ArrayDefault (_, i)
+        | Throw (_, Some i)
         | ThrowRef i
         | Return (Some i)
         | StructGet (i, _) ->
             check_hole_order_rec ctx i n
         | StructSet (i1, _, i2) ->
             n |> check_hole_order_rec ctx i1 |> check_hole_order_rec ctx i2
-        | Sequence l | ArrayFixed (_, l) | Throw (_, l) ->
-            check_hole_order_in_list ctx l n
+        | Sequence l | ArrayFixed (_, l) -> check_hole_order_in_list ctx l n
         | Struct (_, l) ->
             let fields =
               match UnionFind.find (expression_type ctx i) with
@@ -1960,17 +1963,23 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
              ty,
              { i' with info = (Array.append types [| typ1 |], snd i'.info) } ))
         (Array.append (Array.sub params 0 (Array.length params - 1)) [| typ |])
-  | Throw (tag, lst) ->
-      let* lst' = instructions ctx lst in
+  | Throw (tag, i') ->
+      let* i' =
+        match i' with
+        | Some i' ->
+            let* i' = instruction ctx i' in
+            return (Some i')
+        | None -> return None
+      in
       (let>@ { params; results } = Tbl.find ctx.diagnostics ctx.tags tag in
        assert (results = [||]);
        let>@ types =
          array_map_opt (fun (_, typ) -> internalize ctx typ) params
        in
-       check_subtypes ctx
-         (Array.of_list (List.map (expression_type ctx) lst'))
-         types);
-      return_statement i (Throw (tag, lst')) [||]
+       match i' with
+       | Some i' -> check_subtypes ctx (fst i'.info) types
+       | None -> assert (types = [||]));
+      return_statement i (Throw (tag, i')) [||]
   | ThrowRef i' ->
       let* i' = instruction ctx i' in
       (let>@ typ = internalize ctx (Ref { nullable = true; typ = Exn }) in

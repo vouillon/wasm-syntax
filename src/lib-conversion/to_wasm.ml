@@ -697,9 +697,10 @@ let rec instruction ret ctx i : location Text.instr list =
              reftype target_reftype ))
         (instruction ret ctx expr)
   | Throw (tag_idx, args) ->
-      folded loc
-        (Throw (index tag_idx))
-        (List.concat_map (instruction ret ctx) args)
+      let args =
+        match args with None -> [] | Some args -> instruction ret ctx args
+      in
+      folded loc (Throw (index tag_idx)) args
   | ThrowRef expr -> folded loc ThrowRef (instruction ret ctx expr)
   | Return None -> folded loc Return []
   | Return (Some expr) -> folded loc Return (instruction ret ctx expr)

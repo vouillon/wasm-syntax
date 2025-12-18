@@ -42,7 +42,7 @@ type float = { f: f64 }
 #[export = "ocaml_exit"]
 tag ocaml_exit(i32)
 #[export = "caml_sys_exit"]
-fn caml_sys_exit(x: &eq) -> &eq { throw ocaml_exit (x as &i31 as i32_s); }
+fn caml_sys_exit(x: &eq) -> &eq { throw ocaml_exit x as &i31 as i32_s; }
 #[export = "caml_sys_getenv"]
 #[export = "caml_sys_unsafe_getenv"]
 fn caml_sys_getenv(x: &eq) -> &eq {

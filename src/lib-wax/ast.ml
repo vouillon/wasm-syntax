@@ -119,7 +119,7 @@ type 'info instr_desc =
   | Br_on_non_null of label * 'info instr
   | Br_on_cast of label * reftype * 'info instr
   | Br_on_cast_fail of label * reftype * 'info instr
-  | Throw of ident * 'info instr list
+  | Throw of ident * 'info instr option
   | ThrowRef of 'info instr
   | Return of 'info instr option
   | Sequence of 'info instr list

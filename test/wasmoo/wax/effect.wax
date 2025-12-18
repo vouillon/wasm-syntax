@@ -196,7 +196,7 @@ fn caml_start_fiber(p: &?eq) {
                 apply_pair(p as &pair);
             } catch {
                 javascript_exception => {
-                    throw ocaml_exception (caml_wrap_exception(_));
+                    throw ocaml_exception caml_wrap_exception(_);
                 }
             }
         } catch {
@@ -275,9 +275,7 @@ fn caml_push_trap(h: &eq) -> &eq {
     exn_stack = {exn_stack| h: h, next: exn_stack };
     0 as &i31;
 }
-fn raise_exception_2(exn: &eq, x: &eq) -> &eq {
-    throw ocaml_exception (exn);
-}
+fn raise_exception_2(exn: &eq, x: &eq) -> &eq { throw ocaml_exception exn; }
 const raise_exception: &eq = {closure| f: raise_exception_2 };
 #[export = "caml_pop_trap"]
 fn caml_pop_trap() -> &eq {
@@ -399,7 +397,7 @@ fn caml_trampoline(f: &eq, vargs: &eq) -> &eq {
     } /* 'loop */
     exn_stack = saved_exn_stack;
     cps_fiber_stack = saved_fiber_stack;
-    throw ocaml_exception (exn);
+    throw ocaml_exception exn;
 }
 #[export = "caml_trampoline_ref"]
 let caml_trampoline_ref: &?function_1 = null as &?function_1;

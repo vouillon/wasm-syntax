@@ -62,7 +62,7 @@ let rec map_instr f instr =
     | Br_on_non_null (label, v) -> Br_on_non_null (label, map_instr f v)
     | Br_on_cast (label, t, v) -> Br_on_cast (label, t, map_instr f v)
     | Br_on_cast_fail (label, t, v) -> Br_on_cast_fail (label, t, map_instr f v)
-    | Throw (idx, args) -> Throw (idx, List.map (map_instr f) args)
+    | Throw (idx, args) -> Throw (idx, Option.map (map_instr f) args)
     | ThrowRef v -> ThrowRef (map_instr f v)
     | Return v -> Return (Option.map (map_instr f) v)
     | Sequence instrs -> Sequence (List.map (map_instr f) instrs)

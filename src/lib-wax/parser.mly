@@ -472,8 +472,8 @@ statement:
 | BR_TABLE "[" lst = list(i = label { i }) ELSE l = label  "]" i = instr
   { with_loc $sloc (Br_table (lst @ [l], i)) }
 | RETURN i = ioption(instr) { with_loc $sloc (Return i) }
-| THROW t = ident  "(" l = separated_list(",", instr) ")"
-  { with_loc $sloc (Throw (t, l)) }
+| THROW t = ident  i = ioption(instr)
+  { with_loc $sloc (Throw (t, i)) }
 | THROW_REF i = instr
   { with_loc $sloc (ThrowRef i) }
 | BECOME i = instr "(" l = separated_list(",", instr) ")"
