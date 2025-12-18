@@ -13,8 +13,7 @@ let print_module f m =
   Utils.Printer.run f (fun p -> Wasm.Output.module_ ~out_channel:stdout p m)
 
 let convert ~filename =
-  let ctx = Utils.Comment.make () in
-  let ast = P.parse ~filename ctx () in
+  let ast, _ctx = P.parse ~filename () in
   Format.printf "/////////// %s //////////@.@.%a@." filename print_module
     (Wasm.Folding.fold (Wasm.Folding.unfold ast))
 

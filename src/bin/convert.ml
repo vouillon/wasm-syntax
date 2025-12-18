@@ -11,8 +11,7 @@ module P =
 
 let convert ~filename =
   let source = In_channel.with_open_bin filename In_channel.input_all in
-  let ctx = Utils.Comment.make () in
-  let ast = P.parse_from_string ~filename ctx source in
+  let ast, _ctx = P.parse_from_string ~filename source in
   Wasm.Validation.validate_refs := false;
   Utils.Diagnostic.run ~source:(Some source) (fun d -> Wasm.Validation.f d ast);
   let ast' = Conversion.From_wasm.module_ ast in

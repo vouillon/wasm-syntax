@@ -220,8 +220,7 @@ let runtest filename _ =
   let quiet = not !all_errors in
   let color = !color in
   let source = In_channel.with_open_bin filename In_channel.input_all in
-  let ctx = Utils.Comment.make () in
-  let lst = ScriptParser.parse_from_string ~color ~filename ctx source in
+  let lst, _ctx = ScriptParser.parse_from_string ~color ~filename source in
   let lst = List.map (fun (status, m) -> (status, m, Some source)) lst in
   (* Parsing *)
   let lst =
@@ -233,7 +232,7 @@ let runtest filename _ =
         | ((`Valid | `Invalid _) as status), `Text txt ->
             Some
               ( status,
-                ModuleParser.parse_from_string ~color ~filename ctx txt,
+                ModuleParser.parse_from_string ~color ~filename txt |> fst,
                 Some txt )
         | ((`Valid | `Invalid _) as status), `Binary txt ->
             let m =
@@ -248,8 +247,8 @@ let runtest filename _ =
         | `Malformed reason, `Text txt ->
             let ok =
               in_child_process ~quiet (fun () ->
-                  let ast =
-                    ModuleParser.parse_from_string ~color ~filename ctx txt
+                  let ast, _ctx =
+                    ModuleParser.parse_from_string ~color ~filename txt
                   in
                   Utils.Diagnostic.run ~color ~source:(Some txt) (fun d ->
                       Wasm.Validation.check_syntax d ast;
@@ -288,7 +287,7 @@ let runtest filename _ =
         let text = Format.asprintf "%a@." (print_module ~color:Never) m in
         if false then print_flushed text;
         ( status,
-          ModuleParser.parse_from_string ~color ~filename ctx text,
+          ModuleParser.parse_from_string ~color ~filename text |> fst,
           Some text ))
       lst
   in
@@ -377,8 +376,8 @@ let runtest filename _ =
             let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
             let ok =
               in_child_process (fun () ->
-                  let m' =
-                    WaxParser.parse_from_string ~color ~filename ctx text
+                  let m', _ctx =
+                    WaxParser.parse_from_string ~color ~filename text
                   in
                   if true then
                     let ok =

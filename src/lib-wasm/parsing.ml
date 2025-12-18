@@ -134,15 +134,16 @@ struct
             "Input file contains malformed UTF-8 byte sequences\n"
   end
 
-  let parse_from_string ?color ~filename ctx text =
+  let parse_from_string ?color ~filename text =
+    let ctx = Utils.Comment.make () in
     let module Context = struct
       type t = Utils.Comment.context
 
       let context = ctx
     end in
     let module I = Inner (Context) in
-    I.parse_from_string ?color ~filename text
+    (I.parse_from_string ?color ~filename text, ctx)
 
-  let parse ?color ~filename ctx () =
-    parse_from_string ?color ~filename ctx (read filename)
+  let parse ?color ~filename () =
+    parse_from_string ?color ~filename (read filename)
 end

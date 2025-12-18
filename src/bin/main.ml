@@ -55,11 +55,10 @@ let wat_to_wat ~input_file ~output_file ~validate ~color ~fold_mode
   let _ = opt_source_map_file in
   (* Ignored for non-wasm output *)
   let text = with_open_in input_file In_channel.input_all in
-  let ctx = Utils.Comment.make () in
-  let ast =
+  let ast, _ctx =
     Wat_parser.parse_from_string
       ~filename:(Option.value ~default:"-" input_file)
-      ctx text
+      text
   in
   if validate then
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
@@ -71,11 +70,10 @@ let wat_to_wax ~input_file ~output_file ~validate ~color ~fold_mode:_
   let _ = opt_source_map_file in
   (* Ignored for non-wasm output *)
   let text = with_open_in input_file In_channel.input_all in
-  let ctx = Utils.Comment.make () in
-  let ast =
+  let ast, _ctx =
     Wat_parser.parse_from_string
       ~filename:(Option.value ~default:"-" input_file)
-      ctx text
+      text
   in
   if validate then
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
@@ -99,11 +97,10 @@ let wax_to_wat ~input_file ~output_file ~validate ~color ~fold_mode
   let _ = opt_source_map_file in
   (* Ignored for non-wasm output *)
   let text = with_open_in input_file In_channel.input_all in
-  let ctx = Utils.Comment.make () in
-  let ast =
+  let ast, _ctx =
     Wax_parser.parse_from_string
       ~filename:(Option.value ~default:"-" input_file)
-      ctx text
+      text
   in
   let ast =
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
@@ -120,11 +117,10 @@ let wax_to_wax ~input_file ~output_file ~validate ~color ~fold_mode:_
   let _ = opt_source_map_file in
   (* Ignored for non-wasm output *)
   let text = with_open_in input_file In_channel.input_all in
-  let ctx = Utils.Comment.make () in
-  let ast =
+  let ast, _ctx =
     Wax_parser.parse_from_string
       ~filename:(Option.value ~default:"-" input_file)
-      ctx text
+      text
   in
   if validate then
     ignore
@@ -141,11 +137,10 @@ let wax_to_wax ~input_file ~output_file ~validate ~color ~fold_mode:_
 let wax_to_wasm ~input_file ~output_file ~validate ~color ~fold_mode:_
     ~source_map_file:(opt_source_map_file : string option) =
   let text = with_open_in input_file In_channel.input_all in
-  let ctx = Utils.Comment.make () in
-  let ast =
+  let ast, _ctx =
     Wax_parser.parse_from_string
       ~filename:(Option.value ~default:"-" input_file)
-      ctx text
+      text
   in
   let ast =
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
@@ -163,11 +158,10 @@ let wax_to_wasm ~input_file ~output_file ~validate ~color ~fold_mode:_
 let wat_to_wasm ~input_file ~output_file ~validate ~color ~fold_mode:_
     ~source_map_file:opt_source_map_file =
   let text = with_open_in input_file In_channel.input_all in
-  let ctx = Utils.Comment.make () in
-  let ast =
+  let ast, _ctx =
     Wat_parser.parse_from_string
       ~filename:(Option.value ~default:"-" input_file)
-      ctx text
+      text
   in
   if validate then
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->

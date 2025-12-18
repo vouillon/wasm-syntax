@@ -44,17 +44,15 @@ end) : sig
   val parse :
     ?color:Utils.Colors.flag ->
     filename:string ->
-    Utils.Comment.context ->
     unit ->
-    Output.t
+    Output.t * Utils.Comment.context
   (** Parse a file from a filename (reads from stdin if filename is empty or
       "-"). *)
 
   val parse_from_string :
     ?color:Utils.Colors.flag ->
     filename:string ->
-    Utils.Comment.context ->
     string ->
-    Output.t
+    Output.t * Utils.Comment.context
   (** Parse from a string. *)
 end
