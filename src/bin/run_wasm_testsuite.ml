@@ -145,17 +145,39 @@ type script =
   list
 
 module Script_parser = struct
-  include Wasm.Parser
+  module Make (Context : sig
+    type t = Utils.Comment.context
 
-  module Incremental = struct
-    let parse = Wasm.Parser.Incremental.parse_script
+    val context : t
+  end) =
+  struct
+    module P = Wasm.Parser.Make (Context)
+
+    type token = Wasm.Tokens.token
+
+    module MenhirInterpreter = P.MenhirInterpreter
+
+    module Incremental = struct
+      let parse pos = P.Incremental.parse_script pos
+    end
   end
 end
 
 module Fast_script_parser = struct
-  include Wasm.Fast_parser
+  module Make (Context : sig
+    type t = Utils.Comment.context
 
-  let parse = Wasm.Fast_parser.parse_script
+    val context : t
+  end) =
+  struct
+    module F = Wasm.Fast_parser.Make (Context)
+
+    type token = Wasm.Tokens.token
+
+    exception Error = F.Error
+
+    let parse lexer lexbuf = F.parse_script lexer lexbuf
+  end
 end
 
 module ModuleParser =
@@ -163,6 +185,7 @@ module ModuleParser =
     (struct
       type t = Wasm.Ast.location Wasm.Ast.Text.module_
     end)
+    (Wasm.Tokens)
     (Wasm.Parser)
     (Wasm.Fast_parser)
     (Wasm.Parser_messages)
@@ -173,6 +196,7 @@ module ScriptParser =
     (struct
       type t = script
     end)
+    (Wasm.Tokens)
     (Script_parser)
     (Fast_script_parser)
     (Wasm.Parser_messages)
@@ -183,6 +207,7 @@ module WaxParser =
     (struct
       type t = Wax.Ast.location Wax.Ast.module_
     end)
+    (Wax.Tokens)
     (Wax.Parser)
     (Wax.Fast_parser)
     (Wax.Parser_messages)
@@ -195,7 +220,8 @@ let runtest filename _ =
   let quiet = not !all_errors in
   let color = !color in
   let source = In_channel.with_open_bin filename In_channel.input_all in
-  let lst = ScriptParser.parse_from_string ~color ~filename source in
+  let ctx = Utils.Comment.make () in
+  let lst = ScriptParser.parse_from_string ~color ~filename ctx source in
   let lst = List.map (fun (status, m) -> (status, m, Some source)) lst in
   (* Parsing *)
   let lst =
@@ -207,7 +233,7 @@ let runtest filename _ =
         | ((`Valid | `Invalid _) as status), `Text txt ->
             Some
               ( status,
-                ModuleParser.parse_from_string ~color ~filename txt,
+                ModuleParser.parse_from_string ~color ~filename ctx txt,
                 Some txt )
         | ((`Valid | `Invalid _) as status), `Binary txt ->
             let m =
@@ -223,7 +249,7 @@ let runtest filename _ =
             let ok =
               in_child_process ~quiet (fun () ->
                   let ast =
-                    ModuleParser.parse_from_string ~color ~filename txt
+                    ModuleParser.parse_from_string ~color ~filename ctx txt
                   in
                   Utils.Diagnostic.run ~color ~source:(Some txt) (fun d ->
                       Wasm.Validation.check_syntax d ast;
@@ -261,7 +287,9 @@ let runtest filename _ =
       (fun (status, m, _) ->
         let text = Format.asprintf "%a@." (print_module ~color:Never) m in
         if false then print_flushed text;
-        (status, ModuleParser.parse_from_string ~color ~filename text, Some text))
+        ( status,
+          ModuleParser.parse_from_string ~color ~filename ctx text,
+          Some text ))
       lst
   in
   (* Serialization and reparsing (Wasm) *)
@@ -349,7 +377,9 @@ let runtest filename _ =
             let text = Format.asprintf "%a@." (print_wax ~color:Never) m in
             let ok =
               in_child_process (fun () ->
-                  let m' = WaxParser.parse_from_string ~color ~filename text in
+                  let m' =
+                    WaxParser.parse_from_string ~color ~filename ctx text
+                  in
                   if true then
                     let ok =
                       in_child_process (fun () ->

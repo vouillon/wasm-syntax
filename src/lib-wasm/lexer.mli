@@ -1,4 +1,4 @@
 (** Lexer for Wasm Text Format (WAT). *)
 
-val token : Sedlexing.lexbuf -> Parser.token
+val token : Utils.Comment.context -> Sedlexing.lexbuf -> Tokens.token
 val is_valid_identifier : string -> bool

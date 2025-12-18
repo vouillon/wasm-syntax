@@ -7,29 +7,54 @@ exception Syntax_error of (Lexing.position * Lexing.position) * string
 (** Functor to create a parser from a Menhir incremental API. *)
 module Make_parser (Output : sig
   type t
-end) (Parser : sig
+end) (Tokens : sig
   type token
+end) (_ : sig
+  module Make (_ : sig
+    type t = Utils.Comment.context
 
-  module MenhirInterpreter :
-    MenhirLib.IncrementalEngine.INCREMENTAL_ENGINE with type token = token
+    val context : t
+  end) : sig
+    type token = Tokens.token
 
-  module Incremental : sig
-    val parse : Lexing.position -> Output.t MenhirInterpreter.checkpoint
+    module MenhirInterpreter :
+      MenhirLib.IncrementalEngine.INCREMENTAL_ENGINE with type token = token
+
+    module Incremental : sig
+      val parse : Lexing.position -> Output.t MenhirInterpreter.checkpoint
+    end
   end
 end) (_ : sig
-  exception Error
+  module Make (_ : sig
+    type t = Utils.Comment.context
 
-  val parse : (Lexing.lexbuf -> Parser.token) -> Lexing.lexbuf -> Output.t
+    val context : t
+  end) : sig
+    type token = Tokens.token
+
+    exception Error
+
+    val parse : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> Output.t
+  end
 end) (_ : sig
   val message : int -> string
 end) (_ : sig
-  val token : Sedlexing.lexbuf -> Parser.token
+  val token : Utils.Comment.context -> Sedlexing.lexbuf -> Tokens.token
 end) : sig
-  val parse : ?color:Utils.Colors.flag -> filename:string -> unit -> Output.t
+  val parse :
+    ?color:Utils.Colors.flag ->
+    filename:string ->
+    Utils.Comment.context ->
+    unit ->
+    Output.t
   (** Parse a file from a filename (reads from stdin if filename is empty or
       "-"). *)
 
   val parse_from_string :
-    ?color:Utils.Colors.flag -> filename:string -> string -> Output.t
+    ?color:Utils.Colors.flag ->
+    filename:string ->
+    Utils.Comment.context ->
+    string ->
+    Output.t
   (** Parse from a string. *)
 end

@@ -156,6 +156,8 @@ ZZZ
 %token TUPLE
 %token TUPLE_MAKE
 %token TUPLE_EXTRACT
+%token <Ast.location * [ `Line | `Block ] * string> LINE_COMMENT BLOCK_COMMENT
+%token <Ast.location> ANNOTATION
 
 %token DEFINITION
 %token BINARY
@@ -190,6 +192,8 @@ ZZZ
 %token INPUT
 %token OUTPUT
 
+%parameter <Context : sig type t = Utils.Comment.context val context : t end>
+
 %{
 module Uint32 = Utils.Uint32
 module Uint64 = Utils.Uint64
@@ -204,8 +208,8 @@ let lane_width : [ `I8 | `I16 | `I32 | `I64 ] -> Uint64.t = function
   | `I32 -> Uint64.of_int 4
   | `I64 -> Uint64.of_int 8
 
-let with_loc (loc_start, loc_end) desc =
-  {Ast.desc; info = { Ast.loc_start; loc_end }}
+let with_loc loc desc =
+  Utils.Comment.with_pos Context.context {loc_start = fst loc; loc_end = snd loc} desc
 
 let map_fst f (x, y) = (f x, y)
 
@@ -234,12 +238,22 @@ let check_labels lab (lab' : Ast.Text.name option) =
 
 %}
 
+%start <unit> dummy_comments
+%start <Context.t> dummy_ctx
 %start <Ast.location Ast.Text.module_> parse
 %start <([`Valid | `Invalid of string | `Malformed of string ] *
          [`Parsed of Ast.location Ast.Text.module_
          | `Text of string | `Binary of string ]) list> parse_script
 
 %%
+
+dummy_comments:
+  LINE_COMMENT { () }
+| BLOCK_COMMENT { () }
+| ANNOTATION { () }
+
+dummy_ctx:
+  EOF { assert false }
 
 u32: n = NAT { Uint32.of_string n }
 

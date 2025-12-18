@@ -1,5 +1,3 @@
-open Parser
-
 let white = [%sedlex.regexp? Plus (' ' | '\t')]
 let newline = [%sedlex.regexp? '\r' | '\n' | "\r\n"]
 
@@ -87,12 +85,23 @@ let rec string lexbuf =
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Malformed string.\n" ))
 
-let rec token lexbuf =
+open Tokens
+
+let rec token_with_comments lexbuf =
   match%sedlex lexbuf with
-  | white | newline | linecomment -> token lexbuf
+  | white -> token_with_comments lexbuf
+  | newline ->
+      let pos = Sedlexing.lexing_bytes_position_start lexbuf in
+      NEWLINE pos
+  | linecomment ->
+      let loc_start, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
+      let content = Sedlexing.Utf8.lexeme lexbuf in
+      LINE_COMMENT ({ Utils.Ast.loc_start; loc_end }, `Line, content)
   | "/*" ->
+      let loc_start, _ = Sedlexing.lexing_bytes_positions lexbuf in
       comment lexbuf;
-      token lexbuf
+      let _, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
+      BLOCK_COMMENT ({ Utils.Ast.loc_start; loc_end }, `Block, "")
   | ';' -> SEMI
   | '#' -> SHARP
   | '?' -> QUESTIONMARK
@@ -189,6 +198,19 @@ let rec token lexbuf =
         (Wasm.Parsing.Syntax_error
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Syntax error.\n" ))
+
+let rec token ctx lexbuf =
+  match token_with_comments lexbuf with
+  | LINE_COMMENT (loc, kind, content) ->
+      Utils.Comment.report_comment ctx loc kind ~at_start_of_line:false content;
+      token ctx lexbuf
+  | BLOCK_COMMENT (loc, kind, content) ->
+      Utils.Comment.report_comment ctx loc kind ~at_start_of_line:false content;
+      token ctx lexbuf
+  | NEWLINE pos ->
+      Utils.Comment.report_blank_line ctx pos;
+      token ctx lexbuf
+  | t -> t
 
 let is_valid_identifier s =
   let buf = Sedlexing.Utf8.from_string s in

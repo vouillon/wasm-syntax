@@ -1,19 +1,31 @@
 (menhir
  (modules parser)
- (flags --table --dump))
+ (flags --table --dump --external-tokens Tokens))
 
 (menhir
  (modules fast_parser)
- (flags --external-tokens Parser)
+ (flags --external-tokens Tokens)
  (explain false))
 
 (rule
  (copy parser.mly fast_parser.mly))
 
 (rule
- ;  (deps parser_messages.check)
+ (target tokens.mly)
+ (deps parser.mly)
  (action
-  (with-stdout-to
+  (with-stdout-to %{target}
+   (run sed "/%parameter/d" %{deps}))))
+
+(rule
+ (targets tokens.ml tokens.mli)
+ (deps tokens.mly)
+ (action
+  (run menhir --only-tokens %{deps} --base tokens)))
+
+(rule
+  (action
+   (with-stdout-to
    parser_messages.ml
    (run
     menhir
@@ -45,6 +57,7 @@
    %{dep:parser_messages.auto.messages}
    --merge-errors
    %{dep:parser_messages.updated1.messages})))
+
 
 (rule
  (alias runtest)

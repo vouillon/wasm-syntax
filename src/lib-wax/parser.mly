@@ -69,6 +69,8 @@
 %token BR_ON_NULL BR_ON_NON_NULL
 %token TRY CATCH
 %token DISPATCH
+%token <Ast.location * [ `Line | `Block ] * string> LINE_COMMENT BLOCK_COMMENT
+%token <Lexing.position> NEWLINE
 
 %nonassoc prec_ident (* {a|...} *) prec_block
 %right prec_branch
@@ -94,6 +96,8 @@
    {a| b:}  ==> struct; {a|b} should need parenthesis <<< special case??
                             (IDENT < PIPE)
 *)
+
+%parameter <Context : sig type t val context : Utils.Comment.context end>
 
 %{
 open Ast
@@ -147,15 +151,25 @@ let storagetype_tbl =
      "i32", Value I32; "i64", Value I64; "f32", Value F32; "f64", Value F64;
      "v128", Value V128]
 
-let with_loc (loc_start, loc_end) desc =
-  {desc; info = { Wasm.Ast.loc_start; loc_end }}
+let with_loc loc desc =
+   Utils.Comment.with_pos Context.context {loc_start = fst loc; loc_end = snd loc} desc
 
 let blocktype bt = Option.value ~default:{params = [||]; results = [||]} bt
 %}
 
 %start <location module_> parse
+%start <unit> dummy_comments
+%start <Context.t> dummy_ctx
 
 %%
+
+dummy_comments:
+  LINE_COMMENT { () }
+| BLOCK_COMMENT { () }
+| NEWLINE { () }
+
+dummy_ctx:
+  EOF { assert false }
 
 %inline ident:
 | t = IDENT { with_loc $sloc t }

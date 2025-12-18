@@ -152,8 +152,9 @@ let with_loc f lexbuf =
       { Ast.loc_start; loc_end = Sedlexing.lexing_bytes_position_curr lexbuf };
   }
 
-let rec token lexbuf =
-  let open Parser in
+open Tokens
+
+let rec token_with_comments lexbuf =
   match%sedlex lexbuf with
   | '(' -> LPAREN
   | ')' -> RPAREN
@@ -174,15 +175,24 @@ let rec token lexbuf =
              ( (s.info.loc_start, s.info.loc_end),
                "An identifier cannot be the empty string" ));
       ID s
-  | newline | linecomment -> token lexbuf
-  | Plus (' ' | '\t') -> token lexbuf
+  | newline -> token_with_comments lexbuf (* Skip standalone newlines in Wat *)
+  | linecomment ->
+      let loc_start, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
+      let content = Sedlexing.Utf8.lexeme lexbuf in
+      LINE_COMMENT ({ Ast.loc_start; loc_end }, `Line, content)
+  | Plus (' ' | '\t') -> token_with_comments lexbuf
   | "(;" ->
+      let loc_start, _ = Sedlexing.lexing_bytes_positions lexbuf in
       comment lexbuf;
-      token lexbuf
+      let _, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
+      BLOCK_COMMENT ({ Ast.loc_start; loc_end }, `Block, "")
   | "(@", Plus idchar ->
+      let loc_start, _ = Sedlexing.lexing_bytes_positions lexbuf in
       skip_annotation 1 lexbuf;
-      token lexbuf
+      let _, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
+      ANNOTATION { Ast.loc_start; loc_end }
   | "(@\"" ->
+      let loc_start, _ = Sedlexing.lexing_bytes_positions lexbuf in
       let s = string lexbuf in
       if not (String.is_valid_utf_8 s) then
         raise
@@ -195,7 +205,8 @@ let rec token lexbuf =
              ( Sedlexing.lexing_bytes_positions lexbuf,
                "An annotation id cannot be the empty string." ));
       skip_annotation 1 lexbuf;
-      token lexbuf
+      let _, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
+      ANNOTATION { Ast.loc_start; loc_end }
   | id ->
       let loc_start, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
       ID
@@ -869,6 +880,19 @@ let rec token lexbuf =
         (Parsing.Syntax_error
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Syntax error.\n" ))
+
+let rec token ctx lexbuf =
+  match token_with_comments lexbuf with
+  | LINE_COMMENT (loc, kind, content) ->
+      Utils.Comment.report_comment ctx loc kind ~at_start_of_line:false content;
+      token ctx lexbuf
+  | BLOCK_COMMENT (loc, kind, content) ->
+      Utils.Comment.report_comment ctx loc kind ~at_start_of_line:false content;
+      token ctx lexbuf
+  | ANNOTATION loc ->
+      Utils.Comment.report_annotation ctx loc ~at_start_of_line:false;
+      token ctx lexbuf
+  | t -> t
 
 let is_valid_identifier s =
   let buf = Sedlexing.Utf8.from_string s in

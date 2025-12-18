@@ -3,6 +3,7 @@ module P =
     (struct
       type t = Wasm.Ast.location Wasm.Ast.Text.module_
     end)
+    (Wasm.Tokens)
     (Wasm.Parser)
     (Wasm.Fast_parser)
     (Wasm.Parser_messages)
@@ -12,7 +13,8 @@ let print_module f m =
   Utils.Printer.run f (fun p -> Wasm.Output.module_ ~out_channel:stdout p m)
 
 let convert ~filename =
-  let ast = P.parse ~filename () in
+  let ctx = Utils.Comment.make () in
+  let ast = P.parse ~filename ctx () in
   Format.printf "/////////// %s //////////@.@.%a@." filename print_module
     (Wasm.Folding.fold (Wasm.Folding.unfold ast))
 
