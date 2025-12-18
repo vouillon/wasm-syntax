@@ -154,7 +154,7 @@ let with_loc f lexbuf =
 
 open Tokens
 
-let rec token_with_comments lexbuf =
+let rec token_with_comments ctx lexbuf =
   match%sedlex lexbuf with
   | '(' -> LPAREN
   | ')' -> RPAREN
@@ -175,12 +175,15 @@ let rec token_with_comments lexbuf =
              ( (s.info.loc_start, s.info.loc_end),
                "An identifier cannot be the empty string" ));
       ID s
-  | newline -> token_with_comments lexbuf (* Skip standalone newlines in Wat *)
+  | newline ->
+      let pos = Sedlexing.lexing_bytes_position_start lexbuf in
+      Utils.Comment.report_newline ctx pos;
+      token_with_comments ctx lexbuf (* Skip standalone newlines in Wat *)
   | linecomment ->
       let loc_start, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
       let content = Sedlexing.Utf8.lexeme lexbuf in
       LINE_COMMENT ({ Ast.loc_start; loc_end }, `Line, content)
-  | Plus (' ' | '\t') -> token_with_comments lexbuf
+  | Plus (' ' | '\t') -> token_with_comments ctx lexbuf
   | "(;" ->
       let loc_start, _ = Sedlexing.lexing_bytes_positions lexbuf in
       comment lexbuf;
@@ -882,17 +885,19 @@ let rec token_with_comments lexbuf =
              Printf.sprintf "Syntax error.\n" ))
 
 let rec token ctx lexbuf =
-  match token_with_comments lexbuf with
+  match token_with_comments ctx lexbuf with
   | LINE_COMMENT (loc, kind, content) ->
-      Utils.Comment.report_comment ctx loc kind ~at_start_of_line:false content;
+      Utils.Comment.report_comment ctx loc kind content;
       token ctx lexbuf
   | BLOCK_COMMENT (loc, kind, content) ->
-      Utils.Comment.report_comment ctx loc kind ~at_start_of_line:false content;
+      Utils.Comment.report_comment ctx loc kind content;
       token ctx lexbuf
   | ANNOTATION loc ->
-      Utils.Comment.report_annotation ctx loc ~at_start_of_line:false;
+      Utils.Comment.report_annotation ctx loc;
       token ctx lexbuf
-  | t -> t
+  | t ->
+      Utils.Comment.report_token ctx;
+      t
 
 let is_valid_identifier s =
   let buf = Sedlexing.Utf8.from_string s in

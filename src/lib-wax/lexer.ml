@@ -202,15 +202,17 @@ let rec token_with_comments lexbuf =
 let rec token ctx lexbuf =
   match token_with_comments lexbuf with
   | LINE_COMMENT (loc, kind, content) ->
-      Utils.Comment.report_comment ctx loc kind ~at_start_of_line:false content;
+      Utils.Comment.report_comment ctx loc kind content;
       token ctx lexbuf
   | BLOCK_COMMENT (loc, kind, content) ->
-      Utils.Comment.report_comment ctx loc kind ~at_start_of_line:false content;
+      Utils.Comment.report_comment ctx loc kind content;
       token ctx lexbuf
   | NEWLINE pos ->
-      Utils.Comment.report_blank_line ctx pos;
+      Utils.Comment.report_newline ctx pos;
       token ctx lexbuf
-  | t -> t
+  | t ->
+      Utils.Comment.report_token ctx;
+      t
 
 let is_valid_identifier s =
   let buf = Sedlexing.Utf8.from_string s in
