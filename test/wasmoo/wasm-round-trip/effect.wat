@@ -100,9 +100,7 @@
   (func $raise_unhandled
     (param $eff (ref eq)) (param $x (ref eq)) (result (ref eq))
     (local $effect_unhandled (ref $string))
-    (local.set $effect_unhandled
-      (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-        (i32.const 111)))
+    (local.set $effect_unhandled (@string $string "foo" ))
     (block $null
       (call $caml_raise_with_arg
         (br_on_null $null
@@ -182,10 +180,7 @@
     (if (ref.eq (local.get $stack) (ref.i31 (i32.const 0)))
       (then
         (call $caml_raise_constant
-          (ref.as_non_null
-            (call $caml_named_value
-              (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-                (i32.const 111)))))))
+          (ref.as_non_null (call $caml_named_value (@string $string "foo" ))))))
     (return_call $capture_continuation (ref.func $do_resume)
       (struct.new $pair (local.get $stack)
         (struct.new $pair (local.get $f) (local.get $v))))
@@ -552,10 +547,7 @@
             (br $loop)))
         (return (local.get $k))))
     (call $caml_raise_constant
-      (ref.as_non_null
-        (call $caml_named_value
-          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-            (i32.const 111)))))
+      (ref.as_non_null (call $caml_named_value (@string $string "foo" ))))
     (ref.i31 (i32.const 0))
   )
   (func $caml_perform_effect (export "caml_perform_effect")

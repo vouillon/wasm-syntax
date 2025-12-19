@@ -54,10 +54,10 @@ fn caml_hash_mix_bigstring(h: i32, b: &eq) -> i32 {
         }
     } /* 'loop */
     w = 0;
-    'l_2: {
-        'l_3: {
-            'l_4: {
-                'l_5: { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] len & 3; }
+    'l_2: do {
+        'l_3: do {
+            'l_4: do {
+                'l_5: do { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] len & 3; }
                 w = ta_get_ui8(data, i + 2) << 16;
             }
             w = w | ta_get_ui8(data, i + 1) << 8;

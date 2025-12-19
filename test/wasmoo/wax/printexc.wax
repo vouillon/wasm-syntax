@@ -44,7 +44,7 @@ fn caml_format_exception(x: &eq) -> &eq {
         add_string(buf, (exn[1] as &block)[1]);
         bucket =
             'continue: do &block {
-                'default: {
+                'default: do {
                     br_if 'default exn.length != 3;
                     br_if 'default !caml_is_special_exception(exn[1]);
                     v = exn[2];

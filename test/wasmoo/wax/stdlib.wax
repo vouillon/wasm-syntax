@@ -49,7 +49,7 @@ fn find_named_value(s: &eq, l: &?assoc) -> &?assoc {
 }
 #[export = "caml_named_value"]
 fn caml_named_value(s: &string) -> &?eq {
-    'not_found: {
+    'not_found: do {
         return
             (br_on_null 'not_found
                  find_named_value
@@ -66,7 +66,7 @@ fn caml_register_named_value(x: &eq, x_2: &eq) -> &eq {
     let r: &?assoc;
     h = caml_string_hash(0 as &i31, x) as &i31 as i32_s %u Named_value_size;
     r = named_value_table[h];
-    'not_found: {
+    'not_found: do {
         (br_on_null 'not_found find_named_value(x, r)).f_2 = x_2;
         return 0 as &i31;
     }
@@ -82,7 +82,7 @@ fn caml_unregister_named_value(name: &eq) -> &eq {
         caml_string_hash(0 as &i31, name) as &i31 as i32_s %u
             Named_value_size;
     r = named_value_table[h];
-    'done: {
+    'done: do {
         a = br_on_null 'done r;
         r = a.f_3;
         if caml_string_equal(name, a.f) as &i31 as i32_u {
@@ -129,8 +129,8 @@ fn caml_main(start: &func) {
         ocaml_exit => { exit(_); }
         ocaml_exception => {
             exn = _;
-            'exit: {
-                'not_registered: {
+            'exit: do {
+                'not_registered: do {
                     _ =
                         caml_callback_2
                             (br_on_null 'not_registered
@@ -138,7 +138,7 @@ fn caml_main(start: &func) {
                              exn, 0 as &i31);
                     br 'exit;
                 }
-                'null: {
+                'null: do {
                     _ =
                         caml_callback_1
                             (br_on_null 'null caml_named_value(string#"foo"),

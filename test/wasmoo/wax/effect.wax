@@ -62,7 +62,7 @@ type fiber: generic_fiber = {
 fn raise_unhandled(eff: &eq, x: &eq) -> &eq {
     let effect_unhandled: &string;
     effect_unhandled = string#"foo";
-    'null: {
+    'null: do {
         caml_raise_with_arg
             (br_on_null 'null caml_named_value(effect_unhandled), eff);
     }
@@ -97,7 +97,7 @@ fn pop_fiber() -> &cont {
     f.cont;
 }
 fn push_stack(stack_2: &fiber, k: &cont) -> &cont {
-    'done: {
+    'done: do {
         'loop: loop {
             stack =
                 {fiber| handlers: stack_2.handlers, cont: k, next: stack };
@@ -280,7 +280,7 @@ const raise_exception: &eq = {closure| f: raise_exception_2 };
 #[export = "caml_pop_trap"]
 fn caml_pop_trap() -> &eq {
     let top: &exn_stack;
-    'empty: {
+    'empty: do {
         top = br_on_null 'empty exn_stack;
         exn_stack = top.next;
         return top.h;
@@ -377,7 +377,7 @@ fn caml_trampoline(f: &eq, vargs: &eq) -> &eq {
             javascript_exception => { caml_wrap_exception(_); }
         };
     'loop: loop {
-        'empty: {
+        'empty: do {
             top = br_on_null 'empty exn_stack;
             exn_stack = top.next;
             f = top.h;
@@ -414,7 +414,7 @@ fn caml_resume_stack(vstack: &eq, k: &eq) -> &eq {
     _ =
         'already_resumed: do &eq {
             stack = br_on_cast_fail 'already_resumed &cps_fiber vstack;
-            'done: {
+            'done: do {
                 'loop: loop {
                     cps_fiber_stack =
                         {cps_fiber|

@@ -72,6 +72,25 @@ let comment lexbuf =
   Buffer.clear string_buffer;
   s
 
+let unicode_escape lexbuf s =
+  let i = ref 0 in
+  let len = String.length s - 6 in
+  while !i < len && (s.[!i] = '0' || s.[!i] = '-') do
+    incr i
+  done;
+  if len - !i > 0 then
+    raise
+      (Parsing.Syntax_error
+         ( Sedlexing.lexing_bytes_positions lexbuf,
+           Printf.sprintf "Malformed Unicode escape.\n" ));
+  let n = int_of_string ("0x" ^ String.sub s !i (len + 6)) in
+  if not (Uchar.is_valid n) then
+    raise
+      (Parsing.Syntax_error
+         ( Sedlexing.lexing_bytes_positions lexbuf,
+           Printf.sprintf "Malformed Unicode escape.\n" ));
+  Uchar.unsafe_of_int n
+
 let rec string lexbuf =
   match%sedlex lexbuf with
   | '"' ->
@@ -113,8 +132,7 @@ let rec string lexbuf =
       let n =
         Sedlexing.Utf8.sub_lexeme lexbuf 3 (Sedlexing.lexeme_length lexbuf - 4)
       in
-      Buffer.add_utf_8_uchar string_buffer
-        (Uchar.unsafe_of_int (int_of_string ("0x" ^ n)));
+      Buffer.add_utf_8_uchar string_buffer (unicode_escape lexbuf n);
       string lexbuf
   | _ ->
       raise

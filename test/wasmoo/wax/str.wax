@@ -90,34 +90,37 @@ fn re_match(vre: &eq, s: &string, pos: i32, accept_partial_match: i32) -> &eq
     re_register = [int_array|-1; numregisters];
     pc = 1;
     group_start[0] = pos;
-    'reject: {
-        'ACCEPT: {
+    'reject: do {
+        'ACCEPT: do {
             'continue: loop {
-                'backtrack: {
-                    'prefix_match: {
-                        'CHECKPROGRESS: {
-                            'SETMARK: {
-                                'PUSHBACK: {
-                                    'GOTO: {
-                                        'SIMPLEPLUS: {
-                                            'SIMPLESTAR: {
-                                                'SIMPLEOPT: {
-                                                    'REFGROUP: {
-                                                        'ENDGROUP: {
-                                                            'BEGGROUP: {
+                'backtrack: do {
+                    'prefix_match: do {
+                        'CHECKPROGRESS: do {
+                            'SETMARK: do {
+                                'PUSHBACK: do {
+                                    'GOTO: do {
+                                        'SIMPLEPLUS: do {
+                                            'SIMPLESTAR: do {
+                                                'SIMPLEOPT: do {
+                                                    'REFGROUP: do {
+                                                        'ENDGROUP: do {
+                                                            'BEGGROUP: do {
                                                                 'WORDBOUNDARY:
-                                                                {
-                                                                    'EOL: {
-                                                                    'BOL: {
+                                                                do {
+                                                                    'EOL: do
+                                                                    {
+                                                                    'BOL: do
+                                                                    {
                                                                     'CHARCLASS:
-                                                                    {
+                                                                    do {
                                                                     'STRINGNORM:
-                                                                    {
+                                                                    do {
                                                                     'STRING:
-                                                                    {
+                                                                    do {
                                                                     'CHARNORM:
+                                                                    do {
+                                                                    'CHAR: do
                                                                     {
-                                                                    'CHAR: {
                                                                     instr =
                                                                     prog[pc]
                                                                     as &i31

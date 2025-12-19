@@ -142,7 +142,7 @@ fn string_of_jsstring_fallback(s: &?any) -> &string {
         read_from_buffer(s', 0, len);
         return s';
     }
-    'done: {
+    'done: do {
         item = br_on_null 'done stack;
         'loop: loop {
             ofs = ofs + item.s.length;
@@ -152,7 +152,7 @@ fn string_of_jsstring_fallback(s: &?any) -> &string {
     } /* 'done */
     s' = [string|0; len + ofs];
     read_from_buffer(s', ofs, len);
-    'done: {
+    'done: do {
         item = br_on_null 'done stack;
         stack = null as &?stack;
         'loop: loop {

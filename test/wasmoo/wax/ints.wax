@@ -158,8 +158,8 @@ fn parse_int_format(s: &string) -> (i32, i32, i32, i32, i32) {
     let uppercase: i32;
     len = s.length;
     i = 1;
-    'return: {
-        'bad_format: {
+    'return: do {
+        'bad_format: do {
             br_if 'bad_format len <u 2;
             br_if 'bad_format s[0] as i32_u != 37;
             c = s[1] as i32_u;

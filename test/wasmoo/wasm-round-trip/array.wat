@@ -14,10 +14,7 @@
     (local $sz i32) (local $b (ref $block)) (local $f f64)
     (local.set $sz (i31.get_s (ref.cast (ref i31) (local.get $n))))
     (if (i32.lt_s (local.get $sz) (i32.const 0))
-      (then
-        (call $caml_invalid_argument
-          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-            (i32.const 111)))))
+      (then (call $caml_invalid_argument (@string $string "foo" ))))
     (if (i32.eqz (local.get $sz)) (then (return (global.get $empty_array))))
     (drop
       (block $not_float (result (ref eq))
@@ -36,10 +33,7 @@
     (local $sz i32) (local $f f64)
     (local.set $sz (i31.get_s (ref.cast (ref i31) (local.get $n))))
     (if (i32.lt_s (local.get $sz) (i32.const 0))
-      (then
-        (call $caml_invalid_argument
-          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-            (i32.const 111)))))
+      (then (call $caml_invalid_argument (@string $string "foo" ))))
     (if (i32.eqz (local.get $sz)) (then (return (global.get $empty_array))))
     (local.set $f
       (struct.get $float $f (ref.cast (ref $float) (local.get $v))))
@@ -51,10 +45,7 @@
     (local $sz i32)
     (local.set $sz (i31.get_s (ref.cast (ref i31) (local.get $n))))
     (if (i32.lt_s (local.get $sz) (i32.const 0))
-      (then
-        (call $caml_invalid_argument
-          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-            (i32.const 111)))))
+      (then (call $caml_invalid_argument (@string $string "foo" ))))
     (if (i32.eqz (local.get $sz)) (then (return (global.get $empty_array))))
     (array.new $float_array (f64.const 0) (local.get $sz))
   )

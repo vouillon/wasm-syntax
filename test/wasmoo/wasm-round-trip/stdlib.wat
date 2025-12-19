@@ -181,28 +181,22 @@
             (drop
               (call $caml_callback_2
                 (br_on_null $not_registered
-                  (call $caml_named_value
-                    (array.new_fixed $string 3 (i32.const 102)
-                      (i32.const 111) (i32.const 111))))
+                  (call $caml_named_value (@string $string "foo" )))
                 (local.get $exn) (ref.i31 (i32.const 0))))
             (br $exit))
           (block $null
             (drop
               (call $caml_callback_1
                 (br_on_null $null
-                  (call $caml_named_value
-                    (array.new_fixed $string 3 (i32.const 102)
-                      (i32.const 111) (i32.const 111))))
+                  (call $caml_named_value (@string $string "foo" )))
                 (ref.i31 (i32.const 0)))))
           (call $write (i32.const 2)
             (call $unwrap
               (call $caml_jsstring_of_string
-                (call $caml_string_concat
-                  (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-                    (i32.const 111))
+                (call $caml_string_concat (@string $string "foo" )
                   (call $caml_string_concat
                     (call $caml_format_exception (local.get $exn))
-                    (array.new_fixed $string 1 (i32.const 10))))))))
+                    (@string $string "\n" )))))))
         (call $exit (i32.const 2))))
   )
   (elem declare func $reraise_exception)

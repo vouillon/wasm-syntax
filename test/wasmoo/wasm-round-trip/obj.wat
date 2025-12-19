@@ -348,16 +348,12 @@
   )
   (func $caml_obj_add_offset (export "caml_obj_add_offset")
     (param $x (ref eq)) (param $x_2 (ref eq)) (result (ref eq))
-    (call $caml_failwith
-      (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-        (i32.const 111)))
+    (call $caml_failwith (@string $string "foo" ))
     (ref.i31 (i32.const 0))
   )
   (func $caml_obj_truncate (export "caml_obj_truncate")
     (param $x (ref eq)) (param $x_2 (ref eq)) (result (ref eq))
-    (call $caml_failwith
-      (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-        (i32.const 111)))
+    (call $caml_failwith (@string $string "foo" ))
     (ref.i31 (i32.const 0))
   )
   (global $method_cache (mut (ref $int_array))

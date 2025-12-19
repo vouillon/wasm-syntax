@@ -193,7 +193,7 @@ fn caml_array_concat(x: &eq) -> &eq {
             'exit: do &eq {
                 b = br_on_cast_fail 'exit &block l;
                 v = b[1];
-                'continue: {
+                'continue: do {
                     _ =
                         'not_block: do &eq {
                             len =

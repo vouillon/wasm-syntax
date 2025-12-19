@@ -83,10 +83,10 @@ fn caml_hash_mix_string(h: i32, s: &string) -> i32 {
         }
     } /* 'loop */
     w = 0;
-    'l_2: {
-        'l_3: {
-            'l_4: {
-                'l_5: { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] len & 3; }
+    'l_2: do {
+        'l_3: do {
+            'l_4: do {
+                'l_5: do { br_table [ 'l_2 'l_3 'l_4 else 'l_5 ] len & 3; }
                 w = s[i + 2] as i32_u << 16;
             }
             w = w | s[i + 1] as i32_u << 8;
@@ -123,7 +123,7 @@ fn caml_hash(count: &eq, limit: &eq, seed: &eq, obj: &eq) -> &eq {
         if (rd <u wr) & (num >u 0) {
             v = caml_hash_queue[rd];
             rd = rd + 1;
-            'again: {
+            'again: do {
                 _ =
                     'not_int: do &eq {
                         h =

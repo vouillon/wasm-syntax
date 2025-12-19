@@ -5,7 +5,6 @@ let ident =
   [%sedlex.regexp?
     xid_start, Star (xid_continue | '\'') | '_', Plus (xid_continue | '\'')]
 
-let string = [%sedlex.regexp? '"', Star (Sub (any, '"')), '"']
 let sign = [%sedlex.regexp? Opt ('+' | '-')]
 let digit = [%sedlex.regexp? '0' .. '9']
 let hexdigit = [%sedlex.regexp? '0' .. '9' | 'a' .. 'f' | 'A' .. 'F']
@@ -23,6 +22,14 @@ let hexfloat =
     | "0x", hexnum, '.', Opt hexnum )]
 
 let float = [%sedlex.regexp? decfloat | hexfloat | "nan:0x", hexnum]
+
+let stringchar =
+  [%sedlex.regexp?
+    ( Sub (any, (0 .. 31 | 0x7f | '"' | '\\'))
+    | "\\t" | "\\n" | "\\r" | "\\'" | "\\\"" | "\\\\"
+    | "\\u{", hexnum, "}" )]
+
+let stringelem = [%sedlex.regexp? stringchar | "\\", hexdigit, hexdigit]
 let linechar = [%sedlex.regexp? Sub (any, (10 | 13))]
 let linecomment = [%sedlex.regexp? "//", Star linechar, (newline | eof)]
 let string_buffer = Buffer.create 256
@@ -49,6 +56,25 @@ let comment lexbuf =
   let s = Buffer.contents string_buffer in
   Buffer.clear string_buffer;
   s
+
+let unicode_escape lexbuf s =
+  let i = ref 0 in
+  let len = String.length s - 6 in
+  while !i < len && (s.[!i] = '0' || s.[!i] = '-') do
+    incr i
+  done;
+  if len - !i > 0 then
+    raise
+      (Wasm.Parsing.Syntax_error
+         ( Sedlexing.lexing_bytes_positions lexbuf,
+           Printf.sprintf "Malformed Unicode escape.\n" ));
+  let n = int_of_string ("0x" ^ String.sub s !i (len + 6)) in
+  if not (Uchar.is_valid n) then
+    raise
+      (Wasm.Parsing.Syntax_error
+         ( Sedlexing.lexing_bytes_positions lexbuf,
+           Printf.sprintf "Malformed Unicode escape.\n" ));
+  Uchar.unsafe_of_int n
 
 let rec string lexbuf =
   match%sedlex lexbuf with
@@ -85,8 +111,7 @@ let rec string lexbuf =
       let n =
         Sedlexing.Utf8.sub_lexeme lexbuf 3 (Sedlexing.lexeme_length lexbuf - 4)
       in
-      Buffer.add_utf_8_uchar string_buffer
-        (Uchar.unsafe_of_int (int_of_string ("0x" ^ n)));
+      Buffer.add_utf_8_uchar string_buffer (unicode_escape lexbuf n);
       string lexbuf
   | _ ->
       raise
@@ -203,6 +228,30 @@ let rec token_rec ctx lexbuf =
   | float -> FLOAT (Sedlexing.Utf8.lexeme lexbuf)
   | ident -> IDENT (Sedlexing.Utf8.lexeme lexbuf)
   | '"' -> STRING (with_loc string lexbuf)
+  | "'", Sub (any, (0 .. 31 | 0x7f | '"' | '\\')), "'" ->
+      let s = Sedlexing.Utf8.lexeme lexbuf in
+      assert (String.length s = 3);
+      CHAR (Uchar.of_char s.[1])
+  | "'", ("\\t" | "\\n" | "\\r" | "\\'" | "\\\"" | "\\\\"), "'" ->
+      let s = Sedlexing.Utf8.lexeme lexbuf in
+      assert (String.length s = 4);
+      CHAR
+        (Uchar.of_char
+           (match s.[2] with 't' -> '\t' | 'n' -> '\n' | 'r' -> '\r' | c -> c))
+  | "'\\u{", hexnum, "}'" ->
+      let n =
+        Sedlexing.Utf8.sub_lexeme lexbuf 4 (Sedlexing.lexeme_length lexbuf - 5)
+      in
+      CHAR (unicode_escape lexbuf n)
+  | "'\\", hexdigit, hexdigit, "'" ->
+      let s = String.sub (Sedlexing.Utf8.lexeme lexbuf) 2 2 in
+      let n = int_of_string ("0x" ^ s) in
+      if n > 127 then
+        raise
+          (Wasm.Parsing.Syntax_error
+             ( Sedlexing.lexing_bytes_positions lexbuf,
+               Printf.sprintf "Invalid Unicode character.\n" ));
+      CHAR (Uchar.of_int n)
   | eof -> EOF
   | Compl 'x' ->
       raise

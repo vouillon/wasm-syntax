@@ -181,20 +181,20 @@ fn caml_parse_engine(vtables: &eq, venv: &eq, vcmd: &eq, varg: &eq) -> &eq {
     sp = env[env_sp] as &i31 as i32_s;
     state = env[env_state] as &i31 as i32_s;
     errflag = env[env_errflag] as &i31 as i32_s;
-    'exit: {
+    'exit: do {
         'next: loop {
-            'default: {
-                'SEMANTIC_ACTION_COMPUTED: {
-                    'STACKS_GROWN_2: {
-                        'reduce: {
-                            'STACKS_GROWN_1: {
-                                'shift_recover: {
-                                    'shift: {
-                                        'ERROR_DETECTED: {
-                                            'testshift: {
-                                                'TOKEN_READ: {
-                                                    'loop: {
-                                                        'START: {
+            'default: do {
+                'SEMANTIC_ACTION_COMPUTED: do {
+                    'STACKS_GROWN_2: do {
+                        'reduce: do {
+                            'STACKS_GROWN_1: do {
+                                'shift_recover: do {
+                                    'shift: do {
+                                        'ERROR_DETECTED: do {
+                                            'testshift: do {
+                                                'TOKEN_READ: do {
+                                                    'loop: do {
+                                                        'START: do {
                                                             br_table
                                                                 [ 'START
                                                                     'TOKEN_READ
@@ -234,7 +234,7 @@ fn caml_parse_engine(vtables: &eq, venv: &eq, vcmd: &eq, varg: &eq) -> &eq {
                                                     res = READ_TOKEN;
                                                     br 'exit;
                                                 } /* 'TOKEN_READ */
-                                                'cont: {
+                                                'cont: do {
                                                     _ =
                                                         'not_block: do &eq {
                                                             arg =
@@ -451,7 +451,7 @@ fn caml_parse_engine(vtables: &eq, venv: &eq, vcmd: &eq, varg: &eq) -> &eq {
                             (env[env_s_stack] as &block)[sp] as &i31 as i32_s;
                         n1 = get(tbl_gindex_2, m);
                         n2 = n1 + state1;
-                        'cont: {
+                        'cont: do {
                             if (n1 != 0) & (n2 >=s 0) {
                                 if
                                     n2 <=s

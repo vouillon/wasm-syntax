@@ -53,9 +53,7 @@
       (local.get $arg))
   )
   (func $caml_bound_error (export "caml_bound_error")
-    (return_call $caml_invalid_argument
-      (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-        (i32.const 111)))
+    (return_call $caml_invalid_argument (@string $string "foo" ))
   )
   (global $END_OF_FILE_EXN i32 (i32.const 4))
   (func $caml_raise_end_of_file (export "caml_raise_end_of_file")

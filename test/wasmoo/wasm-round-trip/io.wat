@@ -104,9 +104,7 @@
     (sub $custom (struct (field $f (ref $custom_operations)) (field $id i64)))
   )
   (global $channel_ops (ref $custom_operations)
-    (struct.new $custom_operations
-      (array.new_fixed $string 5 (i32.const 95) (i32.const 99)
-        (i32.const 104) (i32.const 97) (i32.const 110))
+    (struct.new $custom_operations (@string $string "_chan" )
       (ref.func $custom_compare_id) (ref.null $compare)
       (ref.func $custom_hash_id) (ref.null $fixed_length)
       (ref.null $serialize) (ref.null $deserialize) (ref.null $dup))

@@ -621,10 +621,7 @@
           (br $loop))))
     (local.get $l)
   )
-  (global $jsError (ref $string)
-    (array.new_fixed $string 7 (i32.const 106) (i32.const 115) (i32.const 69)
-      (i32.const 114) (i32.const 114) (i32.const 111) (i32.const 114))
-  )
+  (global $jsError (ref $string) (@string $string "jsError" ))
   (func $caml_wrap_exception (export "caml_wrap_exception")
     (param $x externref) (result (ref eq))
     (local $exn anyref)
@@ -640,9 +637,7 @@
         (call $wrap
           (call $meth_call (local.get $exn)
             (call $unwrap
-              (call $caml_jsstring_of_string
-                (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-                  (i32.const 111))))
+              (call $caml_jsstring_of_string (@string $string "foo" )))
             (any.convert_extern (call $new_array (i32.const 0)))))))
   )
   (func $caml_js_error_option_of_exception

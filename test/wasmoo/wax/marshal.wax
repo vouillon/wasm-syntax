@@ -270,7 +270,7 @@ fn caml_deserialize_int_8(vs: &eq) -> i64 {
 fn register_object(s: &intern_state, v: &eq) {
     let obj_table: &block;
     let p: i32;
-    'exit: {
+    'exit: do {
         obj_table = br_on_null 'exit s.obj_table;
         p = s.obj_counter;
         obj_table[p] = v;
@@ -283,9 +283,9 @@ fn intern_custom(s: &intern_state, code: i32) -> &eq {
     let expected_size: i32;
     let res: &eq;
     let sz: i32;
-    'unknown: {
+    'unknown: do {
         ops = br_on_null 'unknown caml_find_custom_operations(readstr(s));
-        'no_length: {
+        'no_length: do {
             if code == CODE_CUSTOM_FIXED {
                 expected_size =
                     (br_on_null 'no_length ops.fixed_length).bsize_32;
@@ -330,7 +330,7 @@ fn intern_rec(s: &intern_state, h: &marshal_header) -> &eq {
     size = h.num_objects;
     if size { s.obj_table = [block|0 as &i31; size]; }
     v = 0 as &i31;
-    'exit: {
+    'exit: do {
         'loop: loop {
             item = br_on_null 'exit sp;
             dest = item.blk;
@@ -338,11 +338,11 @@ fn intern_rec(s: &intern_state, h: &marshal_header) -> &eq {
             pos' = pos + 1;
             item.pos = pos';
             if pos' == dest.length { sp = item.next; }
-            'done: {
-                'read_block: {
-                    'read_string: {
-                        'read_double_array: {
-                            'read_shared: {
+            'done: do {
+                'read_block: do {
+                    'read_string: do {
+                        'read_double_array: do {
+                            'read_shared: do {
                                 code = read8u(s);
                                 if code >=u PREFIX_SMALL_INT {
                                     if code >=u PREFIX_SMALL_BLOCK {
@@ -358,31 +358,32 @@ fn intern_rec(s: &intern_state, h: &marshal_header) -> &eq {
                                         len = code & 0x1F;
                                         br 'read_string;
                                     } else {
-                                        'INT8: {
-                                            'INT16: {
-                                                'INT32: {
-                                                    'INT64: {
-                                                        'SHARED8: {
-                                                            'SHARED16: {
-                                                                'SHARED32: {
+                                        'INT8: do {
+                                            'INT16: do {
+                                                'INT32: do {
+                                                    'INT64: do {
+                                                        'SHARED8: do {
+                                                            'SHARED16: do {
+                                                                'SHARED32: do
+                                                                {
                                                                     'BLOCK32:
-                                                                    {
+                                                                    do {
                                                                     'STRING8:
-                                                                    {
+                                                                    do {
                                                                     'STRING32:
-                                                                    {
+                                                                    do {
                                                                     'DOUBLE:
-                                                                    {
+                                                                    do {
                                                                     'DOUBLE_ARRAY8:
-                                                                    {
+                                                                    do {
                                                                     'DOUBLE_ARRAY32:
-                                                                    {
+                                                                    do {
                                                                     'CODEPOINTER:
-                                                                    {
+                                                                    do {
                                                                     'CUSTOM:
-                                                                    {
+                                                                    do {
                                                                     'default:
-                                                                    {
+                                                                    do {
                                                                     br_table
                                                                     [ 'INT8
                                                                     'INT16
@@ -723,7 +724,7 @@ fn writefloats(s: &extern_state, b: &float_array) {
     } /* 'loop2 */
 }
 fn extern_lookup_position(s: &extern_state, obj: &eq) -> i32 {
-    'not_found: {
+    'not_found: do {
         br_if 'not_found s.no_sharing;
         return (br_on_null 'not_found map_get(s.pos_table, obj)) as i32_s;
     }
@@ -800,9 +801,9 @@ fn extern_custom(s: &extern_state, v: &custom) -> (i32, i32) {
     let sz32: i32;
     let sz64: i32;
     ops = v.f;
-    'abstract: {
+    'abstract: do {
         serialize = br_on_null 'abstract ops.serialize;
-        'variable_length: {
+        'variable_length: do {
             fixed_length = br_on_null 'variable_length ops.fixed_length;
             write(s, CODE_CUSTOM_FIXED);
             writeblock(s, ops.id);
@@ -846,7 +847,7 @@ fn extern_rec(s: &extern_state, v: &eq) {
     let sz32: i32;
     let sz64: i32;
     'loop: loop {
-        'next_item: {
+        'next_item: do {
             _ =
                 'not_int: do &eq {
                     extern_int(s, (br_on_cast_fail 'not_int &i31 v) as i32_s);
@@ -915,7 +916,7 @@ fn extern_rec(s: &extern_state, v: &eq) {
             if v is &js { caml_invalid_argument(string#"foo"); }
             caml_invalid_argument(string#"foo");
         } /* 'next_item */
-        'done: {
+        'done: do {
             item = br_on_null 'done sp;
             b = item.blk;
             pos = item.pos;
@@ -936,7 +937,7 @@ fn extern_output_length(s: &extern_state, pos: i32) -> i32 {
         s.output_last.end = s.pos;
         output_block = s.output_first;
         'loop: loop {
-            'done: {
+            'done: do {
                 len = len + output_block.end;
                 output_block = br_on_null 'done output_block.next;
                 br 'loop;
@@ -988,7 +989,7 @@ fn caml_output_value_to_string(v: &eq, flags: &eq) -> &eq {
     res.copy(0, buf, 0, 20);
     pos = 20;
     'loop: loop {
-        'done: {
+        'done: do {
             len = blk.end;
             res.copy(pos, blk.data, 0, len);
             pos = pos + len;
@@ -1044,7 +1045,7 @@ fn caml_output_value(ch: &eq, v: &eq, flags: &eq) -> &eq {
     sz = _;
     caml_really_putblock(ch, buf, 0, 20);
     'loop: loop {
-        'done: {
+        'done: do {
             len = blk.end;
             caml_really_putblock(ch, blk.data, 0, blk.end);
             blk = br_on_null 'done blk.next;

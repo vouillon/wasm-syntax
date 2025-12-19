@@ -2,6 +2,7 @@
 %token <string> INT
 %token <string> FLOAT
 %token <(string, Ast.location) Ast.annotated> STRING
+%token <Uchar.t> CHAR
 
 %token EOF
 %token INF NAN
@@ -363,6 +364,8 @@ plaininstr:
   { with_loc $sloc (Sequence (i :: l)) }
 | i = instr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (Call(i, l)) }
+| c = CHAR
+  { with_loc $loc (Char c) }
 | s = STRING
   { with_loc (s.info.loc_start, s.info.loc_end) (String (None, s.desc)) }
 | t = ident "#" s = STRING

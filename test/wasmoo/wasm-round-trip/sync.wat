@@ -30,9 +30,7 @@
     (sub $custom (struct (field $f (ref $custom_operations)) (field $id i64)))
   )
   (global $mutex_ops (ref $custom_operations)
-    (struct.new $custom_operations
-      (array.new_fixed $string 6 (i32.const 95) (i32.const 109)
-        (i32.const 117) (i32.const 116) (i32.const 101) (i32.const 120))
+    (struct.new $custom_operations (@string $string "_mutex" )
       (ref.func $custom_compare_id) (ref.null $compare)
       (ref.func $custom_hash_id) (ref.null $fixed_length)
       (ref.null $serialize) (ref.null $deserialize) (ref.null $dup))
@@ -54,10 +52,7 @@
     (local $t (ref $mutex))
     (local.set $t (ref.cast (ref $mutex) (local.get $x)))
     (if (struct.get $mutex $state (local.get $t))
-      (then
-        (call $caml_failwith
-          (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-            (i32.const 111)))))
+      (then (call $caml_failwith (@string $string "foo" ))))
     (struct.set $mutex $state (local.get $t) (i32.const 1))
     (ref.i31 (i32.const 0))
   )
@@ -83,9 +78,7 @@
   )
   (func $caml_ml_condition_wait (export "caml_ml_condition_wait")
     (param $x (ref eq)) (param $x_2 (ref eq)) (result (ref eq))
-    (call $caml_failwith
-      (array.new_fixed $string 3 (i32.const 102) (i32.const 111)
-        (i32.const 111)))
+    (call $caml_failwith (@string $string "foo" ))
     (ref.i31 (i32.const 0))
   )
   (func $caml_ml_condition_signal (export "caml_ml_condition_signal")
