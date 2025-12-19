@@ -214,7 +214,8 @@ module WaxParser =
     (Wax.Lexer)
 
 let print_module ~color f m =
-  Utils.Printer.run f (fun p -> Wasm.Output.module_ p ~color m)
+  let trivia = Hashtbl.create 0 in
+  Utils.Printer.run f (fun p -> Wasm.Output.module_ p ~color ~trivia m)
 
 let runtest filename _ =
   let quiet = not !all_errors in

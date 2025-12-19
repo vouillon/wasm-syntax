@@ -1,13 +1,17 @@
+let debug_report = false
+
 type position = Line_start | Inline
 type kind = Line_comment | Block_comment | Annotation
-type t = Item of { content : string; kind : kind } | Blank_line
-type entry = { anchor : int; trivia : t; position : position }
+type trivia = Item of { content : string; kind : kind } | Blank_line
+type entry = { anchor : int; trivia : trivia; position : position }
 
 type associated = {
   before : entry list;
   within : entry list;
   after : entry list;
 }
+
+type t = (Ast.location, associated) Hashtbl.t
 
 type context = {
   mutable comments : entry list;
@@ -29,14 +33,22 @@ let make () =
 let add_entry ctx entry = ctx.comments <- entry :: ctx.comments
 
 let report_item ctx kind content =
+  if debug_report then
+    Format.eprintf "ITEM %b %s@." ctx.at_start_of_line
+      (match kind with
+      | Line_comment -> "line comment"
+      | Block_comment -> "block comment"
+      | Annotation -> "annotation");
   add_entry ctx
     {
       anchor = ctx.prev_token_end;
       trivia = Item { content; kind };
       position = (if ctx.at_start_of_line then Line_start else Inline);
-    }
+    };
+  ctx.at_start_of_line <- kind = Line_comment
 
 let report_newline ctx =
+  if debug_report then Format.eprintf "NEWLINE %b@." ctx.at_start_of_line;
   if ctx.at_start_of_line then
     add_entry ctx
       {
@@ -47,6 +59,7 @@ let report_newline ctx =
   ctx.at_start_of_line <- true
 
 let report_token ctx pos =
+  if debug_report then Format.eprintf "TOKEN@.";
   ctx.at_start_of_line <- false;
   ctx.prev_token_end <- pos
 
@@ -73,6 +86,9 @@ let check_loc ctx (loc : Ast.location) =
             start_pos.Lexing.pos_cnum end_pos.Lexing.pos_cnum
 
 let with_pos ctx info desc =
+  (if false then
+     let loc = info in
+     Format.eprintf "%d--%d@." loc.Ast.loc_start.pos_cnum loc.loc_end.pos_cnum);
   check_loc ctx info;
   ctx.last_loc <- Some info;
   ctx.locations <- info :: ctx.locations;
@@ -81,6 +97,9 @@ let with_pos ctx info desc =
 let associate ctx =
   let tbl = Hashtbl.create (List.length ctx.locations) in
   let comments = List.rev ctx.comments in
+  if false then (
+    List.iter (fun c -> Format.eprintf "%d " c.anchor) comments;
+    Format.eprintf "@.");
   let locs =
     List.sort
       (fun a b ->
@@ -163,9 +182,20 @@ let associate ctx =
               | None -> get_after loc.Ast.loc_end.Lexing.pos_cnum rem3)
           | None -> get_after loc.Ast.loc_end.Lexing.pos_cnum rem3
         in
+        if false then
+          Format.eprintf "%d--%d %d %d %d@." loc.loc_start.pos_cnum
+            loc.loc_end.pos_cnum (List.length before)
+            (List.length within_candidates)
+            (List.length final_after);
         Hashtbl.add tbl loc
           { before; within = within_candidates; after = final_after };
         process siblings rem4
   in
+  if false then
+    List.iter
+      (fun loc ->
+        Format.eprintf "%d--%d@." loc.Ast.loc_start.pos_cnum
+          loc.loc_end.pos_cnum)
+      locs;
   ignore (process locs comments);
   tbl

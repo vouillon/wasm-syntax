@@ -170,14 +170,12 @@ let rec skip_annotation depth lexbuf =
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Illegal character.\n" ))
 
-let with_loc f lexbuf =
+let with_loc ctx f lexbuf =
   let loc_start = Sedlexing.lexing_bytes_position_start lexbuf in
   let desc = f lexbuf in
-  {
-    Ast.desc;
-    info =
-      { Ast.loc_start; loc_end = Sedlexing.lexing_bytes_position_curr lexbuf };
-  }
+  Utils.Trivia.with_pos ctx
+    { loc_start; loc_end = Sedlexing.lexing_bytes_position_curr lexbuf }
+    desc
 
 open Tokens
 
@@ -188,9 +186,9 @@ let rec token_rec ctx lexbuf =
   | uN -> NAT (Sedlexing.Utf8.lexeme lexbuf)
   | sN -> INT (Sedlexing.Utf8.lexeme lexbuf)
   | fN -> FLOAT (Sedlexing.Utf8.lexeme lexbuf)
-  | '"' -> STRING (with_loc string lexbuf)
+  | '"' -> STRING (with_loc ctx string lexbuf)
   | "$\"" ->
-      let s = with_loc string lexbuf in
+      let s = with_loc ctx string lexbuf in
       if not (String.is_valid_utf_8 s.desc) then
         raise
           (Parsing.Syntax_error
@@ -241,12 +239,9 @@ let rec token_rec ctx lexbuf =
   | id ->
       let loc_start, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
       ID
-        {
-          Ast.desc =
-            Sedlexing.Utf8.sub_lexeme lexbuf 1
-              (Sedlexing.lexeme_length lexbuf - 1);
-          Ast.info = { Ast.loc_start; loc_end };
-        }
+        (Utils.Trivia.with_pos ctx { Ast.loc_start; loc_end }
+           (Sedlexing.Utf8.sub_lexeme lexbuf 1
+              (Sedlexing.lexeme_length lexbuf - 1)))
   | eof -> EOF
   | "i32" -> I32
   | "i64" -> I64

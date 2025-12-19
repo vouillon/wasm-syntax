@@ -397,13 +397,13 @@ comptype:
 
 rectype:
 | "(" REC l = typedef * ")"
-  { with_loc ($symbolstartpos, $endpos($2))
+  { with_loc $sloc
       (Types  (Array.map (fun t -> t.Ast.desc) (Array.of_list l))) }
 | t = typedef { {t with desc = Types [|t.Ast.desc|]} }
 
 typedef:
 | "(" TYPE name = ID ? t = subtype ")"
- { with_loc ($symbolstartpos, $endpos(name)) (name, t) }
+ { with_loc $sloc (name, t) }
 
 subtype:
 | "(" SUB final = boption(FINAL) supertype = idx ? typ = comptype
@@ -762,8 +762,7 @@ typeuse_no_bindings(cont):
 import:
 | "(" IMPORT module_ = name name = name desc = importdesc ")"
     { let (id, desc) = desc in
-      with_loc ($symbolstartpos, $endpos(name))
-        (Import {module_; name; id; desc; exports = [] }) }
+      with_loc $sloc (Import {module_; name; id; desc; exports = [] }) }
 
 importdesc:
 | "(" FUNC i = ID ? t = typeuse(")")
@@ -780,14 +779,12 @@ importdesc:
 func:
 | "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(")"))))
   { let (exports, (typ, (locals, instrs))) = r in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Func {id; typ; locals; instrs; exports}) }
+    with_loc $sloc (Func {id; typ; locals; instrs; exports}) }
 | "(" FUNC id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = typeuse({}) ")"
   { let (exports, (module_, name)) = r in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Import {module_; name; id; desc = Func (fst t); exports }) }
+    with_loc $sloc (Import {module_; name; id; desc = Func (fst t); exports }) }
 
 exports(cont):
 | c = cont { [], c }
@@ -804,8 +801,7 @@ locals(cont):
 memory:
 | "(" MEMORY id = ID? r = exports(memtype) ")"
   { let (exports, limits) = r in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Memory {id; limits; init = None; exports}) }
+    with_loc $sloc (Memory {id; limits; init = None; exports}) }
 | "(" MEMORY id = ID?
   r = exports(at = ioption(address_type) "(" DATA s = datastring ")"
               { (at, s) }) ")"
@@ -815,28 +811,25 @@ memory:
       List.fold_left (fun len {Ast.desc; _} -> len + String.length desc) 0 s in
     let sz = Uint64.of_int ((data_len + 65535) lsr 16) in
     let limits = Ast.no_loc {mi = sz; ma = Some sz; address_type} in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Memory {id; limits; init = Some s; exports}) }
+    with_loc $sloc (Memory {id; limits; init = Some s; exports}) }
 | "(" MEMORY id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = memtype ")"
   { let (exports, (module_, name)) = r in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Import {module_; name; id; desc = Memory t; exports}) }
+    with_loc $sloc (Import {module_; name; id; desc = Memory t; exports}) }
 
 table:
 | "(" TABLE id = ID? r = exports(tabletype(expr)) ")"
   { let (exports, (typ, e)) = r in
     let init = if e = [] then Init_default else Init_expr e in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Table {id; typ; init; exports}) }
+    with_loc $sloc (Table {id; typ; init; exports}) }
 | "(" TABLE id = ID?
   r = exports(at = ioption(address_type) t = reftype "(" ELEM e = list(elemexpr) ")" {at, t, e}) ")"
   { let (exports, (at, reftype, elem)) = r in
     let address_type = Option.value ~default:`I32 at in
     let len = Uint64.of_int (List.length elem) in
     let limits = Ast.no_loc {mi=len; ma =Some len; address_type} in
-    with_loc ($symbolstartpos, $endpos(id))
+    with_loc $sloc
       (Table {id; typ = {limits; reftype};
               init = Init_segment elem; exports}) }
 | "(" TABLE id = ID?
@@ -846,39 +839,34 @@ table:
     let len = Uint64.of_int (List.length elem) in
     let elem = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) elem in
     let limits = Ast.no_loc {mi=len; ma =Some len; address_type} in
-    with_loc ($symbolstartpos, $endpos(id))
+    with_loc $sloc
       (Table {id; typ = { limits; reftype };
               init = Init_segment elem; exports}) }
 | "(" TABLE id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = tabletype({}) ")"
   { let (exports, (module_, name)) = r in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Import {module_; name; id; desc = Table (fst t); exports }) }
+    with_loc $sloc (Import {module_; name; id; desc = Table (fst t); exports }) }
 
 tag:
 | "(" TAG id = ID ? r = exports(typeuse (")"))
     { let (exports, (typ, _)) = r in
-      with_loc ($symbolstartpos, $endpos(id))
-        (Tag {id; typ; exports}) }
+      with_loc $sloc (Tag {id; typ; exports}) }
 | "(" TAG id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   t = typeuse (")")
   { let (exports, (module_, name)) = r in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Import {module_; name; id; desc = Tag (fst t); exports }) }
+    with_loc $sloc (Import {module_; name; id; desc = Tag (fst t); exports }) }
 
 global:
 | "(" GLOBAL id = ID ? r = exports(t = globaltype init = expr { t, init }) ")"
   { let (exports, (typ, init)) = r in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Global {id; typ; init; exports}) }
+    with_loc $sloc (Global {id; typ; init; exports}) }
 | "(" GLOBAL id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
   typ = globaltype ")"
   { let (exports, (module_, name)) = r in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Import {module_; name; id; desc = Global typ; exports }) }
+    with_loc $sloc (Import {module_; name; id; desc = Global typ; exports }) }
 
 globaltype:
 | typ = valtype { {mut = false; typ} }
@@ -887,8 +875,7 @@ globaltype:
 export:
 | "(" EXPORT name = name d = exportdesc ")"
   { let (index, kind) = d in
-    with_loc ($symbolstartpos, $endpos(name))
-      (Export {name; kind; index}) }
+    with_loc $sloc (Export {name; kind; index}) }
 
 exportdesc:
 | "(" FUNC i = idx ")" { (i, Func) }
@@ -903,19 +890,16 @@ start:
 elem:
 | "(" ELEM id = ID ? l = elemlist ")"
   { let (typ, init) = l in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Elem {id; mode = Passive; typ; init}) }
+    with_loc $sloc (Elem {id; mode = Passive; typ; init}) }
 | "(" ELEM id = ID ? t = tableuse o = offset l = elemlist ")"
   { let (typ, init) = l in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Elem {id; mode = Active (t, o); typ; init}) }
+    with_loc $sloc (Elem {id; mode = Active (t, o); typ; init}) }
 | "(" ELEM id = ID ? DECLARE l = elemlist ")"
   { let (typ, init) = l in
-    with_loc ($symbolstartpos, $endpos(id))
-      (Elem {id; mode = Declare; typ; init}) }
+    with_loc $sloc (Elem {id; mode = Declare; typ; init}) }
 | "(" ELEM id = ID ? o = offset init = list(idx) ")"
   { let init = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) init in
-    with_loc ($symbolstartpos, $endpos(id))
+    with_loc $sloc
       (Elem {id; mode = Active (Ast.no_loc (Num Uint32.zero), o);
              typ = { nullable = false ; typ = Func }; init}) }
 
@@ -935,11 +919,9 @@ elemexpr:
 
 data:
 | "(" DATA id = ID ? init = datastring ")"
-  { with_loc ($symbolstartpos, $endpos(id))
-      (Data { id; init; mode = Passive }) }
+  { with_loc $sloc (Data { id; init; mode = Passive }) }
 | "(" DATA id = ID ? m = memuse e = offset init = datastring ")"
-  { with_loc ($symbolstartpos, $endpos(id))
-      (Data { id; init; mode = Active (m, e) }) }
+  { with_loc $sloc (Data { id; init; mode = Active (m, e) }) }
 
 offset:
 | "(" OFFSET e = expr ")" { e }

@@ -1,24 +1,3 @@
-module Comments : sig
-  type t
-  (** A mutable collection of comments and blank lines. *)
-
-  val create : unit -> t
-  (** Creates a new empty collection. *)
-
-  val add_line_comment : t -> string -> Ast.location -> unit
-  (** Adds a line comment to the collection. *)
-
-  val add_block_comment : t -> string -> Ast.location -> unit
-  (** Adds a block comment to the collection. *)
-
-  val add_newline : t -> Ast.location -> unit
-  (** Adds a newline (potential blank line) to the collection. *)
-
-  val visit_token : t -> Ast.location -> unit
-  (** Updates the internal state (e.g. last line number) based on a visited
-      normal token. *)
-end
-
 type t
 (** The state of the pretty-printer, managing indentation, pending
     spaces/newlines, and attached comments/blank lines. *)
@@ -42,7 +21,10 @@ val cut : t -> unit -> unit
 (** Prints a cut (break with 0 width) to the formatter. *)
 
 val newline : t -> unit -> unit
-(** Queues a space to be printed, if no non-blank string has been emitted. *)
+(** Queues a newline to be printed, if no non-blank string has been emitted. *)
+
+val blank_line : t -> unit -> unit
+(** Queues a blank line to be printed. *)
 
 val box : t -> ?skip_space:bool -> ?indent:int -> (unit -> unit) -> unit
 (** [box pp ?skip_space ?indent f] creates a "box" for pretty-printing. The
@@ -67,20 +49,6 @@ val vbox : t -> ?skip_space:bool -> ?indent:int -> (unit -> unit) -> unit
     broken within the box. If [?skip_space] is true, no space will be added
     before the box. *)
 
-val node : t -> int -> (unit -> unit) -> unit
-(** Prints a node, consuming any preceding comments/blank lines. *)
-
-val inline_comments : t -> int -> unit
-(** Prints inline comments that occur before the given character offset. *)
-
-val catchup : t -> int -> unit
-(** Advances the printer output, consuming comments and blank lines up to a
-    certain character offset. *)
-
-val remaining_comments : t -> unit
-(** Prints any remaining comments and blank lines after all nodes have been
-    processed. *)
-
-val run : ?comments:Comments.t -> Format.formatter -> (t -> unit) -> unit
+val run : Format.formatter -> (t -> unit) -> unit
 (** [run ?comments fmt f] creates a new printer, runs [f] with it, and flushes
     the printer. *)

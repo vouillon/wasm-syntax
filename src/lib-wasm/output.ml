@@ -1,5 +1,16 @@
+(*
+ZZZ Comments
+- traverse the parse tree to collect locations
+- associate trivia to locations
+- print
+- print tail comments (after any location)
+- check that all locations have been accounted for
+
+- skip space before closing parenthese
+*)
 open Utils.Colors
 module Printer = Utils.Printer
+module Trivia = Utils.Trivia
 module Uint32 = Utils.Uint32
 module Uint64 = Utils.Uint64
 open Ast.Text
@@ -29,6 +40,7 @@ type ctx = {
   theme : theme;
   format : format;
   indent_level : int;
+  trivia : Trivia.t;
 }
 
 let _ = (Compact, Hybrid, Adaptive)
@@ -41,77 +53,59 @@ let print_styled ctx style ?(len = None) text =
   | Some len -> Printer.string_as ctx.printer len text);
   if seq <> "" then Printer.string_as ctx.printer 0 ctx.theme.reset
 
-(*
-let node ?terminator ?(style = `Plain) ctx { span; _ } f =
-  P.catchup ctx span.start_pos.pos_cnum;
-  let wrapper =
-   fun f ->
-    match style with `Plain -> P.box ctx ~indent:2 f | `HV -> P.hvbox ctx f
-  in
-  let limit = span.end_pos.pos_cnum in
-  let terminator () =
-    match (style, terminator) with
-    | _, None -> P.inline_comments ctx limit
-    | `Plain, Some terminator ->
-        P.box ctx ~skip_space:true ~indent:2 (fun () ->
-            terminator ();
-            P.inline_comments ctx limit)
-    | `HV, Some terminator ->
-        P.space ctx ();
-        P.box ctx (fun () ->
-            terminator ();
-            P.inline_comments ctx limit)
-  in
-  wrapper (fun () ->
-      P.indent ctx
-        ~indent:(match style with `Plain -> 0 | `HV -> 2)
-        (fun () ->
-          f ();
-          P.catchup ctx limit);
-      terminator ())
-*)
+let debug = false
 
-let _node ?(indent = 2) ?terminator ?(style = `Plain) ctx (loc : Ast.location) f
-    =
-  Printer.catchup ctx loc.loc_start.pos_cnum;
-  let wrapper =
-   fun f ->
-    match style with
-    | `Plain -> Printer.box ctx ~indent:2 f
-    | `HV -> Printer.hvbox ctx f
-  in
-  let limit = loc.loc_end.pos_cnum in
-  let terminator () =
-    match (style, terminator) with
-    | _, None -> Printer.inline_comments ctx limit
-    | `Plain, Some terminator ->
-        Printer.box ctx ~skip_space:true ~indent (fun () ->
-            terminator ();
-            Printer.inline_comments ctx limit)
-    | `HV, Some terminator ->
-        Printer.space ctx ();
-        Printer.box ctx (fun () ->
-            terminator ();
-            Printer.inline_comments ctx limit)
-  in
-  wrapper (fun () ->
-      Printer.indent ctx
-        (match style with `Plain -> 0 | `HV -> indent)
-        (fun () ->
-          f ();
-          Printer.catchup ctx limit);
-      terminator ())
+(* ZZZ Deal with multiline comments / UTF-8 characters *)
+let print_trivia ctx lst =
+  let open Trivia in
+  let pp = ctx.printer in
+  List.iter
+    (fun e ->
+      match (e.trivia, e.position) with
+      | Item { kind = Block_comment; content; _ }, _ ->
+          Printer.space pp ();
+          Printer.string pp content;
+          Printer.space pp ()
+      | Item { kind = Line_comment; content; _ }, Inline ->
+          if debug then Format.eprintf "COMMENT %s@." (String.trim content);
+          Printer.space pp ();
+          Printer.string pp (String.trim content);
+          Printer.newline pp ()
+      | Item { kind = Line_comment; content; _ }, Line_start ->
+          if debug then Format.eprintf "COMMENT %s@." (String.trim content);
+          Printer.newline pp ();
+          Printer.string pp (String.trim content);
+          Printer.newline pp ()
+      | Item { kind = Annotation; _ }, _ -> ()
+      | Blank_line, _ ->
+          if debug then Format.eprintf "BLANK LINE@.";
+          Printer.blank_line pp ())
+    lst;
+  if debug then if lst <> [] then prerr_endline "===="
+
+let dummy_assoc = { Trivia.before = []; within = []; after = [] }
+
+let get_trivia ctx loc =
+  if false then
+    Option.iter
+      (fun loc ->
+        Format.eprintf "%d--%d@." loc.Ast.loc_start.pos_cnum
+          loc.loc_end.pos_cnum)
+      loc;
+  match loc with
+  | None -> dummy_assoc
+  | Some loc -> (
+      try Hashtbl.find ctx.trivia loc with Not_found -> dummy_assoc)
 
 let atomic_node ctx (loc : Ast.location option) f =
-  match loc with
-  | None -> f ()
-  | Some loc ->
-      Printer.catchup ctx loc.loc_start.pos_cnum;
-      f ();
-      Printer.inline_comments ctx loc.loc_end.pos_cnum
+  let trivia = get_trivia ctx loc in
+  print_trivia ctx trivia.before;
+  f ();
+  print_trivia ctx trivia.within;
+  print_trivia ctx trivia.after
 
 let string_node ctx loc style len s =
-  atomic_node ctx.printer loc @@ fun () -> print_styled ctx style ~len s
+  atomic_node ctx loc @@ fun () -> print_styled ctx style ~len s
 
 type sexp =
   | Atom of {
@@ -131,17 +125,24 @@ let rec format_sexp in_block depth first ctx s =
   let p = ctx.printer in
   match s with
   | Atom { loc; len; style; s } -> string_node ctx loc style len s
-  | List (_, l) when (ctx.format = Hybrid && depth > 1) || ctx.format = Compact
-    ->
-      print_styled ctx Punctuation "(";
-      Printer.hvbox p ~indent:(ctx.indent_level - 1) (fun () ->
-          List.iteri
-            (fun i v ->
-              if i > 0 then Printer.space p ();
-              format_sexp in_block depth (i = 0) ctx v)
-            l);
-      print_styled ctx Punctuation ")"
-  | List (_, l) ->
+  | List (loc, l)
+    when (ctx.format = Hybrid && depth > 1) || ctx.format = Compact ->
+      let trivia = get_trivia ctx loc in
+      print_trivia ctx trivia.before;
+      Printer.box p (fun () ->
+          print_styled ctx Punctuation "(";
+          Printer.hvbox p ~indent:(ctx.indent_level - 1) (fun () ->
+              List.iteri
+                (fun i v ->
+                  if i > 0 then Printer.space p ();
+                  format_sexp in_block depth (i = 0) ctx v)
+                l);
+          print_trivia ctx trivia.within;
+          print_styled ctx Punctuation ")";
+          print_trivia ctx trivia.after)
+  | List (loc, l) ->
+      let trivia = get_trivia ctx loc in
+      print_trivia ctx trivia.before;
       (if (not in_block) && ctx.format = Expansive then Printer.vbox
        else Printer.hvbox) p (fun () ->
           print_styled ctx Punctuation "(";
@@ -152,9 +153,14 @@ let rec format_sexp in_block depth first ctx s =
                   format_sexp in_block (depth + 1) (i = 0) ctx v)
                 l);
           Printer.cut ctx.printer ();
-          print_styled ctx Punctuation ")")
-  | Block { l; transparent; _ } ->
+          print_trivia ctx trivia.within;
+          Printer.box p (fun () ->
+              print_styled ctx Punctuation ")";
+              print_trivia ctx trivia.after))
+  | Block { l; transparent; loc } ->
+      let trivia = get_trivia ctx loc in
       let indent = if first then ctx.indent_level - 1 else 0 in
+      print_trivia ctx trivia.before;
       (if (not in_block) && transparent && ctx.format = Expansive then
          Printer.vbox
        else Printer.box) p ~indent (fun () ->
@@ -166,7 +172,9 @@ let rec format_sexp in_block depth first ctx s =
                 depth
                 (first && i = 0)
                 ctx v)
-            l)
+            l;
+          print_trivia ctx trivia.within;
+          print_trivia ctx trivia.after)
   | Vertical_block l ->
       Printer.vbox p (fun () ->
           List.iteri
@@ -174,14 +182,20 @@ let rec format_sexp in_block depth first ctx s =
               if i > 0 then Printer.space p ();
               format_sexp in_block depth false ctx v)
             l)
-  | Structured_block (_, l) ->
+  | Structured_block (loc, l) ->
+      let trivia = get_trivia ctx loc in
+      print_trivia ctx trivia.before;
       Printer.hvbox p (fun () ->
+          let len = List.length l in
           List.iteri
             (fun i s ->
               match s with
               | Delimiter d ->
                   if i > 0 then Printer.space p ();
-                  format_sexp in_block depth false ctx d
+                  if i = len - 1 then print_trivia ctx trivia.within;
+                  Printer.box p (fun () ->
+                      format_sexp in_block depth false ctx d;
+                      print_trivia ctx trivia.after)
               | Contents [] -> ()
               | Contents l ->
                   Printer.indent p ctx.indent_level (fun () ->
@@ -219,12 +233,11 @@ let id ?(style = Identifier) ?loc x =
     let i, s = escape_string x in
     Atom { loc; style; len = Some (i + 3); s = "$\"" ^ s ^ "\"" }
 
-let opt_id = option (fun i -> [ id i.Ast.desc ])
+let opt_id = option (fun i -> [ id ~loc:i.Ast.info i.Ast.desc ])
 
 let index ?(style = Identifier) x =
-  match x.Ast.desc with
-  | Num i -> u32 ~style ~loc:x.info i
-  | Id s -> id ~style ~loc:x.info s
+  let loc = x.Ast.info in
+  match x.desc with Num i -> u32 ~style ~loc i | Id s -> id ~style ~loc s
 
 let heaptype (ty : heaptype) =
   match ty with
@@ -327,8 +340,10 @@ let limits { Ast.desc = { mi; ma; address_type = at }; _ } =
 let tabletype { limits = l; reftype = typ } = limits l @ [ reftype typ ]
 
 let quoted_string s =
+  let loc = s.Ast.info in
   let i, s = escape_string s.Ast.desc in
-  Atom { loc = None; style = String; len = Some (i + 2); s = "\"" ^ s ^ "\"" }
+  Atom
+    { loc = Some loc; style = String; len = Some (i + 2); s = "\"" ^ s ^ "\"" }
 
 let exports l =
   List.map (fun name -> list [ keyword "export"; quoted_string name ]) l
@@ -1024,10 +1039,11 @@ let rec instr i =
         :: (option (fun id -> [ index ~style:Annotation id ]) id
            @ List.map
                (fun s ->
+                 let loc = Some s.Ast.info in
                  let i, s = escape_string s.Ast.desc in
                  Atom
                    {
-                     loc = None;
+                     loc;
                      style = Annotation;
                      len = Some (i + 2);
                      s = "\"" ^ s ^ "\"";
@@ -1052,15 +1068,15 @@ let rec instr i =
           atom ~style:Annotation ")";
         ]
   | Folded (i, l) ->
-      list ~loc [ block ~loc ~transparent:true (instr i :: List.map instr l) ]
+      list ~loc [ block ~transparent:true (instr i :: List.map instr l) ]
 
 let instrs l = if l = [] then [] else [ Vertical_block (List.map instr l) ]
 
-let subtype (id, { typ; supertype; final }) =
+let subtype ?loc (id, { typ; supertype; final }) =
   if final && Option.is_none supertype then
-    list [ block (keyword "type" :: opt_id id); block [ comptype typ ] ]
+    list ?loc [ block (keyword "type" :: opt_id id); block [ comptype typ ] ]
   else
-    list
+    list ?loc
       [
         block (keyword "type" :: opt_id id);
         list
@@ -1118,11 +1134,13 @@ let function_indices lst =
   else None
 
 let modulefield f =
+  let loc = f.Ast.info in
   match f.Ast.desc with
-  | Types [| t |] -> subtype t
-  | Types l -> list (keyword "rec" :: List.map subtype (Array.to_list l))
+  | Types [| t |] -> subtype ~loc t
+  | Types l ->
+      list ~loc (keyword "rec" :: List.map (subtype ?loc:None) (Array.to_list l))
   | Func { id; typ; locals; instrs = i; exports = e } ->
-      list
+      list ~loc
         (block (keyword "func" :: (opt_id id @ exports e @ fundecl typ))
         :: ((if locals = [] then []
              else
@@ -1145,14 +1163,14 @@ let modulefield f =
       in
       match e with
       | [] ->
-          list
+          list ~loc
             [
               block
                 [ keyword "import"; quoted_string module_; quoted_string name ];
               list [ block (keyword kind :: (opt_id id @ typ)) ];
             ]
       | _ ->
-          list
+          list ~loc
             (block
                (keyword kind
                :: (opt_id id @ exports e
@@ -1166,13 +1184,13 @@ let modulefield f =
                     ]))
             :: typ))
   | Global { id; typ; init; exports = e } ->
-      list
+      list ~loc
         (block (keyword "global" :: (opt_id id @ exports e @ [ globaltype typ ]))
         :: instrs init)
   | Tag { id; typ; exports = e } ->
-      list (keyword "tag" :: (opt_id id @ exports e @ fundecl typ))
+      list ~loc (keyword "tag" :: (opt_id id @ exports e @ fundecl typ))
   | Data { id; init; mode } ->
-      list
+      list ~loc
         (block (keyword "data" :: opt_id id)
         :: ((match mode with
               | Passive -> []
@@ -1181,9 +1199,9 @@ let modulefield f =
                    else [ list [ keyword "memory"; index i ] ])
                   @ [ expr "offset" e ])
            @ List.map quoted_string init))
-  | Start idx -> list [ keyword "start"; index idx ]
+  | Start idx -> list ~loc [ keyword "start"; index idx ]
   | Memory { id; limits = l; init; exports = e } ->
-      list
+      list ~loc
         (block
            (keyword "memory"
            :: (opt_id id @ exports e
@@ -1195,7 +1213,7 @@ let modulefield f =
             address_type l.desc.address_type
             @ [ list (keyword "data" :: List.map quoted_string init) ]))
   | Table { id; typ; init; exports = e } ->
-      list
+      list ~loc
         (block
            (keyword "table"
            :: (opt_id id @ exports e
@@ -1219,7 +1237,7 @@ let modulefield f =
                 | None -> List.map (fun e -> expr "item" e) seg));
             ]))
   | Export { name; kind; index = i } ->
-      list
+      list ~loc
         [
           keyword "export";
           quoted_string name;
@@ -1243,7 +1261,7 @@ let modulefield f =
         | Func -> function_indices init
         | _ -> None
       in
-      list
+      list ~loc
         [
           block
             (keyword "elem"
@@ -1262,7 +1280,7 @@ let modulefield f =
             | _ -> List.map (fun e -> expr "item" e) init);
         ]
   | String_global { id = i; typ; init } ->
-      block
+      block ~loc
         (atom ~style:Annotation "(@string"
          :: id ~style:Annotation i.Ast.desc
          :: option (fun id -> [ index ~style:Annotation id ]) typ
@@ -1279,18 +1297,31 @@ let modulefield f =
             init
         @ [ atom ~style:Annotation ")" ])
 
-let module_ ?(color = Auto) ?out_channel printer (id, fields) =
+let module_ ?(color = Auto) ?out_channel printer ~trivia (id, fields) =
   let use_color = should_use_color ~color ~out_channel in
   let theme = get_theme use_color in
-  format_sexp false 0 false
-    { printer; theme; format = Hybrid; indent_level = 2 }
-    (list
-       (block ~transparent:true (keyword "module" :: opt_id id)
-       :: List.map modulefield fields))
+  let sexp =
+    if id = None then block ~transparent:true (List.map modulefield fields)
+    else
+      list
+        (block ~transparent:true (keyword "module" :: opt_id id)
+        :: List.map modulefield fields)
+  in
+  format_sexp false
+    (if id = None then 1 else 0)
+    false
+    { printer; theme; format = Hybrid; indent_level = 2; trivia }
+    sexp
 
 let instr printer i =
   let use_color = should_use_color ~color:Auto ~out_channel:(Some stderr) in
   let theme = get_theme use_color in
   format_sexp false 2 false
-    { printer; theme; format = Compact; indent_level = 2 }
+    {
+      printer;
+      theme;
+      format = Compact;
+      indent_level = 2;
+      trivia = Hashtbl.create 16;
+    }
     (instr i)

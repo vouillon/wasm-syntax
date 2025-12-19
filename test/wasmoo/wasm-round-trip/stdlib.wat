@@ -1,203 +1,190 @@
-(module
-  (import "hash" "caml_string_hash"
-    (func $caml_string_hash (param (ref eq) (ref eq)) (result (ref eq)))
-  )
-  (import "string" "caml_string_equal"
-    (func $caml_string_equal (param (ref eq) (ref eq)) (result (ref eq)))
-  )
-  (import "jslib" "caml_string_of_jsstring"
-    (func $caml_string_of_jsstring (param (ref eq)) (result (ref eq)))
-  )
-  (import "jslib" "caml_jsstring_of_string"
-    (func $caml_jsstring_of_string (param (ref eq)) (result (ref eq)))
-  )
-  (import "jslib" "wrap" (func $wrap (param anyref) (result (ref eq))))
-  (import "jslib" "unwrap" (func $unwrap (param (ref eq)) (result anyref)))
-  (import "obj" "caml_callback_1"
-    (func $caml_callback_1 (param (ref eq) (ref eq)) (result (ref eq)))
-  )
-  (import "obj" "caml_callback_2"
-    (func $caml_callback_2
-      (param (ref eq) (ref eq) (ref eq)) (result (ref eq)))
-  )
-  (import "bindings" "write" (func $write (param i32 anyref)))
-  (import "string" "caml_string_concat"
-    (func $caml_string_concat (param (ref eq) (ref eq)) (result (ref eq)))
-  )
-  (import "printexc" "caml_format_exception"
-    (func $caml_format_exception (param (ref eq)) (result (ref eq)))
-  )
-  (import "sys" "ocaml_exit" (tag $ocaml_exit (param i32)))
-  (import "fail" "ocaml_exception" (tag $ocaml_exception (param (ref eq))))
-  (import "bindings" "exit" (func $exit (param i32)))
-  (import "bindings" "throw" (func $throw_2 (param externref)))
-  (type $block (array (mut (ref eq))))
-  (type $string (array (mut i8)))
-  (type $assoc
-    (struct
-      (field $f (ref $string))
-      (field $f_2 (mut (ref eq)))
-      (field $f_3 (mut (ref null $assoc))))
-  )
-  (type $assoc_array (array (mut (ref null $assoc))))
-  (global $Named_value_size i32 (i32.const 13))
-  (global $named_value_table (ref $assoc_array)
-    (array.new $assoc_array (ref.null $assoc) (global.get $Named_value_size))
-  )
-  (func $find_named_value
-    (param $s (ref eq)) (param $l (ref null $assoc))
-    (result (ref null $assoc))
-    (local $a (ref $assoc))
-    (block $tail (result (ref null $assoc))
-      (loop $loop
-        (local.set $a
-          (br_on_cast_fail $tail (ref null $assoc) (ref $assoc)
-            (local.get $l)))
-        (if
-          (i31.get_u
-            (ref.cast (ref i31)
-              (call $caml_string_equal (local.get $s)
-                (struct.get $assoc $f (local.get $a)))))
-          (then (return (local.get $a))))
-        (local.set $l (struct.get $assoc $f_3 (local.get $a)))
-        (br $loop))
-      (unreachable))
-  )
-  (func $caml_named_value (export "caml_named_value")
-    (param $s (ref $string)) (result eqref)
-    (block $not_found
-      (return
-        (struct.get $assoc $f_2
-          (br_on_null $not_found
-            (call $find_named_value (local.get $s)
-              (array.get $assoc_array (global.get $named_value_table)
-                (i32.rem_u
-                  (i31.get_s
-                    (ref.cast (ref i31)
-                      (call $caml_string_hash (ref.i31 (i32.const 0))
-                        (local.get $s))))
-                  (global.get $Named_value_size))))))))
-    (return (ref.null eq))
-  )
-  (func $caml_register_named_value (export "caml_register_named_value")
-    (param $x (ref eq)) (param $x_2 (ref eq)) (result (ref eq))
-    (local $h i32) (local $r (ref null $assoc))
-    (local.set $h
-      (i32.rem_u
-        (i31.get_s
+(import "hash" "caml_string_hash"
+  (func $caml_string_hash (param (ref eq) (ref eq)) (result (ref eq)))
+)
+(import "string" "caml_string_equal"
+  (func $caml_string_equal (param (ref eq) (ref eq)) (result (ref eq)))
+)
+(import "jslib" "caml_string_of_jsstring"
+  (func $caml_string_of_jsstring (param (ref eq)) (result (ref eq)))
+)
+(import "jslib" "caml_jsstring_of_string"
+  (func $caml_jsstring_of_string (param (ref eq)) (result (ref eq)))
+) (import "jslib" "wrap" (func $wrap (param anyref) (result (ref eq))))
+(import "jslib" "unwrap" (func $unwrap (param (ref eq)) (result anyref)))
+(import "obj" "caml_callback_1"
+  (func $caml_callback_1 (param (ref eq) (ref eq)) (result (ref eq)))
+)
+(import "obj" "caml_callback_2"
+  (func $caml_callback_2 (param (ref eq) (ref eq) (ref eq)) (result (ref eq)))
+) (import "bindings" "write" (func $write (param i32 anyref)))
+(import "string" "caml_string_concat"
+  (func $caml_string_concat (param (ref eq) (ref eq)) (result (ref eq)))
+)
+(import "printexc" "caml_format_exception"
+  (func $caml_format_exception (param (ref eq)) (result (ref eq)))
+) (import "sys" "ocaml_exit" (tag $ocaml_exit (param i32)))
+(import "fail" "ocaml_exception" (tag $ocaml_exception (param (ref eq))))
+(import "bindings" "exit" (func $exit (param i32)))
+(import "bindings" "throw" (func $throw_2 (param externref)))
+(type $block (array (mut (ref eq)))) (type $string (array (mut i8)))
+(type $assoc
+  (struct
+    (field $f (ref $string))
+    (field $f_2 (mut (ref eq)))
+    (field $f_3 (mut (ref null $assoc))))
+) (type $assoc_array (array (mut (ref null $assoc))))
+(global $Named_value_size i32 (i32.const 13))
+(global $named_value_table (ref $assoc_array)
+  (array.new $assoc_array (ref.null $assoc) (global.get $Named_value_size))
+)
+(func $find_named_value
+  (param $s (ref eq)) (param $l (ref null $assoc)) (result (ref null $assoc))
+  (local $a (ref $assoc))
+  (block $tail (result (ref null $assoc))
+    (loop $loop
+      (local.set $a
+        (br_on_cast_fail $tail (ref null $assoc) (ref $assoc) (local.get $l)))
+      (if
+        (i31.get_u
           (ref.cast (ref i31)
-            (call $caml_string_hash (ref.i31 (i32.const 0)) (local.get $x))))
-        (global.get $Named_value_size)))
-    (local.set $r
-      (array.get $assoc_array (global.get $named_value_table) (local.get $h)))
-    (block $not_found
-      (struct.set $assoc $f_2
+            (call $caml_string_equal (local.get $s)
+              (struct.get $assoc $f (local.get $a)))))
+        (then (return (local.get $a))))
+      (local.set $l (struct.get $assoc $f_3 (local.get $a)))
+      (br $loop))
+    (unreachable))
+)
+(func $caml_named_value (export "caml_named_value")
+  (param $s (ref $string)) (result eqref)
+  (block $not_found
+    (return
+      (struct.get $assoc $f_2
         (br_on_null $not_found
-          (call $find_named_value (local.get $x) (local.get $r)))
-        (local.get $x_2))
-      (return (ref.i31 (i32.const 0))))
-    (array.set $assoc_array (global.get $named_value_table) (local.get $h)
-      (struct.new $assoc (ref.cast (ref $string) (local.get $x))
-        (local.get $x_2) (local.get $r)))
-    (ref.i31 (i32.const 0))
-  )
-  (func $caml_unregister_named_value (export "caml_unregister_named_value")
-    (param $name (ref eq)) (result (ref eq))
-    (local $h i32) (local $r (ref null $assoc)) (local $a (ref $assoc))
-    (local.set $h
-      (i32.rem_u
-        (i31.get_s
-          (ref.cast (ref i31)
-            (call $caml_string_hash (ref.i31 (i32.const 0)) (local.get $name))))
-        (global.get $Named_value_size)))
-    (local.set $r
-      (array.get $assoc_array (global.get $named_value_table) (local.get $h)))
-    (block $done
+          (call $find_named_value (local.get $s)
+            (array.get $assoc_array (global.get $named_value_table)
+              (i32.rem_u
+                (i31.get_s
+                  (ref.cast (ref i31)
+                    (call $caml_string_hash (ref.i31 (i32.const 0))
+                      (local.get $s))))
+                (global.get $Named_value_size))))))))
+  (return (ref.null eq))
+)
+(func $caml_register_named_value (export "caml_register_named_value")
+  (param $x (ref eq)) (param $x_2 (ref eq)) (result (ref eq))
+  (local $h i32) (local $r (ref null $assoc))
+  (local.set $h
+    (i32.rem_u
+      (i31.get_s
+        (ref.cast (ref i31)
+          (call $caml_string_hash (ref.i31 (i32.const 0)) (local.get $x))))
+      (global.get $Named_value_size)))
+  (local.set $r
+    (array.get $assoc_array (global.get $named_value_table) (local.get $h)))
+  (block $not_found
+    (struct.set $assoc $f_2
+      (br_on_null $not_found
+        (call $find_named_value (local.get $x) (local.get $r)))
+      (local.get $x_2))
+    (return (ref.i31 (i32.const 0))))
+  (array.set $assoc_array (global.get $named_value_table) (local.get $h)
+    (struct.new $assoc (ref.cast (ref $string) (local.get $x))
+      (local.get $x_2) (local.get $r)))
+  (ref.i31 (i32.const 0))
+)
+(func $caml_unregister_named_value (export "caml_unregister_named_value")
+  (param $name (ref eq)) (result (ref eq))
+  (local $h i32) (local $r (ref null $assoc)) (local $a (ref $assoc))
+  (local.set $h
+    (i32.rem_u
+      (i31.get_s
+        (ref.cast (ref i31)
+          (call $caml_string_hash (ref.i31 (i32.const 0)) (local.get $name))))
+      (global.get $Named_value_size)))
+  (local.set $r
+    (array.get $assoc_array (global.get $named_value_table) (local.get $h)))
+  (block $done
+    (local.set $a (br_on_null $done (local.get $r)))
+    (local.set $r (struct.get $assoc $f_3 (local.get $a)))
+    (if
+      (i31.get_u
+        (ref.cast (ref i31)
+          (call $caml_string_equal (local.get $name)
+            (struct.get $assoc $f (local.get $a)))))
+      (then
+        (array.set $assoc_array (global.get $named_value_table)
+          (local.get $h) (local.get $r))
+        (br $done)))
+    (loop $loop
       (local.set $a (br_on_null $done (local.get $r)))
-      (local.set $r (struct.get $assoc $f_3 (local.get $a)))
       (if
         (i31.get_u
           (ref.cast (ref i31)
             (call $caml_string_equal (local.get $name)
               (struct.get $assoc $f (local.get $a)))))
         (then
-          (array.set $assoc_array (global.get $named_value_table)
-            (local.get $h) (local.get $r))
+          (struct.set $assoc $f_3 (local.get $r)
+            (struct.get $assoc $f_3 (local.get $a)))
           (br $done)))
-      (loop $loop
-        (local.set $a (br_on_null $done (local.get $r)))
-        (if
-          (i31.get_u
-            (ref.cast (ref i31)
-              (call $caml_string_equal (local.get $name)
-                (struct.get $assoc $f (local.get $a)))))
-          (then
-            (struct.set $assoc $f_3 (local.get $r)
-              (struct.get $assoc $f_3 (local.get $a)))
-            (br $done)))
-        (local.set $r (struct.get $assoc $f_3 (local.get $a)))
-        (br $loop)))
-    (ref.i31 (i32.const 0))
-  )
-  (global $caml_global_data (export "caml_global_data") (mut (ref $block))
-    (array.new $block (ref.i31 (i32.const 0)) (i32.const 12))
-  )
-  (func $caml_register_global (export "caml_register_global")
-    (param $x (ref eq)) (param $v (ref eq)) (param $x_2 (ref eq))
-    (result (ref eq))
-    (local $i i32)
-    (local.set $i (i31.get_u (ref.cast (ref i31) (local.get $x))))
-    (if (i32.lt_u (local.get $i) (array.len (global.get $caml_global_data)))
-      (then
-        (array.set $block (global.get $caml_global_data) (local.get $i)
-          (local.get $v))))
-    (ref.i31 (i32.const 0))
-  )
-  (func $caml_get_global_data (export "caml_get_global_data")
-    (param $x (ref eq)) (result (ref eq))
-    (global.get $caml_global_data)
-  )
-  (type $func_2 (func (result (ref eq))))
-  (global $uncaught_exception (mut externref) (ref.null extern))
-  (func $reraise_exception (result (ref eq))
-    (call $throw_2 (global.get $uncaught_exception))
-    (ref.i31 (i32.const 0))
-  )
-  (func $caml_handle_uncaught_exception
-    (export "caml_handle_uncaught_exception") (param $exn externref)
-    (global.set $uncaught_exception (local.get $exn))
-    (call $caml_main (ref.func $reraise_exception))
-  )
-  (func $caml_main (export "caml_main") (param $start (ref func))
-    (local $exn (ref eq))
-    (try
-      (do
-        (drop (call_ref $func_2 (ref.cast (ref $func_2) (local.get $start)))))
-      (catch $ocaml_exit (call $exit))
-      (catch $ocaml_exception
-        (local.set $exn)
-        (block $exit
-          (block $not_registered
-            (drop
-              (call $caml_callback_2
-                (br_on_null $not_registered
-                  (call $caml_named_value (@string $string "foo" )))
-                (local.get $exn) (ref.i31 (i32.const 0))))
-            (br $exit))
-          (block $null
-            (drop
-              (call $caml_callback_1
-                (br_on_null $null
-                  (call $caml_named_value (@string $string "foo" )))
-                (ref.i31 (i32.const 0)))))
-          (call $write (i32.const 2)
-            (call $unwrap
-              (call $caml_jsstring_of_string
-                (call $caml_string_concat (@string $string "foo" )
-                  (call $caml_string_concat
-                    (call $caml_format_exception (local.get $exn))
-                    (@string $string "\n" )))))))
-        (call $exit (i32.const 2))))
-  )
-  (elem declare func $reraise_exception)
+      (local.set $r (struct.get $assoc $f_3 (local.get $a)))
+      (br $loop)))
+  (ref.i31 (i32.const 0))
 )
+(global $caml_global_data (export "caml_global_data") (mut (ref $block))
+  (array.new $block (ref.i31 (i32.const 0)) (i32.const 12))
+)
+(func $caml_register_global (export "caml_register_global")
+  (param $x (ref eq)) (param $v (ref eq)) (param $x_2 (ref eq))
+  (result (ref eq))
+  (local $i i32)
+  (local.set $i (i31.get_u (ref.cast (ref i31) (local.get $x))))
+  (if (i32.lt_u (local.get $i) (array.len (global.get $caml_global_data)))
+    (then
+      (array.set $block (global.get $caml_global_data) (local.get $i)
+        (local.get $v))))
+  (ref.i31 (i32.const 0))
+)
+(func $caml_get_global_data (export "caml_get_global_data")
+  (param $x (ref eq)) (result (ref eq))
+  (global.get $caml_global_data)
+) (type $func_2 (func (result (ref eq))))
+(global $uncaught_exception (mut externref) (ref.null extern))
+(func $reraise_exception (result (ref eq))
+  (call $throw_2 (global.get $uncaught_exception))
+  (ref.i31 (i32.const 0))
+)
+(func $caml_handle_uncaught_exception
+  (export "caml_handle_uncaught_exception") (param $exn externref)
+  (global.set $uncaught_exception (local.get $exn))
+  (call $caml_main (ref.func $reraise_exception))
+)
+(func $caml_main (export "caml_main") (param $start (ref func))
+  (local $exn (ref eq))
+  (try
+    (do (drop (call_ref $func_2 (ref.cast (ref $func_2) (local.get $start)))))
+    (catch $ocaml_exit (call $exit))
+    (catch $ocaml_exception
+      (local.set $exn)
+      (block $exit
+        (block $not_registered
+          (drop
+            (call $caml_callback_2
+              (br_on_null $not_registered
+                (call $caml_named_value (@string $string "foo" )))
+              (local.get $exn) (ref.i31 (i32.const 0))))
+          (br $exit))
+        (block $null
+          (drop
+            (call $caml_callback_1
+              (br_on_null $null
+                (call $caml_named_value (@string $string "foo" )))
+              (ref.i31 (i32.const 0)))))
+        (call $write (i32.const 2)
+          (call $unwrap
+            (call $caml_jsstring_of_string
+              (call $caml_string_concat (@string $string "foo" )
+                (call $caml_string_concat
+                  (call $caml_format_exception (local.get $exn))
+                  (@string $string "\n" )))))))
+      (call $exit (i32.const 2))))
+) (elem declare func $reraise_exception)

@@ -5,14 +5,12 @@ Error: The type index 0 is not bound.
 1061 │     (call_indirect (type 0) (local.get 0)))
                                 ^
 ==== core/exceptions/tag.wast ====
+Validation should have failed (non-empty tag result type): (tag (result i32))
 Validation should have failed (non-empty tag result type):
-  (module (tag (result i32)))
+  (import "" "" (tag (result i32)))
+Validation should have failed (non-empty tag result type): (tag (result i32))
 Validation should have failed (non-empty tag result type):
-  (module (import "" "" (tag (result i32))))
-Validation should have failed (non-empty tag result type):
-  (module (tag (result i32)))
-Validation should have failed (non-empty tag result type):
-  (module (import "" "" (tag (result i32))))
+  (import "" "" (tag (result i32)))
 ==== core/func.wast ====
 Fatal error: exception File "src/lib-wasm/text_to_binary.ml", line 680, characters 28-34: Assertion failed
 ==== core/stack.wast ====

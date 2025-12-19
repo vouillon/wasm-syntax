@@ -2,8 +2,8 @@
 
 type position = Line_start | Inline
 type kind = Line_comment | Block_comment | Annotation
-type t = Item of { content : string; kind : kind } | Blank_line
-type entry = { anchor : int; trivia : t; position : position }
+type trivia = Item of { content : string; kind : kind } | Blank_line
+type entry = { anchor : int; trivia : trivia; position : position }
 type context
 
 type associated = {
@@ -11,6 +11,8 @@ type associated = {
   within : entry list;
   after : entry list;
 }
+
+type t = (Ast.location, associated) Hashtbl.t
 
 val associate : context -> (Ast.location, associated) Hashtbl.t
 (** [associate ctx] associates trivia to locations. *)

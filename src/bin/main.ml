@@ -35,7 +35,7 @@ let with_open_out file f =
 
 type fold_mode = Auto | Fold | Unfold
 
-let output_wat ~fold_mode ~output_file ~color ast =
+let output_wat ~fold_mode ~output_file ~color ~trivia ast =
   let ast =
     match fold_mode with
     | Auto -> ast
@@ -45,7 +45,7 @@ let output_wat ~fold_mode ~output_file ~color ast =
   with_open_out output_file (fun oc ->
       let print_wat f m =
         Utils.Printer.run f (fun p ->
-            Wasm.Output.module_ ~color ~out_channel:oc p m)
+            Wasm.Output.module_ ~color ~out_channel:oc p ~trivia m)
       in
       let fmt = Format.formatter_of_out_channel oc in
       Format.fprintf fmt "%a@." print_wat ast)
@@ -55,7 +55,7 @@ let wat_to_wat ~input_file ~output_file ~validate ~color ~fold_mode
   let _ = opt_source_map_file in
   (* Ignored for non-wasm output *)
   let text = with_open_in input_file In_channel.input_all in
-  let ast, _ctx =
+  let ast, ctx =
     Wat_parser.parse_from_string
       ~filename:(Option.value ~default:"-" input_file)
       text
@@ -63,7 +63,9 @@ let wat_to_wat ~input_file ~output_file ~validate ~color ~fold_mode
   if validate then
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wasm.Validation.f d ast);
-  output_wat ~fold_mode ~output_file ~color ast
+  output_wat ~fold_mode ~output_file ~color
+    ~trivia:(Utils.Trivia.associate ctx)
+    ast
 
 let wat_to_wax ~input_file ~output_file ~validate ~color ~fold_mode:_
     ~source_map_file:opt_source_map_file =
@@ -113,7 +115,8 @@ let wax_to_wat ~input_file ~output_file ~validate ~color ~fold_mode
   if validate then
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wasm.Validation.f d wasm_ast);
-  output_wat ~fold_mode ~output_file ~color wasm_ast
+  let trivia = (*ZZZ*) Hashtbl.create 0 in
+  output_wat ~fold_mode ~output_file ~color ~trivia wasm_ast
 
 let wax_to_wax ~input_file ~output_file ~validate ~color ~fold_mode:_
     ~source_map_file:opt_source_map_file =
@@ -194,7 +197,8 @@ let wasm_to_wat ~input_file ~output_file ~validate ~color ~fold_mode
   if validate then
     Utils.Diagnostic.run ~color ~source:None (fun d ->
         Wasm.Validation.f d text_ast);
-  output_wat ~fold_mode ~output_file ~color text_ast
+  let trivia = Hashtbl.create 0 in
+  output_wat ~fold_mode ~output_file ~color ~trivia text_ast
 
 let wasm_to_wax ~input_file ~output_file ~validate ~color ~fold_mode:_
     ~source_map_file:opt_source_map_file =

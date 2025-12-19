@@ -9,6 +9,7 @@ val module_ :
   ?color:Utils.Colors.flag ->
   ?out_channel:out_channel ->
   Utils.Printer.t ->
+  trivia:Utils.Trivia.t ->
   Ast.location Ast.Text.module_ ->
   unit
 
