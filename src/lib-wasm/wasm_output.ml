@@ -1021,6 +1021,7 @@ module Encoder = struct
           | VecRelaxedLaneSelect I64x2 -> 0x10c
           | VecRelaxedDotAdd -> 0x113
           | VecRelaxedLaneSelect (F32x4 | F64x2) -> assert false)
+    | String _ | Char _ -> assert false (* Desugared *)
     | Folded (i, is) ->
         List.iter (instr ~source_map_t b) is;
         instr ~source_map_t b i

@@ -28,22 +28,11 @@ let make () =
 
 let add_entry ctx entry = ctx.comments <- entry :: ctx.comments
 
-let report_comment ctx kind content =
-  let kind =
-    match kind with `Line -> Line_comment | `Block -> Block_comment
-  in
+let report_item ctx kind content =
   add_entry ctx
     {
       anchor = ctx.prev_token_end;
       trivia = Item { content; kind };
-      position = (if ctx.at_start_of_line then Line_start else Inline);
-    }
-
-let report_annotation ctx =
-  add_entry ctx
-    {
-      anchor = ctx.prev_token_end;
-      trivia = Item { content = ""; kind = Annotation };
       position = (if ctx.at_start_of_line then Line_start else Inline);
     }
 

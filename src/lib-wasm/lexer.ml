@@ -47,21 +47,30 @@ let reserved = [%sedlex.regexp? Plus (idchar | ',' | '[' | ']' | '{' | '}')]
 let space = [%sedlex.regexp? ' ' | format | comment]
 *)
 let keyword = [%sedlex.regexp? 'a' .. 'z', Star idchar]
+let string_buffer = Buffer.create 256
 
-let rec comment lexbuf =
+let rec comment_rec lexbuf =
   match%sedlex lexbuf with
-  | ";)" -> ()
+  | ";)" -> Buffer.add_string string_buffer ";)"
   | "(;" ->
-      comment lexbuf;
-      comment lexbuf
-  | ';' | '(' | Plus (Sub (any, (';' | '('))) -> comment lexbuf
+      Buffer.add_string string_buffer "(;";
+      comment_rec lexbuf;
+      comment_rec lexbuf
+  | ';' | '(' | Plus (Sub (any, (';' | '('))) ->
+      Buffer.add_string string_buffer (Sedlexing.Utf8.lexeme lexbuf);
+      comment_rec lexbuf
   | _ ->
       raise
         (Parsing.Syntax_error
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Malformed comment.\n" ))
 
-let string_buffer = Buffer.create 256
+let comment lexbuf =
+  Buffer.add_string string_buffer "(;";
+  comment_rec lexbuf;
+  let s = Buffer.contents string_buffer in
+  Buffer.clear string_buffer;
+  s
 
 let rec string lexbuf =
   match%sedlex lexbuf with
@@ -132,7 +141,7 @@ let rec skip_annotation depth lexbuf =
       scan_string lexbuf;
       skip_annotation depth lexbuf
   | "(;" ->
-      comment lexbuf;
+      comment_rec lexbuf;
       skip_annotation depth lexbuf
   | linecomment -> skip_annotation depth lexbuf
   | Plus (' ' | '\t' | '\n' | '\r') -> skip_annotation depth lexbuf
@@ -154,7 +163,7 @@ let with_loc f lexbuf =
 
 open Tokens
 
-let rec token_with_comments ctx lexbuf =
+let rec token_rec ctx lexbuf =
   match%sedlex lexbuf with
   | '(' -> LPAREN
   | ')' -> RPAREN
@@ -177,38 +186,40 @@ let rec token_with_comments ctx lexbuf =
       ID s
   | newline ->
       Utils.Trivia.report_newline ctx;
-      token_with_comments ctx lexbuf (* Skip standalone newlines in Wat *)
+      token_rec ctx lexbuf (* Skip standalone newlines in Wat *)
   | linecomment ->
-      let loc_start, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
       let content = Sedlexing.Utf8.lexeme lexbuf in
-      LINE_COMMENT ({ Ast.loc_start; loc_end }, `Line, content)
-  | Plus (' ' | '\t') -> token_with_comments ctx lexbuf
+      Utils.Trivia.report_item ctx Line_comment content;
+      token_rec ctx lexbuf
+  | Plus (' ' | '\t') -> token_rec ctx lexbuf
   | "(;" ->
-      let loc_start, _ = Sedlexing.lexing_bytes_positions lexbuf in
-      comment lexbuf;
-      let _, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
-      BLOCK_COMMENT ({ Ast.loc_start; loc_end }, `Block, "")
+      let s = comment lexbuf in
+      Utils.Trivia.report_item ctx Block_comment s;
+      token_rec ctx lexbuf
+  | "(@string" -> STRING_ANNOT
+  | "(@char" -> CHAR_ANNOT
   | "(@", Plus idchar ->
-      let loc_start, _ = Sedlexing.lexing_bytes_positions lexbuf in
       skip_annotation 1 lexbuf;
-      let _, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
-      ANNOTATION { Ast.loc_start; loc_end }
+      Utils.Trivia.report_item ctx Annotation "";
+      token_rec ctx lexbuf
   | "(@\"" ->
-      let loc_start, _ = Sedlexing.lexing_bytes_positions lexbuf in
       let s = string lexbuf in
-      if not (String.is_valid_utf_8 s) then
-        raise
-          (Parsing.Syntax_error
-             ( Sedlexing.lexing_bytes_positions lexbuf,
-               "The annotation id contains malformed UTF-8 byte sequences." ));
-      if s = "" then
-        raise
-          (Parsing.Syntax_error
-             ( Sedlexing.lexing_bytes_positions lexbuf,
-               "An annotation id cannot be the empty string." ));
-      skip_annotation 1 lexbuf;
-      let _, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
-      ANNOTATION { Ast.loc_start; loc_end }
+      if s = "string" then STRING_ANNOT
+      else if s = "char" then CHAR_ANNOT
+      else (
+        if not (String.is_valid_utf_8 s) then
+          raise
+            (Parsing.Syntax_error
+               ( Sedlexing.lexing_bytes_positions lexbuf,
+                 "The annotation id contains malformed UTF-8 byte sequences." ));
+        if s = "" then
+          raise
+            (Parsing.Syntax_error
+               ( Sedlexing.lexing_bytes_positions lexbuf,
+                 "An annotation id cannot be the empty string." ));
+        skip_annotation 1 lexbuf;
+        Utils.Trivia.report_item ctx Annotation "";
+        token_rec ctx lexbuf)
   | id ->
       let loc_start, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
       ID
@@ -883,21 +894,11 @@ let rec token_with_comments ctx lexbuf =
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Syntax error.\n" ))
 
-let rec token ctx lexbuf =
-  match token_with_comments ctx lexbuf with
-  | LINE_COMMENT (_loc, kind, content) ->
-      Utils.Trivia.report_comment ctx kind content;
-      token ctx lexbuf
-  | BLOCK_COMMENT (_loc, kind, content) ->
-      Utils.Trivia.report_comment ctx kind content;
-      token ctx lexbuf
-  | ANNOTATION _loc ->
-      Utils.Trivia.report_annotation ctx;
-      token ctx lexbuf
-  | t ->
-      let _start, end_ = Sedlexing.lexing_bytes_positions lexbuf in
-      Utils.Trivia.report_token ctx end_.pos_cnum;
-      t
+let token ctx lexbuf =
+  let t = token_rec ctx lexbuf in
+  let end_ = Sedlexing.lexing_bytes_position_curr lexbuf in
+  Utils.Trivia.report_token ctx end_.pos_cnum;
+  t
 
 let is_valid_identifier s =
   let buf = Sedlexing.Utf8.from_string s in

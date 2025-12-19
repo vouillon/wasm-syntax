@@ -25,21 +25,30 @@ let hexfloat =
 let float = [%sedlex.regexp? decfloat | hexfloat | "nan:0x", hexnum]
 let linechar = [%sedlex.regexp? Sub (any, (10 | 13))]
 let linecomment = [%sedlex.regexp? "//", Star linechar, (newline | eof)]
+let string_buffer = Buffer.create 256
 
-let rec comment lexbuf =
+let rec comment_rec lexbuf =
   match%sedlex lexbuf with
-  | "*/" -> ()
+  | "*/" -> Buffer.add_string string_buffer "*/"
   | "/*" ->
-      comment lexbuf;
-      comment lexbuf
-  | '*' | '/' | Plus (Sub (any, ('*' | '/'))) -> comment lexbuf
+      Buffer.add_string string_buffer "/*";
+      comment_rec lexbuf;
+      comment_rec lexbuf
+  | '*' | '/' | Plus (Sub (any, ('*' | '/'))) ->
+      Buffer.add_string string_buffer (Sedlexing.Utf8.lexeme lexbuf);
+      comment_rec lexbuf
   | _ ->
       raise
         (Wasm.Parsing.Syntax_error
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Malformed comment.\n" ))
 
-let string_buffer = Buffer.create 256
+let comment lexbuf =
+  Buffer.add_string string_buffer "/*";
+  comment_rec lexbuf;
+  let s = Buffer.contents string_buffer in
+  Buffer.clear string_buffer;
+  s
 
 let rec string lexbuf =
   match%sedlex lexbuf with
@@ -85,23 +94,31 @@ let rec string lexbuf =
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Malformed string.\n" ))
 
+let with_loc f lexbuf =
+  let loc_start = Sedlexing.lexing_bytes_position_start lexbuf in
+  let desc = f lexbuf in
+  {
+    Ast.desc;
+    info =
+      { Ast.loc_start; loc_end = Sedlexing.lexing_bytes_position_curr lexbuf };
+  }
+
 open Tokens
 
-let rec token_with_comments lexbuf =
+let rec token_rec ctx lexbuf =
   match%sedlex lexbuf with
-  | white -> token_with_comments lexbuf
+  | white -> token_rec ctx lexbuf
   | newline ->
-      let pos = Sedlexing.lexing_bytes_position_start lexbuf in
-      NEWLINE pos
+      Utils.Trivia.report_newline ctx;
+      token_rec ctx lexbuf
   | linecomment ->
-      let loc_start, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
       let content = Sedlexing.Utf8.lexeme lexbuf in
-      LINE_COMMENT ({ Utils.Ast.loc_start; loc_end }, `Line, content)
+      Utils.Trivia.report_item ctx Line_comment content;
+      token_rec ctx lexbuf
   | "/*" ->
-      let loc_start, _ = Sedlexing.lexing_bytes_positions lexbuf in
-      comment lexbuf;
-      let _, loc_end = Sedlexing.lexing_bytes_positions lexbuf in
-      BLOCK_COMMENT ({ Utils.Ast.loc_start; loc_end }, `Block, "")
+      let s = comment lexbuf in
+      Utils.Trivia.report_item ctx Block_comment s;
+      token_rec ctx lexbuf
   | ';' -> SEMI
   | '#' -> SHARP
   | '?' -> QUESTIONMARK
@@ -185,7 +202,7 @@ let rec token_with_comments lexbuf =
   | int -> INT (Sedlexing.Utf8.lexeme lexbuf)
   | float -> FLOAT (Sedlexing.Utf8.lexeme lexbuf)
   | ident -> IDENT (Sedlexing.Utf8.lexeme lexbuf)
-  | '"' -> STRING (string lexbuf)
+  | '"' -> STRING (with_loc string lexbuf)
   | eof -> EOF
   | Compl 'x' ->
       raise
@@ -199,21 +216,11 @@ let rec token_with_comments lexbuf =
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Syntax error.\n" ))
 
-let rec token ctx lexbuf =
-  match token_with_comments lexbuf with
-  | LINE_COMMENT (_loc, kind, content) ->
-      Utils.Trivia.report_comment ctx kind content;
-      token ctx lexbuf
-  | BLOCK_COMMENT (_loc, kind, content) ->
-      Utils.Trivia.report_comment ctx kind content;
-      token ctx lexbuf
-  | NEWLINE _pos ->
-      Utils.Trivia.report_newline ctx;
-      token ctx lexbuf
-  | t ->
-      let _start, end_ = Sedlexing.lexing_bytes_positions lexbuf in
-      Utils.Trivia.report_token ctx end_.pos_cnum;
-      t
+let token ctx lexbuf =
+  let t = token_rec ctx lexbuf in
+  let end_ = Sedlexing.lexing_bytes_position_curr lexbuf in
+  Utils.Trivia.report_token ctx end_.pos_cnum;
+  t
 
 let is_valid_identifier s =
   let buf = Sedlexing.Utf8.from_string s in

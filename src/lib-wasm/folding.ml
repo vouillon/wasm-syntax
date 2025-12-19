@@ -24,7 +24,7 @@ let map_instrs func (name, fields) =
           | Elem ({ init; _ } as e) ->
               Elem { e with init = List.map (fun l -> func None l) init }
           | Types _ | Import _ | Memory _ | Tag _ | Export _ | Start _ | Data _
-            ->
+          | String_global _ ->
               f.desc
         in
         { f with desc })
@@ -39,20 +39,20 @@ module Tbl = struct
   type 'a t = {
     by_index : 'a Uint32Map.t;
     by_name : 'a StringMap.t;
-    last : int;
+    next : int;
   }
 
   let empty =
-    { by_index = Uint32Map.empty; by_name = StringMap.empty; last = 0 }
+    { by_index = Uint32Map.empty; by_name = StringMap.empty; next = 0 }
 
   let add id v tbl =
     {
-      by_index = Uint32Map.add (Uint32.of_int tbl.last) v tbl.by_index;
+      by_index = Uint32Map.add (Uint32.of_int tbl.next) v tbl.by_index;
       by_name =
         (match id with
         | None -> tbl.by_name
         | Some id -> StringMap.add id.Ast.desc v tbl.by_name);
-      last = tbl.last + 1;
+      next = tbl.next + 1;
     }
 end
 
@@ -78,7 +78,7 @@ let types m =
       | Types l ->
           Array.fold_left (fun tbl (id, typ) -> Tbl.add id typ tbl) tbl l
       | Import _ | Func _ | Memory _ | Table _ | Tag _ | Global _ | Export _
-      | Start _ | Elem _ | Data _ ->
+      | Start _ | Elem _ | Data _ | String_global _ ->
           tbl)
     Tbl.empty m
 
@@ -90,7 +90,7 @@ let functions f =
           Tbl.add id typ tbl
       | Import { desc = Memory _ | Table _ | Global _ | Tag _; _ }
       | Types _ | Memory _ | Table _ | Tag _ | Global _ | Export _ | Start _
-      | Elem _ | Data _ ->
+      | Elem _ | Data _ | String_global _ ->
           tbl)
     Tbl.empty f
 
@@ -100,6 +100,9 @@ let globals f =
       match f.Ast.desc with
       | Global { id; typ; _ } | Import { id; desc = Global typ; _ } ->
           Tbl.add id typ tbl
+      | String_global { id; _ } ->
+          (* Wrong type, but we only care about the arity *)
+          Tbl.add (Some id) { mut = false; typ = (I32 : valtype) } tbl
       | Import { desc = Func _ | Memory _ | Table _ | Tag _; _ }
       | Types _ | Func _ | Memory _ | Table _ | Tag _ | Export _ | Start _
       | Elem _ | Data _ ->
@@ -114,7 +117,7 @@ let tags f =
           Tbl.add id typ tbl
       | Import { desc = Func _ | Memory _ | Table _ | Global _; _ }
       | Types _ | Func _ | Memory _ | Table _ | Global _ | Export _ | Start _
-      | Elem _ | Data _ ->
+      | Elem _ | Data _ | String_global _ ->
           tbl)
     Tbl.empty f
 
@@ -136,8 +139,9 @@ let locals env typ l =
   List.fold_left (fun tbl (id, typ) -> Tbl.add id typ tbl) tbl l
 
 let module_env (_, m) =
+  let types = types m in
   {
-    types = types m;
+    types;
     functions = functions m;
     globals = globals m;
     tags = tags m;
@@ -321,6 +325,7 @@ let arity env i =
   | TupleMake n -> (Uint32.to_int n, Uint32.to_int n)
   | TupleExtract (n, _) -> (Uint32.to_int n, 1)
   | VecTernOp _ -> (3, 1)
+  | String _ | Char _ -> (0, 1)
 
 (****)
 

@@ -112,8 +112,8 @@ let output_inferred_type f ty =
   | Null -> Format.fprintf f "null"
   | Number -> Format.fprintf f "number"
   | Int -> Format.fprintf f "int"
-  | Int16 -> Format.fprintf f "int16"
-  | Int8 -> Format.fprintf f "int8"
+  | Int16 -> Format.fprintf f "i16"
+  | Int8 -> Format.fprintf f "i8"
   | Float -> Format.fprintf f "float"
   | Valtype ty -> Output.valtype f ty.typ
 
@@ -405,8 +405,7 @@ type module_context = {
   types : (int * subtype) Tbl.t;
   functions : (int * string) Tbl.t;
   globals : (*mutable:*) (bool * inferred_valtype) Tbl.t;
-  tags : functype Tbl.t;
-  (*  memories : limits Tbl.t;*)
+  tags : functype Tbl.t; (*  memories : limits Tbl.t;*)
   mutable locals : inferred_valtype StringMap.t;
   control_types : (string option * inferred_type UnionFind.t array) list;
   return_types : inferred_type UnionFind.t array;
@@ -877,8 +876,8 @@ let rec count_holes i =
   | Sequence l | ArrayFixed (_, l) ->
       List.fold_left (fun acc i -> acc + count_holes i) 0 l
   | Select (c, t, e) -> count_holes c + count_holes t + count_holes e
-  | Block _ | Loop _ | TryTable _ | Try _ | StructDefault _ | String _ | Int _
-  | Float _ | Get _ | Null | Unreachable | Nop
+  | Block _ | Loop _ | TryTable _ | Try _ | StructDefault _ | Char _ | String _
+  | Int _ | Float _ | Get _ | Null | Unreachable | Nop
   | Let (_, None)
   | Br (_, None)
   | Throw (_, None)
@@ -896,8 +895,8 @@ let rec check_hole_order_rec ctx i n =
   | _ ->
       let n =
         match i.desc with
-        | Block _ | Loop _ | TryTable _ | Try _ | StructDefault _ | String _
-        | Int _ | Float _ | Get _ | Null | Unreachable | Nop
+        | Block _ | Loop _ | TryTable _ | Try _ | StructDefault _ | Char _
+        | String _ | Int _ | Float _ | Get _ | Null | Unreachable | Nop
         | Let (_, None)
         | Br (_, None)
         | Throw (_, None)
@@ -1346,15 +1345,19 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
       | _ ->
           Format.eprintf "%a@." Output.instr i;
           assert false)
-  | String (ty, _) as desc -> (
-      match ty with
-      | None -> assert false (*ZZZ*)
-      | Some ty ->
-          let _ : _ option = lookup_array_type ctx ty in
-          let*! typ =
-            internalize ctx (Ref { nullable = false; typ = Type ty })
-          in
-          return_expression i desc typ)
+  | Char _ as desc ->
+      return_expression i desc
+        (UnionFind.make (Valtype { typ = I32; internal = I32 }))
+  | String (ty, _) as desc ->
+      let ty =
+        match ty with
+        | None -> { i with desc = "<string>" }
+        | Some ty ->
+            let _ : _ option = lookup_array_type ctx ty in
+            ty
+      in
+      let*! typ = internalize ctx (Ref { nullable = false; typ = Type ty }) in
+      return_expression i desc typ
   | Int _ as desc -> return_expression i desc (UnionFind.make Number)
   | Float _ as desc -> return_expression i desc (UnionFind.make Float)
   | Cast (i', typ) ->
@@ -2286,7 +2289,9 @@ let rec check_constant_instruction ctx i =
       | Some (mut, _) ->
           if mut then Error.constant_global_required ctx.diagnostics ~location
       | None -> (* ref.func *) ())
-  | Null | StructDefault _ | ArrayDefault _ | Int _ | Float _ | String _ -> ()
+  | Null | StructDefault _ | ArrayDefault _ | Int _ | Float _ | Char _
+  | String _ ->
+      ()
   | Struct (_, l) ->
       List.iter (fun (_, i) -> check_constant_instruction ctx i) l
   | ArrayFixed (_, l) -> List.iter (check_constant_instruction ctx) l
@@ -2352,15 +2357,22 @@ let globals ctx fields =
   List.map
     (fun field ->
       match field.desc with
-      | Global ({ name; mut; typ = Some typ; def; _ } as g) ->
-          (*ZZZ handle typ= None *)
+      | Global ({ name; mut; typ; def; _ } as g) ->
           let def' =
             with_empty_stack ctx ~location:def.info ~kind:Expression
               (toplevel_instruction ctx def)
           in
-          (let>@ typ = internalize_valtype ctx typ in
-           Tbl.add ctx.diagnostics ctx.globals name (mut, typ);
-           check_type ctx def' (UnionFind.make (Valtype typ)));
+          (match typ with
+          | Some typ ->
+              let>@ typ = internalize_valtype ctx typ in
+              Tbl.add ctx.diagnostics ctx.globals name (mut, typ);
+              check_type ctx def' (UnionFind.make (Valtype typ))
+          | None -> (
+              let typ = UnionFind.find (expression_type ctx def') in
+              match typ with
+              | Valtype typ ->
+                  Tbl.add ctx.diagnostics ctx.globals name (mut, typ)
+              | _ -> assert false (*ZZZ floating*)));
           check_constant_instruction ctx def';
           After { field with desc = Global { g with def = def' } }
       | _ -> Before field)
@@ -2440,7 +2452,7 @@ let fundecl ctx name typ sign =
     | None -> (
         match sign with
         | Some sign ->
-            let name = { name with desc = "func:" ^ name.desc } in
+            let name = { name with desc = "<func:" ^ name.desc ^ ">" } in
             let+@ i =
               add_type ctx.diagnostics ctx.type_context
                 [|
@@ -2513,6 +2525,18 @@ let f diagnostics fields =
           Tbl.add diagnostics ctx.tags name typ
       | Type _ | Global _ -> ())
     fields;
+  let _ : _ option =
+    let name = Ast.no_loc "<string>" in
+    add_type ctx.diagnostics ctx.type_context
+      [|
+        ( name,
+          {
+            supertype = None;
+            typ = Array { mut = true; typ = Packed I8 };
+            final = true;
+          } );
+      |]
+  in
   let ctx =
     {
       ctx with

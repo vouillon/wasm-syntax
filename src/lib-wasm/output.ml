@@ -206,25 +206,25 @@ let u32 ~style ?loc i = atom ~style ?loc (Uint32.to_string i)
 let u64 ?loc i = atom ?loc (Uint64.to_string i)
 let escape_string = Misc.escape_string
 
-let id ?loc x =
+let id ?(style = Identifier) ?loc x =
   if Lexer.is_valid_identifier x then
     Atom
       {
         loc;
-        style = Identifier;
+        style;
         len = Some (Utils.Unicode.terminal_width x + 1);
         s = "$" ^ x;
       }
   else
     let i, s = escape_string x in
-    Atom { loc; style = Identifier; len = Some (i + 3); s = "$\"" ^ s ^ "\"" }
+    Atom { loc; style; len = Some (i + 3); s = "$\"" ^ s ^ "\"" }
 
 let opt_id = option (fun i -> [ id i.Ast.desc ])
 
-let index x =
+let index ?(style = Identifier) x =
   match x.Ast.desc with
-  | Num i -> u32 ~style:Identifier ~loc:x.info i
-  | Id s -> id ~loc:x.info s
+  | Num i -> u32 ~style ~loc:x.info i
+  | Id s -> id ~style ~loc:x.info s
 
 let heaptype (ty : heaptype) =
   match ty with
@@ -1018,6 +1018,39 @@ let rec instr i =
            match catch_all with
            | None -> []
            | Some l -> [ list (instruction "catch_all" :: List.map instr l) ]))
+  | String (id, s) | Folded ({ desc = String (id, s); _ }, []) ->
+      block ~loc
+        (atom ~style:Annotation "(@string"
+        :: (option (fun id -> [ index ~style:Annotation id ]) id
+           @ List.map
+               (fun s ->
+                 let i, s = escape_string s.Ast.desc in
+                 Atom
+                   {
+                     loc = None;
+                     style = Annotation;
+                     len = Some (i + 2);
+                     s = "\"" ^ s ^ "\"";
+                   })
+               s
+           @ [ atom ~style:Annotation ")" ]))
+  | Char c | Folded ({ desc = Char c; _ }, []) ->
+      let n = Uchar.utf_8_byte_length c in
+      let b = Bytes.create n in
+      ignore (Bytes.set_utf_8_uchar b 0 c);
+      block ~loc
+        [
+          atom ~style:Annotation "(@char";
+          (let i, s = escape_string (Bytes.to_string b) in
+           Atom
+             {
+               loc = None;
+               style = Annotation;
+               len = Some (i + 2);
+               s = "\"" ^ s ^ "\"";
+             });
+          atom ~style:Annotation ")";
+        ]
   | Folded (i, l) ->
       list ~loc [ block ~loc ~transparent:true (instr i :: List.map instr l) ]
 
@@ -1228,6 +1261,23 @@ let modulefield f =
             | Some lst -> List.map index lst
             | _ -> List.map (fun e -> expr "item" e) init);
         ]
+  | String_global { id = i; typ; init } ->
+      block
+        (atom ~style:Annotation "(@string"
+         :: id ~style:Annotation i.Ast.desc
+         :: option (fun id -> [ index ~style:Annotation id ]) typ
+        @ List.map
+            (fun s ->
+              let i, s = escape_string s.Ast.desc in
+              Atom
+                {
+                  loc = None;
+                  style = Annotation;
+                  len = Some (i + 2);
+                  s = "\"" ^ s ^ "\"";
+                })
+            init
+        @ [ atom ~style:Annotation ")" ])
 
 let module_ ?(color = Auto) ?out_channel printer (id, fields) =
   let use_color = should_use_color ~color ~out_channel in

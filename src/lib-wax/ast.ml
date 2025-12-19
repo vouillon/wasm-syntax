@@ -3,7 +3,10 @@ type ('desc, 'info) annotated = ('desc, 'info) Utils.Ast.annotated = {
   info : 'info;
 }
 
-type location = Utils.Ast.location
+type location = Utils.Ast.location = {
+  loc_start : Lexing.position;
+  loc_end : Lexing.position;
+}
 
 let no_loc = Utils.Ast.no_loc
 
@@ -94,6 +97,7 @@ type 'info instr_desc =
   | Tee of ident * 'info instr
   | Call of 'info instr * 'info instr list
   | TailCall of 'info instr * 'info instr list
+  | Char of Uchar.t
   | String of ident option * string
   | Int of string
   | Float of string

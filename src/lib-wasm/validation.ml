@@ -76,6 +76,28 @@ module Error = struct
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f "The %s index %a is not bound." kind print_index id)
 
+  let packed_array_access context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "This instruction cannot be used on packed arrays. Use array.get_s \
+           or array.get_u to specify sign extension.")
+
+  let unpacked_array_access context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "This instruction is only valid for packed arrays. Use array.get.")
+
+  let packed_struct_access context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "This instruction cannot be used on packed fields. Use struct.get_s \
+           or struct.get_u to specify sign extension.")
+
+  let unpacked_struct_access context ~location =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f
+          "This instruction is only valid for packed fields. Use struct.get.")
+
   let instruction_type_mismatch context ~location ty' ty =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
         Format.fprintf f
@@ -416,6 +438,16 @@ let typeuse' d ctx (idx, sign) =
       Types.add_rectype ctx.types
         [| { typ = Func ty; supertype = None; final = true } |]
   | None, None -> assert false (* Should not happen *)
+
+let string ctx =
+  Types.add_rectype ctx.types
+    [|
+      {
+        typ = Array { mut = true; typ = Packed I8 };
+        supertype = None;
+        final = true;
+      };
+    |]
 
 type module_context = {
   diagnostics : Utils.Diagnostic.context;
@@ -1372,8 +1404,19 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let n =
         match idx'.desc with
         | Id id -> List.assoc id field_map (*ZZZ*)
-        | Num n -> Uint32.to_int n
+        | Num n ->
+            let n = Uint32.to_int n in
+            assert (n < Array.length fields);
+            (*ZZZ*)
+            n
       in
+      (match fields.(n).typ with
+      | Packed _ ->
+          if signage = None then
+            Error.packed_struct_access ctx.modul.diagnostics ~location:i.info
+      | Value _ ->
+          if signage <> None then
+            Error.unpacked_struct_access ctx.modul.diagnostics ~location:i.info);
       (*ZZZ signage + validate n*)
       ignore signage;
       push (Some loc) (unpack_type fields.(n))
@@ -1425,9 +1468,15 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
       let* () = pop ctx loc I32 in
       let* () = pop ctx loc I32 in
       push (Some loc) (Ref { nullable = false; typ = Type ty })
-  | ArrayGet (_signage, idx) ->
-      (*ZZZ signage *)
+  | ArrayGet (signage, idx) ->
       let*! ty, field = lookup_array_type ctx idx in
+      (match field.typ with
+      | Packed _ ->
+          if signage = None then
+            Error.packed_array_access ctx.modul.diagnostics ~location:i.info
+      | Value _ ->
+          if signage <> None then
+            Error.unpacked_array_access ctx.modul.diagnostics ~location:i.info);
       let* () = pop ctx loc I32 in
       let* () = pop ctx loc (Ref { nullable = true; typ = Type ty }) in
       push (Some loc) (unpack_type field)
@@ -1574,6 +1623,10 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
     | TupleMake of Int32.t
     | TupleExtract of Int32.t * Int32.t
 *)
+  | String _ ->
+      let ty = Ref { nullable = false; typ = Type (string ctx.modul.types) } in
+      push (Some loc) ty
+  | Char _ -> push (Some loc) I32
   | TupleExtract _ ->
       Format.eprintf "%a@." print_instr i;
       raise Exit
@@ -1612,7 +1665,7 @@ let rec check_constant_instruction ctx (i : _ Ast.Text.instr) =
   | RefNull _ | StructNew _ | StructNewDefault _ | ArrayNew _
   | ArrayNewDefault _ | ArrayNewFixed _ | RefI31 | Const _
   | BinOp (I32 (Add | Sub | Mul) | I64 (Add | Sub | Mul))
-  | ExternConvertAny | AnyConvertExtern | VecConst _ ->
+  | ExternConvertAny | AnyConvertExtern | VecConst _ | String _ | Char _ ->
       ()
   | Folded (i, l) ->
       check_constant_instruction ctx i;
@@ -1754,6 +1807,7 @@ and register_typeuses' d ctx (i : _ Ast.Text.instr) =
       | Some (Valtype _) | None -> ())
   | CallIndirect (_, use) | ReturnCallIndirect (_, use) ->
       ignore (typeuse' d ctx use)
+  | String _ -> ignore (string ctx)
   | Folded (i, l) ->
       register_typeuses' d ctx i;
       register_typeuses d ctx l
@@ -1774,7 +1828,7 @@ and register_typeuses' d ctx (i : _ Ast.Text.instr) =
   | TupleMake _ | TupleExtract _ | VecBitselect | VecConst _ | VecUnOp _
   | VecBinOp _ | VecTest _ | VecShift _ | VecBitmask _ | VecLoad _ | VecStore _
   | VecLoadLane _ | VecStoreLane _ | VecLoadSplat _ | VecExtract _
-  | VecReplace _ | VecSplat _ | VecShuffle _ | VecTernOp _ ->
+  | VecReplace _ | VecSplat _ | VecShuffle _ | VecTernOp _ | Char _ ->
       ()
 
 let build_initial_env ctx fields =
@@ -1891,6 +1945,14 @@ let globals ctx fields =
           constant_expression ctx typ.typ init;
           Sequence.register ctx.globals id typ;
           register_exports ctx exports
+      | String_global { id; _ } ->
+          let typ =
+            {
+              mut = false;
+              typ = Ref { nullable = false; typ = Type (string ctx.types) };
+            }
+          in
+          Sequence.register ctx.globals (Some id) typ
       | _ -> ())
     fields
 
@@ -2338,7 +2400,8 @@ let check_syntax diagnostics (_, lst) =
       | Global { id; _ } -> check_unbound globals "global" id
       | Export _ | Start _ -> ()
       | Elem { id; _ } -> check_unbound elems "elem" id
-      | Data { id; _ } -> check_unbound datas "data" id)
+      | Data { id; _ } -> check_unbound datas "data" id
+      | String_global { id; _ } -> check_unbound globals "global" (Some id))
     lst;
   ignore
     (List.fold_left
@@ -2353,7 +2416,10 @@ let check_syntax diagnostics (_, lst) =
          | None, Table _ -> Some "table"
          | None, Tag _ -> Some "tag"
          | None, Global _ -> Some "global"
-         | Some _, (Func _ | Memory _ | Table _ | Tag _ | Global _)
+         | None, String_global _ -> Some "string"
+         | ( Some _,
+             (Func _ | Memory _ | Table _ | Tag _ | Global _ | String_global _)
+           )
          | None, Import _
          | _, (Types _ | Export _ | Start _ | Elem _ | Data _) ->
              can_import)

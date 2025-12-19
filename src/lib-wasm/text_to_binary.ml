@@ -130,10 +130,10 @@ let global_type ctx g = mut_type valtype ctx g
 let table_type ctx (t : T.tabletype) : B.tabletype =
   { limits = t.limits.desc; reftype = reftype ctx t.reftype }
 
-let block_type ~resolve_type ctx (b : T.blocktype) : B.blocktype =
+let block_type ~resolve_func_type ctx (b : T.blocktype) : B.blocktype =
   match b with
   | Typeuse (Some i, _) -> Typeuse (resolve_idx ctx.types i)
-  | Typeuse (None, Some ft) -> Typeuse (resolve_type ctx ft)
+  | Typeuse (None, Some ft) -> Typeuse (resolve_func_type ctx ft)
   | Typeuse (None, None) -> assert false
   | Valtype v -> Valtype (valtype ctx v)
 
@@ -166,7 +166,16 @@ let resolve_field_idx ctx type_idx (field_idx_text : T.idx) : B.idx =
 let push_label ctx label =
   { ctx with labels = Option.map (fun l -> l.Ast.desc) label :: ctx.labels }
 
-let rec instr ~resolve_type ctx (i : 'info T.instr) =
+let string i ty s =
+  let s = String.concat "" (List.map (fun s -> s.Ast.desc) s) in
+  B.Folded
+    ( { i with desc = ArrayNewFixed (ty, Uint32.of_int (String.length s)) },
+      String.fold_right
+        (fun c acc ->
+          { i with desc = B.Const (I32 (Int32.of_int (Char.code c))) } :: acc)
+        s [] )
+
+let rec instr ~resolve_string_type ~resolve_func_type ctx (i : 'info T.instr) =
   let desc : _ B.instr_desc =
     match i.desc with
     | Block { label; typ; block } ->
@@ -174,25 +183,37 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
         Block
           {
             label = ();
-            typ = Option.map (block_type ~resolve_type ctx) typ;
-            block = List.map (instr ~resolve_type ctx') block;
+            typ = Option.map (block_type ~resolve_func_type ctx) typ;
+            block =
+              List.map
+                (instr ~resolve_string_type ~resolve_func_type ctx')
+                block;
           }
     | Loop { label; typ; block } ->
         let ctx' = push_label ctx label in
         Loop
           {
             label = ();
-            typ = Option.map (block_type ~resolve_type ctx) typ;
-            block = List.map (instr ~resolve_type ctx') block;
+            typ = Option.map (block_type ~resolve_func_type ctx) typ;
+            block =
+              List.map
+                (instr ~resolve_string_type ~resolve_func_type ctx')
+                block;
           }
     | If { label; typ; if_block; else_block } ->
         let ctx' = push_label ctx label in
         If
           {
             label = ();
-            typ = Option.map (block_type ~resolve_type ctx) typ;
-            if_block = List.map (instr ~resolve_type ctx') if_block;
-            else_block = List.map (instr ~resolve_type ctx') else_block;
+            typ = Option.map (block_type ~resolve_func_type ctx) typ;
+            if_block =
+              List.map
+                (instr ~resolve_string_type ~resolve_func_type ctx')
+                if_block;
+            else_block =
+              List.map
+                (instr ~resolve_string_type ~resolve_func_type ctx')
+                else_block;
           }
     | Unreachable -> Unreachable
     | Nop -> Nop
@@ -210,7 +231,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
           | Some i -> resolve_idx ctx.types i
           | None -> (
               match type_opt with
-              | Some ft -> resolve_type ctx ft
+              | Some ft -> resolve_func_type ctx ft
               | None -> assert false)
         in
         CallIndirect (resolve_idx ctx.tables table, type_idx)
@@ -220,7 +241,7 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
           | Some i -> resolve_idx ctx.types i
           | None -> (
               match type_opt with
-              | Some ft -> resolve_type ctx ft
+              | Some ft -> resolve_func_type ctx ft
               | None -> assert false)
         in
         ReturnCallIndirect (resolve_idx ctx.tables table, type_idx)
@@ -268,25 +289,35 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
         TryTable
           {
             label = ();
-            typ = Option.map (block_type ~resolve_type ctx) typ;
+            typ = Option.map (block_type ~resolve_func_type ctx) typ;
             catches = List.map (catch ctx) catches;
-            block = List.map (instr ~resolve_type ctx') block;
+            block =
+              List.map
+                (instr ~resolve_string_type ~resolve_func_type ctx')
+                block;
           }
     | Try { label; typ; block; catches; catch_all } ->
         let ctx' = push_label ctx label in
         Try
           {
             label = ();
-            typ = Option.map (block_type ~resolve_type ctx) typ;
-            block = List.map (instr ~resolve_type ctx') block;
+            typ = Option.map (block_type ~resolve_func_type ctx) typ;
+            block =
+              List.map
+                (instr ~resolve_string_type ~resolve_func_type ctx')
+                block;
             catches =
               List.map
                 (fun (tag, b) ->
                   ( resolve_idx ctx.tags tag,
-                    List.map (instr ~resolve_type ctx') b ))
+                    List.map
+                      (instr ~resolve_string_type ~resolve_func_type ctx')
+                      b ))
                 catches;
             catch_all =
-              Option.map (List.map (instr ~resolve_type ctx')) catch_all;
+              Option.map
+                (List.map (instr ~resolve_string_type ~resolve_func_type ctx'))
+                catch_all;
           }
     | Throw i -> Throw (resolve_idx ctx.tags i)
     | ThrowRef -> ThrowRef
@@ -358,8 +389,18 @@ let rec instr ~resolve_type ctx (i : 'info T.instr) =
     | VecSplat op -> VecSplat op
     | VecShuffle v -> VecShuffle v
     | VecTernOp op -> VecTernOp op
+    | String (idx, s) ->
+        let ty =
+          match idx with
+          | None -> resolve_string_type ()
+          | Some id -> resolve_idx ctx.types id
+        in
+        string i ty s
+    | Char c -> Const (I32 (Int32.of_int (Uchar.to_int c)))
     | Folded (i, is) ->
-        Folded (instr ~resolve_type ctx i, List.map (instr ~resolve_type ctx) is)
+        Folded
+          ( instr ~resolve_string_type ~resolve_func_type ctx i,
+            List.map (instr ~resolve_string_type ~resolve_func_type ctx) is )
   in
   { desc; info = i.info }
 
@@ -460,7 +501,10 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             ({ ctx with elems = fst (add_name ctx.elems id) }, acc_func_types)
         | T.Data { id; _ } ->
             ({ ctx with datas = fst (add_name ctx.datas id) }, acc_func_types)
-        | _ -> (ctx, acc_func_types))
+        | T.String_global { id; _ } ->
+            ( { ctx with globals = fst (add_name ctx.globals (Some id)) },
+              acc_func_types )
+        | T.Start _ | T.Export _ -> (ctx, acc_func_types))
       (ctx, func_types_by_idx) fields
   in
 
@@ -499,6 +543,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
 
   (* Type Memoization *)
   let type_map = Hashtbl.create 1024 in
+  let string_type = ref None in
   let extra_types = ref [] in
   let type_count = ref ctx.types.count in
 
@@ -507,23 +552,51 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
     let rec scan_existing_types idx fields =
       match fields with
       | [] -> ()
+      | {
+          desc =
+            T.Types
+              [| (_, { final = true; supertype = None; typ = T.Func f }) |];
+          _;
+        }
+        :: rest ->
+          (let b_f = func_type ctx f in
+           if not (Hashtbl.mem type_map b_f) then Hashtbl.add type_map b_f idx);
+          scan_existing_types (idx + 1) rest
+      | {
+          desc =
+            T.Types
+              [|
+                ( _,
+                  {
+                    final = true;
+                    supertype = None;
+                    typ = T.Array { mut = true; typ = Packed I8 };
+                  } );
+              |];
+          _;
+        }
+        :: rest ->
+          string_type := Some idx;
+          scan_existing_types (idx + 1) rest
       | { desc = T.Types r; _ } :: rest ->
-          Array.iteri
-            (fun i (_, subtype) ->
-              match subtype.T.typ with
-              | T.Func f ->
-                  let b_f = func_type ctx f in
-                  if not (Hashtbl.mem type_map b_f) then
-                    Hashtbl.add type_map b_f (idx + i)
-              | _ -> ())
-            r;
           scan_existing_types (idx + Array.length r) rest
       | _ :: rest -> scan_existing_types idx rest
     in
     scan_existing_types 0 fields
   in
 
-  let resolve_type ctx (ft : T.functype) : int =
+  let resolve_string_type () =
+    match !string_type with
+    | Some i -> i
+    | None ->
+        let i = !type_count in
+        type_count := i + 1;
+        string_type := Some i;
+        extra_types := B.Array { mut = true; typ = Packed I8 } :: !extra_types;
+        i
+  in
+
+  let resolve_func_type ctx (ft : T.functype) : int =
     let ft = func_type ctx ft in
     match Hashtbl.find_opt type_map ft with
     | Some i -> i
@@ -531,7 +604,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
         let i = !type_count in
         type_count := i + 1;
         Hashtbl.add type_map ft i;
-        extra_types := ft :: !extra_types;
+        extra_types := B.Func ft :: !extra_types;
         i
   in
 
@@ -544,13 +617,13 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             let desc : B.importdesc =
               match desc with
               | Func (Some i, _) -> Func (resolve_idx ctx.types i)
-              | Func (None, Some ty) -> Func (resolve_type ctx ty)
+              | Func (None, Some ty) -> Func (resolve_func_type ctx ty)
               | Func (None, None) -> assert false
               | Table t -> Table (table_type ctx t)
               | Memory l -> Memory l.desc
               | Global g -> Global (global_type ctx g)
               | Tag (Some i, _) -> Tag (resolve_idx ctx.types i)
-              | Tag (None, Some ty) -> Tag (resolve_type ctx ty)
+              | Tag (None, Some ty) -> Tag (resolve_func_type ctx ty)
               | Tag (None, None) -> failwith "Tag import missing type"
             in
             Some { B.module_ = module_.desc; name = name.desc; desc }
@@ -572,7 +645,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
         | T.Func { typ; _ } -> (
             match typ with
             | Some i, _ -> Some (resolve_idx ctx.types i)
-            | None, Some ty -> Some (resolve_type ctx ty)
+            | None, Some ty -> Some (resolve_func_type ctx ty)
             | None, None -> assert false)
         | _ -> None)
       fields
@@ -635,7 +708,10 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
           let converted_func =
             {
               B.locals = b_locals;
-              instrs = List.map (instr ~resolve_type func_ctx) instrs;
+              instrs =
+                List.map
+                  (instr ~resolve_string_type ~resolve_func_type func_ctx)
+                  instrs;
             }
           in
 
@@ -653,7 +729,11 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
         | T.Table { typ; init; _ } ->
             let expr =
               match init with
-              | T.Init_expr e -> Some (List.map (instr ~resolve_type ctx) e)
+              | T.Init_expr e ->
+                  Some
+                    (List.map
+                       (instr ~resolve_string_type ~resolve_func_type ctx)
+                       e)
               | _ -> None
             in
             Some { B.typ = table_type ctx typ; B.expr }
@@ -678,7 +758,18 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             Some
               {
                 B.typ = global_type ctx typ;
-                B.init = List.map (instr ~resolve_type ctx) init;
+                B.init =
+                  List.map
+                    (instr ~resolve_string_type ~resolve_func_type ctx)
+                    init;
+              }
+        | T.String_global { init; _ } ->
+            let ty = resolve_string_type () in
+            Some
+              {
+                B.typ =
+                  { mut = false; typ = Ref { nullable = false; typ = Type ty } };
+                B.init = [ { f with desc = string f ty init } ];
               }
         | _ -> None)
       fields
@@ -790,13 +881,18 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             | Active (i, ex) ->
                 Active
                   ( resolve_idx ctx.tables i,
-                    List.map (instr ~resolve_type ctx) ex )
+                    List.map
+                      (instr ~resolve_string_type ~resolve_func_type ctx)
+                      ex )
             | Declare -> Declare
           in
           let e =
             {
               B.typ = reftype ctx typ;
-              init = List.map (List.map (instr ~resolve_type ctx)) init;
+              init =
+                List.map
+                  (List.map (instr ~resolve_string_type ~resolve_func_type ctx))
+                  init;
               mode;
             }
           in
@@ -816,7 +912,10 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
           let e =
             {
               B.typ = reftype ctx typ.reftype;
-              init = List.map (List.map (instr ~resolve_type ctx)) exprs;
+              init =
+                List.map
+                  (List.map (instr ~resolve_string_type ~resolve_func_type ctx))
+                  exprs;
               mode;
             }
           in
@@ -847,7 +946,9 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
             | Active (i, ex) ->
                 Active
                   ( resolve_idx ctx.memories i,
-                    List.map (instr ~resolve_type ctx) ex )
+                    List.map
+                      (instr ~resolve_string_type ~resolve_func_type ctx)
+                      ex )
           in
           let init = String.concat "" (List.map (fun s -> s.Ast.desc) init) in
           let d = { B.init; mode } in
@@ -878,7 +979,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
       (fun f ->
         match f.desc with
         | T.Tag { typ = Some i, _; _ } -> Some (resolve_idx ctx.types i)
-        | Tag { typ = None, Some ty; _ } -> Some (resolve_type ctx ty)
+        | Tag { typ = None, Some ty; _ } -> Some (resolve_func_type ctx ty)
         | Tag { typ = None, None; _ } ->
             failwith "Tag type must have an explicit type index or inline type"
         | _ -> None)
@@ -888,8 +989,7 @@ let module_ (m : 'info T.module_) : 'info B.module_ =
   let types =
     explicit_types
     @ (List.rev !extra_types
-      |> List.map (fun ft ->
-          [| { B.typ = B.Func ft; supertype = None; final = true } |]))
+      |> List.map (fun typ -> [| { B.typ; supertype = None; final = true } |]))
   in
 
   {

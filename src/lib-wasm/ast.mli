@@ -544,6 +544,9 @@ end) : sig
     | Pop of X.valtype
     | TupleMake of Uint32.t
     | TupleExtract of Uint32.t * Uint32.t
+    (* Our extensions *)
+    | String of X.idx option * (string, location) annotated list
+    | Char of Uchar.t
 
   and 'info instr = ('info instr_desc, 'info) annotated
 
@@ -649,6 +652,8 @@ module Text : sig
         mode : 'info elemmode;
       }
     | Data of { id : name option; init : datastring; mode : 'info datamode }
+    (* Our extensions *)
+    | String_global of { id : name; typ : idx option; init : datastring }
 
   type 'info module_ =
     name option * ('info modulefield, location) annotated list

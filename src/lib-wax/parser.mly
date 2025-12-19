@@ -1,7 +1,7 @@
 %token <string> IDENT
 %token <string> INT
 %token <string> FLOAT
-%token <string> STRING
+%token <(string, Ast.location) Ast.annotated> STRING
 
 %token EOF
 %token INF NAN
@@ -69,8 +69,6 @@
 %token BR_ON_NULL BR_ON_NON_NULL
 %token TRY CATCH
 %token DISPATCH
-%token <Ast.location * [ `Line | `Block ] * string> LINE_COMMENT BLOCK_COMMENT
-%token <Lexing.position> NEWLINE
 
 %nonassoc prec_ident (* {a|...} *) prec_block
 %right prec_branch
@@ -158,18 +156,13 @@ let blocktype bt = Option.value ~default:{params = [||]; results = [||]} bt
 %}
 
 %start <location module_> parse
-%start <unit> dummy_comments
+
+ (* To refer to Context in the mli *)
 %start <Context.t> dummy_ctx
 
 %%
 
-dummy_comments:
-  LINE_COMMENT { () }
-| BLOCK_COMMENT { () }
-| NEWLINE { () }
-
-dummy_ctx:
-  EOF { assert false }
+dummy_ctx: EOF { assert false }
 
 %inline ident:
 | t = IDENT { with_loc $sloc t }
@@ -370,7 +363,10 @@ plaininstr:
   { with_loc $sloc (Sequence (i :: l)) }
 | i = instr "(" l = separated_list(",", instr) ")"
    { with_loc $sloc (Call(i, l)) }
-| t  = option(t = ident "#" { t }) s = STRING { with_loc $sloc (String (t, s)) }
+| s = STRING
+  { with_loc (s.info.loc_start, s.info.loc_end) (String (None, s.desc)) }
+| t = ident "#" s = STRING
+  { with_loc ($symbolstartpos, s.info.loc_end) (String (Some t, s.desc)) }
 | i = INT { with_loc $sloc (Int i) }
 | f = FLOAT { with_loc $sloc (Float f) }
 | INF { with_loc $sloc (Float "inf") }

@@ -715,14 +715,9 @@ let rec instruction ret ctx i : location Text.instr list =
         | Some typ -> Some [ valtype typ ]
       in
       folded loc (Select typ) (code_then @ code_else @ code_cond)
-  | String (Some idx, s) ->
-      folded loc
-        (ArrayNewFixed (index idx, Uint32.of_int (String.length s)))
-        (String.fold_right
-           (fun c rem ->
-             folded loc (Const (I32 (Int.to_string (Char.code c)))) [] @ rem)
-           s [])
-  | String (None, _) -> assert false
+  | Char c -> folded loc (Char c) []
+  | String (ty, s) ->
+      folded loc (String (Option.map index ty, [ { desc = s; info = loc } ])) []
 
 let import attributes =
   List.find_map
@@ -775,7 +770,11 @@ let reorder_imports lst =
        } as f)
       :: rem ->
         traverse (f :: acc) rem
-    | { desc = Func _ | Memory _ | Table _ | Tag _ | Global _; _ } :: _ ->
+    | {
+        desc = Func _ | Memory _ | Table _ | Tag _ | Global _ | String_global _;
+        _;
+      }
+      :: _ ->
         let imports, others =
           List.partition
             (fun f ->

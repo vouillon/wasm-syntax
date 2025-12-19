@@ -18,11 +18,8 @@ val associate : context -> (Ast.location, associated) Hashtbl.t
 val make : unit -> context
 (** Create a new trivia context. *)
 
-val report_comment : context -> [ `Line | `Block ] -> string -> unit
-(** [report_comment ctx kind content] reports a comment. *)
-
-val report_annotation : context -> unit
-(** [report_annotation ctx] reports an annotation. *)
+val report_item : context -> kind -> string -> unit
+(** [report_item ctx kind content] reports a comment or an annotation. *)
 
 val report_newline : context -> unit
 (** [report_newline ctx] reports a newline. *)

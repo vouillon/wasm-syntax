@@ -423,9 +423,9 @@ let array_instr pp nm f =
 let get_prec (i : _ Ast.instr) =
   match i.desc with
   | Block _ | Loop _ | If _ | Try _ | TryTable _ -> Atom
-  | Unreachable | Nop | Hole | Null | Get _ | String _ | Int _ | Float _
-  | Struct _ | StructDefault _ | Array _ | ArrayDefault _ | ArrayFixed _
-  | ArrayGet _ | ArraySet _ | Sequence _ ->
+  | Unreachable | Nop | Hole | Null | Get _ | Char _ | String _ | Int _
+  | Float _ | Struct _ | StructDefault _ | Array _ | ArrayDefault _
+  | ArrayFixed _ | ArrayGet _ | ArraySet _ | Sequence _ ->
       Atom
   | Set _ | Tee _ -> Assignement
   | Call _ | TailCall _ -> CallAndFieldAccess
@@ -446,8 +446,8 @@ let is_block (i : _ Ast.instr) =
   match i.desc with
   | Block _ | Loop _ | If _ | Try _ | TryTable _ -> true
   | Call _ | Unreachable | Nop | Hole | Null | Get _ | Set _ | Tee _
-  | TailCall _ | String _ | Int _ | Float _ | Cast _ | Test _ | NonNull _
-  | Struct _ | StructDefault _ | StructGet _ | StructSet _ | Array _
+  | TailCall _ | Char _ | String _ | Int _ | Float _ | Cast _ | Test _
+  | NonNull _ | Struct _ | StructDefault _ | StructGet _ | StructSet _ | Array _
   | ArrayDefault _ | ArrayFixed _ | ArrayGet _ | ArraySet _ | BinOp _ | UnOp _
   | Let _ | Br _ | Br_if _ | Br_table _ | Br_on_null _ | Br_on_non_null _
   | Br_on_cast _ | Br_on_cast_fail _ | Throw _ | ThrowRef _ | Return _
@@ -472,7 +472,7 @@ let rec starts_with_block_prec prec (i : 'a Ast.instr) =
         starts_with_block_prec left i
     | Select (i, _, _) -> starts_with_block_prec Select i
     | Unreachable | Nop | Hole | Null | Get _ | Set _ | Tee _ | TailCall _
-    | String _ | Int _ | Float _ | Struct _ | StructDefault _ | Array _
+    | Char _ | String _ | Int _ | Float _ | Struct _ | StructDefault _ | Array _
     | ArrayDefault _ | ArrayFixed _ | Let _ | Br _ | Br_if _ | Br_table _
     | Br_on_null _ | Br_on_non_null _ | Br_on_cast _ | Br_on_cast_fail _
     | Throw _ | ThrowRef _ | Return _ | Sequence _ ->
@@ -654,6 +654,14 @@ let rec instr prec pp (i : _ instr) =
           instr Instruction pp i)
   | Call (i, l) -> call_instr instr pp i l
   | TailCall (i, l) -> call_instr instr pp ~prefix:"become" i l
+  | Char c ->
+      let n = Uchar.utf_8_byte_length c in
+      let b = Bytes.create n in
+      ignore (Bytes.set_utf_8_uchar b 0 c);
+      let len, s = Wasm.Output.escape_string (Bytes.to_string b) in
+      string pp "\'";
+      string pp ~len:(Some len) s;
+      string pp "\'"
   | String (t, s) ->
       Option.iter
         (fun t ->

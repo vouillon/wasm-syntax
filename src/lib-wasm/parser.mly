@@ -156,8 +156,7 @@ ZZZ
 %token TUPLE
 %token TUPLE_MAKE
 %token TUPLE_EXTRACT
-%token <Ast.location * [ `Line | `Block ] * string> LINE_COMMENT BLOCK_COMMENT
-%token <Ast.location> ANNOTATION
+%token STRING_ANNOT CHAR_ANNOT
 
 %token DEFINITION
 %token BINARY
@@ -238,22 +237,17 @@ let check_labels lab (lab' : Ast.Text.name option) =
 
 %}
 
-%start <unit> dummy_comments
-%start <Context.t> dummy_ctx
 %start <Ast.location Ast.Text.module_> parse
 %start <([`Valid | `Invalid of string | `Malformed of string ] *
          [`Parsed of Ast.location Ast.Text.module_
          | `Text of string | `Binary of string ]) list> parse_script
 
+ (* To avoid unused token report and refer to Context in the mli *)
+%start <Context.t> dummy_ctx
+
 %%
 
-dummy_comments:
-  LINE_COMMENT { () }
-| BLOCK_COMMENT { () }
-| ANNOTATION { () }
-
-dummy_ctx:
-  EOF { assert false }
+dummy_ctx: EOF { assert false }
 
 u32: n = NAT { Uint32.of_string n }
 
@@ -716,6 +710,20 @@ foldedinstr:
     with_loc $sloc
       (Folded
         (with_loc $sloc (Try {label; typ; block; catches; catch_all}), [])) }
+| STRING_ANNOT id = option(idx) l = list(STRING) ")"
+    { with_loc $sloc (String (id, l)) }
+| CHAR_ANNOT s = STRING ")"
+    { let c = String.get_utf_8_uchar s.Ast.desc 0 in
+      if
+        not (Uchar.utf_decode_is_valid c) ||
+        Uchar.utf_decode_length c <> String.length s.desc
+      then
+        raise
+          (Parsing.Syntax_error
+             ( $sloc,
+               Printf.sprintf "Malformed char \"%s\".\n"
+                 (snd (Misc.escape_string s.desc))));
+      with_loc $sloc (Char (Uchar.utf_decode_uchar c)) }
 
 foldedcatches:
 | { [], None }
@@ -944,6 +952,10 @@ datastring:
 | "(" MEMORY i = idx ")" { i }
 | { with_loc $sloc (Num Uint32.zero) }
 
+globalstring:
+| STRING_ANNOT id = ID typ = option(idx) init = list(STRING) ")"
+  { with_loc $sloc (String_global {id; typ; init}) }
+
 modulefield:
 | f = rectype
 | f = import
@@ -956,6 +968,7 @@ modulefield:
 | f = start
 | f = elem
 | f = data
+| f = globalstring
   { f }
 
 parse:
