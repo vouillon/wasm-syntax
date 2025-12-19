@@ -14,7 +14,7 @@ parse: TYPE UNREACHABLE
 ##
 ## Ends in an error in state: 4.
 ##
-## typedef -> TYPE . IDENT option(__anonymous_2) EQUAL boption(OPEN) comptype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET FN EOF CONST ]
+## typedef -> TYPE . IDENT option(__anonymous_2) EQUAL boption(OPEN) comptype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TYPE
@@ -26,7 +26,7 @@ parse: TYPE IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 5.
 ##
-## typedef -> TYPE IDENT . option(__anonymous_2) EQUAL boption(OPEN) comptype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET FN EOF CONST ]
+## typedef -> TYPE IDENT . option(__anonymous_2) EQUAL boption(OPEN) comptype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TYPE IDENT
@@ -51,7 +51,7 @@ parse: TYPE IDENT COLON IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 8.
 ##
-## typedef -> TYPE IDENT option(__anonymous_2) . EQUAL boption(OPEN) comptype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET FN EOF CONST ]
+## typedef -> TYPE IDENT option(__anonymous_2) . EQUAL boption(OPEN) comptype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TYPE IDENT option(__anonymous_2)
@@ -63,7 +63,7 @@ parse: TYPE IDENT EQUAL UNREACHABLE
 ##
 ## Ends in an error in state: 9.
 ##
-## typedef -> TYPE IDENT option(__anonymous_2) EQUAL . boption(OPEN) comptype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET FN EOF CONST ]
+## typedef -> TYPE IDENT option(__anonymous_2) EQUAL . boption(OPEN) comptype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TYPE IDENT option(__anonymous_2) EQUAL
@@ -75,7 +75,7 @@ parse: TYPE IDENT EQUAL LBRACKET UNREACHABLE
 ##
 ## Ends in an error in state: 12.
 ##
-## arraytype -> LBRACKET . fieldtype RBRACKET [ TYPE TAG SHARP SEMI REC RBRACE LET FN EOF CONST ]
+## arraytype -> LBRACKET . fieldtype RBRACKET [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACKET
@@ -123,7 +123,7 @@ parse: TYPE IDENT EQUAL LBRACKET IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 14.
 ##
-## arraytype -> LBRACKET fieldtype . RBRACKET [ TYPE TAG SHARP SEMI REC RBRACE LET FN EOF CONST ]
+## arraytype -> LBRACKET fieldtype . RBRACKET [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACKET fieldtype
@@ -135,7 +135,7 @@ parse: TYPE IDENT EQUAL LBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 25.
 ##
-## structtype -> LBRACE . loption(separated_nonempty_list(COMMA,__anonymous_1)) RBRACE [ TYPE TAG SHARP SEMI REC RBRACE LET FN EOF CONST ]
+## structtype -> LBRACE . loption(separated_nonempty_list(COMMA,__anonymous_1)) RBRACE [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## LBRACE
@@ -198,7 +198,7 @@ parse: TYPE IDENT EQUAL FN UNREACHABLE
 ##
 ## Ends in an error in state: 34.
 ##
-## functype -> FN . LPAREN funcparams RPAREN option(__anonymous_0) [ TYPE TAG SHARP SEMI REC RBRACE LET FN EOF CONST ]
+## functype -> FN . LPAREN funcparams RPAREN option(__anonymous_0) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN
@@ -210,7 +210,7 @@ parse: TYPE IDENT EQUAL FN LPAREN UNREACHABLE
 ##
 ## Ends in an error in state: 35.
 ##
-## functype -> FN LPAREN . funcparams RPAREN option(__anonymous_0) [ TYPE TAG SHARP SEMI REC RBRACE LET FN EOF CONST ]
+## functype -> FN LPAREN . funcparams RPAREN option(__anonymous_0) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN LPAREN
@@ -233,10 +233,10 @@ Expecting a comma ',', or a closing parenthesis ')'.
 
 parse: LET IDENT UNREACHABLE
 ##
-## Ends in an error in state: 609.
+## Ends in an error in state: 617.
 ##
-## global -> list(attribute) globalmut IDENT . option(__anonymous_23) EQUAL instr SEMI [ TYPE TAG SHARP REC LET FN EOF CONST ]
-## globaldecl -> list(attribute) globalmut IDENT . COLON valtype option(SEMI) [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## global -> list(attribute) globalmut IDENT . option(__anonymous_23) EQUAL instr SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## globaldecl -> list(attribute) globalmut IDENT . COLON valtype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) globalmut IDENT
@@ -246,9 +246,9 @@ Expecting a colon ':' followed by the type of the global, or an equal sign '=' f
 
 parse: LET IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 610.
+## Ends in an error in state: 618.
 ##
-## globaldecl -> list(attribute) globalmut IDENT COLON . valtype option(SEMI) [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## globaldecl -> list(attribute) globalmut IDENT COLON . valtype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ## option(__anonymous_23) -> COLON . valtype [ EQUAL ]
 ##
 ## The known suffix of the stack is as follows:
@@ -259,9 +259,9 @@ Expecting a global type.
 
 parse: LET IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 611.
+## Ends in an error in state: 619.
 ##
-## globaldecl -> list(attribute) globalmut IDENT COLON valtype . option(SEMI) [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## globaldecl -> list(attribute) globalmut IDENT COLON valtype . option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ## option(__anonymous_23) -> COLON valtype . [ EQUAL ]
 ##
 ## The known suffix of the stack is as follows:
@@ -353,9 +353,9 @@ Expecting a parameter name or an underscore '_'.
 
 parse: FN IDENT LPAREN RPAREN UNREACHABLE
 ##
-## Ends in an error in state: 597.
+## Ends in an error in state: 605.
 ##
-## option(__anonymous_6) -> LPAREN funcparams RPAREN . option(__anonymous_5) [ TYPE TAG SHARP SEMI REC QUOTE LET LBRACE FN EOF CONST ]
+## option(__anonymous_6) -> LPAREN funcparams RPAREN . option(__anonymous_5) [ TYPE TAG SHARP SEMI REC RBRACE QUOTE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## LPAREN funcparams RPAREN
@@ -412,9 +412,9 @@ Expecting a colon ':'.
 
 parse: FN IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 602.
+## Ends in an error in state: 610.
 ##
-## fundecl -> FN IDENT COLON IDENT . option(__anonymous_6) [ TYPE TAG SHARP SEMI REC QUOTE LET LBRACE FN EOF CONST ]
+## fundecl -> FN IDENT COLON IDENT . option(__anonymous_6) [ TYPE TAG SHARP SEMI REC RBRACE QUOTE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN IDENT COLON IDENT
@@ -424,9 +424,9 @@ Expecting a list of function parameters.
 
 parse: FN IDENT LPAREN UNREACHABLE
 ##
-## Ends in an error in state: 595.
+## Ends in an error in state: 603.
 ##
-## option(__anonymous_6) -> LPAREN . funcparams RPAREN option(__anonymous_5) [ TYPE TAG SHARP SEMI REC QUOTE LET LBRACE FN EOF CONST ]
+## option(__anonymous_6) -> LPAREN . funcparams RPAREN option(__anonymous_5) [ TYPE TAG SHARP SEMI REC RBRACE QUOTE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## LPAREN
@@ -461,9 +461,9 @@ Expecting a comma ',' followed by a parameter declaration, or a closing parenthe
 
 parse: FN IDENT LPAREN RPAREN ARROW UNREACHABLE
 ##
-## Ends in an error in state: 598.
+## Ends in an error in state: 606.
 ##
-## option(__anonymous_5) -> ARROW . resulttype [ TYPE TAG SHARP SEMI REC QUOTE LET LBRACE FN EOF CONST ]
+## option(__anonymous_5) -> ARROW . resulttype [ TYPE TAG SHARP SEMI REC RBRACE QUOTE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## ARROW
@@ -475,7 +475,7 @@ parse: REC LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 577.
 ##
-## list(modulefield) -> modulefield . list(modulefield) [ EOF ]
+## list(modulefield) -> modulefield . list(modulefield) [ RBRACE EOF ]
 ##
 ## The known suffix of the stack is as follows:
 ## modulefield
@@ -485,11 +485,11 @@ Expecting a module field.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 ##
-## Ends in an error in state: 617.
+## Ends in an error in state: 625.
 ##
-## func -> list(attribute) fundecl . LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
-## func -> list(attribute) fundecl . QUOTE ident_or_keyword COLON LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
-## modulefield -> list(attribute) fundecl . option(SEMI) [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## func -> list(attribute) fundecl . LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> list(attribute) fundecl . QUOTE ident_or_keyword COLON LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## modulefield -> list(attribute) fundecl . option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) fundecl
@@ -500,9 +500,9 @@ Expecting a label, the start of the function body, or another module field.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 619.
+## Ends in an error in state: 627.
 ##
-## func -> list(attribute) fundecl QUOTE ident_or_keyword . COLON LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## func -> list(attribute) fundecl QUOTE ident_or_keyword . COLON LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) fundecl QUOTE ident_or_keyword
@@ -532,10 +532,10 @@ Expecting keyword 'type', or character '}'.
 
 parse: FN UNREACHABLE
 ##
-## Ends in an error in state: 593.
+## Ends in an error in state: 601.
 ##
-## fundecl -> FN . IDENT option(__anonymous_6) [ TYPE TAG SHARP SEMI REC QUOTE LET LBRACE FN EOF CONST ]
-## fundecl -> FN . IDENT COLON IDENT option(__anonymous_6) [ TYPE TAG SHARP SEMI REC QUOTE LET LBRACE FN EOF CONST ]
+## fundecl -> FN . IDENT option(__anonymous_6) [ TYPE TAG SHARP SEMI REC RBRACE QUOTE LET LBRACE FN EOF CONST ]
+## fundecl -> FN . IDENT COLON IDENT option(__anonymous_6) [ TYPE TAG SHARP SEMI REC RBRACE QUOTE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN
@@ -545,9 +545,9 @@ Expecting a function name.
 
 parse: FN IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 601.
+## Ends in an error in state: 609.
 ##
-## fundecl -> FN IDENT COLON . IDENT option(__anonymous_6) [ TYPE TAG SHARP SEMI REC QUOTE LET LBRACE FN EOF CONST ]
+## fundecl -> FN IDENT COLON . IDENT option(__anonymous_6) [ TYPE TAG SHARP SEMI REC RBRACE QUOTE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN IDENT COLON
@@ -574,7 +574,7 @@ parse: TYPE IDENT EQUAL OPEN UNREACHABLE
 ##
 ## Ends in an error in state: 11.
 ##
-## typedef -> TYPE IDENT option(__anonymous_2) EQUAL boption(OPEN) . comptype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET FN EOF CONST ]
+## typedef -> TYPE IDENT option(__anonymous_2) EQUAL boption(OPEN) . comptype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TYPE IDENT option(__anonymous_2) EQUAL boption(OPEN)
@@ -598,7 +598,7 @@ parse: TYPE IDENT EQUAL FN LPAREN RPAREN UNREACHABLE
 ##
 ## Ends in an error in state: 47.
 ##
-## functype -> FN LPAREN funcparams RPAREN . option(__anonymous_0) [ TYPE TAG SHARP SEMI REC RBRACE LET FN EOF CONST ]
+## functype -> FN LPAREN funcparams RPAREN . option(__anonymous_0) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN LPAREN funcparams RPAREN
@@ -610,7 +610,7 @@ parse: TYPE IDENT EQUAL FN LPAREN RPAREN ARROW UNREACHABLE
 ##
 ## Ends in an error in state: 48.
 ##
-## option(__anonymous_0) -> ARROW . resulttype [ TYPE TAG SHARP SEMI REC RBRACE LET FN EOF CONST ]
+## option(__anonymous_0) -> ARROW . resulttype [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## ARROW
@@ -660,7 +660,7 @@ parse: TYPE IDENT EQUAL LBRACE RBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 64.
 ##
-## typedef -> TYPE IDENT option(__anonymous_2) EQUAL boption(OPEN) comptype . option(SEMI) [ TYPE TAG SHARP REC RBRACE LET FN EOF CONST ]
+## typedef -> TYPE IDENT option(__anonymous_2) EQUAL boption(OPEN) comptype . option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TYPE IDENT option(__anonymous_2) EQUAL boption(OPEN) comptype
@@ -672,7 +672,7 @@ parse: SHARP UNREACHABLE
 ##
 ## Ends in an error in state: 68.
 ##
-## attribute -> SHARP . LBRACKET IDENT EQUAL instr RBRACKET [ TAG SHARP LET FN CONST ]
+## attribute -> SHARP . LBRACKET IDENT EQUAL instr RBRACKET [ TAG SHARP LET LBRACE FN CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## SHARP
@@ -684,7 +684,7 @@ parse: SHARP LBRACKET UNREACHABLE
 ##
 ## Ends in an error in state: 69.
 ##
-## attribute -> SHARP LBRACKET . IDENT EQUAL instr RBRACKET [ TAG SHARP LET FN CONST ]
+## attribute -> SHARP LBRACKET . IDENT EQUAL instr RBRACKET [ TAG SHARP LET LBRACE FN CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## SHARP LBRACKET
@@ -696,7 +696,7 @@ parse: SHARP LBRACKET IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 70.
 ##
-## attribute -> SHARP LBRACKET IDENT . EQUAL instr RBRACKET [ TAG SHARP LET FN CONST ]
+## attribute -> SHARP LBRACKET IDENT . EQUAL instr RBRACKET [ TAG SHARP LET LBRACE FN CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## SHARP LBRACKET IDENT
@@ -708,7 +708,7 @@ parse: SHARP LBRACKET IDENT EQUAL UNREACHABLE
 ##
 ## Ends in an error in state: 71.
 ##
-## attribute -> SHARP LBRACKET IDENT EQUAL . instr RBRACKET [ TAG SHARP LET FN CONST ]
+## attribute -> SHARP LBRACKET IDENT EQUAL . instr RBRACKET [ TAG SHARP LET LBRACE FN CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## SHARP LBRACKET IDENT EQUAL
@@ -7329,7 +7329,7 @@ parse: SHARP LBRACKET IDENT EQUAL CHAR RPAREN
 ##
 ## Ends in an error in state: 566.
 ##
-## attribute -> SHARP LBRACKET IDENT EQUAL instr . RBRACKET [ TAG SHARP LET FN CONST ]
+## attribute -> SHARP LBRACKET IDENT EQUAL instr . RBRACKET [ TAG SHARP LET LBRACE FN CONST ]
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET QUESTIONMARK PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL BANG AS AMPERSAND ]
 ## plaininstr -> instr . AS casttype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET QUESTIONMARK PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL BANG AS AMPERSAND ]
 ## plaininstr -> instr . IS reftype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL RBRACKET QUESTIONMARK PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL BANG AS AMPERSAND ]
@@ -7377,7 +7377,7 @@ parse: REC UNREACHABLE
 ##
 ## Ends in an error in state: 568.
 ##
-## rectype -> REC . LBRACE list(typedef) RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## rectype -> REC . LBRACE list(typedef) RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## REC
@@ -7389,7 +7389,7 @@ parse: REC LBRACE UNREACHABLE
 ##
 ## Ends in an error in state: 569.
 ##
-## rectype -> REC LBRACE . list(typedef) RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## rectype -> REC LBRACE . list(typedef) RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## REC LBRACE
@@ -7401,8 +7401,8 @@ parse: TAG UNREACHABLE
 ##
 ## Ends in an error in state: 580.
 ##
-## tag -> TAG . IDENT option(__anonymous_9) [ TYPE TAG SHARP SEMI REC LET FN EOF CONST ]
-## tag -> TAG . IDENT COLON IDENT option(__anonymous_9) [ TYPE TAG SHARP SEMI REC LET FN EOF CONST ]
+## tag -> TAG . IDENT option(__anonymous_9) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
+## tag -> TAG . IDENT COLON IDENT option(__anonymous_9) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TAG
@@ -7414,8 +7414,8 @@ parse: TAG IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 581.
 ##
-## tag -> TAG IDENT . option(__anonymous_9) [ TYPE TAG SHARP SEMI REC LET FN EOF CONST ]
-## tag -> TAG IDENT . COLON IDENT option(__anonymous_9) [ TYPE TAG SHARP SEMI REC LET FN EOF CONST ]
+## tag -> TAG IDENT . option(__anonymous_9) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
+## tag -> TAG IDENT . COLON IDENT option(__anonymous_9) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TAG IDENT
@@ -7427,7 +7427,7 @@ parse: TAG IDENT LPAREN UNREACHABLE
 ##
 ## Ends in an error in state: 582.
 ##
-## option(__anonymous_9) -> LPAREN . funcparams RPAREN option(__anonymous_8) [ TYPE TAG SHARP SEMI REC LET FN EOF CONST ]
+## option(__anonymous_9) -> LPAREN . funcparams RPAREN option(__anonymous_8) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## LPAREN
@@ -7439,7 +7439,7 @@ parse: TAG IDENT LPAREN RPAREN UNREACHABLE
 ##
 ## Ends in an error in state: 584.
 ##
-## option(__anonymous_9) -> LPAREN funcparams RPAREN . option(__anonymous_8) [ TYPE TAG SHARP SEMI REC LET FN EOF CONST ]
+## option(__anonymous_9) -> LPAREN funcparams RPAREN . option(__anonymous_8) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## LPAREN funcparams RPAREN
@@ -7451,7 +7451,7 @@ parse: TAG IDENT LPAREN RPAREN ARROW UNREACHABLE
 ##
 ## Ends in an error in state: 585.
 ##
-## option(__anonymous_8) -> ARROW . resulttype [ TYPE TAG SHARP SEMI REC LET FN EOF CONST ]
+## option(__anonymous_8) -> ARROW . resulttype [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## ARROW
@@ -7463,7 +7463,7 @@ parse: TAG IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 588.
 ##
-## tag -> TAG IDENT COLON . IDENT option(__anonymous_9) [ TYPE TAG SHARP SEMI REC LET FN EOF CONST ]
+## tag -> TAG IDENT COLON . IDENT option(__anonymous_9) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TAG IDENT COLON
@@ -7475,7 +7475,7 @@ parse: TAG IDENT COLON IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 589.
 ##
-## tag -> TAG IDENT COLON IDENT . option(__anonymous_9) [ TYPE TAG SHARP SEMI REC LET FN EOF CONST ]
+## tag -> TAG IDENT COLON IDENT . option(__anonymous_9) [ TYPE TAG SHARP SEMI REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TAG IDENT COLON IDENT
@@ -7483,12 +7483,59 @@ parse: TAG IDENT COLON IDENT UNREACHABLE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: FN IDENT UNREACHABLE
+parse: LBRACE UNREACHABLE
+##
+## Ends in an error in state: 593.
+##
+## modulefield -> list(attribute) LBRACE . list(modulefield) RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+##
+## The known suffix of the stack is as follows:
+## list(attribute) LBRACE
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: LBRACE FN IDENT EOF
 ##
 ## Ends in an error in state: 594.
 ##
-## fundecl -> FN IDENT . option(__anonymous_6) [ TYPE TAG SHARP SEMI REC QUOTE LET LBRACE FN EOF CONST ]
-## fundecl -> FN IDENT . COLON IDENT option(__anonymous_6) [ TYPE TAG SHARP SEMI REC QUOTE LET LBRACE FN EOF CONST ]
+## modulefield -> list(attribute) LBRACE list(modulefield) . RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+##
+## The known suffix of the stack is as follows:
+## list(attribute) LBRACE list(modulefield)
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 602, spurious reduction of production option(__anonymous_6) ->
+## In state 612, spurious reduction of production fundecl -> FN IDENT option(__anonymous_6)
+## In state 625, spurious reduction of production option(SEMI) ->
+## In state 635, spurious reduction of production modulefield -> list(attribute) fundecl option(SEMI)
+## In state 577, spurious reduction of production list(modulefield) ->
+## In state 578, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: SHARP LBRACKET IDENT EQUAL CHAR RBRACKET UNREACHABLE
+##
+## Ends in an error in state: 599.
+##
+## list(attribute) -> attribute . list(attribute) [ TAG LET LBRACE FN CONST ]
+##
+## The known suffix of the stack is as follows:
+## attribute
+##
+
+<YOUR SYNTAX ERROR MESSAGE HERE>
+
+parse: FN IDENT UNREACHABLE
+##
+## Ends in an error in state: 602.
+##
+## fundecl -> FN IDENT . option(__anonymous_6) [ TYPE TAG SHARP SEMI REC RBRACE QUOTE LET LBRACE FN EOF CONST ]
+## fundecl -> FN IDENT . COLON IDENT option(__anonymous_6) [ TYPE TAG SHARP SEMI REC RBRACE QUOTE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN IDENT
@@ -7498,9 +7545,9 @@ parse: FN IDENT UNREACHABLE
 
 parse: TAG IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 ##
-## Ends in an error in state: 606.
+## Ends in an error in state: 614.
 ##
-## modulefield -> list(attribute) tag . option(SEMI) [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## modulefield -> list(attribute) tag . option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) tag
@@ -7510,10 +7557,10 @@ parse: TAG IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 
 parse: CONST UNREACHABLE
 ##
-## Ends in an error in state: 608.
+## Ends in an error in state: 616.
 ##
-## global -> list(attribute) globalmut . IDENT option(__anonymous_23) EQUAL instr SEMI [ TYPE TAG SHARP REC LET FN EOF CONST ]
-## globaldecl -> list(attribute) globalmut . IDENT COLON valtype option(SEMI) [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## global -> list(attribute) globalmut . IDENT option(__anonymous_23) EQUAL instr SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## globaldecl -> list(attribute) globalmut . IDENT COLON valtype option(SEMI) [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) globalmut
@@ -7523,9 +7570,9 @@ parse: CONST UNREACHABLE
 
 parse: CONST IDENT EQUAL UNREACHABLE
 ##
-## Ends in an error in state: 614.
+## Ends in an error in state: 622.
 ##
-## global -> list(attribute) globalmut IDENT option(__anonymous_23) EQUAL . instr SEMI [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## global -> list(attribute) globalmut IDENT option(__anonymous_23) EQUAL . instr SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) globalmut IDENT option(__anonymous_23) EQUAL
@@ -7535,9 +7582,9 @@ parse: CONST IDENT EQUAL UNREACHABLE
 
 parse: CONST IDENT EQUAL CHAR RPAREN
 ##
-## Ends in an error in state: 615.
+## Ends in an error in state: 623.
 ##
-## global -> list(attribute) globalmut IDENT option(__anonymous_23) EQUAL instr . SEMI [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## global -> list(attribute) globalmut IDENT option(__anonymous_23) EQUAL instr . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ## plaininstr -> instr . LPAREN loption(separated_nonempty_list(COMMA,instr)) RPAREN [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI QUESTIONMARK PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL BANG AS AMPERSAND ]
 ## plaininstr -> instr . AS casttype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI QUESTIONMARK PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL BANG AS AMPERSAND ]
 ## plaininstr -> instr . IS reftype [ STAR SLASHU SLASHS SLASH SHRU SHRS SHL SEMI QUESTIONMARK PLUS PIPE PERCENTU PERCENTS MINUS LTU LTS LT LPAREN LEU LES LE LBRACKET IS GTU GTS GT GEU GES GE EQUALEQUAL DOT CARET BANGEQUAL BANG AS AMPERSAND ]
@@ -7583,9 +7630,9 @@ parse: CONST IDENT EQUAL CHAR RPAREN
 
 parse: FN IDENT QUOTE UNDERSCORE
 ##
-## Ends in an error in state: 618.
+## Ends in an error in state: 626.
 ##
-## func -> list(attribute) fundecl QUOTE . ident_or_keyword COLON LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## func -> list(attribute) fundecl QUOTE . ident_or_keyword COLON LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) fundecl QUOTE
@@ -7595,9 +7642,9 @@ parse: FN IDENT QUOTE UNDERSCORE
 
 parse: FN IDENT QUOTE AS COLON UNREACHABLE
 ##
-## Ends in an error in state: 620.
+## Ends in an error in state: 628.
 ##
-## func -> list(attribute) fundecl QUOTE ident_or_keyword COLON . LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## func -> list(attribute) fundecl QUOTE ident_or_keyword COLON . LBRACE delimited_instr_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) fundecl QUOTE ident_or_keyword COLON
@@ -7607,9 +7654,9 @@ parse: FN IDENT QUOTE AS COLON UNREACHABLE
 
 parse: FN IDENT QUOTE AS COLON LBRACE TYPE
 ##
-## Ends in an error in state: 621.
+## Ends in an error in state: 629.
 ##
-## func -> list(attribute) fundecl QUOTE ident_or_keyword COLON LBRACE . delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## func -> list(attribute) fundecl QUOTE ident_or_keyword COLON LBRACE . delimited_instr_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) fundecl QUOTE ident_or_keyword COLON LBRACE
@@ -7619,9 +7666,9 @@ parse: FN IDENT QUOTE AS COLON LBRACE TYPE
 
 parse: FN IDENT LBRACE TYPE
 ##
-## Ends in an error in state: 624.
+## Ends in an error in state: 632.
 ##
-## func -> list(attribute) fundecl LBRACE . delimited_instr_list RBRACE [ TYPE TAG SHARP REC LET FN EOF CONST ]
+## func -> list(attribute) fundecl LBRACE . delimited_instr_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## list(attribute) fundecl LBRACE
@@ -7629,14 +7676,25 @@ parse: FN IDENT LBRACE TYPE
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
 
-parse: SHARP LBRACKET IDENT EQUAL CHAR RBRACKET UNREACHABLE
+parse: FN IDENT RBRACE
 ##
-## Ends in an error in state: 631.
+## Ends in an error in state: 636.
 ##
-## list(attribute) -> attribute . list(attribute) [ TAG LET FN CONST ]
+## parse -> list(modulefield) . EOF [ # ]
 ##
 ## The known suffix of the stack is as follows:
-## attribute
+## list(modulefield)
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 602, spurious reduction of production option(__anonymous_6) ->
+## In state 612, spurious reduction of production fundecl -> FN IDENT option(__anonymous_6)
+## In state 625, spurious reduction of production option(SEMI) ->
+## In state 635, spurious reduction of production modulefield -> list(attribute) fundecl option(SEMI)
+## In state 577, spurious reduction of production list(modulefield) ->
+## In state 578, spurious reduction of production list(modulefield) -> modulefield list(modulefield)
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>

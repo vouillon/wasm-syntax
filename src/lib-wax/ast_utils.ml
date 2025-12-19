@@ -71,9 +71,30 @@ let rec map_instr f instr =
   in
   { desc; info = f instr.info }
 
-let map_modulefield f field =
+let rec map_modulefield f field =
   match field with
-  | (Type _ | Fundecl _ | GlobalDecl _ | Tag _) as f -> f
+  | Type t -> Type t
+  | Fundecl f -> Fundecl f
+  | GlobalDecl g -> GlobalDecl g
+  | Tag t -> Tag t
   | Func ({ body = s, instrs; _ } as func) ->
       Func { func with body = (s, List.map (map_instr f) instrs) }
   | Global g -> Global { g with def = map_instr f g.def }
+  | Group { attributes; fields } ->
+      Group
+        {
+          attributes;
+          fields =
+            List.map
+              (fun a -> { a with desc = map_modulefield f a.desc })
+              fields;
+        }
+
+let rec iter_fields f l =
+  List.iter
+    (fun field ->
+      f field;
+      match field.desc with
+      | Group { fields; _ } -> iter_fields f fields
+      | _ -> ())
+    l

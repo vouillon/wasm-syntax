@@ -167,5 +167,9 @@ type 'info modulefield =
       sign : functype option;
       attributes : attributes;
     }
+  | Group of {
+      attributes : attributes;
+      fields : ('info modulefield, location) annotated list;
+    }
 
 type 'info module_ = ('info modulefield, location) annotated list

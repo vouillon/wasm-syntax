@@ -2362,9 +2362,12 @@ let rec check_constant_instruction ctx i =
     ->
       Error.constant_expression_required ctx.diagnostics ~location
 
-type ('before, 'after) phased = Before of 'before | After of 'after
+type ('before, 'after) phased =
+  | Before of 'before
+  | After of 'after
+  | PhasedGroup of { before : 'before; fields : ('before, 'after) phased list }
 
-let globals ctx fields =
+let rec globals ctx fields =
   List.map
     (fun field ->
       match field.desc with
@@ -2386,10 +2389,13 @@ let globals ctx fields =
               | _ -> assert false (*ZZZ floating*)));
           check_constant_instruction ctx def';
           After { field with desc = Global { g with def = def' } }
+      | Group { fields; _ } ->
+          let fields = globals ctx fields in
+          PhasedGroup { before = field; fields }
       | _ -> Before field)
     fields
 
-let functions ctx fields =
+let rec functions ctx fields =
   List.filter_map
     (fun field ->
       match field with
@@ -2442,8 +2448,12 @@ let functions ctx fields =
               f with
               desc = Func { name; sign; body = (label, body); typ; attributes };
             }
-      | Before { desc = Global _; _ } -> assert false
-      | After f
+      | PhasedGroup
+          { before = { desc = Group { attributes; _ }; info }; fields } ->
+          Some
+            { info; desc = Group { attributes; fields = functions ctx fields } }
+      | PhasedGroup _ | Before { desc = Global _ | Group _; _ } -> assert false
+      | After f -> Some f
       | Before ({ desc = Type _ | Fundecl _ | GlobalDecl _ | Tag _; _ } as f) ->
           Some f)
     fields
@@ -2485,14 +2495,18 @@ let f diagnostics fields =
       types = Tbl.make (Namespace.make ()) "type";
     }
   in
-  List.iter
-    (fun (field : (_ modulefield, _) annotated) ->
-      match field.desc with
-      | Type rectype ->
-          let _ : int option = add_type diagnostics type_context rectype in
-          ()
-      | _ -> ())
-    fields;
+  let rec register_types fields =
+    Ast_utils.iter_fields
+      (fun (field : (_ modulefield, _) annotated) ->
+        match field.desc with
+        | Type rectype ->
+            let _ : int option = add_type diagnostics type_context rectype in
+            ()
+        | Group { fields; _ } -> register_types fields
+        | _ -> ())
+      fields
+  in
+  register_types fields;
   let ctx =
     let namespace = Namespace.make () in
     {
@@ -2510,7 +2524,7 @@ let f diagnostics fields =
     }
   in
   check_type_definitions ctx;
-  List.iter
+  Ast_utils.iter_fields
     (fun field ->
       match field.desc with
       | Fundecl { name; typ; sign; _ } ->
@@ -2534,7 +2548,7 @@ let f diagnostics fields =
             | None, None -> assert false (*ZZZ*)
           in
           Tbl.add diagnostics ctx.tags name typ
-      | Type _ | Global _ -> ())
+      | Group _ | Type _ | Global _ -> ())
     fields;
   let _ : _ option =
     let name = Ast.no_loc "<string>" in
@@ -2554,8 +2568,8 @@ let f diagnostics fields =
       subtyping_info = Wasm.Types.subtyping_info type_context.internal_types;
     }
   in
-  let fields = globals ctx fields in
-  let fields = functions ctx fields in
+  let phased_fields = globals ctx fields in
+  let typed_fields = functions ctx phased_fields in
   ( ctx.type_context.types,
     List.map
       (fun f ->
@@ -2579,7 +2593,7 @@ let f diagnostics fields =
             f.desc
         in
         { f with desc })
-      fields )
+      typed_fields )
 
 let erase_types m =
   List.map (fun m -> { m with desc = Ast_utils.map_modulefield snd m.desc }) m

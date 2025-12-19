@@ -914,7 +914,7 @@ let print_attr_prefix pp attributes_list content_fn =
         newline pp ());
       content_fn ())
 
-let modulefield pp field =
+let rec modulefield pp field =
   match field.desc with
   | Type t -> rectype pp t
   | Func { name; typ; sign; body = label, body; attributes = a } ->
@@ -959,6 +959,19 @@ let modulefield pp field =
               punctuation pp ":";
               space pp ();
               valtype pp typ))
+  | Group { attributes; fields } ->
+      print_attr_prefix pp attributes (fun () ->
+          hvbox pp (fun () ->
+              punctuation pp "{";
+              if fields <> [] then (
+                indent pp indent_level (fun () ->
+                    List.iter
+                      (fun f ->
+                        space pp ();
+                        modulefield pp f)
+                      fields);
+                space pp ());
+              punctuation pp "}"))
 
 let module_ ?(color = Auto) ?out_channel printer l =
   let use_color = should_use_color ~color ~out_channel in

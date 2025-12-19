@@ -786,6 +786,14 @@ let reorder_imports lst =
   in
   traverse [] lst
 
+let rec flatten fields =
+  List.concat_map
+    (fun field ->
+      match field.desc with
+      | Group { fields = flds; _ } -> flatten flds
+      | _ -> [ field ])
+    fields
+
 let module_ diagnostics types fields =
   let func_refs_in_func = Hashtbl.create 16 in
   let func_refs_outside_func = Hashtbl.create 16 in
@@ -802,7 +810,7 @@ let module_ diagnostics types fields =
       extra_types = Hashtbl.create 16;
     }
   in
-  List.iter
+  Wax.Ast_utils.iter_fields
     (fun field ->
       match field.desc with
       | Type rectype ->
@@ -826,7 +834,7 @@ let module_ diagnostics types fields =
       | GlobalDecl { name; _ } -> Hashtbl.replace ctx.globals name.desc ()
       | Global { name; _ } -> Hashtbl.replace ctx.globals name.desc ()
       | Fundecl { name; _ } -> Hashtbl.replace ctx.functions name.desc ()
-      | _ -> ())
+      | Tag _ | Group _ -> ())
     fields;
   let ensure_type_is_defined typ =
     match typ with
@@ -837,6 +845,7 @@ let module_ diagnostics types fields =
             (Wax.Typing.get_type_definition diagnostics types nm)
     | _ -> ()
   in
+  let fields = flatten fields in
   let wasm_fields =
     List.map
       (fun field ->
@@ -941,6 +950,7 @@ let module_ diagnostics types fields =
                   instrs;
                   exports = exports attributes;
                 }
+          | Group _ -> assert false
         in
         { field with desc })
       fields

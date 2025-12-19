@@ -516,5 +516,7 @@ modulefield:
 | attributes = list(attribute) f = tag option(";")
   { let (name, typ, sign) = f in
     with_loc $loc(f) (Tag {name; typ; sign; attributes}) }
+| attributes = list(attribute) "{" fields = list(modulefield) "}"
+  { with_loc $sloc (Group {attributes; fields}) }
 
 parse: l = list(modulefield) EOF { l }
