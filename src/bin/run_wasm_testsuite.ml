@@ -358,11 +358,14 @@ let runtest filename _ =
         | m ->
             let ok =
               in_child_process (fun () ->
-                  let m =
+                  let types, m =
                     Utils.Diagnostic.run ~color ~source (fun d ->
                         Wax.Typing.f d m)
                   in
-                  let m' = Conversion.To_wasm.module_ m in
+                  let m' =
+                    Utils.Diagnostic.run ~color ~source (fun d ->
+                        Conversion.To_wasm.module_ d types m)
+                  in
                   let ok =
                     in_child_process (fun () ->
                         Utils.Diagnostic.run ~color ~source (fun d ->

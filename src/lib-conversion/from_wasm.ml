@@ -584,6 +584,17 @@ let push_label ctx ~loop label typ =
   let label, labels = LabelStack.push ctx.labels label in
   (label, { ctx with labels; label_arities })
 
+let bottom_heap_type ctx (t : Src.heaptype) : Ast.heaptype =
+  match t with
+  | Any | Eq | I31 | Struct | Array | None_ -> None_
+  | Func | NoFunc -> NoFunc
+  | Exn | NoExn -> NoExn
+  | Extern | NoExtern -> NoExtern
+  | Type ty -> (
+      match (lookup_type ctx Type ty).typ with
+      | Struct _ | Array _ -> None_
+      | Func _ -> NoFunc)
+
 let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   let with_loc (i' : _ Ast.instr_desc) = { i with Ast.desc = i' } in
   match i.desc with
@@ -775,12 +786,7 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
       let* args = Stack.grab (Uint32.to_int n) in
       Stack.push 1
         (match string_args n args with
-        | Some s ->
-            with_loc
-              (Cast
-                 ( with_loc (String (Some (idx ctx `Type t), s)),
-                   Valtype
-                     (Ref { nullable = false; typ = Type (idx ctx `Type t) }) ))
+        | Some s -> with_loc (String (Some (idx ctx `Type t), s))
         | None -> with_loc (ArrayFixed (Some (idx ctx `Type t), args)))
   | ArrayGet (s, t) ->
       let* e2 = Stack.pop in
@@ -917,7 +923,8 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
         (with_loc
            (Cast
               ( with_loc Null,
-                Valtype (Ref { nullable = true; typ = heaptype ctx typ }) )))
+                Valtype
+                  (Ref { nullable = true; typ = bottom_heap_type ctx typ }) )))
   | RefIsNull ->
       let* e = Stack.pop in
       Stack.push 1 (with_loc (UnOp (Not, e)))

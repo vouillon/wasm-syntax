@@ -126,12 +126,7 @@ type intern_state = {
     obj_counter: mut i32
 }
 fn get_intern_state(src: &string, pos: i32) -> &intern_state {
-    {intern_state|
-        src: src,
-        pos: pos,
-        obj_table: null as &?block,
-        obj_counter: 0
-    };
+    {intern_state| src: src, pos: pos, obj_table: null, obj_counter: 0 };
 }
 fn read8u(s: &intern_state) -> i32 {
     let pos: i32;
@@ -326,7 +321,7 @@ fn intern_rec(s: &intern_state, h: &marshal_header) -> &eq {
     let v: &eq;
     caml_init_custom_operations();
     res = [block|0 as &i31];
-    sp = {stack_item| blk: res, pos: 0, next: null as &?stack_item };
+    sp = {stack_item| blk: res, pos: 0, next: null };
     size = h.num_objects;
     if size { s.obj_table = [block|0 as &i31; size]; }
     v = 0 as &i31;
@@ -625,7 +620,7 @@ fn reserve_extern_output(s: &extern_state, required: i32) -> i32 {
     last.end = s.pos;
     if required >s SIZE_EXTERN_OUTPUT_BLOCK >>u 1 { extra = required; }
     buf = [string|0; SIZE_EXTERN_OUTPUT_BLOCK + extra];
-    blk = {output_block| next: null as &?output_block, end: 0, data: buf };
+    blk = {output_block| next: null, end: 0, data: buf };
     last.next = blk;
     s.output_last = blk;
     s.buf = buf;
@@ -977,7 +972,7 @@ fn caml_output_value_to_string(v: &eq, flags: &eq) -> &eq {
     let res: &string;
     blk =
         {output_block|
-            next: null as &?output_block,
+            next: null,
             end: SIZE_EXTERN_OUTPUT_BLOCK,
             data: [string|0; SIZE_EXTERN_OUTPUT_BLOCK]
         };
@@ -1012,12 +1007,7 @@ fn caml_output_value_to_buffer
     buf_2 = vbuf as &string;
     pos = vpos as &i31 as i32_u;
     len = vlen as &i31 as i32_u;
-    blk =
-        {output_block|
-            next: null as &?output_block,
-            end: pos + len,
-            data: buf_2
-        };
+    blk = {output_block| next: null, end: pos + len, data: buf_2 };
     extern_value(flags, blk, pos + 20, 1, v);
     _ = _;
     buf_2 = _;
@@ -1035,7 +1025,7 @@ fn caml_output_value(ch: &eq, v: &eq, flags: &eq) -> &eq {
     let res: &string;
     blk =
         {output_block|
-            next: null as &?output_block,
+            next: null,
             end: SIZE_EXTERN_OUTPUT_BLOCK,
             data: [string|0; SIZE_EXTERN_OUTPUT_BLOCK]
         };

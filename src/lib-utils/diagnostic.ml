@@ -68,6 +68,13 @@ let output_error_no_source ~theme ~location:{ Ast.loc_start; loc_end } ~severity
       start_line start_col end_line end_col;
   output_error_no_loc ~theme ~severity msg
 
+let count_leading_whitespaces s =
+  let i = ref 0 in
+  while !i < String.length s && s.[!i] = ' ' do
+    incr i
+  done;
+  !i
+
 let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
     ~severity msg =
   let rewind_line text bol =
@@ -157,7 +164,7 @@ let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
            let rest_len =
              max 1 (Unicode.terminal_width raw_content - visual_col)
            in
-           print_underline visual_col rest_len
+           print_underline visual_col (rest_len + 4)
          else
            let err_len_bytes = e_cnum - s_cnum in
            let err_part = String.sub raw_content start_col_byte err_len_bytes in
@@ -165,7 +172,8 @@ let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
              (max 1 (Unicode.terminal_width err_part))
        else if !current_line = end_line then
          let err_part = String.sub raw_content 0 end_col_byte in
-         print_underline ~at_end:true 0 (Unicode.terminal_width err_part));
+         let n = max 0 (count_leading_whitespaces err_part - 4) in
+         print_underline ~at_end:true n (Unicode.terminal_width err_part - n));
       curr_pos := next_eol + 1;
       incr current_line
   done

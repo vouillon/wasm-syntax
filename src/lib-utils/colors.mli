@@ -7,6 +7,12 @@ val should_use_color : color:flag -> out_channel:out_channel option -> bool
     checks for `NO_COLOR` environment variable, `TERM` environment variable, and
     if [out_channel] is a TTY. *)
 
+val update_flag : color:flag -> flag
+(** [update_flag ~color ~out_channel] checks if ANSI color codes should be
+    emitted based on the [color] flag and stdout. If [Auto], it checks for
+    `NO_COLOR` environment variable, `TERM` environment variable, and if stdout
+    is a TTY. *)
+
 (** ANSI escape codes for basic text formatting and colors. *)
 module Ansi : sig
   val reset : string

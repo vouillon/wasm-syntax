@@ -7,6 +7,11 @@ TODO:
 - locations on the heap when push several values?
 - more methods rather than global functions (no ambiguity)?
   rotl(..), rotr(..), min(..), max(..), copysign(..)
+- try to use declared types instead of adding <string>
+- floating type String? (with default to array<i8>)
+- desugar by default
+- handle double casts: i31 then i32_s
+- utf-16 string / js strings
 
 Optimizations
 - move lets at more appropriate places
@@ -253,10 +258,14 @@ module Tbl = struct
   let remove env x = Hashtbl.remove env.tbl x.desc
 end
 
+type types = (int * subtype) Tbl.t
+
 type type_context = {
   internal_types : Wasm.Types.t;
   types : (int * subtype) Tbl.t;
 }
+
+let get_type_definition d types nm = Option.map snd (Tbl.find d types nm)
 
 let resolve_type_name d ctx name =
   let+@ res = Tbl.find d ctx.types name in
@@ -550,8 +559,7 @@ let cast ctx ty ty' =
       UnionFind.set ty (Valtype { typ = F64; internal = F64 });
       true
   | Null, Ref { typ = ty'; _ } ->
-      (let>@ typ = top_heap_type ctx ty' in
-       let ty' = Ref { nullable = true; typ } in
+      (let ty' = Ref { nullable = true; typ = ty' } in
        let>@ ity' = valtype ctx.diagnostics ctx.type_context ty' in
        UnionFind.set ty (Valtype { typ = ty'; internal = ity' }));
       true
@@ -1353,7 +1361,10 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
         match ty with
         | None -> { i with desc = "<string>" }
         | Some ty ->
-            let _ : _ option = lookup_array_type ctx ty in
+            (let>@ field = lookup_array_type ctx ty in
+             match field.typ with
+             | Value (I32 | I64 | F32 | F64) | Packed _ -> ()
+             | Value (Ref _ | V128 | Tuple _) -> assert false (*ZZZ*));
             ty
       in
       let*! typ = internalize ctx (Ref { nullable = false; typ = Type ty }) in
@@ -2545,28 +2556,30 @@ let f diagnostics fields =
   in
   let fields = globals ctx fields in
   let fields = functions ctx fields in
-  List.map
-    (fun f ->
-      let desc =
-        Ast_utils.map_modulefield
-          (fun (types, loc) ->
-            ( Array.map
-                (fun ty ->
-                  match UnionFind.find ty with
-                  | Unknown -> None
-                  | Null -> Some (Value (Ref { nullable = true; typ = None_ }))
-                  | Number -> Some (Value I32)
-                  | Int8 -> Some (Packed I8)
-                  | Int16 -> Some (Packed I16)
-                  | Int -> Some (Value I32)
-                  | Float -> Some (Value F64)
-                  | Valtype { typ; _ } -> Some (Value typ))
-                types,
-              loc ))
-          f.desc
-      in
-      { f with desc })
-    fields
+  ( ctx.type_context.types,
+    List.map
+      (fun f ->
+        let desc =
+          Ast_utils.map_modulefield
+            (fun (types, loc) ->
+              ( Array.map
+                  (fun ty ->
+                    match UnionFind.find ty with
+                    | Unknown -> None
+                    | Null ->
+                        Some (Value (Ref { nullable = true; typ = None_ }))
+                    | Number -> Some (Value I32)
+                    | Int8 -> Some (Packed I8)
+                    | Int16 -> Some (Packed I16)
+                    | Int -> Some (Value I32)
+                    | Float -> Some (Value F64)
+                    | Valtype { typ; _ } -> Some (Value typ))
+                  types,
+                loc ))
+            f.desc
+        in
+        { f with desc })
+      fields )
 
 let erase_types m =
   List.map (fun m -> { m with desc = Ast_utils.map_modulefield snd m.desc }) m

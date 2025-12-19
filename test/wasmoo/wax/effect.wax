@@ -88,7 +88,7 @@ let stack: &?fiber =
                     {closure_3| f: dummy_fun, f_2: uncaught_effect_handler }
             },
         cont: {cont| cont_func: default_continuation },
-        next: null as &?fiber
+        next: null
     };
 fn pop_fiber() -> &cont {
     let f: &fiber;
@@ -159,7 +159,7 @@ fn do_perform(k0: &cont, vp: &eq) {
             next:
                 if next_fiber is &fiber => &?fiber {
                     next_fiber as &fiber;
-                } else { null as &?fiber; }
+                } else { null; }
         };
     k1 = pop_fiber();
     become k1.cont_func
@@ -213,7 +213,7 @@ fn caml_alloc_stack(hv: &eq, hx: &eq, hf: &eq) -> &eq {
     {fiber|
         handlers: {handlers| value: hv, exn: hx, effect: hf },
         cont: {cont| cont_func: initial_cont },
-        next: null as &?fiber
+        next: null
     };
 }
 #[export = "caml_continuation_use_noexc"]
@@ -269,7 +269,7 @@ type cps_fiber: generic_fiber = {
     exn_stack: &?exn_stack,
     next: &?cps_fiber
 }
-let exn_stack: &?exn_stack = null as &?exn_stack;
+let exn_stack: &?exn_stack = null;
 #[export = "caml_push_trap"]
 fn caml_push_trap(h: &eq) -> &eq {
     exn_stack = {exn_stack| h: h, next: exn_stack };
@@ -320,7 +320,7 @@ fn caml_apply_continuation(args: &eq) -> &eq {
     {iterator| f: apply_iterator, i: 1, args: args as &block };
 }
 fn dummy_cps_fun(x: &eq, x_2: &eq, x_3: &eq) -> &eq { unreachable; }
-let cps_fiber_stack: &?cps_fiber = null as &?cps_fiber;
+let cps_fiber_stack: &?cps_fiber = null;
 const default_fiber_stack: &?cps_fiber =
     {cps_fiber|
         handlers:
@@ -334,8 +334,8 @@ const default_fiber_stack: &?cps_fiber =
                     }
             },
         cont: 0 as &i31,
-        exn_stack: null as &?exn_stack,
-        next: null as &?cps_fiber
+        exn_stack: null,
+        next: null
     };
 #[export = "caml_trampoline"]
 fn caml_trampoline(f: &eq, vargs: &eq) -> &eq {
@@ -348,7 +348,7 @@ fn caml_trampoline(f: &eq, vargs: &eq) -> &eq {
     let saved_fiber_stack: &?cps_fiber;
     saved_exn_stack = exn_stack;
     saved_fiber_stack = cps_fiber_stack;
-    exn_stack = null as &?exn_stack;
+    exn_stack = null;
     cps_fiber_stack = default_fiber_stack;
     args = vargs as &block;
     exn =
@@ -400,7 +400,7 @@ fn caml_trampoline(f: &eq, vargs: &eq) -> &eq {
     throw ocaml_exception exn;
 }
 #[export = "caml_trampoline_ref"]
-let caml_trampoline_ref: &?function_1 = null as &?function_1;
+let caml_trampoline_ref: &?function_1 = null;
 fn caml_pop_fiber() -> &eq {
     let top: &cps_fiber;
     top = cps_fiber_stack!;
@@ -457,7 +457,7 @@ fn caml_perform_effect(eff: &eq, vcont: &eq, k0: &eq) -> &eq {
             next:
                 if next_fiber is &cps_fiber => &?cps_fiber {
                     next_fiber as &cps_fiber;
-                } else { null as &?cps_fiber; }
+                } else { null; }
         };
     k1 = caml_pop_fiber();
     become (handler as &cps_closure_3).f_2(eff, cont, k1, k1, handler);
@@ -478,8 +478,8 @@ fn caml_cps_alloc_stack(hv: &eq, hx: &eq, hf: &eq) -> &eq {
     {cps_fiber|
         handlers: {handlers| value: hv, exn: hx, effect: hf },
         cont: value_handler,
-        exn_stack: {exn_stack| h: exn_handler, next: null as &?exn_stack },
-        next: null as &?cps_fiber
+        exn_stack: {exn_stack| h: exn_handler, next: null },
+        next: null
     };
 }
 fn cps_uncaught_effect_handler(eff: &eq, k: &eq, ms: &eq, x: &eq, x_2: &eq)

@@ -14,6 +14,7 @@ type ctx = {
   type_kinds : (string, [ `Struct | `Array | `Func ]) Hashtbl.t;
   struct_fields : (string, string list) Hashtbl.t;
   referenced_functions : (string, unit) Hashtbl.t;
+  extra_types : (string, Text.name * subtype) Hashtbl.t;
 }
 
 let with_loc loc desc = { desc; info = loc }
@@ -785,7 +786,7 @@ let reorder_imports lst =
   in
   traverse [] lst
 
-let module_ fields =
+let module_ diagnostics types fields =
   let func_refs_in_func = Hashtbl.create 16 in
   let func_refs_outside_func = Hashtbl.create 16 in
   let ctx =
@@ -798,6 +799,7 @@ let module_ fields =
       type_kinds = Hashtbl.create 16;
       struct_fields = Hashtbl.create 16;
       referenced_functions = Hashtbl.create 16;
+      extra_types = Hashtbl.create 16;
     }
   in
   List.iter
@@ -826,6 +828,15 @@ let module_ fields =
       | Fundecl { name; _ } -> Hashtbl.replace ctx.functions name.desc ()
       | _ -> ())
     fields;
+  let ensure_type_is_defined typ =
+    match typ with
+    | Ref { typ = Type nm; _ } when nm.desc.[0] = '<' ->
+        if not (Hashtbl.mem ctx.extra_types nm.desc) then
+          Option.iter
+            (fun subtype -> Hashtbl.add ctx.extra_types nm.desc (nm, subtype))
+            (Wax.Typing.get_type_definition diagnostics types nm)
+    | _ -> ()
+  in
   let wasm_fields =
     List.map
       (fun field ->
@@ -835,15 +846,26 @@ let module_ fields =
               Text.Types
                 (Array.map (fun (idx, s) -> (Some idx, subtype s)) rectype)
           | Global { name; mut; typ; def; attributes } ->
-              let typ = Option.value ~default:(expr_valtype def) typ in
-              let ctx =
-                { ctx with referenced_functions = func_refs_outside_func }
+              let typ =
+                match typ with
+                | Some typ -> typ
+                | None ->
+                    (*ZZZ *)
+                    let typ = expr_valtype def in
+                    ensure_type_is_defined typ;
+                    typ
+              in
+              let init =
+                let ctx =
+                  { ctx with referenced_functions = func_refs_outside_func }
+                in
+                instruction None ctx def
               in
               Text.Global
                 {
                   id = Some name;
                   typ = globaltype mut typ;
-                  init = instruction None ctx def;
+                  init;
                   exports = exports attributes;
                 }
           | GlobalDecl { name; mut; typ; attributes } ->
@@ -923,6 +945,12 @@ let module_ fields =
         { field with desc })
       fields
   in
+  let extra_types =
+    Hashtbl.fold
+      (fun _ (idx, s) rem ->
+        Ast.no_loc (Text.Types [| (Some idx, subtype s) |]) :: rem)
+      ctx.extra_types []
+  in
   let elem_declare : (_ Text.modulefield, _) Ast.annotated list =
     let funcs =
       Hashtbl.fold
@@ -949,6 +977,6 @@ let module_ fields =
              });
       ]
   in
-  let wasm_fields = wasm_fields @ elem_declare in
+  let wasm_fields = wasm_fields @ extra_types @ elem_declare in
   let wasm_fields = reorder_imports wasm_fields in
   (None, wasm_fields)

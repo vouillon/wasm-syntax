@@ -82,7 +82,7 @@ let wat_to_wax ~input_file ~output_file ~validate ~color ~fold_mode:_
   let wax_ast =
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wax.Typing.f d wax_ast)
-    |> Wax.Typing.erase_types
+    |> snd |> Wax.Typing.erase_types
   in
   with_open_out output_file (fun oc ->
       let print_wax f m =
@@ -102,11 +102,14 @@ let wax_to_wat ~input_file ~output_file ~validate ~color ~fold_mode
       ~filename:(Option.value ~default:"-" input_file)
       text
   in
-  let ast =
+  let types, ast =
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wax.Typing.f d ast)
   in
-  let wasm_ast = Conversion.To_wasm.module_ ast in
+  let wasm_ast =
+    Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
+        Conversion.To_wasm.module_ d types ast)
+  in
   if validate then
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wasm.Validation.f d wasm_ast);
@@ -142,11 +145,14 @@ let wax_to_wasm ~input_file ~output_file ~validate ~color ~fold_mode:_
       ~filename:(Option.value ~default:"-" input_file)
       text
   in
-  let ast =
+  let types, ast =
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wax.Typing.f d ast)
   in
-  let wasm_ast_text = Conversion.To_wasm.module_ ast in
+  let wasm_ast_text =
+    Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
+        Conversion.To_wasm.module_ d types ast)
+  in
   if validate then
     Utils.Diagnostic.run ~color ~source:(Some text) (fun d ->
         Wasm.Validation.f d wasm_ast_text);
@@ -270,6 +276,12 @@ let convert input_file output_file input_format_opt output_format_opt validate
   if output_format = Wasm && output_file = None && Unix.isatty Unix.stdout then (
     Printf.eprintf "Binary output not allowed on terminal\n";
     exit 123);
+  let color, with_pager =
+    match output_file with
+    | None -> (Utils.Colors.update_flag ~color, Utils.Pager.use)
+    | Some _ -> (color, fun f -> f ())
+  in
+  with_pager @@ fun () ->
   convert ~input_file ~output_file ~validate ~color
     ~source_map_file:opt_source_map_file ~fold_mode
 

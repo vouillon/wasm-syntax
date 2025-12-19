@@ -1623,7 +1623,13 @@ let rec instruction ctx (i : _ Ast.Text.instr) =
     | TupleMake of Int32.t
     | TupleExtract of Int32.t * Int32.t
 *)
-  | String _ ->
+  | String (Some idx, _) ->
+      let*! ty, field = lookup_array_type ctx idx in
+      (match field.typ with
+      | Value (I32 | I64 | F32 | F64) | Packed _ -> ()
+      | Value (Ref _ | V128 | Tuple _) -> assert false (*ZZZ*));
+      push (Some loc) (Ref { nullable = false; typ = Type ty })
+  | String (None, _) ->
       let ty = Ref { nullable = false; typ = Type (string ctx.modul.types) } in
       push (Some loc) ty
   | Char _ -> push (Some loc) I32
@@ -2044,7 +2050,7 @@ let functions ctx fields =
               incr i;
               Sequence.register locals id typ)
             locs;
-          with_empty_stack ctx (Ast.no_loc ()).info (*ZZZ*)
+          with_empty_stack ctx field.info (*ZZZ*)
             (let ctx =
                {
                  locals;
@@ -2055,7 +2061,7 @@ let functions ctx fields =
                }
              in
              let* () = instructions ctx instrs in
-             pop_args ctx (Ast.no_loc ()).info (*ZZZ*) return_types);
+             pop_args ctx field.info (*ZZZ*) return_types);
           register_exports ctx exports
       | _ -> ())
     fields
