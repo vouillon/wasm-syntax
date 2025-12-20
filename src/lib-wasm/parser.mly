@@ -191,8 +191,6 @@ ZZZ
 %token INPUT
 %token OUTPUT
 
-%on_error_reduce foldedinstr instrs(RPAREN)
-
 %parameter <Context : sig type t = Utils.Trivia.context val context : t end>
 
 %{
@@ -659,7 +657,7 @@ select_results(cont):
       rem }
 
 select(cont):
-| SELECT p = select_results({}) cont
+| SELECT p = select_results(cont)
   { let ((l, loc), c) = p in
     with_loc ($symbolstartpos, Option.value ~default:$endpos($1) loc)
       (Select (if l = [] then None else Some (List.concat l))) :: c }
