@@ -56,7 +56,8 @@ type custom_operations_list = {
     ops: &custom_operations,
     next: &?custom_operations_list
 }
-let custom_operations: &?custom_operations_list = null;
+let custom_operations: &?custom_operations_list =
+    null as &?custom_operations_list;
 #[export = "caml_register_custom_operations"]
 fn caml_register_custom_operations(ops: &custom_operations) {
     custom_operations =
@@ -75,7 +76,7 @@ fn caml_find_custom_operations(id: &string) -> &?custom_operations {
             br 'loop;
         } /* 'loop */
     } /* 'not_found */
-    null;
+    null as &?custom_operations;
 }
 let initialized: i32 = 0;
 #[export = "caml_init_custom_operations"]

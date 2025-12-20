@@ -1,6 +1,6 @@
 ==== core/elem.wast ====
-File "wasm-test-suite/core/elem.wast", line 1061, characters 25-26:
 Error: The type index 0 is not bound.
+    ──➤  wasm-test-suite/core/elem.wast:1061:26
 1060 │   (func (export "call_in_table") (param i32) (result i32)
 1061 │     (call_indirect (type 0) (local.get 0)))
                                 ^

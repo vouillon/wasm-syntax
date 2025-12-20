@@ -33,7 +33,8 @@ type string = [mut i8]
 type assoc = { f: &string, f_2: mut &eq, f_3: mut &?assoc }
 type assoc_array = [mut &?assoc]
 const Named_value_size: i32 = 13;
-const named_value_table: &assoc_array = [assoc_array|null; Named_value_size];
+const named_value_table: &assoc_array =
+    [assoc_array|null as &?assoc; Named_value_size];
 fn find_named_value(s: &eq, l: &?assoc) -> &?assoc {
     let a: &assoc;
     'tail: do &?assoc {
@@ -57,7 +58,7 @@ fn caml_named_value(s: &string) -> &?eq {
                           [caml_string_hash(0 as &i31, s) as &i31 as i32_s %u
                                Named_value_size])).f_2;
     }
-    return null;
+    return null as &?eq;
 }
 #[export = "caml_register_named_value"]
 fn caml_register_named_value(x: &eq, x_2: &eq) -> &eq {

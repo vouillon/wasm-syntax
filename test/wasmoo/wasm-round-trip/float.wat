@@ -515,7 +515,7 @@
                   (then
                     (return
                       (struct.new $float
-                        (select (f64.neg (f64.const inf)) (f64.const inf)
+                        (select (f64.const -inf) (f64.const inf)
                           (local.get $negative))))))))))))
     (if (i32.eq (i32.add (local.get $i) (i32.const 8)) (local.get $len))
       (then
@@ -582,7 +582,7 @@
                                       (then
                                         (return
                                           (struct.new $float
-                                            (select (f64.neg (f64.const inf))
+                                            (select (f64.const -inf)
                                               (f64.const inf)
                                               (local.get $negative))))))))))))))))))))))
     (local.set $f
@@ -602,7 +602,7 @@
     (then
       (if (result f64) (f64.ge (local.get $y) (f64.const 0))
         (then (return (f64.const 0x1p-1074)))
-        (else (return (f64.neg (f64.const 0x1p-1074))))))
+        (else (return (f64.const -0x1p-1074)))))
     (else
       (local.set $i (i64.reinterpret_f64 (local.get $x)))
       (local.set $j (i64.reinterpret_f64 (local.get $y)))
@@ -725,9 +725,9 @@
   (local $a1 f64) (local $a2 f64) (local $a3 f64) (local $a4 f64)
   (local $a5 f64) (local $p f64) (local $t f64) (local $y f64)
   (local.set $a1 (f64.const 0.254829592))
-  (local.set $a2 (f64.neg (f64.const 0.284496736)))
+  (local.set $a2 (f64.const -0.284496736))
   (local.set $a3 (f64.const 1.421413741))
-  (local.set $a4 (f64.neg (f64.const 1.453152027)))
+  (local.set $a4 (f64.const -1.453152027))
   (local.set $a5 (f64.const 1.061405429))
   (local.set $p (f64.const 0.3275911))
   (local.set $t
@@ -826,7 +826,7 @@
     (block $cont
       (br_if $cont (i64.gt_u (local.get $x_6) (i64.const 967)))
       (local.set $y
-        (select (f64.const 0x1p-1074) (f64.neg (f64.const 0x1p-1074))
+        (select (f64.const 0x1p-1074) (f64.const -0x1p-1074)
           (i64.gt_s (i64.xor (local.get $x_2) (local.get $x_4))
             (i64.const -1))))
       (block $cont2

@@ -134,12 +134,12 @@ const bigarray_ops: &custom_operations =
     {custom_operations|
         id: string#"_bigarr02",
         compare: caml_ba_compare,
-        compare_ext: null,
+        compare_ext: null as &?compare,
         hash: bigarray_hash,
-        fixed_length: null,
+        fixed_length: null as &?fixed_length,
         serialize: bigarray_serialize,
         deserialize: bigarray_deserialize,
-        dup: null
+        dup: null as &?dup
     };
 type int_array = [mut i32]
 type bigarray: custom = {

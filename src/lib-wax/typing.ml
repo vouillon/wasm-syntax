@@ -2098,6 +2098,14 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
                 Error.select_type_mismatch ctx.diagnostics ~location:i.info ty1
                   ty2;
                 None)
+        | Valtype { typ = Ref { typ; _ }; _ }, Null ->
+            let*@ ty = internalize ctx (Ref { typ; nullable = true }) in
+            UnionFind.set ty2 (UnionFind.find ty);
+            Some ty
+        | Null, Valtype { typ = Ref { typ; _ }; _ } ->
+            let*@ ty = internalize ctx (Ref { typ; nullable = true }) in
+            UnionFind.set ty1 (UnionFind.find ty);
+            Some ty
         | _ ->
             Error.select_type_mismatch ctx.diagnostics ~location:i.info ty1 ty2;
             None

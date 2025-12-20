@@ -15,6 +15,8 @@ type ctx = {
   struct_fields : (string, string list) Hashtbl.t;
   referenced_functions : (string, unit) Hashtbl.t;
   extra_types : (string, Text.name * subtype) Hashtbl.t;
+  types : Wax.Typing.types;
+  diagnostics : Utils.Diagnostic.context;
 }
 
 let with_loc loc desc = { desc; info = loc }
@@ -211,6 +213,15 @@ let push ret label =
   | Some (label, _), Some label' when label = label'.desc -> None
   | Some (label, i), _ -> Some (label, i + 1)
   | None, _ -> None
+
+let ensure_type_is_defined ctx typ =
+  match typ with
+  | Ref { typ = Type nm; _ } when nm.desc.[0] = '<' ->
+      if not (Hashtbl.mem ctx.extra_types nm.desc) then
+        Option.iter
+          (fun subtype -> Hashtbl.add ctx.extra_types nm.desc (nm, subtype))
+          (Wax.Typing.get_type_definition ctx.diagnostics ctx.types nm)
+  | _ -> ()
 
 let rec instruction ret ctx i : location Text.instr list =
   let _, loc = i.info in
@@ -713,7 +724,9 @@ let rec instruction ret ctx i : location Text.instr list =
       let typ =
         match expr_opt_valtype i with
         | None | Some (I32 | I64 | F32 | F64 | V128) -> None
-        | Some typ -> Some [ valtype typ ]
+        | Some typ ->
+            ensure_type_is_defined ctx typ;
+            Some [ valtype typ ]
       in
       folded loc (Select typ) (code_then @ code_else @ code_cond)
   | Char c -> folded loc (Char c) []
@@ -808,6 +821,8 @@ let module_ diagnostics types fields =
       struct_fields = Hashtbl.create 16;
       referenced_functions = Hashtbl.create 16;
       extra_types = Hashtbl.create 16;
+      types;
+      diagnostics;
     }
   in
   Wax.Ast_utils.iter_fields
@@ -836,15 +851,6 @@ let module_ diagnostics types fields =
       | Fundecl { name; _ } -> Hashtbl.replace ctx.functions name.desc ()
       | Tag _ | Group _ -> ())
     fields;
-  let ensure_type_is_defined typ =
-    match typ with
-    | Ref { typ = Type nm; _ } when nm.desc.[0] = '<' ->
-        if not (Hashtbl.mem ctx.extra_types nm.desc) then
-          Option.iter
-            (fun subtype -> Hashtbl.add ctx.extra_types nm.desc (nm, subtype))
-            (Wax.Typing.get_type_definition diagnostics types nm)
-    | _ -> ()
-  in
   let fields = flatten fields in
   let wasm_fields =
     List.map
@@ -861,7 +867,7 @@ let module_ diagnostics types fields =
                 | None ->
                     (*ZZZ *)
                     let typ = expr_valtype def in
-                    ensure_type_is_defined typ;
+                    ensure_type_is_defined ctx typ;
                     typ
               in
               let init =

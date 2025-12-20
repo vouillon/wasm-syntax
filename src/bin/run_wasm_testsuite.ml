@@ -359,9 +359,13 @@ let runtest filename _ =
         | m ->
             let ok =
               in_child_process (fun () ->
-                  let types, m =
+                  let _, m =
                     Utils.Diagnostic.run ~color ~source (fun d ->
                         Wax.Typing.f d m)
+                  in
+                  let types, m =
+                    Utils.Diagnostic.run ~color ~source (fun d ->
+                        Wax.Typing.f d (Wax.Typing.erase_types m))
                   in
                   let m' =
                     Utils.Diagnostic.run ~color ~source (fun d ->

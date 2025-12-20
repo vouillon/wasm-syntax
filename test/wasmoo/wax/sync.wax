@@ -29,12 +29,12 @@ const mutex_ops: &custom_operations =
     {custom_operations|
         id: string#"_mutex",
         compare: custom_compare_id,
-        compare_ext: null,
+        compare_ext: null as &?compare,
         hash: custom_hash_id,
-        fixed_length: null,
-        serialize: null,
-        deserialize: null,
-        dup: null
+        fixed_length: null as &?fixed_length,
+        serialize: null as &?serialize,
+        deserialize: null as &?deserialize,
+        dup: null as &?dup
     };
 type mutex: custom_with_id = {
     f: &custom_operations,
