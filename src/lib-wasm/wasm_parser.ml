@@ -316,7 +316,8 @@ let memarg ch =
   let a = uint ch in
   let o = uint64 ch in
   let m, a = if a land 0x40 <> 0 then (uint ch, a lxor 0x40) else (0, a) in
-  (m, { align = Utils.Uint64.of_int a; offset = o })
+  assert (a < 64);
+  (m, { align = Utils.Uint64.of_int (1 lsl a); offset = o })
 
 let position ch pos =
   {

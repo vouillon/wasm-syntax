@@ -9,12 +9,16 @@ module P =
     (Wasm.Parser_messages)
     (Wasm.Lexer)
 
-let print_module f m =
-  Utils.Printer.run f (fun p -> Wasm.Output.module_ ~out_channel:stdout p m)
+let print_module trivia f m =
+  Utils.Printer.run f (fun p ->
+      Wasm.Output.module_ ~out_channel:stdout p
+        ~trivia:(Utils.Trivia.associate trivia)
+        m)
 
 let convert ~filename =
-  let ast, _ctx = P.parse ~filename () in
-  Format.printf "/////////// %s //////////@.@.%a@." filename print_module
+  let ast, trivia = P.parse ~filename () in
+  Format.printf "/////////// %s //////////@.@.%a@." filename
+    (print_module trivia)
     (Wasm.Folding.fold (Wasm.Folding.unfold ast))
 
 let _ =

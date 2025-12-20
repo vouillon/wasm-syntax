@@ -1,5 +1,6 @@
 (executable
  (name main)
+ (modes exe wasm)
  (public_name wax)
  (libraries wasm wax conversion cmdliner unix))
 

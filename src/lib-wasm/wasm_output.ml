@@ -159,11 +159,14 @@ module Encoder = struct
         vec' subtype b t
 
   let memarg b (m : memarg) idx =
+    let align =
+      Int.of_float (Float.log2 (Float.of_int (Utils.Uint64.to_int m.align)))
+    in
     if idx = 0 then (
-      uint b (Utils.Uint64.to_int m.align);
+      uint b align;
       uint64 b m.offset)
     else (
-      uint b (Utils.Uint64.to_int m.align lor 64);
+      uint b (align lor 64);
       uint64 b m.offset;
       uint b idx)
 

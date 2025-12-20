@@ -53,6 +53,22 @@ Explicit types?
 ==> for function types
 ==> for call_indirect
 (But we don't have a cast to a typeuse in WAT)
+
+Typing with conditionals:
+- when a conditional is encountered, refine the assumptions to take
+  the first branch (if possible) and register that the other branch
+  needs to be visited.
+  A --> A /\ B
+        A /\ not B
+- store somehow a mapping conditional branch ==> code
+- to transform the code, we need to cover all the branches; to type,
+  we need to test all combinations
+==> take a branch which is not covered. find a condition so that it is
+    covered and run the typer again with this assumption
+vs
+==> stack of possible conditions; when we encounter a branch, we split
+    the current condition in two, push one one the stack, and continue
+    with the other
 *)
 
 open Ast

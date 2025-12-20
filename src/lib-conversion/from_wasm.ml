@@ -387,28 +387,30 @@ let reasonable_string =
                [ diff any (rg '\000' '\031'); char '\n'; char '\r'; char '\t' ]))))
 
 let string_args n args =
-  try
-    if Uint32.of_int (List.length args) <> n then raise Exit;
-    List.iter
-      (fun arg ->
-        match arg.Ast.desc with
-        | Ast.Int c
-          when let c = int_of_string c in
-               c >= 0 && c < 256 ->
-            ()
-        | _ -> raise Exit)
-      args;
-    let b = Bytes.create (Uint32.to_int n) in
-    List.iteri
-      (fun i arg ->
-        match arg.Ast.desc with
-        | Ast.Int c -> Bytes.set b i (Char.chr (int_of_string c))
-        | _ -> assert false)
-      args;
-    let s = Bytes.to_string b in
-    if String.is_valid_utf_8 s && Re.execp reasonable_string s then Some s
-    else None
-  with Exit -> None
+  if n = Uint32.zero then None
+  else
+    try
+      if Uint32.of_int (List.length args) <> n then raise Exit;
+      List.iter
+        (fun arg ->
+          match arg.Ast.desc with
+          | Ast.Int c
+            when let c = int_of_string c in
+                 c >= 0 && c < 256 ->
+              ()
+          | _ -> raise Exit)
+        args;
+      let b = Bytes.create (Uint32.to_int n) in
+      List.iteri
+        (fun i arg ->
+          match arg.Ast.desc with
+          | Ast.Int c -> Bytes.set b i (Char.chr (int_of_string c))
+          | _ -> assert false)
+        args;
+      let s = Bytes.to_string b in
+      if String.is_valid_utf_8 s && Re.execp reasonable_string s then Some s
+      else None
+    with Exit -> None
 
 let inttype ty : Ast.valtype =
   match ty with
