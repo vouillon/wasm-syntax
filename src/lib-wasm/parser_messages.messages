@@ -2352,7 +2352,7 @@ parse: LPAREN FUNC LPAREN TRY_TABLE RPAREN V128
 ## foldedinstr
 ##
 
-Expecting instruction.
+Expecting instruction or closing parenthesis.
 
 parse: LPAREN FUNC TRY_TABLE END CATCH_ALL
 ##

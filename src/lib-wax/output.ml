@@ -946,7 +946,9 @@ let rec modulefield pp field =
               punctuation pp ";"))
   | Fundecl { name; typ; sign; attributes = a } ->
       print_attr_prefix pp a (fun () ->
-          box pp (fun () -> fundecl ~tag:false pp (name, typ, sign)))
+          box pp (fun () ->
+              fundecl ~tag:false pp (name, typ, sign);
+              punctuation pp ";"))
   | Tag { name; typ; sign; attributes = a } ->
       print_attr_prefix pp a (fun () ->
           box pp (fun () -> fundecl ~tag:true pp (name, typ, sign)))

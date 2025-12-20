@@ -111,9 +111,9 @@ fn caml_sys_get_config(x: &eq) -> &eq {
 #[export = "caml_sys_isatty"]
 fn caml_sys_isatty(x: &eq) -> &eq { 0 as &i31; }
 #[export = "caml_runtime_variant"]
-fn caml_runtime_variant(x: &eq) -> &eq { string#""; }
+fn caml_runtime_variant(x: &eq) -> &eq { [string|]; }
 #[export = "caml_runtime_parameters"]
-fn caml_runtime_parameters(x: &eq) -> &eq { string#""; }
+fn caml_runtime_parameters(x: &eq) -> &eq { [string|]; }
 #[export = "caml_install_signal_handler"]
 fn caml_install_signal_handler(x: &eq, x_2: &eq) -> &eq { 0 as &i31; }
 let caml_runtime_warnings: i32 = 0;

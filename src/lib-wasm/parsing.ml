@@ -81,6 +81,13 @@ struct
           | None -> 0)
       | _ -> assert false
 
+    let rec positions_in_stack env i =
+      match P.MenhirInterpreter.get i env with
+      | Some (Element (_, _, pos1, pos2)) ->
+          Format.eprintf "%d--%d@." pos1.pos_cnum pos2.pos_cnum;
+          positions_in_stack env (i + 1)
+      | None -> ()
+
     let get text checkpoint i =
       match checkpoint with
       | P.MenhirInterpreter.HandlingError env -> (
@@ -90,6 +97,13 @@ struct
       | _ -> assert false
 
     let fail ~color text buffer checkpoint =
+      let env =
+        match checkpoint with
+        | P.MenhirInterpreter.HandlingError env -> env
+        | _ -> assert false
+      in
+      positions_in_stack env 0;
+
       let location = E.last buffer in
       let s = state checkpoint in
       let message =

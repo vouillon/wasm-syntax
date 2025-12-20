@@ -71,6 +71,8 @@
 %token TRY CATCH
 %token DISPATCH
 
+%on_error_reduce plaininstr instr statement
+
 %nonassoc prec_ident (* {a|...} *) prec_block
 %right prec_branch
 %right ":=" "="
@@ -507,7 +509,7 @@ globaldecl:
 
 modulefield:
 | r = rectype { {desc = Type r.desc; info = r.info} }
-| attributes = list(attribute) f = fundecl option(";")
+| attributes = list(attribute) f = fundecl ";"
   { let (name, typ, sign) = f in
     with_loc $loc(f) (Fundecl {name; typ; sign; attributes}) }
 | f = func { f }
