@@ -12,6 +12,7 @@ TODO:
 - desugar by default
 - handle double casts: i31 then i32_s
 - utf-16 string / js strings
+- suggestion for unbound values
 
 Optimizations
 - move lets at more appropriate places

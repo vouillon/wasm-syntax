@@ -68,13 +68,27 @@ let print_text f s =
 module Error = struct
   open Utils
 
-  let unbound_label context ~location id =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "The label %a is not bound." print_index id)
+  let did_you_mean f lst =
+    match List.rev lst with
+    | [] -> ()
+    | last :: rest ->
+        let rest = List.rev rest in
+        let pp f = Format.fprintf f "%s" in
+        Format.fprintf f "@.@[<2>Hint:@ Did@ you@ mean@ %a%s%a?@]"
+          (Format.pp_print_list ~pp_sep:(fun f () -> Format.fprintf f ",@ ") pp)
+          rest
+          (if rest = [] then "" else " or ")
+          pp last
 
-  let unbound_index context ~location kind id =
+  let unbound_label context ~location id lst =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "The %s index %a is not bound." kind print_index id)
+        Format.fprintf f "The label %a is not bound.%a" print_index id
+          did_you_mean lst)
+
+  let unbound_index context ~location kind id lst =
+    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+        Format.fprintf f "The %s index %a is not bound.%a" kind print_index id
+          did_you_mean lst)
 
   let packed_array_access context ~location =
     Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
@@ -278,7 +292,15 @@ module Sequence = struct
           Some
             (Hashtbl.find seq.index_mapping (Hashtbl.find seq.label_mapping id))
     with Not_found ->
-      Error.unbound_index d ~location:idx.info seq.name idx;
+      let lst =
+        match idx.desc with
+        | Num _ -> []
+        | Id id ->
+            Utils.Spell_check.f
+              (fun f -> Hashtbl.iter (fun id' _ -> f id') seq.label_mapping)
+              id
+      in
+      Error.unbound_index d ~location:idx.info seq.name idx lst;
       None
 
   let get_index seq (idx : Ast.Text.idx) =
@@ -302,7 +324,15 @@ let get_type_info d ctx (idx : Ast.Text.idx) =
     | Num x -> Some (Hashtbl.find ctx.index_mapping x)
     | Id id -> Some (Hashtbl.find ctx.label_mapping id)
   with Not_found ->
-    Error.unbound_index d ~location:idx.info "type" idx;
+    let lst =
+      match idx.desc with
+      | Num _ -> []
+      | Id id ->
+          Utils.Spell_check.f
+            (fun f -> Hashtbl.iter (fun id' _ -> f id') ctx.label_mapping)
+            id
+    in
+    Error.unbound_index d ~location:idx.info "type" idx lst;
     None
 
 let resolve_type_index d ctx idx =
@@ -408,8 +438,19 @@ let subtype d ctx current { Ast.Text.typ; supertype; final } =
     | None -> Some None
     | Some idx ->
         let+@ i = resolve_type_index d ctx idx in
-        if i <= lnot current then
-          Error.unbound_index d ~location:idx.info "type" idx;
+        (if i <= lnot current then
+           let lst =
+             match idx.desc with
+             | Num _ -> []
+             | Id id ->
+                 Utils.Spell_check.f
+                   (fun f ->
+                     Hashtbl.iter
+                       (fun id' (i, _) -> if i > lnot current then f id')
+                       ctx.label_mapping)
+                   id
+           in
+           Error.unbound_index d ~location:idx.info "type" idx lst);
         Some i
   in
   { typ; supertype; final }
@@ -682,13 +723,23 @@ let branch_target ctx (idx : Ast.Text.idx) =
   | Num i -> (
       try Some (snd (List.nth ctx.control_types (Uint32.to_int i)))
       with Failure _ ->
-        Error.unbound_label ctx.modul.diagnostics ~location:idx.Ast.info idx;
+        Error.unbound_label ctx.modul.diagnostics ~location:idx.Ast.info idx [];
         None)
   | Id id ->
       let rec find l id =
         match l with
         | [] ->
-            Error.unbound_label ctx.modul.diagnostics ~location:idx.Ast.info idx;
+            let lst =
+              Utils.Spell_check.f
+                (fun f ->
+                  List.iter
+                    (fun (id_opt, _) ->
+                      match id_opt with Some id -> f id | None -> ())
+                    ctx.control_types)
+                id
+            in
+            Error.unbound_label ctx.modul.diagnostics ~location:idx.Ast.info idx
+              lst;
             None
         | (Some id', res) :: _ when id = id' -> Some res
         | _ :: rem -> find rem id

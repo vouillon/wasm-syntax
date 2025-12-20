@@ -64,17 +64,17 @@ let print_trivia ctx lst =
       match (e.trivia, e.position) with
       | Item { kind = Block_comment; content; _ }, _ ->
           Printer.space pp ();
-          Printer.string pp content;
+          print_styled ctx Comment content;
           Printer.space pp ()
       | Item { kind = Line_comment; content; _ }, Inline ->
           if debug then Format.eprintf "COMMENT %s@." (String.trim content);
           Printer.space pp ();
-          Printer.string pp (String.trim content);
+          print_styled ctx Comment (String.trim content);
           Printer.newline pp ()
       | Item { kind = Line_comment; content; _ }, Line_start ->
           if debug then Format.eprintf "COMMENT %s@." (String.trim content);
           Printer.newline pp ();
-          Printer.string pp (String.trim content);
+          print_styled ctx Comment (String.trim content);
           Printer.newline pp ()
       | Item { kind = Annotation; _ }, _ -> ()
       | Blank_line, _ ->
