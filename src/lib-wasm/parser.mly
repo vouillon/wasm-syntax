@@ -191,6 +191,8 @@ ZZZ
 %token INPUT
 %token OUTPUT
 
+%on_error_reduce nop
+
 %parameter <Context : sig type t = Utils.Trivia.context val context : t end>
 
 %{
@@ -347,7 +349,7 @@ valtype:
 | t = tupletype { Tuple t }
 
 functype:
-| "(" FUNC r = params_and_results(")") { fst r }
+| "(" FUNC r = params_and_results(nop) ")"{ fst r }
 
 params(cont):
 | c = cont { ([] , c) }
@@ -432,30 +434,30 @@ tabletype(cont):
 (* Instructions *)
 
 blockinstr:
-| BLOCK label = label bti = blocktype(instrs(END)) label2 = label
+| BLOCK label = label bti = blocktype(instrs(nop)) END label2 = label
   { check_labels label label2;
     let (typ, block) = bti in with_loc $sloc (Block {label; typ; block}) }
-| LOOP label = label bti = blocktype(instrs(END)) label2 = label
+| LOOP label = label bti = blocktype(instrs(nop)) END label2 = label
   { check_labels label label2;
     let (typ, block) = bti in with_loc $sloc (Loop {label; typ; block}) }
-| IF label = label bti = blocktype(instrs(ELSE))
-  label2 = label else_block = instrs(END)
+| IF label = label bti = blocktype(instrs(nop)) ELSE
+  label2 = label else_block = instrs(nop) END
   label3 = label
   { check_labels label label2;
     check_labels label label3;
     let (typ, if_block) = bti in
     with_loc $sloc (If {label; typ; if_block; else_block }) }
-| IF label = label bti = blocktype(instrs(END))
+| IF label = label bti = blocktype(instrs(nop)) END
   label2 = label
   { check_labels label label2;
     let (typ, if_block) = bti in
     with_loc $sloc (If {label; typ; if_block; else_block = [] }) }
-| TRY_TABLE label = label bti = blocktype(tbl_catches(instrs({})))
+| TRY_TABLE label = label bti = blocktype(tbl_catches(instrs(nop)))
   END label2 = label
    { check_labels label label2;
      let (typ, (catches, block)) = bti in
      with_loc $sloc (TryTable {label; typ; catches; block}) }
-| TRY label = label bti = blocktype(instrs({})) c = catches END label2 = label
+| TRY label = label bti = blocktype(instrs(nop)) c = catches END label2 = label
   { check_labels label label2;
     let (typ, block) = bti in
     let (catches, catch_all) = c in
@@ -474,8 +476,8 @@ tbl_catches(cont):
 
 catches:
 | END { [], None }
-| CATCH_ALL l = instrs(END) { [], Some l }
-| CATCH i = idx l = instrs({}) rem = catches
+| CATCH_ALL l = instrs(nop) END { [], Some l }
+| CATCH i = idx l = instrs(nop) rem = catches
   { map_fst (fun r -> (i, l) :: r) rem }
 
 label:
@@ -674,20 +676,22 @@ instrs (cont):
 | i = blockinstr r = instrs(cont) { i :: r }
 | i = foldedinstr r = instrs(cont) { i :: r }
 
+nop: {}
+
 foldedinstr:
 | "(" i = plaininstr l = foldedinstr * ")"
   { with_loc $sloc (Folded (i, l)) }
 | "(" l = ambiguous_instr(foldedinstr *) ")"
   { with_loc $sloc (Folded (List.hd l, List.tl l)) }
-| "(" BLOCK label = label btx = blocktype (instrs(")"))
+| "(" BLOCK label = label btx = blocktype (instrs(nop)) ")"
   { let (typ, block) = btx in
     with_loc $sloc (Folded (with_loc $sloc (Block {label; typ; block}), [])) }
-| "(" LOOP label = label btx = blocktype (instrs(")"))
+| "(" LOOP label = label btx = blocktype (instrs(nop)) ")"
   { let (typ, block) = btx in
     with_loc $sloc (Folded (with_loc $sloc (Loop {label; typ; block}), [])) }
 | "(" IF label = label
-  btx = blocktype (foldedinstrs("(" THEN l =  instrs(")") {l}))
-  else_block = option("(" ELSE l = instrs(")") { l })
+  btx = blocktype (foldedinstrs("(" THEN l =  instrs(nop) ")" {l}))
+  else_block = option("(" ELSE l = instrs(nop) ")" { l })
   ")"
   { let (typ, (l, if_block)) = btx in
     with_loc $sloc
@@ -696,14 +700,14 @@ foldedinstr:
           (If {label; typ; if_block;
                else_block = Option.value ~default:[] else_block }),
          l)) }
-| "(" TRY_TABLE label = label bti = blocktype(tbl_catches(instrs(")")))
+| "(" TRY_TABLE label = label bti = blocktype(tbl_catches(instrs(nop)))  ")"
    { let (typ, (catches, block)) = bti in
      with_loc $sloc
        (Folded
           (with_loc $sloc (TryTable {label; typ; catches; block}),
           [])) }
 | "(" TRY label = label
-  btb = blocktype("(" DO l = instrs(")") { l })
+  btb = blocktype("(" DO l = instrs(nop) ")" { l })
   c = foldedcatches ")"
   { let (typ, block) = btb in
     let (catches, catch_all) = c in
@@ -727,8 +731,8 @@ foldedinstr:
 
 foldedcatches:
 | { [], None }
-| "(" CATCH_ALL l = instrs(")") { [], Some l }
-| "(" CATCH i = idx l = instrs(")") rem = foldedcatches
+| "(" CATCH_ALL l = instrs(nop) ")" { [], Some l }
+| "(" CATCH i = idx l = instrs(nop) ")" rem = foldedcatches
   { map_fst (fun r -> (i, l) :: r) rem }
 
 foldedinstrs(cont):
@@ -736,7 +740,7 @@ foldedinstrs(cont):
 | i = foldedinstr r = foldedinstrs(cont) { map_fst (fun l -> i :: l) r }
 
 expr:
-| l = instrs({}) { l }
+| l = instrs(nop) { l }
 
 (* Modules *)
 
@@ -765,24 +769,24 @@ import:
       with_loc $sloc (Import {module_; name; id; desc; exports = [] }) }
 
 importdesc:
-| "(" FUNC i = ID ? t = typeuse(")")
+| "(" FUNC i = ID ? t = typeuse(nop)")"
     { (i, Func (fst t)) }
 | "(" MEMORY i = ID ? l = limits ")"
     { (i, (Memory l)) }
-| "(" TABLE i = ID ? t = tabletype({}) ")"
+| "(" TABLE i = ID ? t = tabletype(nop) ")"
     { (i, (Table (fst t))) }
 | "(" GLOBAL i = ID ? t = globaltype ")"
     { (i, (Global t)) }
-| "(" TAG i = ID ? t = typeuse(")")
+| "(" TAG i = ID ? t = typeuse(nop) ")"
     { (i, (Tag (fst t) : importdesc)) }
 
 func:
-| "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(")"))))
+| "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(nop)))) ")"
   { let (exports, (typ, (locals, instrs))) = r in
     with_loc $sloc (Func {id; typ; locals; instrs; exports}) }
 | "(" FUNC id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
-  t = typeuse({}) ")"
+  t = typeuse(nop) ")"
   { let (exports, (module_, name)) = r in
     with_loc $sloc (Import {module_; name; id; desc = Func (fst t); exports }) }
 
@@ -844,17 +848,17 @@ table:
               init = Init_segment elem; exports}) }
 | "(" TABLE id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
-  t = tabletype({}) ")"
+  t = tabletype(nop) ")"
   { let (exports, (module_, name)) = r in
     with_loc $sloc (Import {module_; name; id; desc = Table (fst t); exports }) }
 
 tag:
-| "(" TAG id = ID ? r = exports(typeuse (")"))
+| "(" TAG id = ID ? r = exports(typeuse (nop)) ")"
     { let (exports, (typ, _)) = r in
       with_loc $sloc (Tag {id; typ; exports}) }
 | "(" TAG id = ID ?
   r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
-  t = typeuse (")")
+  t = typeuse (nop)")"
   { let (exports, (module_, name)) = r in
     with_loc $sloc (Import {module_; name; id; desc = Tag (fst t); exports }) }
 
