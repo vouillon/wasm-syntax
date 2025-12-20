@@ -1817,12 +1817,10 @@ let rec check_constant_instruction ctx (i : _ Ast.Text.instr) =
           ( Div _ | Rem _ | And | Or | Xor | Shl | Shr _ | Rotl | Rotr | Eq | Ne
           | Lt _ | Gt _ | Le _ | Ge _ ) )
   | I32WrapI64 | I64ExtendI32 _ | F32DemoteF64 | F64PromoteF32 | Pop _
-  | TupleMake _ | TupleExtract _ ->
-      Error.constant_expression_required ctx.diagnostics ~location:i.info
   | VecBitselect | VecUnOp _ | VecBinOp _ | VecTest _ | VecShift _
   | VecBitmask _ | VecLoad _ | VecStore _ | VecLoadLane _ | VecStoreLane _
   | VecLoadSplat _ | VecExtract _ | VecReplace _ | VecSplat _ | VecShuffle _
-  | VecTernOp _ ->
+  | VecTernOp _ | TupleMake _ | TupleExtract _ ->
       Error.constant_expression_required ctx.diagnostics ~location:i.info
 
 and check_constant_instructions ctx l =

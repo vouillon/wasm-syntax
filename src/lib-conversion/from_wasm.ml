@@ -571,7 +571,7 @@ let blocktype ctx (typ : Src.blocktype option) =
         | None, None -> assert false
       in
       {
-        Ast.params = Array.map (fun (id, t) -> (id, valtype ctx t)) params;
+        Ast.params = Array.map (fun (_, t) -> (None, valtype ctx t)) params;
         results = Array.map (fun t -> valtype ctx t) results;
       }
 
@@ -584,6 +584,7 @@ let push_label ctx ~loop label typ =
   let label, labels = LabelStack.push ctx.labels label in
   (label, { ctx with labels; label_arities })
 
+(*
 let bottom_heap_type ctx (t : Src.heaptype) : Ast.heaptype =
   match t with
   | Any | Eq | I31 | Struct | Array | None_ -> None_
@@ -594,7 +595,7 @@ let bottom_heap_type ctx (t : Src.heaptype) : Ast.heaptype =
       match (lookup_type ctx Type ty).typ with
       | Struct _ | Array _ -> None_
       | Func _ -> NoFunc)
-
+*)
 let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
   let with_loc (i' : _ Ast.instr_desc) = { i with Ast.desc = i' } in
   match i.desc with
@@ -923,8 +924,7 @@ let rec instruction ctx (i : _ Src.instr) : unit Stack.t =
         (with_loc
            (Cast
               ( with_loc Null,
-                Valtype
-                  (Ref { nullable = true; typ = bottom_heap_type ctx typ }) )))
+                Valtype (Ref { nullable = true; typ = heaptype ctx typ }) )))
   | RefIsNull ->
       let* e = Stack.pop in
       Stack.push 1 (with_loc (UnOp (Not, e)))

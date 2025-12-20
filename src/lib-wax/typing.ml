@@ -590,7 +590,8 @@ let cast ctx ty ty' =
       UnionFind.set ty (Valtype { typ = F64; internal = F64 });
       true
   | Null, Ref { typ = ty'; _ } ->
-      (let ty' = Ref { nullable = true; typ = ty' } in
+      (let>@ typ = top_heap_type ctx ty' in
+       let ty' = Ref { nullable = true; typ } in
        let>@ ity' = valtype ctx.diagnostics ctx.type_context ty' in
        UnionFind.set ty (Valtype { typ = ty'; internal = ity' }));
       true
@@ -1710,16 +1711,18 @@ let rec instruction ctx i : 'a list -> 'a list * (_, _ array * _) annotated =
                 (match typ with
                 | Valtype { internal = I32; _ }
                 | Valtype { internal = I64; _ }
-                | Number | Int | Float ->
+                | Int ->
                     ()
+                | Number -> UnionFind.set ty1 Int
                 | _ -> assert false (*ZZZ*));
                 UnionFind.make (Valtype { typ = I32; internal = I32 })
             | Lt None | Gt None | Le None | Ge None ->
                 (match typ with
                 | Valtype { internal = F32; _ }
                 | Valtype { internal = F64; _ }
-                | Number | Int | Float ->
+                | Float ->
                     ()
+                | Number -> UnionFind.set ty1 Float
                 | _ -> assert false (*ZZZ*));
                 UnionFind.make (Valtype { typ = I32; internal = I32 })
             | Ne ->

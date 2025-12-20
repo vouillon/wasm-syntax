@@ -88,6 +88,8 @@ let count_leading_whitespaces s =
   done;
   !i
 
+let modern = true
+
 let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
     ~severity ?hint msg =
   let rewind_line text bol =
@@ -111,19 +113,29 @@ let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
   let e_cnum = loc_end.Lexing.pos_cnum in
   let start_col_byte = s_cnum - s_bol in
   let end_col_byte = e_cnum - loc_end.Lexing.pos_bol in
-  if start_line = end_line then
-    Format.eprintf "File \"%s\", line %d, characters %d-%d:@." filename
-      start_line start_col_byte end_col_byte
-  else
-    Format.eprintf
-      "File \"%s\", line %d, character %d to line %d, character %d:@." filename
-      start_line start_col_byte end_line end_col_byte;
-  output_error_no_loc ~theme ~severity ~hint msg;
+  if not modern then
+    if start_line = end_line then
+      Format.eprintf "File \"%s\", line %d, characters %d-%d:@." filename
+        start_line start_col_byte end_col_byte
+    else
+      Format.eprintf
+        "File \"%s\", line %d, character %d to line %d, character %d:@."
+        filename start_line start_col_byte end_line end_col_byte;
+  output_error_no_loc ~theme ~severity ~hint:None msg;
   let context_lines = 2 in
   let total_lines = end_line - start_line + 1 in
   let should_truncate = total_lines > (context_lines * 2) + 1 in
   let gutter_width = String.length (string_of_int end_line) in
   let gutter_width = max 1 gutter_width in
+  let gutter_padding = String.make gutter_width ' ' in
+  if modern then
+    Format.eprintf "%a %a@."
+      (with_style theme.line_numbers (fun f () ->
+           Format.fprintf f "%s──➤" gutter_padding))
+      ()
+      (fun f () ->
+        Format.fprintf f " %s:%d:%d" filename start_line (start_col_byte + 1))
+      ();
   let first_printed_line = max 1 (start_line - 1) in
   let curr_pos =
     ref
@@ -140,7 +152,6 @@ let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
       () contents ()
   in
   let print_string s f () = Format.fprintf f "%s" s in
-  let gutter_padding = String.make gutter_width ' ' in
   let print_underline ?at_end col len =
     let code_padding = String.make col ' ' in
     let underline = String.make len '^' in
@@ -189,7 +200,8 @@ let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
          print_underline ~at_end:true n (Unicode.terminal_width err_part - n));
       curr_pos := next_eol + 1;
       incr current_line
-  done
+  done;
+  print_hint ~theme hint
 
 let output_error ~theme ~source ~location:{ Ast.loc_start; loc_end } ~severity
     ?hint msg =

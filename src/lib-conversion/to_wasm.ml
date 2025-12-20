@@ -597,7 +597,7 @@ let rec instruction ret ctx i : location Text.instr list =
       | _ ->
           let opcode = binop i op operand_type in
           folded loc opcode (code_a @ code_b))
-  | UnOp (Neg, ({ desc = Int n; _ } as a)) ->
+  | UnOp (Neg, ({ desc = Int n | Float n; _ } as a)) ->
       let n = "-" ^ n in
       folded loc
         (Const
