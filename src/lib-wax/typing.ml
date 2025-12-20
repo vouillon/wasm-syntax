@@ -12,7 +12,7 @@ TODO:
 - desugar by default
 - handle double casts: i31 then i32_s
 - utf-16 string / js strings
-- suggestion for unbound values
+- suggestion for unknown keywords 
 
 Optimizations
 - move lets at more appropriate places
@@ -129,82 +129,112 @@ module Error = struct
   let print_name f x = Format.fprintf f "'%s'" x.desc
 
   let empty_stack context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "The stack is empty.")
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () -> Format.fprintf f "The stack is empty.")
+      ()
 
   let non_empty_stack context ~location output_stack =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Some values remain on the stack:%a" output_stack ())
+      ()
 
   let expected_func_type context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "Expected function type.")
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () -> Format.fprintf f "Expected function type.")
+      ()
 
   let expected_struct_type context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "Expected struct type.")
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () -> Format.fprintf f "Expected struct type.")
+      ()
 
   let expected_array_type context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "Expected array type.")
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () -> Format.fprintf f "Expected array type.")
+      ()
 
   let _type_mismatch context ~location ty' ty =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Expecting type@ @[<2>%a@]@ but got type@ @[<2>%a@]."
           output_inferred_type ty output_inferred_type ty')
+      ()
 
   let not_an_expression context ~location n =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "An expression is expected here. This instruction returns %d values."
           n)
+      ()
 
   let instruction_type_mismatch context ~location ty ty' =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "This instruction has type@ @[<2>%a@]@ but is expected to have type@ \
            @[<2>%a@]."
           output_inferred_type ty output_inferred_type ty')
+      ()
 
   let select_type_mismatch context ~location ty1 ty2 =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "The two branches of the select does not have a common supertype. \
            There types are respectively@ @[<2>%a@]@ and@ @[<2>%a@]."
           output_inferred_type ty1 output_inferred_type ty2)
+      ()
 
   let name_already_bound context ~location kind x =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "A %s named %a is already bound." kind print_name x)
+      ()
 
   let unbound_name context ~location kind x =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "The %s %a is not bound." kind print_name x)
+      ()
 
   let before_hole context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "This expression occurs before a hole '_'.")
+      ()
 
   let unsupported_tuple_type context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Tuple types are not supported yet.")
+      ()
 
   let duplicated_field context ~location x =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Several fields have the same name %a." print_name x)
+      ()
 
   let duplicated_parameter context ~location x =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Several parameters have the same name %a." print_name
           x)
+      ()
 
   let constant_expression_required context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Only constant expressions are allowed here.")
+      ()
 
   let constant_global_required context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Only accessing a constant global is allowed here.")
+      ()
 end
 
 module StringSet = Set.Make (String)

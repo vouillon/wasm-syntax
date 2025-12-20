@@ -68,56 +68,72 @@ let print_text f s =
 module Error = struct
   open Utils
 
-  let did_you_mean f lst =
+  let did_you_mean lst =
     match List.rev lst with
-    | [] -> ()
+    | [] -> None
     | last :: rest ->
         let rest = List.rev rest in
         let pp f = Format.fprintf f "%s" in
-        Format.fprintf f "@.@[<2>Hint:@ Did@ you@ mean@ %a%s%a?@]"
-          (Format.pp_print_list ~pp_sep:(fun f () -> Format.fprintf f ",@ ") pp)
-          rest
-          (if rest = [] then "" else " or ")
-          pp last
+        Some
+          (fun f () ->
+            Format.fprintf f "Did@ you@ mean@ %a%s%a?"
+              (Format.pp_print_list
+                 ~pp_sep:(fun f () -> Format.fprintf f ",@ ")
+                 pp)
+              rest
+              (if rest = [] then "" else " or ")
+              pp last)
 
   let unbound_label context ~location id lst =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "The label %a is not bound.%a" print_index id
-          did_you_mean lst)
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
+        Format.fprintf f "The label %a is not bound." print_index id)
+      ?hint:(did_you_mean lst) ()
 
   let unbound_index context ~location kind id lst =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "The %s index %a is not bound.%a" kind print_index id
-          did_you_mean lst)
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
+        Format.fprintf f "The %s index %a is not bound." kind print_index id)
+      ?hint:(did_you_mean lst) ()
 
   let packed_array_access context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "This instruction cannot be used on packed arrays. Use array.get_s \
            or array.get_u to specify sign extension.")
+      ()
 
   let unpacked_array_access context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "This instruction is only valid for packed arrays. Use array.get.")
+      ()
 
   let packed_struct_access context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "This instruction cannot be used on packed fields. Use struct.get_s \
            or struct.get_u to specify sign extension.")
+      ()
 
   let unpacked_struct_access context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "This instruction is only valid for packed fields. Use struct.get.")
+      ()
 
   let instruction_type_mismatch context ~location ty' ty =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "This instruction is expected to have type@ @[<2>%a@]@ but has type@ \
            @[<2>%a@]"
           print_valtype ty print_valtype ty')
+      ()
 
   let expected_ref_type context ~location ~src_loc ty =
     match src_loc with
@@ -126,6 +142,7 @@ module Error = struct
           ~message:(fun f () ->
             Format.fprintf f "Expected reference type but got type@ @[<2>%a@]."
               print_valtype ty)
+          ()
     | Some location ->
         Diagnostic.report context ~location ~severity:Error
           ~message:(fun f () ->
@@ -133,131 +150,183 @@ module Error = struct
               "This instruction should return a reference type but has type@ \
                @[<2>%a@]."
               print_valtype ty)
+          ()
 
   let table_type_mismatch context ~location idx ty =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "The table %a@ %a@ @[%a@]." print_index idx print_text
           "should contain functions but its elements have type" print_valtype ty)
+      ()
 
   let type_mismatch context ~location ty' ty =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Expecting type@ @[<2>%a@]@ but got type@ @[<2>%a@]."
           print_valtype ty print_valtype ty')
+      ()
 
   let br_cast_type_mismatch context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "The first type must be a supertype of the seconde one.")
+      ()
 
   let select_type_mismatch context ~location ty1 ty2 =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "Both branch of a select should have the same type.@ Here, they have \
            type@ @[<2>%a@]@ and@ @[<2>%a@]."
           print_valtype ty1 print_valtype ty2)
+      ()
 
   let empty_stack context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
-        Format.fprintf f "The stack is empty.")
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () -> Format.fprintf f "The stack is empty.")
+      ()
 
   let non_empty_stack context ~location output_stack =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Some values remain on the stack:%a" output_stack ())
+      ()
 
   let branch_parameter_count_mismatch context ~location label len label' len' =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "The default branch target@ %a@ expects@ %d@ parameters, while \
            branch target@ %a@ expects@ %d@ parameters."
           print_index label len print_index label' len')
+      ()
 
   let memory_offset_too_large context ~location max_offset =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "The memory offset should be less than 0x%Lx."
           (Uint64.to_int64 max_offset))
+      ()
 
   let memory_align_too_large context ~location natural =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "The memory alignment is larger than the natural alignment %d."
           natural)
+      ()
 
   let bad_memory_align context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "The memory alignment should be a power of two.")
+      ()
 
   let invalid_lane_index context ~location max_lane =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "The lane index should be less than %d." max_lane)
+      ()
 
   let inline_function_type_mismatch context ~location _ =
     (*ZZZ print expected type *)
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "The inline function type does not match the type definition.")
+      ()
 
   let constant_expression_required context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Only constant expressions are allowed here.")
+      ()
 
   let immutable_global context ~location idx =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "The global %a should be mutable." print_index idx)
+      ()
 
   let limit_too_large context ~location kind max =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "The %s size it too large. It should be less than 0x%Lx." kind
           (Uint64.to_int64 max))
+      ()
 
   let limit_mismatch context ~location kind =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "The %s maximum size should be larger than the minimal size." kind)
+      ()
 
   let duplicated_export context ~location name =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "There is already an export of name \"%a\"."
           print_string name)
+      ()
 
   let import_after_definition context ~location kind =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "This imports is after a %s definition." kind)
+      ()
 
   let supertype_mismatch context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "The supertype is not of the same kind as this type.")
+      ()
 
   let non_nullable_table_type context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f
           "The type of the elements of this table must be nullable.")
+      ()
 
   let uninitialized_local context ~location idx =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "The local variable %a has not been initialized."
           print_index idx)
+      ()
 
   let index_already_bound context ~location kind index =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "The %s index %a is already bound." kind print_ident
           index.Ast.desc)
+      ()
 
   let expected_func_type context ~location idx =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Type %a should be a function type." print_index idx)
+      ()
 
   let expected_struct_type context ~location idx =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Type %a should be a struct type." print_index idx)
+      ()
 
   let expected_array_type context ~location idx =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Type %a should be an array type." print_index idx)
+      ()
 
   let unsupported_tuple_type context ~location =
-    Diagnostic.report context ~location ~severity:Error ~message:(fun f () ->
+    Diagnostic.report context ~location ~severity:Error
+      ~message:(fun f () ->
         Format.fprintf f "Tuple types are not supported yet.")
+      ()
 end
 
 let print_instr f i = Utils.Printer.run f (fun p -> Output.instr p i)

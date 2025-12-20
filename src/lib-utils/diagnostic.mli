@@ -7,7 +7,9 @@ val report :
   context ->
   location:Ast.location ->
   severity:severity ->
+  ?hint:(Format.formatter -> unit -> unit) ->
   message:(Format.formatter -> unit -> unit) ->
+  unit ->
   unit
 
 type theme
@@ -17,6 +19,7 @@ val output_error_with_source :
   source:string ->
   location:Ast.location ->
   severity:severity ->
+  ?hint:(Format.formatter -> unit -> unit) ->
   (Format.formatter -> unit -> unit) ->
   unit
 

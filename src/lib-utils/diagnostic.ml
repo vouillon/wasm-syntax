@@ -1,6 +1,7 @@
 type theme = {
   error_header : string;
   warning_header : string;
+  hint_header : string;
   error_label : string;
   warning_label : string;
   line_numbers : string;
@@ -13,6 +14,7 @@ let get_theme ?(color = Colors.Auto) () =
     {
       error_header = Ansi.bold ^ Ansi.high_red;
       warning_header = Ansi.bold ^ Ansi.high_yellow;
+      hint_header = Ansi.bold ^ Ansi.cyan;
       error_label = Ansi.red;
       warning_label = Ansi.yellow;
       line_numbers = Ansi.cyan;
@@ -21,6 +23,7 @@ let get_theme ?(color = Colors.Auto) () =
     {
       error_header = "";
       warning_header = "";
+      hint_header = "";
       error_label = "";
       warning_label = "";
       line_numbers = "";
@@ -37,19 +40,29 @@ type t = {
   location : Ast.location;
   severity : severity;
   message : Format.formatter -> unit -> unit;
+  hint : (Format.formatter -> unit -> unit) option;
 }
 
-let output_error_no_loc ~theme ~severity msg =
+let print_hint ~theme hint =
+  match hint with
+  | None -> ()
+  | Some pp ->
+      Format.eprintf "@[<2>%a:@ %a@]@."
+        (with_style theme.hint_header (fun f () -> Format.fprintf f "Hint"))
+        () pp ()
+
+let output_error_no_loc ~theme ~severity ~hint msg =
   Format.eprintf "@[<2>%a:@ %a@]@."
     (match severity with
     | Error ->
         with_style theme.error_header (fun f () -> Format.fprintf f "Error")
     | Warning ->
         with_style theme.warning_header (fun f () -> Format.fprintf f "Warning"))
-    () msg ()
+    () msg ();
+  print_hint ~theme hint
 
 let output_error_no_source ~theme ~location:{ Ast.loc_start; loc_end } ~severity
-    msg =
+    ?hint msg =
   let start_line = loc_start.Lexing.pos_lnum in
   let end_line = loc_end.Lexing.pos_lnum in
   let filename = loc_start.Lexing.pos_fname in
@@ -66,7 +79,7 @@ let output_error_no_source ~theme ~location:{ Ast.loc_start; loc_end } ~severity
     Format.eprintf
       "File \"%s\", line %d, character %d to line %d, character %d:@." filename
       start_line start_col end_line end_col;
-  output_error_no_loc ~theme ~severity msg
+  output_error_no_loc ~theme ~severity ~hint msg
 
 let count_leading_whitespaces s =
   let i = ref 0 in
@@ -76,7 +89,7 @@ let count_leading_whitespaces s =
   !i
 
 let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
-    ~severity msg =
+    ~severity ?hint msg =
   let rewind_line text bol =
     if bol < 2 then 0
     else try String.rindex_from text (bol - 2) '\n' + 1 with Not_found -> 0
@@ -105,7 +118,7 @@ let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
     Format.eprintf
       "File \"%s\", line %d, character %d to line %d, character %d:@." filename
       start_line start_col_byte end_line end_col_byte;
-  output_error_no_loc ~theme ~severity msg;
+  output_error_no_loc ~theme ~severity ~hint msg;
   let context_lines = 2 in
   let total_lines = end_line - start_line + 1 in
   let should_truncate = total_lines > (context_lines * 2) + 1 in
@@ -179,16 +192,17 @@ let output_error_with_source ~theme ~source ~location:{ Ast.loc_start; loc_end }
   done
 
 let output_error ~theme ~source ~location:{ Ast.loc_start; loc_end } ~severity
-    msg =
-  if loc_start = Lexing.dummy_pos then output_error_no_loc ~theme ~severity msg
+    ?hint msg =
+  if loc_start = Lexing.dummy_pos then
+    output_error_no_loc ~theme ~severity ~hint msg
   else
     match source with
     | None ->
         output_error_no_source ~theme ~location:{ Ast.loc_start; loc_end }
-          ~severity msg
+          ~severity ?hint msg
     | Some source ->
         output_error_with_source ~theme ~source
-          ~location:{ Ast.loc_start; loc_end } ~severity msg
+          ~location:{ Ast.loc_start; loc_end } ~severity ?hint msg
 
 type context = {
   max : int;
@@ -204,20 +218,20 @@ let make ?color ~source () =
 let output_errors context =
   if not (Queue.is_empty context.queue) then (
     Queue.iter
-      (fun { location; severity; message } ->
+      (fun { location; severity; hint; message } ->
         output_error ~theme:context.theme ~source:context.source ~location
-          ~severity message)
+          ~severity ?hint message)
       context.queue;
     Queue.clear context.queue;
     exit 128)
 
-let report context ~location ~severity ~message =
+let report context ~location ~severity ?hint ~message () =
   match severity with
   | Warning ->
       output_error ~theme:context.theme ~source:context.source ~location
-        ~severity message
+        ~severity ?hint message
   | Error ->
-      Queue.push { location; severity; message } context.queue;
+      Queue.push { location; severity; message; hint } context.queue;
       if Queue.length context.queue = context.max then output_errors context
 
 let run ?color ~source f =
