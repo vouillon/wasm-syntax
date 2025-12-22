@@ -71,7 +71,8 @@
 %token TRY CATCH
 %token DISPATCH
 
-%on_error_reduce statement instruction plaininstr separated_nonempty_list(COMMA,structure_field) list(module_field) separated_nonempty_list(COMMA,value_type) block_type separated_nonempty_list(COMMA,function_parameter) list(label) list(attribute) list(typedef) list(legacy_catch) separated_nonempty_list(COMMA,catch) separated_nonempty_list(COMMA,let_pattern) blockinstr delimited_instruction_list loption(separated_nonempty_list(COMMA,catch))
+%on_error_reduce statement plaininstr separated_nonempty_list(",",structure_type_field) list(module_field) separated_nonempty_list(",",value_type) block_type separated_nonempty_list(",",function_parameter) list(label) list(attribute) list(typedef) list(legacy_catch) separated_nonempty_list(",",catch) separated_nonempty_list(",",let_pattern) blockinstr delimited_instruction_list loption(separated_nonempty_list(",",catch)) separated_nonempty_list(",",instruction) let_pattern structure_field separated_nonempty_list(",",structure_field)
+
 
 %nonassoc prec_ident (* {a|...} *) prec_block
 %right prec_branch
@@ -258,11 +259,11 @@ field_type:
 field_name:
 | i = ident { i }
 
-structure_field:
+structure_type_field:
 | x = field_name ":" t = field_type { (x, t) }
 
 structtype:
-| "{" l = separated_list(",", structure_field) "}"
+| "{" l = separated_list(",", structure_type_field) "}"
   { Array.of_list l }
 
 arraytype:
@@ -353,6 +354,9 @@ legacy_catch_all:
 %inline block:
 | label = block_label "{" l = delimited_instruction_list "}" { (label, l) }
 
+structure_field:
+| y = field_name ":" i = instruction { (y, i) }
+
 blockinstr:
 | b = block
   { let (label, l) = b in with_loc $sloc (Block{label; typ = blocktype None; block = l}) }
@@ -393,21 +397,21 @@ plaininstr:
 | f = FLOAT { with_loc $sloc (Float f) }
 | INF { with_loc $sloc (Float "inf") }
 | NAN { with_loc $sloc (Float "nan") }
-| "{" x = ident "|" l = separated_list(",", y = field_name ":" i = instruction { (y, i) }) "}"
+| "{" x = ident "|" l = separated_list(",", structure_field) "}"
   { with_loc $sloc (Struct (Some x, l)) }
-| "{" l = separated_nonempty_list(",", y = field_name ":" i = instruction { (y, i) }) "}"
+| "{" l = separated_nonempty_list(",", structure_field) "}"
   { with_loc $sloc (Struct (None, l)) }
 | "{" x = ident "|" ".." "}"
   { with_loc $sloc (StructDefault (Some x)) }
 | "{" ".." "}"
   { with_loc $sloc (StructDefault (None)) }
-| "[" l = separated_list(",", i = instruction { i }) "]"
+| "[" l = separated_list(",", instruction) "]"
   { with_loc $sloc (ArrayFixed (None, l)) }
 | "[" i1 = instruction ";" i2 = instruction "]"
   { with_loc $sloc (Array (None, i1, i2)) }
 | "[" ".." ";" i = instruction "]"
   { with_loc $sloc (ArrayDefault (None, i)) }
-| "[" t = ident "|" l = separated_list(",", i = instruction { i }) "]"
+| "[" t = ident "|" l = separated_list(",", instruction) "]"
   { with_loc $sloc (ArrayFixed (Some t, l)) }
 | "[" t = ident "|" i1 = instruction ";" i2 = instruction "]"
   { with_loc $sloc (Array (Some t, i1, i2)) }
