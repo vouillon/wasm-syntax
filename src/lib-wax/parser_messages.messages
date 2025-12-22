@@ -149,7 +149,7 @@ parse: TYPE IDENT EQUAL LBRACE UNREACHABLE
 ## LBRACE
 ##
 
-Expecting '}', or a structure field.
+Expecting '}', or a structure type field.
 <1>This '{' might be unmatched.
 
 parse: TYPE IDENT EQUAL LBRACE IDENT UNREACHABLE
@@ -206,7 +206,7 @@ parse: TYPE IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 ## structure_type_field COMMA
 ##
 
-Expecting a structure field.
+Expecting a structure type field.
 
 parse: TYPE IDENT EQUAL FN UNREACHABLE
 ##
@@ -393,7 +393,7 @@ parse: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA UNREACHABLE
 ## structure_field COMMA
 ##
 
-Expecting a field name.
+Expecting a structure field.
 
 parse: LET IDENT EQUAL LBRACE IDENT COLON IDENT COMMA IDENT UNREACHABLE
 ##
@@ -1017,7 +1017,8 @@ parse: FN IDENT LBRACE LET LPAREN IDENT UNREACHABLE
 ## In state 150, spurious reduction of production loption(separated_nonempty_list(COMMA,let_pattern)) -> separated_nonempty_list(COMMA,let_pattern)
 ##
 
-Expecting ')', ',', or ':'.
+Expecting ')'.
+<2>This '(' might be unmatched.
 
 parse: FN IDENT LBRACE LET LPAREN IDENT COLON UNREACHABLE
 ##
@@ -1362,7 +1363,8 @@ parse: CONST IDENT EQUAL CHAR LPAREN CHAR UNREACHABLE
 ## In state 189, spurious reduction of production loption(separated_nonempty_list(COMMA,instruction)) -> separated_nonempty_list(COMMA,instruction)
 ##
 
-Syntax error
+Expecting ')'.
+<2>This '(' might be unmatched.
 
 parse: CONST IDENT EQUAL CHAR STAR UNREACHABLE
 ##
@@ -3207,7 +3209,7 @@ parse: CONST IDENT EQUAL LBRACE IDENT PIPE UNREACHABLE
 ## LBRACE IDENT PIPE
 ##
 
-Expecting '..', '}', or a field name.
+Expecting '..', '}', or a structure field.
 <3>This '{' might be unmatched.
 
 parse: CONST IDENT EQUAL LBRACE IDENT PIPE DOTDOT UNREACHABLE
@@ -3253,7 +3255,8 @@ parse: CONST IDENT EQUAL LBRACE IDENT PIPE IDENT COLON CHAR UNREACHABLE
 ## In state 359, spurious reduction of production loption(separated_nonempty_list(COMMA,structure_field)) -> separated_nonempty_list(COMMA,structure_field)
 ##
 
-Syntax error
+Expecting '}'.
+<4>This '{' might be unmatched.
 
 parse: CONST IDENT EQUAL LBRACE DOTDOT UNREACHABLE
 ##
@@ -3285,7 +3288,8 @@ parse: CONST IDENT EQUAL LBRACE IDENT COLON CHAR UNREACHABLE
 ## In state 353, spurious reduction of production separated_nonempty_list(COMMA,structure_field) -> structure_field
 ##
 
-Syntax error
+Expecting '}'.
+<2>This '{' might be unmatched.
 
 parse: CONST IDENT EQUAL LBRACE STAR
 ##
@@ -3411,7 +3415,7 @@ parse: CONST IDENT EQUAL LBRACKET IDENT PIPE CHAR UNREACHABLE
 ## In state 189, spurious reduction of production loption(separated_nonempty_list(COMMA,instruction)) -> separated_nonempty_list(COMMA,instruction)
 ##
 
-Syntax error
+Expecting ']'.
 <4>This '[' might be unmatched.
 
 parse: CONST IDENT EQUAL LBRACKET IDENT PIPE CHAR SEMI UNREACHABLE
@@ -3567,7 +3571,7 @@ parse: CONST IDENT EQUAL LBRACKET IDENT UNREACHABLE
 ## In state 189, spurious reduction of production loption(separated_nonempty_list(COMMA,instruction)) -> separated_nonempty_list(COMMA,instruction)
 ##
 
-Syntax error
+Expecting ']'.
 <2>This '[' might be unmatched.
 
 parse: CONST IDENT EQUAL LBRACKET IDENT SEMI UNREACHABLE
@@ -4814,7 +4818,8 @@ parse: FN IDENT LBRACE BECOME CHAR LPAREN CHAR UNREACHABLE
 ## In state 189, spurious reduction of production loption(separated_nonempty_list(COMMA,instruction)) -> separated_nonempty_list(COMMA,instruction)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting ')'.
+<2>This '(' might be unmatched.
 
 parse: FN IDENT LBRACE BECOME CHAR LPAREN RPAREN UNREACHABLE
 ##
@@ -4827,7 +4832,7 @@ parse: FN IDENT LBRACE BECOME CHAR LPAREN RPAREN UNREACHABLE
 ## BECOME instruction LPAREN loption(separated_nonempty_list(COMMA,instruction)) RPAREN
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Syntax error
 
 parse: FN IDENT LBRACE CHAR UNREACHABLE
 ##
@@ -4845,7 +4850,7 @@ parse: FN IDENT LBRACE CHAR UNREACHABLE
 ## In state 313, spurious reduction of production statement -> plaininstr
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting ';'.
 
 parse: CONST IDENT EQUAL LPAREN CHAR COMMA CHAR UNREACHABLE
 ##
@@ -4864,4 +4869,6 @@ parse: CONST IDENT EQUAL LPAREN CHAR COMMA CHAR UNREACHABLE
 ## In state 189, spurious reduction of production loption(separated_nonempty_list(COMMA,instruction)) -> separated_nonempty_list(COMMA,instruction)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expecting ')'.
+<4>This '(' might be unmatched.
+
