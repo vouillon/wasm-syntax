@@ -509,7 +509,9 @@ statement:
 
 delimited_instruction_list:
 | { [] }
+(*
 | i = statement { [i] }
+*)
 | i = blockinstr l = delimited_instruction_list { i :: l }
 | i = statement ";" l = delimited_instruction_list { i :: l }
 
