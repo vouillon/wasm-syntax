@@ -224,7 +224,8 @@ let subtype pp (nm, { typ; supertype; final }) =
             space pp ();
             punctuation pp "{"));
       space pp ();
-      comptype pp typ)
+      comptype pp typ;
+      punctuation pp ";")
 
 let rectype pp t =
   match Array.to_list t with
@@ -951,7 +952,9 @@ let rec modulefield pp field =
               punctuation pp ";"))
   | Tag { name; typ; sign; attributes = a } ->
       print_attr_prefix pp a (fun () ->
-          box pp (fun () -> fundecl ~tag:true pp (name, typ, sign)))
+          box pp (fun () ->
+              fundecl ~tag:true pp (name, typ, sign);
+              punctuation pp ";"))
   | GlobalDecl { name; mut; typ; attributes = a } ->
       print_attr_prefix pp a (fun () ->
           box pp ~indent:indent_level (fun () ->
@@ -960,7 +963,8 @@ let rec modulefield pp field =
               identifier pp name.desc;
               punctuation pp ":";
               space pp ();
-              valtype pp typ))
+              valtype pp typ;
+              punctuation pp ";"))
   | Group { attributes; fields } ->
       print_attr_prefix pp attributes (fun () ->
           hvbox pp (fun () ->

@@ -1,37 +1,37 @@
 #[import = ("hash", "caml_string_hash")]
-fn caml_string_hash(&eq, &eq) -> &eq
+fn caml_string_hash(&eq, &eq) -> &eq;
 #[import = ("string", "caml_string_equal")]
-fn caml_string_equal(&eq, &eq) -> &eq
+fn caml_string_equal(&eq, &eq) -> &eq;
 #[import = ("jslib", "caml_string_of_jsstring")]
-fn caml_string_of_jsstring(&eq) -> &eq
+fn caml_string_of_jsstring(&eq) -> &eq;
 #[import = ("jslib", "caml_jsstring_of_string")]
-fn caml_jsstring_of_string(&eq) -> &eq
+fn caml_jsstring_of_string(&eq) -> &eq;
 #[import = ("jslib", "wrap")]
-fn wrap(&?any) -> &eq
+fn wrap(&?any) -> &eq;
 #[import = ("jslib", "unwrap")]
-fn unwrap(&eq) -> &?any
+fn unwrap(&eq) -> &?any;
 #[import = ("obj", "caml_callback_1")]
-fn caml_callback_1(&eq, &eq) -> &eq
+fn caml_callback_1(&eq, &eq) -> &eq;
 #[import = ("obj", "caml_callback_2")]
-fn caml_callback_2(&eq, &eq, &eq) -> &eq
+fn caml_callback_2(&eq, &eq, &eq) -> &eq;
 #[import = ("bindings", "write")]
-fn write(i32, &?any)
+fn write(i32, &?any);
 #[import = ("string", "caml_string_concat")]
-fn caml_string_concat(&eq, &eq) -> &eq
+fn caml_string_concat(&eq, &eq) -> &eq;
 #[import = ("printexc", "caml_format_exception")]
-fn caml_format_exception(&eq) -> &eq
+fn caml_format_exception(&eq) -> &eq;
 #[import = ("sys", "ocaml_exit")]
-tag ocaml_exit(i32)
+tag ocaml_exit(i32);
 #[import = ("fail", "ocaml_exception")]
-tag ocaml_exception(&eq)
+tag ocaml_exception(&eq);
 #[import = ("bindings", "exit")]
-fn exit(i32)
+fn exit(i32);
 #[import = ("bindings", "throw")]
-fn throw_2(&?extern)
-type block = [mut &eq]
-type string = [mut i8]
-type assoc = { f: &string, f_2: mut &eq, f_3: mut &?assoc }
-type assoc_array = [mut &?assoc]
+fn throw_2(&?extern);
+type block = [mut &eq];
+type string = [mut i8];
+type assoc = { f: &string, f_2: mut &eq, f_3: mut &?assoc };
+type assoc_array = [mut &?assoc];
 const Named_value_size: i32 = 13;
 const named_value_table: &assoc_array =
     [assoc_array|null as &?assoc; Named_value_size];
@@ -112,7 +112,7 @@ fn caml_register_global(x: &eq, v: &eq, x_2: &eq) -> &eq {
 }
 #[export = "caml_get_global_data"]
 fn caml_get_global_data(x: &eq) -> &eq { caml_global_data; }
-type func_2 = fn() -> &eq
+type func_2 = fn() -> &eq;
 let uncaught_exception: &?extern = null;
 fn reraise_exception() -> &eq { throw_2(uncaught_exception); 0 as &i31; }
 #[export = "caml_handle_uncaught_exception"]

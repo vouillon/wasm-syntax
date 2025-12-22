@@ -1,43 +1,43 @@
 #[import = ("jslib", "wrap")]
-fn wrap(&?any) -> &eq
+fn wrap(&?any) -> &eq;
 #[import = ("jslib", "unwrap")]
-fn unwrap(&eq) -> &?any
+fn unwrap(&eq) -> &?any;
 #[import = ("jslib", "caml_js_get")]
-fn caml_js_get(&eq, &eq) -> &eq
+fn caml_js_get(&eq, &eq) -> &eq;
 #[import = ("bigarray", "caml_ba_to_typed_array")]
 #[export = "bigstring_to_typed_array"]
-fn caml_ba_to_typed_array(&eq) -> &eq
+fn caml_ba_to_typed_array(&eq) -> &eq;
 #[import = ("bigarray", "caml_ba_from_typed_array")]
-fn caml_ba_from_typed_array(&eq) -> &eq
+fn caml_ba_from_typed_array(&eq) -> &eq;
 #[import = ("bigarray", "caml_ba_sub")]
-fn caml_ba_sub(&eq, &eq, &eq) -> &eq
+fn caml_ba_sub(&eq, &eq, &eq) -> &eq;
 #[import = ("bigarray", "caml_ba_fill")]
-fn caml_ba_fill(&eq, &eq) -> &eq
+fn caml_ba_fill(&eq, &eq) -> &eq;
 #[import = ("bigarray", "caml_ba_get_data")]
-fn caml_ba_get_data(&eq) -> &extern
+fn caml_ba_get_data(&eq) -> &extern;
 #[import = ("bindings", "ta_create")]
-fn ta_create(i32, &?any) -> &?any
+fn ta_create(i32, &?any) -> &?any;
 #[import = ("bindings", "ta_get_ui8")]
-fn ta_get_ui8(&extern, i32) -> i32
+fn ta_get_ui8(&extern, i32) -> i32;
 #[import = ("bindings", "ta_get32_ui8")]
-fn ta_get32_ui8(&extern, i32) -> i32
+fn ta_get32_ui8(&extern, i32) -> i32;
 #[import = ("bindings", "ta_set_ui8")]
-fn ta_set_ui8(&extern, i32, &i31)
+fn ta_set_ui8(&extern, i32, &i31);
 #[import = ("bindings", "ta_subarray")]
-fn ta_subarray(&extern, i32, i32) -> &extern
+fn ta_subarray(&extern, i32, i32) -> &extern;
 #[import = ("bindings", "ta_set")]
-fn ta_set(&extern, &extern, i32)
+fn ta_set(&extern, &extern, i32);
 #[import = ("bindings", "ta_length")]
-fn ta_length(&extern) -> i32
+fn ta_length(&extern) -> i32;
 #[import = ("bindings", "ta_bytes")]
-fn ta_bytes(&?any) -> &?any
+fn ta_bytes(&?any) -> &?any;
 #[import = ("bindings", "ta_blit_from_string")]
-fn ta_blit_from_string(&string, i32, &extern, i32, i32)
+fn ta_blit_from_string(&string, i32, &extern, i32, i32);
 #[import = ("bindings", "ta_blit_to_string")]
-fn ta_blit_to_string(&extern, i32, &string, i32, i32)
+fn ta_blit_to_string(&extern, i32, &string, i32, i32);
 #[import = ("hash", "caml_hash_mix_int")]
-fn caml_hash_mix_int(i32, i32) -> i32
-type string = [mut i8]
+fn caml_hash_mix_int(i32, i32) -> i32;
+type string = [mut i8];
 #[export = "caml_hash_mix_bigstring"]
 fn caml_hash_mix_bigstring(h: i32, b: &eq) -> i32 {
     let data: &extern;

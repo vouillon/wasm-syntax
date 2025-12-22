@@ -191,7 +191,7 @@ ZZZ
 %token INPUT
 %token OUTPUT
 
-%on_error_reduce nop
+%on_error_reduce nop plaininstr list(STRING) list(valtype) list(fieldtype) list(field) limits list(foldedinstr) list(typedef) list(idx) list(elemexpr) list(modulefield) nonempty_list(f64) list(const) nonempty_list(float_or_nan) nonempty_list(result_pat) list(result_pat) list(cmd) nonempty_list(modulefield)
 
 %parameter <Context : sig type t = Utils.Trivia.context val context : t end>
 

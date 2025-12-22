@@ -1,26 +1,26 @@
 #[import = ("obj", "abstract_tag")]
-const abstract_tag: i32
+const abstract_tag: i32;
 #[import = ("obj", "caml_obj_dup")]
-fn caml_obj_dup(&eq) -> &eq
+fn caml_obj_dup(&eq) -> &eq;
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(arg: &eq)
+fn caml_invalid_argument(arg: &eq);
 #[import = ("bindings", "weak_new")]
-fn weak_new(&eq) -> &?any
+fn weak_new(&eq) -> &?any;
 #[import = ("bindings", "weak_deref")]
-fn weak_deref(&?any) -> &?eq
+fn weak_deref(&?any) -> &?eq;
 #[import = ("bindings", "weak_map_new")]
-fn weak_map_new() -> &any
+fn weak_map_new() -> &any;
 #[import = ("bindings", "map_get")]
-fn map_get(&any, &eq) -> &?any
+fn map_get(&any, &eq) -> &?any;
 #[import = ("bindings", "map_set")]
-fn map_set(&any, &eq, &any)
+fn map_set(&any, &eq, &any);
 #[import = ("jslib", "unwrap")]
-fn unwrap(&eq) -> &?any
+fn unwrap(&eq) -> &?any;
 #[import = ("jslib", "wrap")]
-fn wrap(&?any) -> &eq
-type block = [mut &eq]
-type string = [mut i8]
-type js = { f: &?any }
+fn wrap(&?any) -> &eq;
+type block = [mut &eq];
+type string = [mut i8];
+type js = { f: &?any };
 const caml_ephe_data_offset: i32 = 2;
 const caml_ephe_key_offset: i32 = 3;
 const caml_ephe_none: &eq = [block|abstract_tag as &i31];

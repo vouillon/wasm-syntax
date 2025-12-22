@@ -1,22 +1,22 @@
 #[import = ("jslib", "wrap")]
-fn wrap(&?any) -> &eq
+fn wrap(&?any) -> &eq;
 #[import = ("jslib", "caml_string_of_jsstring")]
-fn caml_string_of_jsstring(&eq) -> &eq
+fn caml_string_of_jsstring(&eq) -> &eq;
 #[import = ("io", "caml_stderr")]
-let caml_stderr: &eq
+let caml_stderr: &eq;
 #[import = ("io", "caml_ml_open_descriptor_out")]
-fn caml_ml_open_descriptor_out(&eq) -> &eq
+fn caml_ml_open_descriptor_out(&eq) -> &eq;
 #[import = ("io", "caml_ml_output")]
-fn caml_ml_output(&eq, &eq, &eq, &eq) -> &eq
+fn caml_ml_output(&eq, &eq, &eq, &eq) -> &eq;
 #[import = ("io", "caml_ml_flush")]
-fn caml_ml_flush(&eq) -> &eq
+fn caml_ml_flush(&eq) -> &eq;
 #[import = ("ints", "caml_format_int")]
-fn caml_format_int(&eq, &eq) -> &eq
+fn caml_format_int(&eq, &eq) -> &eq;
 #[import = ("float", "caml_format_float")]
-fn caml_format_float(&eq, &eq) -> &eq
-type float = { f: f64 }
-type block = [mut &eq]
-type string = [mut i8]
+fn caml_format_float(&eq, &eq) -> &eq;
+type float = { f: f64 };
+type block = [mut &eq];
+type string = [mut i8];
 fn get(a: &eq, i: i32) -> i32 {
     let s: &string;
     s = a as &string;

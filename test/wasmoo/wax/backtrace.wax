@@ -1,7 +1,7 @@
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(&eq)
-type block = [mut &eq]
-type string = [mut i8]
+fn caml_invalid_argument(&eq);
+type block = [mut &eq];
+type string = [mut i8];
 #[export = "caml_get_exception_raw_backtrace"]
 fn caml_get_exception_raw_backtrace(x: &eq) -> &eq { [block|0 as &i31]; }
 #[export = "caml_backtrace_status"]

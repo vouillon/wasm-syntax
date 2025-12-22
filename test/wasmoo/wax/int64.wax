@@ -1,26 +1,26 @@
 #[import = ("ints", "parse_sign_and_base")]
-fn parse_sign_and_base(&string) -> (i32, i32, i32, i32)
+fn parse_sign_and_base(&string) -> (i32, i32, i32, i32);
 #[import = ("ints", "parse_digit")]
-fn parse_digit(i32) -> i32
+fn parse_digit(i32) -> i32;
 #[import = ("ints", "parse_int_format")]
-fn parse_int_format(&string) -> (i32, i32, i32, i32, i32)
+fn parse_int_format(&string) -> (i32, i32, i32, i32, i32);
 #[import = ("fail", "caml_failwith")]
-fn caml_failwith(&eq)
+fn caml_failwith(&eq);
 #[import = ("marshal", "caml_serialize_int_8")]
-fn caml_serialize_int_8(&eq, i64)
+fn caml_serialize_int_8(&eq, i64);
 #[import = ("marshal", "caml_deserialize_int_8")]
-fn caml_deserialize_int_8(&eq) -> i64
+fn caml_deserialize_int_8(&eq) -> i64;
 #[import = ("ints", "lowercase_hex_table")]
-const lowercase_hex_table: &chars
+const lowercase_hex_table: &chars;
 #[import = ("ints", "uppercase_hex_table")]
-const uppercase_hex_table: &chars
-type string = [mut i8]
-type compare = fn(&eq, &eq, i32) -> i32
-type hash = fn(&eq) -> i32
-type fixed_length = { bsize_32: i32, bsize_64: i32 }
-type serialize = fn(&eq, &eq) -> (i32, i32)
-type deserialize = fn(&eq) -> (&eq, i32)
-type dup = fn(&eq) -> &eq
+const uppercase_hex_table: &chars;
+type string = [mut i8];
+type compare = fn(&eq, &eq, i32) -> i32;
+type hash = fn(&eq) -> i32;
+type fixed_length = { bsize_32: i32, bsize_64: i32 };
+type serialize = fn(&eq, &eq) -> (i32, i32);
+type deserialize = fn(&eq) -> (&eq, i32);
+type dup = fn(&eq) -> &eq;
 type custom_operations = {
     id: &string,
     compare: &?compare,
@@ -30,8 +30,8 @@ type custom_operations = {
     serialize: &?serialize,
     deserialize: &?deserialize,
     dup: &?dup
-}
-type custom = open { f: &custom_operations }
+};
+type custom = open { f: &custom_operations };
 #[export = "int64_ops"]
 const int64_ops: &custom_operations =
     {custom_operations|
@@ -44,7 +44,7 @@ const int64_ops: &custom_operations =
         deserialize: int64_deserialize,
         dup: int64_dup
     };
-type int64: custom = { f: &custom_operations, f_2: i64 }
+type int64: custom = { f: &custom_operations, f_2: i64 };
 fn int64_cmp(v1: &eq, v2: &eq, x: i32) -> i32 {
     let i1: i64;
     let i2: i64;
@@ -153,7 +153,7 @@ fn format_int64_default(d: i64) -> &eq {
     if negative { s[0] = 45; }
     s;
 }
-type chars = [i8]
+type chars = [i8];
 #[export = "caml_int64_format"]
 fn caml_int64_format(x: &eq, x_2: &eq) -> &eq {
     let d: i64;

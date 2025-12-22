@@ -1,8 +1,8 @@
 #[import = ("fail", "caml_failwith")]
-fn caml_failwith(&eq)
+fn caml_failwith(&eq);
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(&eq)
-type string = [mut i8]
+fn caml_invalid_argument(&eq);
+type string = [mut i8];
 #[export = "caml_format_int"]
 fn caml_format_int(x: &eq, x_2: &eq) -> &eq {
     become format_int(x, x_2 as &i31 as i32_s, 1);
@@ -123,7 +123,7 @@ fn caml_bswap16(x: &eq) -> &eq {
     x_2 = x as &i31 as i32_s;
     ((x_2 & 0xFF) << 8 | x_2 >>u 8 & 0xFF) as &i31;
 }
-type chars = [i8]
+type chars = [i8];
 #[export = "lowercase_hex_table"]
 const lowercase_hex_table: &chars = chars#"0123456789abcdef";
 #[export = "uppercase_hex_table"]

@@ -1,8 +1,8 @@
 #[import = ("fail", "caml_bound_error")]
-fn caml_bound_error()
+fn caml_bound_error();
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(arg: &eq)
-type string = [mut i8]
+fn caml_invalid_argument(arg: &eq);
+type string = [mut i8];
 #[export = "caml_string_equal"]
 #[export = "caml_bytes_equal"]
 fn caml_string_equal(p1: &eq, p2: &eq) -> &eq {

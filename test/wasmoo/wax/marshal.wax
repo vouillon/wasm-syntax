@@ -1,35 +1,35 @@
 #[import = ("fail", "caml_failwith")]
-fn caml_failwith(&eq)
+fn caml_failwith(&eq);
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(&eq)
+fn caml_invalid_argument(&eq);
 #[import = ("fail", "caml_raise_end_of_file")]
-fn caml_raise_end_of_file()
+fn caml_raise_end_of_file();
 #[import = ("obj", "double_array_tag")]
-const double_array_tag: i32
+const double_array_tag: i32;
 #[import = ("string", "caml_string_concat")]
-fn caml_string_concat(&eq, &eq) -> &eq
+fn caml_string_concat(&eq, &eq) -> &eq;
 #[import = ("obj", "caml_is_closure")]
-fn caml_is_closure(&eq) -> i32
+fn caml_is_closure(&eq) -> i32;
 #[import = ("effect", "caml_is_continuation")]
-fn caml_is_continuation(&eq) -> i32
+fn caml_is_continuation(&eq) -> i32;
 #[import = ("bindings", "map_new")]
-fn map_new() -> &any
+fn map_new() -> &any;
 #[import = ("bindings", "map_get")]
-fn map_get(&any, &eq) -> &?i31
+fn map_get(&any, &eq) -> &?i31;
 #[import = ("bindings", "map_set")]
-fn map_set(&any, &eq, &i31)
+fn map_set(&any, &eq, &i31);
 #[import = ("io", "caml_really_putblock")]
-fn caml_really_putblock(&eq, &string, i32, i32)
+fn caml_really_putblock(&eq, &string, i32, i32);
 #[import = ("io", "caml_really_getblock")]
-fn caml_really_getblock(&eq, &string, i32, i32) -> i32
+fn caml_really_getblock(&eq, &string, i32, i32) -> i32;
 #[import = ("io", "caml_flush_if_unbuffered")]
-fn caml_flush_if_unbuffered(&eq)
+fn caml_flush_if_unbuffered(&eq);
 #[import = ("custom", "caml_init_custom_operations")]
-fn caml_init_custom_operations()
+fn caml_init_custom_operations();
 #[import = ("custom", "caml_find_custom_operations")]
-fn caml_find_custom_operations(&string) -> &?custom_operations
+fn caml_find_custom_operations(&string) -> &?custom_operations;
 #[import = ("version-dependent", "caml_marshal_header_size")]
-const caml_marshal_header_size: i32
+const caml_marshal_header_size: i32;
 const input_val_from_string: &string = string#"input_val_from_string";
 #[export = "caml_input_value_from_bytes"]
 #[export = "caml_input_value_from_string"]
@@ -70,17 +70,17 @@ fn caml_input_value(ch: &eq) -> &eq {
     s = get_intern_state(buf, 0);
     become intern_rec(s, h);
 }
-type block = [mut &eq]
-type string = [mut i8]
-type float = { f: f64 }
-type float_array = [mut f64]
-type js = { f: &?any }
-type compare = fn(&eq, &eq, i32) -> i32
-type hash = fn(&eq) -> i32
-type fixed_length = { bsize_32: i32, bsize_64: i32 }
-type serialize = fn(&eq, &eq) -> (i32, i32)
-type deserialize = fn(&eq) -> (&eq, i32)
-type dup = fn(&eq) -> &eq
+type block = [mut &eq];
+type string = [mut i8];
+type float = { f: f64 };
+type float_array = [mut f64];
+type js = { f: &?any };
+type compare = fn(&eq, &eq, i32) -> i32;
+type hash = fn(&eq) -> i32;
+type fixed_length = { bsize_32: i32, bsize_64: i32 };
+type serialize = fn(&eq, &eq) -> (i32, i32);
+type deserialize = fn(&eq) -> (&eq, i32);
+type dup = fn(&eq) -> &eq;
 type custom_operations = {
     id: &string,
     compare: &?compare,
@@ -90,8 +90,8 @@ type custom_operations = {
     serialize: &?serialize,
     deserialize: &?deserialize,
     dup: &?dup
-}
-type custom = open { f: &custom_operations }
+};
+type custom = open { f: &custom_operations };
 const Intext_magic_number_small: i32 = 0x8495A6BE;
 const Intext_magic_number_big: i32 = 0x8495A6BF;
 const PREFIX_SMALL_BLOCK: i32 = 0x80;
@@ -124,7 +124,7 @@ type intern_state = {
     pos: mut i32,
     obj_table: mut &?block,
     obj_counter: mut i32
-}
+};
 fn get_intern_state(src: &string, pos: i32) -> &intern_state {
     {intern_state|
         src: src,
@@ -277,7 +277,7 @@ fn register_object(s: &intern_state, v: &eq) {
         s.obj_counter = p + 1;
     }
 }
-type stack_item = { blk: &block, pos: mut i32, next: &?stack_item }
+type stack_item = { blk: &block, pos: mut i32, next: &?stack_item };
 fn intern_custom(s: &intern_state, code: i32) -> &eq {
     let ops: &custom_operations;
     let expected_size: i32;
@@ -544,7 +544,7 @@ fn bad_object(prim: &string) {
 fn bad_length(prim: &string) {
     caml_failwith(caml_string_concat(prim, string#"foo"));
 }
-type marshal_header = { data_len: i32, num_objects: i32 }
+type marshal_header = { data_len: i32, num_objects: i32 };
 fn parse_header(s: &intern_state, prim: &string) -> &marshal_header {
     let magic: i32;
     let data_len: i32;
@@ -569,7 +569,11 @@ fn caml_marshal_data_size(buf: &eq, ofs: &eq) -> &eq {
     if magic != Intext_magic_number_small { bad_object(string#"foo"); }
     (20 - caml_marshal_header_size + read32(s)) as &i31;
 }
-type output_block = { next: mut &?output_block, end: mut i32, data: &string }
+type output_block = {
+    next: mut &?output_block,
+    end: mut i32,
+    data: &string
+};
 type extern_state = {
     no_sharing: i32,
     user_provided_output: i32,
@@ -582,7 +586,7 @@ type extern_state = {
     limit: mut i32,
     output_first: &output_block,
     output_last: mut &output_block
-}
+};
 fn init_extern_state
 (flags: &eq, output: &output_block, pos: i32, user_provided_output: i32) ->
 &extern_state {

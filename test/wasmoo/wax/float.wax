@@ -1,25 +1,25 @@
 #[import = ("jslib", "unwrap")]
-fn unwrap(&eq) -> &?any
+fn unwrap(&eq) -> &?any;
 #[import = ("bindings", "format_float")]
-fn format_float(i32, i32, i32, f64) -> &?any
+fn format_float(i32, i32, i32, f64) -> &?any;
 #[import = ("bindings", "identity")]
-fn parse_float(&?any) -> f64
+fn parse_float(&?any) -> f64;
 #[import = ("Math", "exp")]
-fn exp(f64) -> f64
+fn exp(f64) -> f64;
 #[import = ("fail", "caml_failwith")]
-fn caml_failwith(&eq)
+fn caml_failwith(&eq);
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(&eq)
+fn caml_invalid_argument(&eq);
 #[import = ("ints", "lowercase_hex_table")]
-const lowercase_hex_table: &chars
+const lowercase_hex_table: &chars;
 #[import = ("jsstring", "jsstring_of_string")]
-fn jsstring_of_string(&string) -> &?any
+fn jsstring_of_string(&string) -> &?any;
 #[import = ("jsstring", "string_of_jsstring")]
-fn string_of_jsstring(&?any) -> &string
-type float = { f: f64 }
-type string = [mut i8]
-type block = [mut &eq]
-type chars = [i8]
+fn string_of_jsstring(&?any) -> &string;
+type float = { f: f64 };
+type string = [mut i8];
+type block = [mut &eq];
+type chars = [i8];
 const infinity: &chars = chars#"infinity";
 const nan_2: &chars = chars#"nan";
 #[export = "Double_val"]
