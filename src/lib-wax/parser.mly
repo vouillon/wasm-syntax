@@ -71,7 +71,7 @@
 %token TRY CATCH
 %token DISPATCH
 
-%on_error_reduce statement plaininstr separated_nonempty_list(",",structure_type_field) list(module_field) separated_nonempty_list(",",value_type) block_type separated_nonempty_list(",",function_parameter) list(label) list(attribute) list(typedef) list(legacy_catch) separated_nonempty_list(",",catch) separated_nonempty_list(",",let_pattern) blockinstr delimited_instruction_list loption(separated_nonempty_list(",",catch)) separated_nonempty_list(",",expression) let_pattern structure_field separated_nonempty_list(",",structure_field) constant_expression attribute_expression parenthesized_expression index_expression then_branch condition_expression length_expression optional_function_type
+%on_error_reduce statement plaininstr separated_nonempty_list(",",structure_type_field) list(module_field) separated_nonempty_list(",",value_type) block_type separated_nonempty_list(",",function_parameter) list(label) list(attribute) list(typedef) list(legacy_catch) separated_nonempty_list(",",catch) separated_nonempty_list(",",let_pattern) blockinstr statement_list loption(separated_nonempty_list(",",catch)) separated_nonempty_list(",",expression) let_pattern structure_field separated_nonempty_list(",",structure_field) constant_expression attribute_expression parenthesized_expression index_expression then_branch condition_expression length_expression optional_function_type structure_type result_type_ expression_list structure
 
 
 %nonassoc prec_ident (* {a|...} *) prec_block
@@ -237,11 +237,13 @@ cast_type:
 | functype { assert false }
 *)
 
+result_type_:
+| l = separated_nonempty_list(",", value_type) { l }
 
 result_type:
 | "(" ")" { [||] }
 | t = value_type { [|t|] }
-| "(" l = separated_nonempty_list(",", value_type) ")" { Array.of_list l }
+| "(" l = result_type_ ")" { Array.of_list l }
 
 function_type_definition:
 | FN s = function_type
@@ -262,9 +264,11 @@ field_name:
 structure_type_field:
 | x = field_name ":" t = field_type { (x, t) }
 
+structure_type:
+| l = separated_list(",", structure_type_field) { l }
+
 structtype:
-| "{" l = separated_list(",", structure_type_field) "}"
-  { Array.of_list l }
+| "{" l = structure_type "}" { Array.of_list l }
 
 arraytype:
 | "[" t = field_type "]" { t }
@@ -336,8 +340,11 @@ tag:
 
 %inline block_label: l = ioption(l = label ":" { l }) { l }
 
+parameter_types:
+| l = separated_list(",", value_type) { l }
+
 block_type:
-| "(" params = separated_list(",", value_type) ")"
+| "(" params = parameter_types ")"
   results = ioption("->" results = result_type {results})
   { {params = Array.of_list (List.map (fun t -> (None, t)) params);
      results = Option.value ~default:[||] results} }
@@ -350,34 +357,37 @@ catch:
 | "_" "&" "->" l = label { CatchAllRef l }
 
 legacy_catch:
-| t = ident "=>" "{" l = delimited_instruction_list "}" { (t, l) }
+| t = ident "=>" "{" l = statement_list "}" { (t, l) }
 
 legacy_catch_all:
-| "_" "=>"  "{" l = delimited_instruction_list "}" { l }
+| "_" "=>"  "{" l = statement_list "}" { l }
 
 %inline block:
-| label = block_label "{" l = delimited_instruction_list "}" { (label, l) }
+| label = block_label "{" l = statement_list "}" { (label, l) }
 
 structure_field:
 | y = field_name ":" i = expression { (y, i) }
 
+structure:
+| l = separated_list(",", structure_field) { l }
+
 blockinstr:
 | b = block
   { let (label, l) = b in with_loc $sloc (Block{label; typ = blocktype None; block = l}) }
-| label = block_label DO bt = option(block_type) "{" l = delimited_instruction_list "}"
+| label = block_label DO bt = option(block_type) "{" l = statement_list "}"
   { with_loc $sloc (Block{label; typ = blocktype bt; block = l}) }
 | label = block_label LOOP bt = option(block_type)
-  "{" l = delimited_instruction_list "}"
+  "{" l = statement_list "}"
   { with_loc $sloc (Loop{label; typ = blocktype bt; block = l}) }
 | label = block_label IF e = condition_expression
   bt = option("=>" bt = block_type { bt })
-  "{" l1 = delimited_instruction_list "}"
-  l2 = ioption(ELSE  "{" l = delimited_instruction_list "}" { l })
+  "{" l1 = statement_list "}"
+  l2 = ioption(ELSE  "{" l = statement_list "}" { l })
   { with_loc $sloc (If{label; typ = blocktype bt; cond = e; if_block = l1; else_block = l2}) }
-| label = block_label TRY bt = option(block_type) "{" l = delimited_instruction_list "}"
+| label = block_label TRY bt = option(block_type) "{" l = statement_list "}"
   CATCH "[" catches = separated_list(",", catch) "]"
   { with_loc $sloc (TryTable {label; typ = blocktype bt; catches; block = l}) }
-| label = block_label TRY bt = option(block_type) "{" l = delimited_instruction_list "}"
+| label = block_label TRY bt = option(block_type) "{" l = statement_list "}"
   CATCH
   "{" catches = list(legacy_catch); catch_all = option(legacy_catch_all) "}"
   { with_loc $sloc
@@ -389,14 +399,17 @@ then_branch: e = expression { e }
 condition_expression: e = expression { e }
 length_expression: e = expression { e }
 
+expression_list:
+| l = separated_list(",", expression) { l }
+
 plaininstr:
 | NULL { with_loc $sloc Null }
 | "_" {with_loc $sloc Hole }
 | x = ident { with_loc $sloc (Get x) } %prec prec_ident
 | "(" l = parenthesized_expression ")" { l }
-| "(" i = expression "," l = separated_list(",", expression) ")"
+| "(" i = expression "," l = expression_list ")"
   { with_loc $sloc (Sequence (i :: l)) }
-| i = expression "(" l = separated_list(",", expression) ")"
+| i = expression "(" l = expression_list ")"
    { with_loc $sloc (Call(i, l)) }
 | c = CHAR
   { with_loc $loc (Char c) }
@@ -408,21 +421,21 @@ plaininstr:
 | f = FLOAT { with_loc $sloc (Float f) }
 | INF { with_loc $sloc (Float "inf") }
 | NAN { with_loc $sloc (Float "nan") }
-| "{" x = ident "|" l = separated_list(",", structure_field) "}"
+| "{" x = ident "|" l = structure "}"
   { with_loc $sloc (Struct (Some x, l)) }
-| "{" l = separated_nonempty_list(",", structure_field) "}"
-  { with_loc $sloc (Struct (None, l)) }
+| "{" f = structure_field "," l = structure "}"
+  { with_loc $sloc (Struct (None, f :: l)) }
 | "{" x = ident "|" ".." "}"
   { with_loc $sloc (StructDefault (Some x)) }
 | "{" ".." "}"
   { with_loc $sloc (StructDefault (None)) }
-| "[" l = separated_list(",", expression) "]"
+| "[" l = expression_list "]"
   { with_loc $sloc (ArrayFixed (None, l)) }
 | "[" i1 = expression ";" i2 = length_expression "]"
   { with_loc $sloc (Array (None, i1, i2)) }
 | "[" ".." ";" i = length_expression "]"
   { with_loc $sloc (ArrayDefault (None, i)) }
-| "[" t = ident "|" l = separated_list(",", expression) "]"
+| "[" t = ident "|" l = expression_list "]"
   { with_loc $sloc (ArrayFixed (Some t, l)) }
 | "[" t = ident "|" i1 = expression ";" i2 = length_expression "]"
   { with_loc $sloc (Array (Some t, i1, i2)) }
@@ -489,6 +502,9 @@ expression:
 let_pattern:
 | p = simple_pattern t = ioption(":" t = value_type {t}) { (p, t) }
 
+let_pattern_:
+| p = separated_list(",", let_pattern) { p }
+
 statement:
 | i = plaininstr { i }
 | NOP { with_loc $sloc Nop }
@@ -503,7 +519,7 @@ statement:
 | LET x = simple_pattern ":" t = value_type
   { with_loc $sloc (Let ([(x, Some t)], None)) }
 | LET
-  "(" l = separated_list(",", let_pattern) ")" i = ioption("=" i = expression {i})
+  "(" l = let_pattern_ ")" i = ioption("=" i = expression {i})
   { with_loc $sloc (Let (l, i)) }
 | BR l = label i = ioption(expression)
   { with_loc $sloc (Br (l, i)) }
@@ -514,18 +530,18 @@ statement:
   { with_loc $sloc (Throw (t, i)) }
 | THROW_REF i = expression
   { with_loc $sloc (ThrowRef i) }
-| BECOME i = expression "(" l = separated_list(",", expression) ")"
+| BECOME i = expression "(" l = expression_list ")"
    { with_loc $sloc (TailCall(i, l)) }
 | i1 = expression "[" i2 = index_expression "]" "=" i3 = expression
   { with_loc $sloc (ArraySet (i1, i2, i3)) }
 
-delimited_instruction_list:
+statement_list:
 | { [] }
 (*
 | i = statement { [i] }
 *)
-| i = blockinstr l = delimited_instruction_list { i :: l }
-| i = statement ";" l = delimited_instruction_list { i :: l }
+| i = blockinstr l = statement_list { i :: l }
+| i = statement ";" l = statement_list { i :: l }
 
 globalmut:
 | LET { true }

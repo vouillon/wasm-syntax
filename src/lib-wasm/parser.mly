@@ -193,7 +193,7 @@ ZZZ
 %token INPUT
 %token OUTPUT
 
-%on_error_reduce plaininstr list(STRING) list(valtype) list(fieldtype) list(field) limits list(foldedinstr) list(typedef) list(idx) list(elemexpr) list(modulefield) nonempty_list(f64) list(const) nonempty_list(float_or_nan) nonempty_list(result_pat) list(result_pat) list(cmd) nonempty_list(modulefield) nonempty_list(idx)
+%on_error_reduce plain_instruction list(STRING) list(value_type) list(field_type) list(field) limits list(folded_instruction) list(typedef) list(index) list(elemexpr) list(module_field) nonempty_list(f64) list(const) nonempty_list(float_or_nan) nonempty_list(result_pat) list(result_pat) list(cmd) nonempty_list(module_field) nonempty_list(index) string_list
 
 %parameter <Context : sig type t = Utils.Trivia.context val context : t end>
 
@@ -291,7 +291,7 @@ f64:
 | f = FLOAT
 { check_constant Misc.is_float64 $sloc f; f }
 
-idx:
+index:
 | n = u32 { with_loc $sloc (Num n) }
 | i = ID { {info = i.info; desc = (Id i.Ast.desc)} }
 
@@ -307,7 +307,7 @@ name: s = STRING
 
 (* Types *)
 
-heaptype:
+heap_type:
 | ANY { Any }
 | EQ { Eq }
 | I31 { I31 }
@@ -320,10 +320,10 @@ heaptype:
 | NOEXN { NoExn }
 | EXTERN { Extern }
 | NOEXTERN { NoExtern }
-| i = idx { Type i }
+| i = index { Type i }
 
-reftype:
-| "(" REF nullable = boption(NULL) typ = heaptype ")"
+reference_type:
+| "(" REF nullable = boption(NULL) typ = heap_type ")"
   { { nullable; typ } }
 | ANYREF { {nullable = true; typ = Any} }
 | EQREF { {nullable = true; typ = Eq} }
@@ -339,60 +339,60 @@ reftype:
 | NULLEXTERNREF { {nullable = true; typ = NoExtern} }
 
 tupletype:
-| "(" TUPLE l = list(valtype) ")" { l }
+| "(" TUPLE l = list(value_type) ")" { l }
 
-valtype:
+value_type:
 | I32 { I32 }
 | I64 { I64 }
 | F32 { F32 }
 | F64 { F64 }
 | V128 { V128 }
-| t = reftype { Ref t }
+| t = reference_type { Ref t }
 | t = tupletype { Tuple t }
 
 functype:
-| "(" FUNC r = params_and_results ")"{ r }
+| "(" FUNC r = parameters_and_results ")"{ r }
 
-params:
+parameters:
 | { [] }
-| LPAREN_PARAM i = ID t = valtype ")" rem = params
+| LPAREN_PARAM i = ID t = value_type ")" rem = parameters
   { (Some i, t) :: rem }
-| LPAREN_PARAM l = valtype * ")" rem = params
+| LPAREN_PARAM l = value_type * ")" rem = parameters
   { List.map (fun t -> (None, t)) l @ rem }
 
-params_no_bindings:
+parameters_without_bindings:
 | { [] }
-| LPAREN_PARAM l = valtype * ")" rem = params_no_bindings
+| LPAREN_PARAM l = value_type * ")" rem = parameters_without_bindings
   { l @ rem }
 
 results:
 | { [] }
-| LPAREN_RESULT l = valtype * ")" rem = results
+| LPAREN_RESULT l = value_type * ")" rem = results
   { l @ rem }
 
-params_and_results:
-| p = params r = results
+parameters_and_results:
+| p = parameters r = results
   { {params = Array.of_list p; results = Array.of_list r} }
 
-params_and_results_no_bindings:
-| p = params_no_bindings r = results
+parameters_and_results_without_bindings:
+| p = parameters_without_bindings r = results
   { {params = Array.of_list (List.map (fun t -> (None, t)) p);
      results = Array.of_list r } }
 
 field:
-| "(" FIELD i = ID t = fieldtype ")" { [(Some i, t)] }
-| "(" FIELD l = fieldtype * ")" { List.map (fun t -> (None, t)) l }
+| "(" FIELD i = ID t = field_type ")" { [(Some i, t)] }
+| "(" FIELD l = field_type * ")" { List.map (fun t -> (None, t)) l }
 
-fieldtype:
-| typ = storagetype { {mut = false; typ} }
-| "(" MUT typ = storagetype ")" { {mut = true; typ} }
+field_type:
+| typ = storage_type { {mut = false; typ} }
+| "(" MUT typ = storage_type ")" { {mut = true; typ} }
 
-storagetype:
-| t = valtype { Value t }
+storage_type:
+| t = value_type { Value t }
 | t = PACKEDTYPE { Packed t }
 
-comptype:
-| "(" ARRAY t = fieldtype ")" { Array t }
+composite_type:
+| "(" ARRAY t = field_type ")" { Array t }
 | "(" STRUCT l = field * ")" { Struct (Array.of_list (List.flatten l)) }
 | t = functype { Func t }
 
@@ -407,10 +407,10 @@ typedef:
  { with_loc $sloc (name, t) }
 
 subtype:
-| "(" SUB final = boption(FINAL) supertype = idx ? typ = comptype
+| "(" SUB final = boption(FINAL) supertype = index ? typ = composite_type
   ")"
   { {final; supertype; typ} }
-| typ = comptype { {final = true; supertype = None; typ } }
+| typ = composite_type { {final = true; supertype = None; typ } }
 
 address_type:
 | I32 { `I32 }
@@ -424,154 +424,156 @@ limits:
 | at = address_type mi = u64 ma = u64
   { with_loc $sloc {mi; ma = Some ma; address_type = at} }
 
-memtype:
+memory_type:
 | l = limits { l }
 
-tabletype:
-| l = limits t = reftype { {limits = l; reftype = t} }
+table_type:
+| l = limits t = reference_type { {limits = l; reftype = t} }
 
 (* Instructions *)
 
 blockinstr:
-| BLOCK label = label typ = blocktype block =instrs END label2 = label
+| BLOCK label = label typ = block_type block =instructions END label2 = label
   { check_labels label label2;
     with_loc $sloc (Block {label; typ; block}) }
-| LOOP label = label typ = blocktype block = instrs END label2 = label
+| LOOP label = label typ = block_type block = instructions END label2 = label
   { check_labels label label2;
     with_loc $sloc (Loop {label; typ; block}) }
-| IF label = label typ = blocktype if_block = instrs ELSE
-  label2 = label else_block = instrs END
+| IF label = label typ = block_type if_block = instructions ELSE
+  label2 = label else_block = instructions END
   label3 = label
   { check_labels label label2;
     check_labels label label3;
     with_loc $sloc (If {label; typ; if_block; else_block }) }
-| IF label = label typ = blocktype if_block = instrs END
+| IF label = label typ = block_type if_block = instructions END
   label2 = label
   { check_labels label label2;
     with_loc $sloc (If {label; typ; if_block; else_block = [] }) }
-| TRY_TABLE label = label typ = blocktype catches = tbl_catches block = instrs
+| TRY_TABLE label = label typ = block_type catches = catches block = instructions
   END label2 = label
    { check_labels label label2;
      with_loc $sloc (TryTable {label; typ; catches; block}) }
-| TRY label = label typ = blocktype block = instrs c = catches END label2 = label
+| TRY label = label typ = block_type block = instructions c = legacy_catches END label2 = label
   { check_labels label label2;
     let (catches, catch_all) = c in
     with_loc $sloc (Try {label; typ; block; catches; catch_all}) }
 
-tbl_catches:
+catches:
 | { [] }
-| LPAREN_CATCH x = idx l = idx ")" c = tbl_catches
+| LPAREN_CATCH x = index l = index ")" c = catches
   { Catch(x, l) :: c }
-| LPAREN_CATCH_REF x = idx l = idx ")" c = tbl_catches
+| LPAREN_CATCH_REF x = index l = index ")" c = catches
   { CatchRef(x, l) :: c }
-| LPAREN_CATCH_ALL l = idx ")" c = tbl_catches
+| LPAREN_CATCH_ALL l = index ")" c = catches
   { CatchAll l :: c }
-| LPAREN_CATCH_ALL_REF l = idx ")" c = tbl_catches
+| LPAREN_CATCH_ALL_REF l = index ")" c = catches
   { CatchAllRef l :: c }
 
-catches:
+legacy_catches:
 | END { [], None }
-| CATCH_ALL l = instrs END { [], Some l }
-| CATCH i = idx l = instrs rem = catches
+| CATCH_ALL l = instructions END { [], Some l }
+| CATCH i = index l = instructions rem = legacy_catches
   { map_fst (fun r -> (i, l) :: r) rem }
 
 label:
 | i = ID ? { i }
 
-blocktype:
-| tu = typeuse_no_bindings
+block_type:
+| tu = type_use_without_bindings
   { match tu with
     | None, Some {params = [||]; results = [|typ|]} -> Some (Valtype typ)
     | None, None -> None
     | _ -> Some (Typeuse tu) }
 
-%inline memidx:
-| i = ioption(idx) { Option.value ~default:(with_loc $sloc (Num Uint32.zero)) i}
+%inline memindex:
+| i = ioption(index) { Option.value ~default:(with_loc $sloc (Num Uint32.zero)) i}
 
-%inline tableidx:
-| i = ioption(idx) { Option.value ~default:(with_loc $sloc (Num Uint32.zero)) i}
+%inline tableindex:
+| i = ioption(index) { Option.value ~default:(with_loc $sloc (Num Uint32.zero)) i}
 
-plaininstr:
-| THROW i = idx { with_loc $sloc (Throw i) }
+list_of_indices: l = index+ { l }
+
+plain_instruction:
+| THROW i = index { with_loc $sloc (Throw i) }
 | THROW_REF { with_loc $sloc ThrowRef }
-| BR i = idx { with_loc $sloc (Br i) }
-| BR_IF i = idx { with_loc $sloc (Br_if i) }
-| BR_TABLE l = idx +
+| BR i = index { with_loc $sloc (Br i) }
+| BR_IF i = index { with_loc $sloc (Br_if i) }
+| BR_TABLE l = index+
   { let l = List.rev l in
     with_loc $sloc (Br_table (List.rev (List.tl l), List.hd l)) }
-| BR_ON_NULL i = idx { with_loc $sloc (Br_on_null i) }
-| BR_ON_NON_NULL i = idx { with_loc $sloc (Br_on_non_null i) }
-| BR_ON_CAST i = idx t1 = reftype t2 = reftype
+| BR_ON_NULL i = index { with_loc $sloc (Br_on_null i) }
+| BR_ON_NON_NULL i = index { with_loc $sloc (Br_on_non_null i) }
+| BR_ON_CAST i = index t1 = reference_type t2 = reference_type
   { with_loc $sloc (Br_on_cast (i, t1, t2)) }
-| BR_ON_CAST_FAIL i = idx t1 = reftype t2 = reftype
+| BR_ON_CAST_FAIL i = index t1 = reference_type t2 = reference_type
   { with_loc $sloc (Br_on_cast_fail (i, t1, t2)) }
-| CALL i = idx { with_loc $sloc (Call i) }
-| CALL_REF i = idx { with_loc $sloc (CallRef i) }
-| RETURN_CALL i = idx { with_loc $sloc (ReturnCall i) }
-| RETURN_CALL_REF i = idx { with_loc $sloc (ReturnCallRef i) }
-| POP t = valtype { with_loc $sloc (Pop t) }
-| LOCAL_GET i = idx { with_loc $sloc (LocalGet i) }
-| LOCAL_SET i = idx { with_loc $sloc (LocalSet i) }
-| LOCAL_TEE i = idx { with_loc $sloc (LocalTee i) }
+| CALL i = index { with_loc $sloc (Call i) }
+| CALL_REF i = index { with_loc $sloc (CallRef i) }
+| RETURN_CALL i = index { with_loc $sloc (ReturnCall i) }
+| RETURN_CALL_REF i = index { with_loc $sloc (ReturnCallRef i) }
+| POP t = value_type { with_loc $sloc (Pop t) }
+| LOCAL_GET i = index { with_loc $sloc (LocalGet i) }
+| LOCAL_SET i = index { with_loc $sloc (LocalSet i) }
+| LOCAL_TEE i = index { with_loc $sloc (LocalTee i) }
 | op = VEC_SHIFT_OP { with_loc $sloc (VecShift op) }
 | op = VEC_BITMASK_OP { with_loc $sloc (VecBitmask op) }
 | op = VEC_TERN_OP { with_loc $sloc (VecTernOp op) }
 | VEC_BITSELECT { with_loc $sloc VecBitselect }
-| GLOBAL_GET i = idx { with_loc $sloc (GlobalGet i) }
-| GLOBAL_SET i = idx { with_loc $sloc (GlobalSet i) }
-| sz = LOAD i = memidx m = memarg
+| GLOBAL_GET i = index { with_loc $sloc (GlobalGet i) }
+| GLOBAL_SET i = index { with_loc $sloc (GlobalSet i) }
+| sz = LOAD i = memindex m = memarg
   { with_loc $sloc (Load (i, m (Uint64.one), sz)) }
-| op = VEC_LOAD i = memidx m = memarg
+| op = VEC_LOAD i = memindex m = memarg
   { with_loc $sloc (VecLoad (i, op, m (Uint64.one))) }
-| k = LOADS i = memidx m = memarg
+| k = LOADS i = memindex m = memarg
   { let (sz, sz', s) = k in
     with_loc $sloc (LoadS (i, m Uint64.one, sz, sz', s)) }
-| sz = STORE i = memidx m = memarg
+| sz = STORE i = memindex m = memarg
   { with_loc $sloc (Store (i, m (Uint64.one), sz)) }
-| VEC_STORE i = memidx m = memarg
+| VEC_STORE i = memindex m = memarg
   { with_loc $sloc (VecStore (i, m (Uint64.one))) }
-| sz = STORES i = memidx m = memarg
+| sz = STORES i = memindex m = memarg
   { with_loc $sloc (StoreS (i, m Uint64.one, fst sz, snd sz)) }
-| MEMORY_SIZE i = memidx { with_loc $sloc (MemorySize i) }
-| MEMORY_GROW i = memidx { with_loc $sloc (MemoryGrow i) }
-| MEMORY_FILL i = memidx { with_loc $sloc (MemoryFill i) }
-| MEMORY_COPY p = ioption(i1 = idx i2 = idx { (i1, i2) })
+| MEMORY_SIZE i = memindex { with_loc $sloc (MemorySize i) }
+| MEMORY_GROW i = memindex { with_loc $sloc (MemoryGrow i) }
+| MEMORY_FILL i = memindex { with_loc $sloc (MemoryFill i) }
+| MEMORY_COPY p = ioption(i1 = index i2 = index { (i1, i2) })
   { let zero = with_loc $loc(p) (Num Uint32.zero) in
     let (i, i') = Option.value ~default:(zero, zero) p in
     with_loc $sloc (MemoryCopy (i, i')) }
-| MEMORY_INIT i = memidx d = idx { with_loc $sloc (MemoryInit (i, d)) }
-| DATA_DROP d = idx { with_loc $sloc (DataDrop d) }
-| TABLE_GET i = tableidx { with_loc $sloc (TableGet i) }
-| TABLE_SET i = tableidx { with_loc $sloc (TableSet i) }
-| TABLE_SIZE i = tableidx { with_loc $sloc (TableSize i) }
-| TABLE_GROW i = tableidx { with_loc $sloc (TableGrow i) }
-| TABLE_FILL i = tableidx { with_loc $sloc (TableFill i) }
-| TABLE_COPY p = ioption(i1 = idx i2 = idx { (i1, i2) })
+| MEMORY_INIT i = memindex d = index { with_loc $sloc (MemoryInit (i, d)) }
+| DATA_DROP d = index { with_loc $sloc (DataDrop d) }
+| TABLE_GET i = tableindex { with_loc $sloc (TableGet i) }
+| TABLE_SET i = tableindex { with_loc $sloc (TableSet i) }
+| TABLE_SIZE i = tableindex { with_loc $sloc (TableSize i) }
+| TABLE_GROW i = tableindex { with_loc $sloc (TableGrow i) }
+| TABLE_FILL i = tableindex { with_loc $sloc (TableFill i) }
+| TABLE_COPY p = ioption(i1 = index i2 = index { (i1, i2) })
   { let zero = with_loc $loc(p) (Num Uint32.zero) in
     let (i, i') = Option.value ~default:(zero, zero) p in
     with_loc $sloc (TableCopy (i, i')) }
-| TABLE_INIT i = tableidx d = idx { with_loc $sloc (TableInit (i, d)) }
-| ELEM_DROP e = idx { with_loc $sloc (ElemDrop e) }
-| REF_NULL t = heaptype { with_loc $sloc (RefNull t) }
-| REF_FUNC i = idx { with_loc $sloc (RefFunc i) }
-| REF_TEST t = reftype { with_loc $sloc (RefTest t) }
-| REF_CAST t = reftype { with_loc $sloc (RefCast t) }
-| STRUCT_NEW i = idx { with_loc $sloc (StructNew i) }
-| STRUCT_NEW_DEFAULT i = idx { with_loc $sloc (StructNewDefault i) }
-| s = STRUCT_GET i1 = idx i2 = idx { with_loc $sloc (StructGet (s, i1, i2)) }
-| STRUCT_SET i1 = idx i2 = idx { with_loc $sloc (StructSet (i1, i2)) }
-| ARRAY_NEW i = idx { with_loc $sloc (ArrayNew i) }
-| ARRAY_NEW_DEFAULT i = idx { with_loc $sloc (ArrayNewDefault i) }
-| ARRAY_NEW_FIXED i = idx l = u32
+| TABLE_INIT i = tableindex d = index { with_loc $sloc (TableInit (i, d)) }
+| ELEM_DROP e = index { with_loc $sloc (ElemDrop e) }
+| REF_NULL t = heap_type { with_loc $sloc (RefNull t) }
+| REF_FUNC i = index { with_loc $sloc (RefFunc i) }
+| REF_TEST t = reference_type { with_loc $sloc (RefTest t) }
+| REF_CAST t = reference_type { with_loc $sloc (RefCast t) }
+| STRUCT_NEW i = index { with_loc $sloc (StructNew i) }
+| STRUCT_NEW_DEFAULT i = index { with_loc $sloc (StructNewDefault i) }
+| s = STRUCT_GET i1 = index i2 = index { with_loc $sloc (StructGet (s, i1, i2)) }
+| STRUCT_SET i1 = index i2 = index { with_loc $sloc (StructSet (i1, i2)) }
+| ARRAY_NEW i = index { with_loc $sloc (ArrayNew i) }
+| ARRAY_NEW_DEFAULT i = index { with_loc $sloc (ArrayNewDefault i) }
+| ARRAY_NEW_FIXED i = index l = u32
   { with_loc $sloc (ArrayNewFixed (i, l)) }
-| ARRAY_NEW_DATA i1 = idx i2 = idx { with_loc $sloc (ArrayNewData (i1, i2)) }
-| ARRAY_NEW_ELEM i1 = idx i2 = idx { with_loc $sloc (ArrayNewElem (i1, i2)) }
-| s = ARRAY_GET i = idx { with_loc $sloc (ArrayGet (s, i)) }
-| ARRAY_SET i = idx { with_loc $sloc (ArraySet i) }
-| ARRAY_FILL i = idx { with_loc $sloc (ArrayFill i) }
-| ARRAY_COPY i1 = idx i2 = idx { with_loc $sloc (ArrayCopy (i1, i2)) }
-| ARRAY_INIT_DATA i1 = idx i2 = idx { with_loc $sloc (ArrayInitData (i1, i2)) }
-| ARRAY_INIT_ELEM i1 = idx i2 = idx { with_loc $sloc (ArrayInitElem (i1, i2)) }
+| ARRAY_NEW_DATA i1 = index i2 = index { with_loc $sloc (ArrayNewData (i1, i2)) }
+| ARRAY_NEW_ELEM i1 = index i2 = index { with_loc $sloc (ArrayNewElem (i1, i2)) }
+| s = ARRAY_GET i = index { with_loc $sloc (ArrayGet (s, i)) }
+| ARRAY_SET i = index { with_loc $sloc (ArraySet i) }
+| ARRAY_FILL i = index { with_loc $sloc (ArrayFill i) }
+| ARRAY_COPY i1 = index i2 = index { with_loc $sloc (ArrayCopy (i1, i2)) }
+| ARRAY_INIT_DATA i1 = index i2 = index { with_loc $sloc (ArrayInitData (i1, i2)) }
+| ARRAY_INIT_ELEM i1 = index i2 = index { with_loc $sloc (ArrayInitElem (i1, i2)) }
 | I32_CONST i = i32
   { with_loc $sloc (Const (I32 i)) }
 | I64_CONST i = i64
@@ -613,12 +615,12 @@ plaininstr:
             i9; i10; i11; i12; i13; i14; i15])
     in
     with_loc $sloc (VecShuffle lanes) }
-| op = VEC_LOAD_LANE i = memidx m = memarg l = u8
+| op = VEC_LOAD_LANE i = memindex m = memarg l = u8
   { with_loc $sloc (VecLoadLane (i, op, m (lane_width op), int_of_string l)) }
-| op = VEC_STORE_LANE i = memidx m = memarg l = u8
+| op = VEC_STORE_LANE i = memindex m = memarg l = u8
   { with_loc $sloc
       (VecStoreLane (i, op, m (lane_width op), int_of_string l)) }
-| op = VEC_LOAD_SPLAT i = memidx m = memarg
+| op = VEC_LOAD_SPLAT i = memindex m = memarg
   { with_loc $sloc (VecLoadSplat (i, op, m (lane_width op))) }
 | TUPLE_MAKE l = u32 { with_loc $sloc (TupleMake l) }
 | TUPLE_EXTRACT l = u32 i = u32
@@ -634,40 +636,42 @@ plaininstr:
      align = Option.value ~default:(width : Uint64.t) (Option.map Uint64.of_string a)} }
 
 callindirect:
-| CALL_INDIRECT i = idx t = typeuse_no_bindings
+| CALL_INDIRECT i = index t = type_use_without_bindings
   { with_loc $sloc (CallIndirect (i, t)) }
-| CALL_INDIRECT t = typeuse_no_bindings
+| CALL_INDIRECT t = type_use_without_bindings
   { with_loc $sloc (CallIndirect (Ast.no_loc (Num Uint32.zero), t)) }
-| RETURN_CALL_INDIRECT i = idx t = typeuse_no_bindings
+| RETURN_CALL_INDIRECT i = index t = type_use_without_bindings
   { with_loc $sloc (ReturnCallIndirect (i, t)) }
-| RETURN_CALL_INDIRECT t = typeuse_no_bindings
+| RETURN_CALL_INDIRECT t = type_use_without_bindings
   { with_loc $sloc (ReturnCallIndirect (Ast.no_loc (Num Uint32.zero), t)) }
 
-select_results:
+select_result_type:
 | { ([]) }
-| LPAREN_RESULT l = valtype * ")" rem = select_results
+| LPAREN_RESULT l = value_type * ")" rem = select_result_type
   { l :: rem }
 
 select:
-| SELECT l = select_results
+| SELECT l = select_result_type
   { with_loc $sloc  (Select (if l = [] then None else Some (List.concat l))) }
 
-instrs:
+instructions:
 | { [] }
-| i = plaininstr r = instrs { i :: r }
-| i = blockinstr r = instrs { i :: r }
-| i = foldedinstr r = instrs { i :: r }
+| i = plain_instruction r = instructions { i :: r }
+| i = blockinstr r = instructions { i :: r }
+| i = folded_instruction r = instructions { i :: r }
 
-foldedinstr:
-| "(" i = plaininstr l = foldedinstr * ")"
+string_list: l = list(STRING) { l }
+
+folded_instruction:
+| "(" i = plain_instruction l = folded_instruction * ")"
   { with_loc $sloc (Folded (i, l)) }
-| "(" BLOCK label = label typ = blocktype block = instrs ")"
+| "(" BLOCK label = label typ = block_type block = instructions ")"
   { with_loc $sloc (Folded (with_loc $sloc (Block {label; typ; block}), [])) }
-| "(" LOOP label = label typ = blocktype block = instrs ")"
+| "(" LOOP label = label typ = block_type block = instructions ")"
   { with_loc $sloc (Folded (with_loc $sloc (Loop {label; typ; block}), [])) }
 | "(" IF label = label
-  typ = blocktype l = foldedinstrs LPAREN_THEN if_block =  instrs ")"
-  else_block = option("(" ELSE l = instrs ")" { l })
+  typ = block_type l = folded_instructions LPAREN_THEN if_block =  instructions ")"
+  else_block = option("(" ELSE l = instructions ")" { l })
   ")"
   { with_loc $sloc
       (Folded
@@ -675,20 +679,20 @@ foldedinstr:
           (If {label; typ; if_block;
                else_block = Option.value ~default:[] else_block }),
          l)) }
-| "(" TRY_TABLE label = label typ = blocktype catches = tbl_catches
-  block = instrs  ")"
+| "(" TRY_TABLE label = label typ = block_type catches = catches
+  block = instructions  ")"
    { with_loc $sloc
        (Folded
           (with_loc $sloc (TryTable {label; typ; catches; block}),
           [])) }
 | "(" TRY label = label
-  typ = blocktype "(" DO block = instrs ")"
-  c = foldedcatches ")"
+  typ = block_type "(" DO block = instructions ")"
+  c = folded_catches ")"
   { let (catches, catch_all) = c in
     with_loc $sloc
       (Folded
         (with_loc $sloc (Try {label; typ; block; catches; catch_all}), [])) }
-| STRING_ANNOT id = option(idx) l = list(STRING) ")"
+| STRING_ANNOT id = option(index) l = string_list ")"
     { with_loc $sloc (String (id, l)) }
 | CHAR_ANNOT s = STRING ")"
     { let c = String.get_utf_8_uchar s.Ast.desc 0 in
@@ -703,60 +707,60 @@ foldedinstr:
                  (snd (Misc.escape_string s.desc))));
       with_loc $sloc (Char (Uchar.utf_decode_uchar c)) }
 
-foldedcatches:
+folded_catches:
 | { [], None }
-| LPAREN_CATCH_ALL l = instrs ")" { [], Some l }
-| LPAREN_CATCH i = idx l = instrs ")" rem = foldedcatches
+| LPAREN_CATCH_ALL l = instructions ")" { [], Some l }
+| LPAREN_CATCH i = index l = instructions ")" rem = folded_catches
   { map_fst (fun r -> (i, l) :: r) rem }
 
-foldedinstrs:
+folded_instructions:
 | { [] }
-| i = foldedinstr r = foldedinstrs { i :: r }
+| i = folded_instruction r = folded_instructions { i :: r }
 
-expr:
-| l = instrs { l }
+expression:
+| l = instructions { l }
 
 (* Modules *)
 
-typeuse:
-| LPAREN_TYPE i = idx ")" s = params_and_results
+type_use:
+| LPAREN_TYPE i = index ")" s = parameters_and_results
   { match s with
     | {params = [||]; results = [||]} -> Some i, None
     | _ -> Some i, Some s }
-| s = params_and_results { (None, Some s)}
+| s = parameters_and_results { (None, Some s)}
 
-typeuse_no_bindings:
-| LPAREN_TYPE i = idx ")" s = params_and_results_no_bindings
+type_use_without_bindings:
+| LPAREN_TYPE i = index ")" s = parameters_and_results_without_bindings
   { match s with
     | {params = [||]; results = [||]} -> Some i, None
     | _ -> Some i, Some s }
-| s = params_and_results_no_bindings
+| s = parameters_and_results_without_bindings
   { (None, Some s) }
 
 import:
-| LPAREN_IMPORT module_ = name name = name desc = importdesc ")"
+| LPAREN_IMPORT module_ = name name = name desc = external_type ")"
     { let (id, desc) = desc in
       with_loc $sloc (Import {module_; name; id; desc; exports = [] }) }
 
-importdesc:
-| "(" FUNC i = ID ? t = typeuse")"
+external_type:
+| "(" FUNC i = ID ? t = type_use ")"
     { (i, Func t) }
 | "(" MEMORY i = ID ? l = limits ")"
     { (i, (Memory l)) }
-| "(" TABLE i = ID ? t = tabletype ")"
+| "(" TABLE i = ID ? t = table_type ")"
     { (i, (Table t)) }
-| "(" GLOBAL i = ID ? t = globaltype ")"
+| "(" GLOBAL i = ID ? t = global_type ")"
     { (i, (Global t)) }
-| "(" TAG i = ID ? t = typeuse ")"
+| "(" TAG i = ID ? t = type_use ")"
     { (i, (Tag t : importdesc)) }
 
 func:
-| "(" FUNC id = ID ? exports = exports typ = typeuse
-   locals = locals instrs = instrs ")"
+| "(" FUNC id = ID ? exports = exports typ = type_use
+   locals = locals instrs = instructions ")"
   { with_loc $sloc (Func {id; typ; locals; instrs; exports}) }
 | "(" FUNC id = ID ?
   exports = exports LPAREN_IMPORT module_ = name name = name ")"
-  t = typeuse ")"
+  t = type_use ")"
   { with_loc $sloc (Import {module_; name; id; desc = Func t; exports }) }
 
 exports:
@@ -765,16 +769,16 @@ exports:
 
 locals:
 | { [] }
-| LPAREN_LOCAL i = ID t = valtype ")" r = locals
+| LPAREN_LOCAL i = ID t = value_type ")" r = locals
   { (Some i, t) :: r }
-| LPAREN_LOCAL l = valtype * ")" r = locals
+| LPAREN_LOCAL l = value_type * ")" r = locals
   { List.map (fun t -> (None, t)) l @ r }
 
 memory:
-| "(" MEMORY id = ID? exports = exports limits = memtype ")"
+| "(" MEMORY id = ID? exports = exports limits = memory_type ")"
   { with_loc $sloc (Memory {id; limits; init = None; exports}) }
 | "(" MEMORY id = ID?
-  exports = exports at = ioption(address_type) "(" DATA s = datastring ")" ")"
+  exports = exports at = ioption(address_type) "(" DATA s = data_string ")" ")"
   { let address_type = Option.value ~default:`I32 at in
     let data_len =
       List.fold_left (fun len {Ast.desc; _} -> len + String.length desc) 0 s in
@@ -782,15 +786,15 @@ memory:
     let limits = Ast.no_loc {mi = sz; ma = Some sz; address_type} in
     with_loc $sloc (Memory {id; limits; init = Some s; exports}) }
 | "(" MEMORY id = ID ?
-  exports = exports LPAREN_IMPORT module_ = name name = name ")" t = memtype ")"
+  exports = exports LPAREN_IMPORT module_ = name name = name ")" t = memory_type ")"
   { with_loc $sloc (Import {module_; name; id; desc = Memory t; exports}) }
 
 table:
-| "(" TABLE id = ID? exports = exports typ = tabletype e = expr ")"
+| "(" TABLE id = ID? exports = exports typ = table_type e = expression ")"
   { let init = if e = [] then Init_default else Init_expr e in
     with_loc $sloc (Table {id; typ; init; exports}) }
 | "(" TABLE id = ID?
-  exports = exports at = ioption(address_type) reftype = reftype
+  exports = exports at = ioption(address_type) reftype = reference_type
   "(" ELEM elem = list(elemexpr) ")" ")"
   { let address_type = Option.value ~default:`I32 at in
     let len = Uint64.of_int (List.length elem) in
@@ -799,8 +803,8 @@ table:
       (Table {id; typ = {limits; reftype};
               init = Init_segment elem; exports}) }
 | "(" TABLE id = ID?
-  exports = exports at = ioption(address_type) reftype = reftype
-  "(" ELEM elem = nonempty_list(idx) ")" ")"
+  exports = exports at = ioption(address_type) reftype = reference_type
+  "(" ELEM elem = list_of_indices ")" ")"
   { let address_type = Option.value ~default:`I32 at in
     let len = Uint64.of_int (List.length elem) in
     let elem = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) elem in
@@ -810,96 +814,96 @@ table:
               init = Init_segment elem; exports}) }
 | "(" TABLE id = ID ?
   exports = exports LPAREN_IMPORT module_ = name name = name ")"
-  t = tabletype ")"
+  t = table_type ")"
   { with_loc $sloc (Import {module_; name; id; desc = Table t; exports }) }
 
 tag:
-| "(" TAG id = ID ? exports = exports typ = typeuse ")"
+| "(" TAG id = ID ? exports = exports typ = type_use ")"
     { with_loc $sloc (Tag {id; typ; exports}) }
 | "(" TAG id = ID ?
   exports = exports LPAREN_IMPORT module_ = name name = name ")"
-  typ = typeuse")"
+  typ = type_use")"
   { with_loc $sloc (Import {module_; name; id; desc = Tag typ; exports }) }
 
 global:
-| "(" GLOBAL id = ID ? exports = exports typ = globaltype init = expr ")"
+| "(" GLOBAL id = ID ? exports = exports typ = global_type init = expression ")"
   { with_loc $sloc (Global {id; typ; init; exports}) }
 | "(" GLOBAL id = ID ?
   exports = exports LPAREN_IMPORT module_ = name name = name ")"
-  typ = globaltype ")"
+  typ = global_type ")"
   { with_loc $sloc (Import {module_; name; id; desc = Global typ; exports }) }
 
-globaltype:
-| typ = valtype { {mut = false; typ} }
-| "(" MUT typ = valtype ")" { {mut = true; typ} }
+global_type:
+| typ = value_type { {mut = false; typ} }
+| "(" MUT typ = value_type ")" { {mut = true; typ} }
 
 export:
-| LPAREN_EXPORT name = name d = exportdesc ")"
+| LPAREN_EXPORT name = name d = extern_index ")"
   { let (index, kind) = d in
     with_loc $sloc (Export {name; kind; index}) }
 
-exportdesc:
-| "(" FUNC i = idx ")" { (i, Func) }
-| "(" GLOBAL i = idx ")" { (i, Global) }
-| "(" MEMORY i = idx ")" { (i, Memory) }
-| "(" TABLE i = idx ")" { (i, Table) }
-| "(" TAG i = idx ")" { (i, (Tag : exportable)) }
+extern_index:
+| "(" FUNC i = index ")" { (i, Func) }
+| "(" GLOBAL i = index ")" { (i, Global) }
+| "(" MEMORY i = index ")" { (i, Memory) }
+| "(" TABLE i = index ")" { (i, Table) }
+| "(" TAG i = index ")" { (i, (Tag : exportable)) }
 
 start:
-| "(" START i = idx ")" { with_loc $sloc (Start i) }
+| "(" START i = index ")" { with_loc $sloc (Start i) }
 
 elem:
-| "(" ELEM id = ID ? l = elemlist ")"
+| "(" ELEM id = ID ? l = element_list ")"
   { let (typ, init) = l in
     with_loc $sloc (Elem {id; mode = Passive; typ; init}) }
-| "(" ELEM id = ID ? t = tableuse o = offset l = elemlist ")"
+| "(" ELEM id = ID ? t = tableuse o = offset l = element_list ")"
   { let (typ, init) = l in
     with_loc $sloc (Elem {id; mode = Active (t, o); typ; init}) }
-| "(" ELEM id = ID ? DECLARE l = elemlist ")"
+| "(" ELEM id = ID ? DECLARE l = element_list ")"
   { let (typ, init) = l in
     with_loc $sloc (Elem {id; mode = Declare; typ; init}) }
-| "(" ELEM id = ID ? o = offset init = list(idx) ")"
+| "(" ELEM id = ID ? o = offset init = list(index) ")"
   { let init = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) init in
     with_loc $sloc
       (Elem {id; mode = Active (Ast.no_loc (Num Uint32.zero), o);
              typ = { nullable = false ; typ = Func }; init}) }
 
-elemlist:
-| t = reftype l = elemexpr * { (t, l) }
-| FUNC l = list(idx)
+element_list:
+| t = reference_type l = elemexpr * { (t, l) }
+| FUNC l = list(index)
   { let l = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) l in
     ({nullable = false; typ = Func}, l) }
 
 elemexpr:
-| "(" ITEM  e = expr ")" { e }
-| instr = foldedinstr { [instr] }
+| "(" ITEM  e = expression ")" { e }
+| instr = folded_instruction { [instr] }
 
 %inline tableuse:
-| "(" TABLE i = idx ")" { i }
+| "(" TABLE i = index ")" { i }
 | { with_loc $sloc (Num Uint32.zero) }
 
 data:
-| "(" DATA id = ID ? init = datastring ")"
+| "(" DATA id = ID ? init = data_string ")"
   { with_loc $sloc (Data { id; init; mode = Passive }) }
-| "(" DATA id = ID ? m = memuse e = offset init = datastring ")"
+| "(" DATA id = ID ? m = memuse e = offset init = data_string ")"
   { with_loc $sloc (Data { id; init; mode = Active (m, e) }) }
 
 offset:
-| "(" OFFSET e = expr ")" { e }
-| instr = foldedinstr { [instr] }
+| "(" OFFSET e = expression ")" { e }
+| instr = folded_instruction { [instr] }
 
-datastring:
+data_string:
 | l = STRING * { l }
 
 %inline memuse:
-| "(" MEMORY i = idx ")" { i }
+| "(" MEMORY i = index ")" { i }
 | { with_loc $sloc (Num Uint32.zero) }
 
 globalstring:
-| STRING_ANNOT id = ID typ = option(idx) init = list(STRING) ")"
+| STRING_ANNOT id = ID typ = option(index) init = string_list ")"
   { with_loc $sloc (String_global {id; typ; init}) }
 
-modulefield:
+module_field:
 | f = rectype
 | f = import
 | f = func
@@ -915,9 +919,9 @@ modulefield:
   { f }
 
 parse:
-| "(" MODULE name = ID ? l = modulefield * ")" EOF
+| "(" MODULE name = ID ? l = module_field * ")" EOF
   { (name, l) }
-| l = modulefield * EOF
+| l = module_field * EOF
   { (None, l) }
 
 parse_script:
@@ -928,7 +932,7 @@ script:
 | c = cmd* { List.concat c }
 
 inline_module:
-| l = modulefield + { [(`Valid, `Parsed (None, l))] }
+| l = module_field + { [(`Valid, `Parsed (None, l))] }
 
 cmd:
 | m = module_ { m `Valid }
@@ -940,7 +944,7 @@ cmd:
 
 
 module_:
-| "(" MODULE DEFINITION ? name = ID ? l = modulefield * ")"
+| "(" MODULE DEFINITION ? name = ID ? l = module_field * ")"
   { fun status -> [(status, `Parsed (name, l))] }
 | "(" MODULE DEFINITION ? ID ? BINARY s = STRING *  ")"
   { fun status ->
@@ -970,7 +974,7 @@ const:
 | "(" F32_CONST f32 ")"
 | "(" F64_CONST f64 ")"
 | "(" V128_CONST vec_shape f64+ ")"
-| "(" REF_NULL heaptype ")"
+| "(" REF_NULL heap_type ")"
 | "(" REF_HOST NAT ")"
 | "(" REF_EXTERN NAT ")"
 {}
@@ -1014,7 +1018,7 @@ result_pat:
 | "(" REF_EXTERN ")"
 | "(" REF_STRUCT ")"
 | "(" REF_ARRAY ")"
-| "(" REF_NULL heaptype ")"
+| "(" REF_NULL heap_type ")"
 | "(" REF_HOST NAT ")"
 | "(" REF_EXTERN NAT ")"
 | "(" INSTR (*RefI31*) ")"
