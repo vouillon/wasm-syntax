@@ -71,7 +71,7 @@
 %token TRY CATCH
 %token DISPATCH
 
-%on_error_reduce statement plaininstr separated_nonempty_list(",",structure_type_field) list(module_field) separated_nonempty_list(",",value_type) block_type separated_nonempty_list(",",function_parameter) list(label) list(attribute) list(typedef) list(legacy_catch) separated_nonempty_list(",",catch) separated_nonempty_list(",",let_pattern) blockinstr delimited_instruction_list loption(separated_nonempty_list(",",catch)) separated_nonempty_list(",",instruction) let_pattern structure_field separated_nonempty_list(",",structure_field)
+%on_error_reduce statement plaininstr separated_nonempty_list(",",structure_type_field) list(module_field) separated_nonempty_list(",",value_type) block_type separated_nonempty_list(",",function_parameter) list(label) list(attribute) list(typedef) list(legacy_catch) separated_nonempty_list(",",catch) separated_nonempty_list(",",let_pattern) blockinstr delimited_instruction_list loption(separated_nonempty_list(",",catch)) separated_nonempty_list(",",expression) let_pattern structure_field separated_nonempty_list(",",structure_field) constant_expression attribute_expression parenthesized_expression index_expression then_branch condition_expression length_expression
 
 
 %nonassoc prec_ident (* {a|...} *) prec_block
@@ -287,8 +287,10 @@ rectype:
 | REC "{" l = list(typedef) "}" { with_loc $loc($1) (Array.of_list l) }
 | t = typedef { with_loc $sloc [|t|] }
 
+attribute_expression: e = expression { e }
+
 attribute:
-| "#" "[" name = IDENT "=" i = instruction "]" { (name, i) }
+| "#" "[" name = IDENT "=" i = attribute_expression "]" { (name, i) }
 
 simple_pattern:
 | x = ident { Some x }
@@ -355,7 +357,7 @@ legacy_catch_all:
 | label = block_label "{" l = delimited_instruction_list "}" { (label, l) }
 
 structure_field:
-| y = field_name ":" i = instruction { (y, i) }
+| y = field_name ":" i = expression { (y, i) }
 
 blockinstr:
 | b = block
@@ -365,7 +367,8 @@ blockinstr:
 | label = block_label LOOP bt = option(block_type)
   "{" l = delimited_instruction_list "}"
   { with_loc $sloc (Loop{label; typ = blocktype bt; block = l}) }
-| label = block_label IF e = instruction bt = option("=>" bt = block_type { bt })
+| label = block_label IF e = condition_expression
+  bt = option("=>" bt = block_type { bt })
   "{" l1 = delimited_instruction_list "}"
   l2 = ioption(ELSE  "{" l = delimited_instruction_list "}" { l })
   { with_loc $sloc (If{label; typ = blocktype bt; cond = e; if_block = l1; else_block = l2}) }
@@ -378,14 +381,20 @@ blockinstr:
   { with_loc $sloc
       (Try {label; typ = blocktype bt; block = l; catches; catch_all}) }
 
+parenthesized_expression: e = expression { e }
+index_expression: e = expression { e }
+then_branch: e = expression { e }
+condition_expression: e = expression { e }
+length_expression: e = expression { e }
+
 plaininstr:
 | NULL { with_loc $sloc Null }
 | "_" {with_loc $sloc Hole }
 | x = ident { with_loc $sloc (Get x) } %prec prec_ident
-| "(" l = instruction ")" { l }
-| "(" i = instruction "," l = separated_list(",", instruction) ")"
+| "(" l = parenthesized_expression ")" { l }
+| "(" i = expression "," l = separated_list(",", expression) ")"
   { with_loc $sloc (Sequence (i :: l)) }
-| i = instruction "(" l = separated_list(",", instruction) ")"
+| i = expression "(" l = separated_list(",", expression) ")"
    { with_loc $sloc (Call(i, l)) }
 | c = CHAR
   { with_loc $loc (Char c) }
@@ -405,72 +414,73 @@ plaininstr:
   { with_loc $sloc (StructDefault (Some x)) }
 | "{" ".." "}"
   { with_loc $sloc (StructDefault (None)) }
-| "[" l = separated_list(",", instruction) "]"
+| "[" l = separated_list(",", expression) "]"
   { with_loc $sloc (ArrayFixed (None, l)) }
-| "[" i1 = instruction ";" i2 = instruction "]"
+| "[" i1 = expression ";" i2 = length_expression "]"
   { with_loc $sloc (Array (None, i1, i2)) }
-| "[" ".." ";" i = instruction "]"
+| "[" ".." ";" i = length_expression "]"
   { with_loc $sloc (ArrayDefault (None, i)) }
-| "[" t = ident "|" l = separated_list(",", instruction) "]"
+| "[" t = ident "|" l = separated_list(",", expression) "]"
   { with_loc $sloc (ArrayFixed (Some t, l)) }
-| "[" t = ident "|" i1 = instruction ";" i2 = instruction "]"
+| "[" t = ident "|" i1 = expression ";" i2 = length_expression "]"
   { with_loc $sloc (Array (Some t, i1, i2)) }
-| "[" t = ident "|" ".." ";" i = instruction "]"
+| "[" t = ident "|" ".." ";" i = length_expression "]"
   { with_loc $sloc (ArrayDefault (Some t, i)) }
-| x = ident ":=" i = instruction { with_loc $sloc (Tee (x, i)) }
-| i = instruction AS t = cast_type { with_loc $sloc (Cast(i, t)) }
-| i = instruction IS t = reference_type { with_loc $sloc (Test(i, t)) }
-| i = instruction "." x = ident { with_loc $sloc (StructGet(i, x)) }
-| i = instruction "." x = ident "=" j = instruction { with_loc $sloc (StructSet(i, x, j)) }
-| i = instruction "+" j = instruction { with_loc $sloc (BinOp(Add, i, j)) }
-| i = instruction "-" j = instruction { with_loc $sloc (BinOp(Sub, i, j)) }
-| i = instruction "*" j = instruction { with_loc $sloc (BinOp(Mul, i, j)) }
-| i = instruction "/" j = instruction { with_loc $sloc (BinOp(Div None, i, j)) }
-| i = instruction "/s" j = instruction { with_loc $sloc (BinOp(Div (Some Signed), i, j)) }
-| i = instruction "/u" j = instruction { with_loc $sloc (BinOp(Div (Some Unsigned), i, j)) }
-| i = instruction "%s" j = instruction { with_loc $sloc (BinOp(Rem Signed, i, j)) }
-| i = instruction "%u" j = instruction { with_loc $sloc (BinOp(Rem Unsigned, i, j)) }
-| i = instruction "&" j = instruction { with_loc $sloc (BinOp(And, i, j)) }
-| i = instruction "^" j = instruction { with_loc $sloc (BinOp(Xor, i, j)) }
-| i = instruction "|" j = instruction { with_loc $sloc (BinOp(Or, i, j)) }
-| i = instruction "<<" j = instruction { with_loc $sloc (BinOp(Shl, i, j)) }
-| i = instruction ">>s" j = instruction { with_loc $sloc (BinOp(Shr Signed, i, j)) }
-| i = instruction ">>u" j = instruction { with_loc $sloc (BinOp(Shr Unsigned, i, j)) }
-| i = instruction "==" j = instruction { with_loc $sloc (BinOp(Eq, i, j)) }
-| i = instruction "!=" j = instruction { with_loc $sloc (BinOp(Ne, i, j)) }
-| i = instruction ">" j = instruction { with_loc $sloc (BinOp(Gt None, i, j)) }
-| i = instruction ">s" j = instruction { with_loc $sloc (BinOp(Gt (Some Signed), i, j)) }
-| i = instruction ">u" j = instruction { with_loc $sloc (BinOp(Gt (Some Unsigned), i, j)) }
-| i = instruction "<" j = instruction { with_loc $sloc (BinOp(Lt None, i, j)) }
-| i = instruction "<s" j = instruction { with_loc $sloc (BinOp(Lt (Some Signed), i, j)) }
-| i = instruction "<u" j = instruction { with_loc $sloc (BinOp(Lt (Some Unsigned), i, j)) }
-| i = instruction ">=" j = instruction { with_loc $sloc (BinOp(Ge None, i, j)) }
-| i = instruction ">=s" j = instruction { with_loc $sloc (BinOp(Ge (Some Signed), i, j)) }
-| i = instruction ">=u" j = instruction { with_loc $sloc (BinOp(Ge (Some Unsigned), i, j)) }
-| i = instruction "<=" j = instruction { with_loc $sloc (BinOp(Le None, i, j)) }
-| i = instruction "<=s" j = instruction { with_loc $sloc (BinOp(Le (Some Signed), i, j)) }
-| i = instruction "<=u" j = instruction { with_loc $sloc (BinOp(Le (Some Unsigned), i, j)) }
-| BR_IF l = label i = instruction %prec prec_branch
+| x = ident ":=" i = expression { with_loc $sloc (Tee (x, i)) }
+| i = expression AS t = cast_type { with_loc $sloc (Cast(i, t)) }
+| i = expression IS t = reference_type { with_loc $sloc (Test(i, t)) }
+| i = expression "." x = ident { with_loc $sloc (StructGet(i, x)) }
+| i = expression "." x = ident "=" j = expression { with_loc $sloc (StructSet(i, x, j)) }
+| i = expression "+" j = expression { with_loc $sloc (BinOp(Add, i, j)) }
+| i = expression "-" j = expression { with_loc $sloc (BinOp(Sub, i, j)) }
+| i = expression "*" j = expression { with_loc $sloc (BinOp(Mul, i, j)) }
+| i = expression "/" j = expression { with_loc $sloc (BinOp(Div None, i, j)) }
+| i = expression "/s" j = expression { with_loc $sloc (BinOp(Div (Some Signed), i, j)) }
+| i = expression "/u" j = expression { with_loc $sloc (BinOp(Div (Some Unsigned), i, j)) }
+| i = expression "%s" j = expression { with_loc $sloc (BinOp(Rem Signed, i, j)) }
+| i = expression "%u" j = expression { with_loc $sloc (BinOp(Rem Unsigned, i, j)) }
+| i = expression "&" j = expression { with_loc $sloc (BinOp(And, i, j)) }
+| i = expression "^" j = expression { with_loc $sloc (BinOp(Xor, i, j)) }
+| i = expression "|" j = expression { with_loc $sloc (BinOp(Or, i, j)) }
+| i = expression "<<" j = expression { with_loc $sloc (BinOp(Shl, i, j)) }
+| i = expression ">>s" j = expression { with_loc $sloc (BinOp(Shr Signed, i, j)) }
+| i = expression ">>u" j = expression { with_loc $sloc (BinOp(Shr Unsigned, i, j)) }
+| i = expression "==" j = expression { with_loc $sloc (BinOp(Eq, i, j)) }
+| i = expression "!=" j = expression { with_loc $sloc (BinOp(Ne, i, j)) }
+| i = expression ">" j = expression { with_loc $sloc (BinOp(Gt None, i, j)) }
+| i = expression ">s" j = expression { with_loc $sloc (BinOp(Gt (Some Signed), i, j)) }
+| i = expression ">u" j = expression { with_loc $sloc (BinOp(Gt (Some Unsigned), i, j)) }
+| i = expression "<" j = expression { with_loc $sloc (BinOp(Lt None, i, j)) }
+| i = expression "<s" j = expression { with_loc $sloc (BinOp(Lt (Some Signed), i, j)) }
+| i = expression "<u" j = expression { with_loc $sloc (BinOp(Lt (Some Unsigned), i, j)) }
+| i = expression ">=" j = expression { with_loc $sloc (BinOp(Ge None, i, j)) }
+| i = expression ">=s" j = expression { with_loc $sloc (BinOp(Ge (Some Signed), i, j)) }
+| i = expression ">=u" j = expression { with_loc $sloc (BinOp(Ge (Some Unsigned), i, j)) }
+| i = expression "<=" j = expression { with_loc $sloc (BinOp(Le None, i, j)) }
+| i = expression "<=s" j = expression { with_loc $sloc (BinOp(Le (Some Signed), i, j)) }
+| i = expression "<=u" j = expression { with_loc $sloc (BinOp(Le (Some Unsigned), i, j)) }
+| BR_IF l = label i = expression %prec prec_branch
   { with_loc $sloc (Br_if (l, i))} 
 (*
-| BR l = label IF i = instruction
+| BR l = label IF i = expression
   { with_loc $sloc (Br_if (l, i)) } %prec prec_branch
 *)
-| DISPATCH instruction "["   list(label) ELSE label "]" "{" instruction "}"
+| DISPATCH expression "["   list(label) ELSE label "]" "{" expression "}"
  { with_loc $sloc Nop }
-| BR_ON_NULL l = label i = instruction { with_loc $sloc (Br_on_null (l, i)) } %prec prec_branch
-| BR_ON_NON_NULL l = label i = instruction { with_loc $sloc (Br_on_non_null (l, i)) }  %prec prec_branch
-| BR_ON_CAST l = label t = reference_type i = instruction { with_loc $sloc (Br_on_cast (l, t, i)) } %prec prec_branch
-| BR_ON_CAST_FAIL l = label t = reference_type i = instruction { with_loc $sloc (Br_on_cast_fail (l, t, i)) } %prec prec_branch
-| i1 = instruction "[" i2 = instruction "]" { with_loc $sloc (ArrayGet (i1, i2)) }
-| i1 = instruction "?" i2 = instruction ":" i3 = instruction
+| BR_ON_NULL l = label i = expression { with_loc $sloc (Br_on_null (l, i)) } %prec prec_branch
+| BR_ON_NON_NULL l = label i = expression { with_loc $sloc (Br_on_non_null (l, i)) }  %prec prec_branch
+| BR_ON_CAST l = label t = reference_type i = expression { with_loc $sloc (Br_on_cast (l, t, i)) } %prec prec_branch
+| BR_ON_CAST_FAIL l = label t = reference_type i = expression { with_loc $sloc (Br_on_cast_fail (l, t, i)) } %prec prec_branch
+| i1 = expression "[" i2 = index_expression "]"
+  { with_loc $sloc (ArrayGet (i1, i2)) }
+| i1 = expression "?" i2 = then_branch ":" i3 = expression
   { with_loc $sloc (Select (i1, i2, i3)) }
-| "!" i = instruction { with_loc $sloc (UnOp (Not, i)) } %prec prec_unary
-| "+" i = instruction { with_loc $sloc (UnOp (Pos, i)) } %prec prec_unary
-| "-" i = instruction { with_loc $sloc (UnOp (Neg, i)) } %prec prec_unary
-| i = instruction "!" { with_loc $sloc (NonNull i) }
+| "!" i = expression { with_loc $sloc (UnOp (Not, i)) } %prec prec_unary
+| "+" i = expression { with_loc $sloc (UnOp (Pos, i)) } %prec prec_unary
+| "-" i = expression { with_loc $sloc (UnOp (Neg, i)) } %prec prec_unary
+| i = expression "!" { with_loc $sloc (NonNull i) }
 
-instruction:
+expression:
 | i = blockinstr %prec prec_block { i }
 | i = plaininstr { i }
 
@@ -481,30 +491,30 @@ statement:
 | i = plaininstr { i }
 | NOP { with_loc $sloc Nop }
 | UNREACHABLE { with_loc $sloc Unreachable }
-| x = simple_pattern "=" i = instruction { with_loc $sloc (Set (x, i)) }
+| x = simple_pattern "=" i = expression { with_loc $sloc (Set (x, i)) }
 | LET x = simple_pattern
   { with_loc $sloc (Let ([(x, None)], None)) }
-| LET x = simple_pattern "=" i = instruction
+| LET x = simple_pattern "=" i = expression
   { with_loc $sloc (Let ([(x, None)], Some i)) }
-| LET x = simple_pattern ":" t = value_type "=" i = instruction
+| LET x = simple_pattern ":" t = value_type "=" i = expression
   { with_loc $sloc (Let ([(x, Some t)], Some i)) }
 | LET x = simple_pattern ":" t = value_type
   { with_loc $sloc (Let ([(x, Some t)], None)) }
 | LET
-  "(" l = separated_list(",", let_pattern) ")" i = ioption("=" i = instruction {i})
+  "(" l = separated_list(",", let_pattern) ")" i = ioption("=" i = expression {i})
   { with_loc $sloc (Let (l, i)) }
-| BR l = label i = ioption(instruction)
+| BR l = label i = ioption(expression)
   { with_loc $sloc (Br (l, i)) }
-| BR_TABLE "[" lst = list(label) ELSE l = label  "]" i = instruction
+| BR_TABLE "[" lst = list(label) ELSE l = label  "]" i = expression
   { with_loc $sloc (Br_table (lst @ [l], i)) }
-| RETURN i = ioption(instruction) { with_loc $sloc (Return i) }
-| THROW t = tag_name  i = ioption(instruction)
+| RETURN i = ioption(expression) { with_loc $sloc (Return i) }
+| THROW t = tag_name  i = ioption(expression)
   { with_loc $sloc (Throw (t, i)) }
-| THROW_REF i = instruction
+| THROW_REF i = expression
   { with_loc $sloc (ThrowRef i) }
-| BECOME i = instruction "(" l = separated_list(",", instruction) ")"
+| BECOME i = expression "(" l = separated_list(",", expression) ")"
    { with_loc $sloc (TailCall(i, l)) }
-| i1 = instruction "[" i2 = instruction "]" "=" i3 = instruction
+| i1 = expression "[" i2 = index_expression "]" "=" i3 = expression
   { with_loc $sloc (ArraySet (i1, i2, i3)) }
 
 delimited_instruction_list:
@@ -519,10 +529,12 @@ globalmut:
 | LET { true }
 | CONST { false }
 
+constant_expression: e = expression { e }
+
 global:
 | mut = globalmut name = ident
   typ = ioption(":" typ = value_type { typ })
-  "=" def = instruction ";"
+  "=" def = constant_expression ";"
   { fun attributes -> with_loc $sloc (Global {name; mut; typ; def; attributes}) }
 
 globaldecl:
