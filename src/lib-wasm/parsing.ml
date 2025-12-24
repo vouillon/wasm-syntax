@@ -59,8 +59,8 @@ struct
     Sedlexing.set_filename lexbuf filename;
     lexbuf
 
-  let lexer_lexbuf_to_supplier lexer ctx (lexbuf : Sedlexing.lexbuf) () =
-    let token = lexer ctx lexbuf in
+  let lexer_lexbuf_to_supplier lexer (lexbuf : Sedlexing.lexbuf) () =
+    let token = lexer lexbuf in
     let startp, endp = Sedlexing.lexing_bytes_positions lexbuf in
     (token, startp, endp)
 
@@ -123,7 +123,7 @@ struct
       let lexbuf = initialize_lexing filename text in
       try
         let supplier =
-          lexer_lexbuf_to_supplier Lexer.token Context.context lexbuf
+          lexer_lexbuf_to_supplier (Lexer.token Context.context) lexbuf
         in
         let revised_parser =
           MenhirLib.Convert.Simplified.traditional2revised F.parse
@@ -133,7 +133,7 @@ struct
       | F.Error ->
           let lexbuf = initialize_lexing filename text in
           let supplier =
-            lexer_lexbuf_to_supplier Lexer.token Context.context lexbuf
+            lexer_lexbuf_to_supplier (Lexer.token Context.context) lexbuf
           in
           let buffer, supplier = E.wrap_supplier supplier in
           let checkpoint =

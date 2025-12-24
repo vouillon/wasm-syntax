@@ -41,17 +41,22 @@ ZZZ
 %token NULLEXTERNREF
 %token REF
 %token NULL
-%token PARAM
-%token RESULT
 %token MUT
 %token FIELD
 %token REC
-%token TYPE
 %token SUB
 %token FINAL
-%token IMPORT
-%token EXPORT
-%token LOCAL
+%token LPAREN_CATCH
+%token LPAREN_CATCH_ALL
+%token LPAREN_CATCH_ALL_REF
+%token LPAREN_CATCH_REF
+%token LPAREN_EXPORT
+%token LPAREN_IMPORT
+%token LPAREN_LOCAL
+%token LPAREN_PARAM
+%token LPAREN_RESULT
+%token LPAREN_THEN
+%token LPAREN_TYPE
 %token GLOBAL
 %token START
 %token ELEM
@@ -66,7 +71,6 @@ ZZZ
 %token LOOP
 %token END
 %token IF
-%token THEN
 %token ELSE
 %token BR
 %token BR_IF
@@ -144,9 +148,7 @@ ZZZ
 %token TRY_TABLE
 %token DO
 %token CATCH
-%token CATCH_REF
 %token CATCH_ALL
-%token CATCH_ALL_REF
 %token THROW
 %token THROW_REF
 %token <string> MEM_ALIGN
@@ -191,7 +193,7 @@ ZZZ
 %token INPUT
 %token OUTPUT
 
-%on_error_reduce nop plaininstr list(STRING) list(valtype) list(fieldtype) list(field) limits list(foldedinstr) list(typedef) list(idx) list(elemexpr) list(modulefield) nonempty_list(f64) list(const) nonempty_list(float_or_nan) nonempty_list(result_pat) list(result_pat) list(cmd) nonempty_list(modulefield)
+%on_error_reduce plaininstr list(STRING) list(valtype) list(fieldtype) list(field) limits list(foldedinstr) list(typedef) list(idx) list(elemexpr) list(modulefield) nonempty_list(f64) list(const) nonempty_list(float_or_nan) nonempty_list(result_pat) list(result_pat) list(cmd) nonempty_list(modulefield)
 
 %parameter <Context : sig type t = Utils.Trivia.context val context : t end>
 
@@ -349,36 +351,33 @@ valtype:
 | t = tupletype { Tuple t }
 
 functype:
-| "(" FUNC r = params_and_results(nop) ")"{ fst r }
+| "(" FUNC r = params_and_results ")"{ r }
 
-params(cont):
-| c = cont { ([] , c) }
-| "(" PARAM i = ID t = valtype ")" rem = params(cont)
-  { map_fst (fun l -> (Some i, t) :: l) rem }
-| "(" PARAM l = valtype * ")" rem = params(cont)
-  { map_fst ((@) (List.map (fun t -> (None, t)) l)) rem }
+params:
+| { [] }
+| LPAREN_PARAM i = ID t = valtype ")" rem = params
+  { (Some i, t) :: rem }
+| LPAREN_PARAM l = valtype * ")" rem = params
+  { List.map (fun t -> (None, t)) l @ rem }
 
-params_no_bindings(cont):
-| c = cont { [], c }
-| "(" PARAM l = valtype * ")" rem = params_no_bindings(cont)
-  { map_fst ((@) l) rem }
+params_no_bindings:
+| { [] }
+| LPAREN_PARAM l = valtype * ")" rem = params_no_bindings
+  { l @ rem }
 
-results(cont):
-| c = cont { [], c }
-| "(" RESULT l = valtype * ")" rem = results(cont)
-  { map_fst ((@) l) rem }
+results:
+| { [] }
+| LPAREN_RESULT l = valtype * ")" rem = results
+  { l @ rem }
 
-params_and_results(cont):
-| r = params(results(cont))
-  { let (p, (r, c)) = r in
-    ({params = Array.of_list p; results = Array.of_list r}, c) }
+params_and_results:
+| p = params r = results
+  { {params = Array.of_list p; results = Array.of_list r} }
 
-params_and_results_no_bindings(cont):
-| r = params_no_bindings(results(cont))
-  { let (p, (r, c)) = r in
-    ({params = Array.of_list (List.map (fun t -> (None, t)) p);
-      results = Array.of_list r },
-     c) }
+params_and_results_no_bindings:
+| p = params_no_bindings r = results
+  { {params = Array.of_list (List.map (fun t -> (None, t)) p);
+     results = Array.of_list r } }
 
 field:
 | "(" FIELD i = ID t = fieldtype ")" { [(Some i, t)] }
@@ -404,7 +403,7 @@ rectype:
 | t = typedef { {t with desc = Types [|t.Ast.desc|]} }
 
 typedef:
-| "(" TYPE name = ID ? t = subtype ")"
+| LPAREN_TYPE name = ID ? t = subtype ")"
  { with_loc $sloc (name, t) }
 
 subtype:
@@ -428,68 +427,63 @@ limits:
 memtype:
 | l = limits { l }
 
-tabletype(cont):
-| l = limits t = reftype c = cont { ({limits = l; reftype = t}, c) }
+tabletype:
+| l = limits t = reftype { {limits = l; reftype = t} }
 
 (* Instructions *)
 
 blockinstr:
-| BLOCK label = label bti = blocktype(instrs(nop)) END label2 = label
+| BLOCK label = label typ = blocktype block =instrs END label2 = label
   { check_labels label label2;
-    let (typ, block) = bti in with_loc $sloc (Block {label; typ; block}) }
-| LOOP label = label bti = blocktype(instrs(nop)) END label2 = label
+    with_loc $sloc (Block {label; typ; block}) }
+| LOOP label = label typ = blocktype block = instrs END label2 = label
   { check_labels label label2;
-    let (typ, block) = bti in with_loc $sloc (Loop {label; typ; block}) }
-| IF label = label bti = blocktype(instrs(nop)) ELSE
-  label2 = label else_block = instrs(nop) END
+    with_loc $sloc (Loop {label; typ; block}) }
+| IF label = label typ = blocktype if_block = instrs ELSE
+  label2 = label else_block = instrs END
   label3 = label
   { check_labels label label2;
     check_labels label label3;
-    let (typ, if_block) = bti in
     with_loc $sloc (If {label; typ; if_block; else_block }) }
-| IF label = label bti = blocktype(instrs(nop)) END
+| IF label = label typ = blocktype if_block = instrs END
   label2 = label
   { check_labels label label2;
-    let (typ, if_block) = bti in
     with_loc $sloc (If {label; typ; if_block; else_block = [] }) }
-| TRY_TABLE label = label bti = blocktype(tbl_catches(instrs(nop)))
+| TRY_TABLE label = label typ = blocktype catches = tbl_catches block = instrs
   END label2 = label
    { check_labels label label2;
-     let (typ, (catches, block)) = bti in
      with_loc $sloc (TryTable {label; typ; catches; block}) }
-| TRY label = label bti = blocktype(instrs(nop)) c = catches END label2 = label
+| TRY label = label typ = blocktype block = instrs c = catches END label2 = label
   { check_labels label label2;
-    let (typ, block) = bti in
     let (catches, catch_all) = c in
     with_loc $sloc (Try {label; typ; block; catches; catch_all}) }
 
-tbl_catches(cont):
-| c = cont { [], c }
-| "(" CATCH x = idx l = idx ")" c = tbl_catches(cont)
-  { map_fst (fun r -> Catch(x, l) :: r) c }
-| "(" CATCH_REF x = idx l = idx ")" c = tbl_catches(cont)
-  { map_fst (fun r -> CatchRef(x, l) :: r) c }
-| "(" CATCH_ALL l = idx ")" c = tbl_catches(cont)
-  { map_fst (fun r -> CatchAll l :: r) c }
-| "(" CATCH_ALL_REF l = idx ")" c = tbl_catches(cont)
-  { map_fst (fun r -> CatchAllRef l :: r) c }
+tbl_catches:
+| { [] }
+| LPAREN_CATCH x = idx l = idx ")" c = tbl_catches
+  { Catch(x, l) :: c }
+| LPAREN_CATCH_REF x = idx l = idx ")" c = tbl_catches
+  { CatchRef(x, l) :: c }
+| LPAREN_CATCH_ALL l = idx ")" c = tbl_catches
+  { CatchAll l :: c }
+| LPAREN_CATCH_ALL_REF l = idx ")" c = tbl_catches
+  { CatchAllRef l :: c }
 
 catches:
 | END { [], None }
-| CATCH_ALL l = instrs(nop) END { [], Some l }
-| CATCH i = idx l = instrs(nop) rem = catches
+| CATCH_ALL l = instrs END { [], Some l }
+| CATCH i = idx l = instrs rem = catches
   { map_fst (fun r -> (i, l) :: r) rem }
 
 label:
 | i = ID ? { i }
 
-blocktype(cont):
-| r = typeuse_no_bindings(cont)
-  { (match fst r with
-     | None, Some {params = [||]; results = [|typ|]} -> Some (Valtype typ)
-     | None, None -> None
-     | _ -> Some (Typeuse (fst r))),
-    snd r }
+blocktype:
+| tu = typeuse_no_bindings
+  { match tu with
+    | None, Some {params = [||]; results = [|typ|]} -> Some (Valtype typ)
+    | None, None -> None
+    | _ -> Some (Typeuse tu) }
 
 %inline memidx:
 | i = ioption(idx) { Option.value ~default:(with_loc $sloc (Num Uint32.zero)) i}
@@ -630,6 +624,8 @@ plaininstr:
 | TUPLE_EXTRACT l = u32 i = u32
   { with_loc $sloc (TupleExtract (l, i)) }
 | i = INSTR { with_loc $sloc i }
+| i = callindirect { i }
+| i = select { i }
 
 %inline memarg:
 | o = ioption(MEM_OFFSET) a = ioption(MEM_ALIGN)
@@ -637,80 +633,58 @@ plaininstr:
     {offset = Option.value ~default:Uint64.zero (Option.map Uint64.of_string o);
      align = Option.value ~default:(width : Uint64.t) (Option.map Uint64.of_string a)} }
 
-callindirect(cont):
-| CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
-  { with_loc ($symbolstartpos, $endpos(i)) (CallIndirect (i, fst t)) :: snd t }
-| CALL_INDIRECT t = typeuse_no_bindings(cont)
-  { with_loc $loc($1)
-      (CallIndirect (Ast.no_loc (Num Uint32.zero), fst t)) :: snd t }
-| RETURN_CALL_INDIRECT i = idx t = typeuse_no_bindings(cont)
-  { with_loc ($symbolstartpos, $endpos(i))
-      (ReturnCallIndirect (i, fst t)) :: snd t }
-| RETURN_CALL_INDIRECT t = typeuse_no_bindings(cont)
-  { with_loc $loc($1)
-      (ReturnCallIndirect (Ast.no_loc (Num Uint32.zero), fst t)) :: snd t }
+callindirect:
+| CALL_INDIRECT i = idx t = typeuse_no_bindings
+  { with_loc $sloc (CallIndirect (i, t)) }
+| CALL_INDIRECT t = typeuse_no_bindings
+  { with_loc $sloc (CallIndirect (Ast.no_loc (Num Uint32.zero), t)) }
+| RETURN_CALL_INDIRECT i = idx t = typeuse_no_bindings
+  { with_loc $sloc (ReturnCallIndirect (i, t)) }
+| RETURN_CALL_INDIRECT t = typeuse_no_bindings
+  { with_loc $sloc (ReturnCallIndirect (Ast.no_loc (Num Uint32.zero), t)) }
 
-select_results(cont):
-| c = cont { (([], None), c) }
-| "(" RESULT l = valtype * ")" rem = select_results(cont)
-  { map_fst
-      (fun (l', loc) ->
-         (l :: l', Some (Option.value ~default:$endpos($4) loc)))
-      rem }
+select_results:
+| { ([]) }
+| LPAREN_RESULT l = valtype * ")" rem = select_results
+  { l :: rem }
 
-select(cont):
-| SELECT p = select_results(cont)
-  { let ((l, loc), c) = p in
-    with_loc ($symbolstartpos, Option.value ~default:$endpos($1) loc)
-      (Select (if l = [] then None else Some (List.concat l))) :: c }
+select:
+| SELECT l = select_results
+  { with_loc $sloc  (Select (if l = [] then None else Some (List.concat l))) }
 
-ambiguous_instr(cont):
-| l = callindirect(cont)
-| l = select(cont)
-{ l }
-
-instrs (cont):
-| cont { [] }
-| i = plaininstr r = instrs(cont) { i :: r }
-| l = ambiguous_instr(instrs(cont)) { l }
-| i = blockinstr r = instrs(cont) { i :: r }
-| i = foldedinstr r = instrs(cont) { i :: r }
-
-nop: {}
+instrs:
+| { [] }
+| i = plaininstr r = instrs { i :: r }
+| i = blockinstr r = instrs { i :: r }
+| i = foldedinstr r = instrs { i :: r }
 
 foldedinstr:
 | "(" i = plaininstr l = foldedinstr * ")"
   { with_loc $sloc (Folded (i, l)) }
-| "(" l = ambiguous_instr(foldedinstr *) ")"
-  { with_loc $sloc (Folded (List.hd l, List.tl l)) }
-| "(" BLOCK label = label btx = blocktype (instrs(nop)) ")"
-  { let (typ, block) = btx in
-    with_loc $sloc (Folded (with_loc $sloc (Block {label; typ; block}), [])) }
-| "(" LOOP label = label btx = blocktype (instrs(nop)) ")"
-  { let (typ, block) = btx in
-    with_loc $sloc (Folded (with_loc $sloc (Loop {label; typ; block}), [])) }
+| "(" BLOCK label = label typ = blocktype block = instrs ")"
+  { with_loc $sloc (Folded (with_loc $sloc (Block {label; typ; block}), [])) }
+| "(" LOOP label = label typ = blocktype block = instrs ")"
+  { with_loc $sloc (Folded (with_loc $sloc (Loop {label; typ; block}), [])) }
 | "(" IF label = label
-  btx = blocktype (foldedinstrs("(" THEN l =  instrs(nop) ")" {l}))
-  else_block = option("(" ELSE l = instrs(nop) ")" { l })
+  typ = blocktype l = foldedinstrs LPAREN_THEN if_block =  instrs ")"
+  else_block = option("(" ELSE l = instrs ")" { l })
   ")"
-  { let (typ, (l, if_block)) = btx in
-    with_loc $sloc
+  { with_loc $sloc
       (Folded
         (with_loc $sloc
           (If {label; typ; if_block;
                else_block = Option.value ~default:[] else_block }),
          l)) }
-| "(" TRY_TABLE label = label bti = blocktype(tbl_catches(instrs(nop)))  ")"
-   { let (typ, (catches, block)) = bti in
-     with_loc $sloc
+| "(" TRY_TABLE label = label typ = blocktype catches = tbl_catches
+  block = instrs  ")"
+   { with_loc $sloc
        (Folded
           (with_loc $sloc (TryTable {label; typ; catches; block}),
           [])) }
 | "(" TRY label = label
-  btb = blocktype("(" DO l = instrs(nop) ")" { l })
+  typ = blocktype "(" DO block = instrs ")"
   c = foldedcatches ")"
-  { let (typ, block) = btb in
-    let (catches, catch_all) = c in
+  { let (catches, catch_all) = c in
     with_loc $sloc
       (Folded
         (with_loc $sloc (Try {label; typ; block; catches; catch_all}), [])) }
@@ -731,115 +705,103 @@ foldedinstr:
 
 foldedcatches:
 | { [], None }
-| "(" CATCH_ALL l = instrs(nop) ")" { [], Some l }
-| "(" CATCH i = idx l = instrs(nop) ")" rem = foldedcatches
+| LPAREN_CATCH_ALL l = instrs ")" { [], Some l }
+| LPAREN_CATCH i = idx l = instrs ")" rem = foldedcatches
   { map_fst (fun r -> (i, l) :: r) rem }
 
-foldedinstrs(cont):
-| c = cont { [], c }
-| i = foldedinstr r = foldedinstrs(cont) { map_fst (fun l -> i :: l) r }
+foldedinstrs:
+| { [] }
+| i = foldedinstr r = foldedinstrs { i :: r }
 
 expr:
-| l = instrs(nop) { l }
+| l = instrs { l }
 
 (* Modules *)
 
-typeuse(cont):
-| "(" TYPE i = idx ")" rem = params_and_results(cont)
-  { let (s, r) = rem in
-    (match s with
-     | {params = [||]; results = [||]} -> Some i, None
-     | _ -> Some i, Some s),
-    r }
-| rem = params_and_results(cont) { let (s, r) = rem in (None, Some s), r }
+typeuse:
+| LPAREN_TYPE i = idx ")" s = params_and_results
+  { match s with
+    | {params = [||]; results = [||]} -> Some i, None
+    | _ -> Some i, Some s }
+| s = params_and_results { (None, Some s)}
 
-typeuse_no_bindings(cont):
-| "(" TYPE i = idx ")" rem = params_and_results_no_bindings(cont)
-  { let (s, r) = rem in
-    (match s with
-     | {params = [||]; results = [||]} -> Some i, None
-     | _ -> Some i, Some s),
-    r }
-| rem = params_and_results_no_bindings(cont)
-  { let (s, r) = rem in (None, Some s), r }
+typeuse_no_bindings:
+| LPAREN_TYPE i = idx ")" s = params_and_results_no_bindings
+  { match s with
+    | {params = [||]; results = [||]} -> Some i, None
+    | _ -> Some i, Some s }
+| s = params_and_results_no_bindings
+  { (None, Some s) }
 
 import:
-| "(" IMPORT module_ = name name = name desc = importdesc ")"
+| LPAREN_IMPORT module_ = name name = name desc = importdesc ")"
     { let (id, desc) = desc in
       with_loc $sloc (Import {module_; name; id; desc; exports = [] }) }
 
 importdesc:
-| "(" FUNC i = ID ? t = typeuse(nop)")"
-    { (i, Func (fst t)) }
+| "(" FUNC i = ID ? t = typeuse")"
+    { (i, Func t) }
 | "(" MEMORY i = ID ? l = limits ")"
     { (i, (Memory l)) }
-| "(" TABLE i = ID ? t = tabletype(nop) ")"
-    { (i, (Table (fst t))) }
+| "(" TABLE i = ID ? t = tabletype ")"
+    { (i, (Table t)) }
 | "(" GLOBAL i = ID ? t = globaltype ")"
     { (i, (Global t)) }
-| "(" TAG i = ID ? t = typeuse(nop) ")"
-    { (i, (Tag (fst t) : importdesc)) }
+| "(" TAG i = ID ? t = typeuse ")"
+    { (i, (Tag t : importdesc)) }
 
 func:
-| "(" FUNC id = ID ? r = exports(typeuse(locals(instrs(nop)))) ")"
-  { let (exports, (typ, (locals, instrs))) = r in
-    with_loc $sloc (Func {id; typ; locals; instrs; exports}) }
+| "(" FUNC id = ID ? exports = exports typ = typeuse
+   locals = locals instrs = instrs ")"
+  { with_loc $sloc (Func {id; typ; locals; instrs; exports}) }
 | "(" FUNC id = ID ?
-  r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
-  t = typeuse(nop) ")"
-  { let (exports, (module_, name)) = r in
-    with_loc $sloc (Import {module_; name; id; desc = Func (fst t); exports }) }
+  exports = exports LPAREN_IMPORT module_ = name name = name ")"
+  t = typeuse ")"
+  { with_loc $sloc (Import {module_; name; id; desc = Func t; exports }) }
 
-exports(cont):
-| c = cont { [], c }
-| "(" EXPORT n = name ")" r = exports(cont)
-  { map_fst (fun l -> n :: l) r }
+exports:
+| { [] }
+| LPAREN_EXPORT n = name ")" r = exports { n :: r }
 
-locals(cont):
-| c = cont { [], c }
-| "(" LOCAL i = ID t = valtype ")" r = locals(cont)
-  { map_fst (fun l -> (Some i, t) :: l) r }
-| "(" LOCAL l = valtype * ")" r = locals(cont)
-  { map_fst ((@) (List.map (fun t -> (None, t)) l)) r }
+locals:
+| { [] }
+| LPAREN_LOCAL i = ID t = valtype ")" r = locals
+  { (Some i, t) :: r }
+| LPAREN_LOCAL l = valtype * ")" r = locals
+  { List.map (fun t -> (None, t)) l @ r }
 
 memory:
-| "(" MEMORY id = ID? r = exports(memtype) ")"
-  { let (exports, limits) = r in
-    with_loc $sloc (Memory {id; limits; init = None; exports}) }
+| "(" MEMORY id = ID? exports = exports limits = memtype ")"
+  { with_loc $sloc (Memory {id; limits; init = None; exports}) }
 | "(" MEMORY id = ID?
-  r = exports(at = ioption(address_type) "(" DATA s = datastring ")"
-              { (at, s) }) ")"
-  { let (exports, (at, s)) = r in
-    let address_type = Option.value ~default:`I32 at in
+  exports = exports at = ioption(address_type) "(" DATA s = datastring ")" ")"
+  { let address_type = Option.value ~default:`I32 at in
     let data_len =
       List.fold_left (fun len {Ast.desc; _} -> len + String.length desc) 0 s in
     let sz = Uint64.of_int ((data_len + 65535) lsr 16) in
     let limits = Ast.no_loc {mi = sz; ma = Some sz; address_type} in
     with_loc $sloc (Memory {id; limits; init = Some s; exports}) }
 | "(" MEMORY id = ID ?
-  r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
-  t = memtype ")"
-  { let (exports, (module_, name)) = r in
-    with_loc $sloc (Import {module_; name; id; desc = Memory t; exports}) }
+  exports = exports LPAREN_IMPORT module_ = name name = name ")" t = memtype ")"
+  { with_loc $sloc (Import {module_; name; id; desc = Memory t; exports}) }
 
 table:
-| "(" TABLE id = ID? r = exports(tabletype(expr)) ")"
-  { let (exports, (typ, e)) = r in
-    let init = if e = [] then Init_default else Init_expr e in
+| "(" TABLE id = ID? exports = exports typ = tabletype e = expr ")"
+  { let init = if e = [] then Init_default else Init_expr e in
     with_loc $sloc (Table {id; typ; init; exports}) }
 | "(" TABLE id = ID?
-  r = exports(at = ioption(address_type) t = reftype "(" ELEM e = list(elemexpr) ")" {at, t, e}) ")"
-  { let (exports, (at, reftype, elem)) = r in
-    let address_type = Option.value ~default:`I32 at in
+  exports = exports at = ioption(address_type) reftype = reftype
+  "(" ELEM elem = list(elemexpr) ")" ")"
+  { let address_type = Option.value ~default:`I32 at in
     let len = Uint64.of_int (List.length elem) in
     let limits = Ast.no_loc {mi=len; ma =Some len; address_type} in
     with_loc $sloc
       (Table {id; typ = {limits; reftype};
               init = Init_segment elem; exports}) }
 | "(" TABLE id = ID?
-  r = exports(at = ioption(address_type) t = reftype "(" ELEM e = nonempty_list(idx) ")" {at, t, e}) ")"
-  { let (exports, (at, reftype, elem)) = r in
-    let address_type = Option.value ~default:`I32 at in
+  exports = exports at = ioption(address_type) reftype = reftype
+  "(" ELEM elem = nonempty_list(idx) ")" ")"
+  { let address_type = Option.value ~default:`I32 at in
     let len = Uint64.of_int (List.length elem) in
     let elem = List.map (fun i -> [{i with Ast.desc = RefFunc i}]) elem in
     let limits = Ast.no_loc {mi=len; ma =Some len; address_type} in
@@ -847,37 +809,32 @@ table:
       (Table {id; typ = { limits; reftype };
               init = Init_segment elem; exports}) }
 | "(" TABLE id = ID ?
-  r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
-  t = tabletype(nop) ")"
-  { let (exports, (module_, name)) = r in
-    with_loc $sloc (Import {module_; name; id; desc = Table (fst t); exports }) }
+  exports = exports LPAREN_IMPORT module_ = name name = name ")"
+  t = tabletype ")"
+  { with_loc $sloc (Import {module_; name; id; desc = Table t; exports }) }
 
 tag:
-| "(" TAG id = ID ? r = exports(typeuse (nop)) ")"
-    { let (exports, (typ, _)) = r in
-      with_loc $sloc (Tag {id; typ; exports}) }
+| "(" TAG id = ID ? exports = exports typ = typeuse ")"
+    { with_loc $sloc (Tag {id; typ; exports}) }
 | "(" TAG id = ID ?
-  r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
-  t = typeuse (nop)")"
-  { let (exports, (module_, name)) = r in
-    with_loc $sloc (Import {module_; name; id; desc = Tag (fst t); exports }) }
+  exports = exports LPAREN_IMPORT module_ = name name = name ")"
+  typ = typeuse")"
+  { with_loc $sloc (Import {module_; name; id; desc = Tag typ; exports }) }
 
 global:
-| "(" GLOBAL id = ID ? r = exports(t = globaltype init = expr { t, init }) ")"
-  { let (exports, (typ, init)) = r in
-    with_loc $sloc (Global {id; typ; init; exports}) }
+| "(" GLOBAL id = ID ? exports = exports typ = globaltype init = expr ")"
+  { with_loc $sloc (Global {id; typ; init; exports}) }
 | "(" GLOBAL id = ID ?
-  r = exports("(" IMPORT module_ = name name = name ")" { (module_, name) })
+  exports = exports LPAREN_IMPORT module_ = name name = name ")"
   typ = globaltype ")"
-  { let (exports, (module_, name)) = r in
-    with_loc $sloc (Import {module_; name; id; desc = Global typ; exports }) }
+  { with_loc $sloc (Import {module_; name; id; desc = Global typ; exports }) }
 
 globaltype:
 | typ = valtype { {mut = false; typ} }
 | "(" MUT typ = valtype ")" { {mut = true; typ} }
 
 export:
-| "(" EXPORT name = name d = exportdesc ")"
+| LPAREN_EXPORT name = name d = exportdesc ")"
   { let (index, kind) = d in
     with_loc $sloc (Export {name; kind; index}) }
 
