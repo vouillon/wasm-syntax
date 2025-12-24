@@ -71,7 +71,7 @@
 %token TRY CATCH
 %token DISPATCH
 
-%on_error_reduce statement plaininstr separated_nonempty_list(",",structure_type_field) list(module_field) separated_nonempty_list(",",value_type) block_type separated_nonempty_list(",",function_parameter) list(label) list(attribute) list(typedef) list(legacy_catch) separated_nonempty_list(",",catch) separated_nonempty_list(",",let_pattern) blockinstr delimited_instruction_list loption(separated_nonempty_list(",",catch)) separated_nonempty_list(",",expression) let_pattern structure_field separated_nonempty_list(",",structure_field) constant_expression attribute_expression parenthesized_expression index_expression then_branch condition_expression length_expression
+%on_error_reduce statement plaininstr separated_nonempty_list(",",structure_type_field) list(module_field) separated_nonempty_list(",",value_type) block_type separated_nonempty_list(",",function_parameter) list(label) list(attribute) list(typedef) list(legacy_catch) separated_nonempty_list(",",catch) separated_nonempty_list(",",let_pattern) blockinstr delimited_instruction_list loption(separated_nonempty_list(",",catch)) separated_nonempty_list(",",expression) let_pattern structure_field separated_nonempty_list(",",structure_field) constant_expression attribute_expression parenthesized_expression index_expression then_branch condition_expression length_expression optional_function_type
 
 
 %nonassoc prec_ident (* {a|...} *) prec_block
@@ -311,10 +311,12 @@ function_type:
 function_name:
 | i = ident { i }
 
+optional_function_type: sign = option (function_type) { sign }
+
 %inline fundecl:
 | FN name = function_name
   t = ioption(":" t = type_name { t } )
-  sign = option (function_type)
+  sign = optional_function_type
   { (name, t, sign) }
 
 func:
@@ -329,7 +331,7 @@ tag_name:
 tag:
 | TAG name = tag_name
   t = ioption(":" t = type_name { t } )
-  sign = option (function_type) ";"
+  sign = optional_function_type ";"
   { (name, t, sign) }
 
 %inline block_label: l = ioption(l = label ":" { l }) { l }

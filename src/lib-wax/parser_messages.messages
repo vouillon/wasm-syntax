@@ -248,7 +248,7 @@ Expecting ')', ',', or ':'.
 
 parse: LET IDENT UNREACHABLE
 ##
-## Ends in an error in state: 546.
+## Ends in an error in state: 547.
 ##
 ## global -> globalmut IDENT . EQUAL constant_expression SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ## global -> globalmut IDENT . COLON value_type EQUAL constant_expression SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
@@ -262,7 +262,7 @@ Expecting ':', or '='.
 
 parse: LET IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 551.
+## Ends in an error in state: 552.
 ##
 ## global -> globalmut IDENT COLON . value_type EQUAL constant_expression SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ## globaldecl -> globalmut IDENT COLON . value_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
@@ -275,7 +275,7 @@ Expecting a value type.
 
 parse: LET IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 552.
+## Ends in an error in state: 553.
 ##
 ## global -> globalmut IDENT COLON value_type . EQUAL constant_expression SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ## globaldecl -> globalmut IDENT COLON value_type . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
@@ -409,11 +409,11 @@ Expecting ':'.
 
 parse: FN IDENT COLON IDENT UNREACHABLE
 ##
-## Ends in an error in state: 520.
+## Ends in an error in state: 521.
 ##
-## declaration -> FN function_name COLON type_name . option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name COLON type_name . option(function_type) LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name COLON type_name . option(function_type) QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## declaration -> FN function_name COLON type_name . optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON type_name . optional_function_type LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON type_name . optional_function_type QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN function_name COLON type_name
@@ -469,12 +469,12 @@ Expecting a result type.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT QUOTE IDENT UNREACHABLE
 ##
-## Ends in an error in state: 535.
+## Ends in an error in state: 536.
 ##
-## func -> FN function_name option(function_type) QUOTE label_name . COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name optional_function_type QUOTE label_name . COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name option(function_type) QUOTE label_name
+## FN function_name optional_function_type QUOTE label_name
 ##
 
 Expecting ':'.
@@ -493,14 +493,14 @@ Expecting ';'.
 
 parse: FN UNREACHABLE
 ##
-## Ends in an error in state: 516.
+## Ends in an error in state: 517.
 ##
-## declaration -> FN . function_name option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## declaration -> FN . function_name COLON type_name option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN . function_name option(function_type) LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN . function_name option(function_type) QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN . function_name COLON type_name option(function_type) LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN . function_name COLON type_name option(function_type) QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## declaration -> FN . function_name optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## declaration -> FN . function_name COLON type_name optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN . function_name optional_function_type LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN . function_name optional_function_type QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN . function_name COLON type_name optional_function_type LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN . function_name COLON type_name optional_function_type QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN
@@ -510,11 +510,11 @@ Expecting a function name.
 
 parse: FN IDENT COLON UNREACHABLE
 ##
-## Ends in an error in state: 519.
+## Ends in an error in state: 520.
 ##
-## declaration -> FN function_name COLON . type_name option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name COLON . type_name option(function_type) LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name COLON . type_name option(function_type) QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## declaration -> FN function_name COLON . type_name optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON . type_name optional_function_type LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON . type_name optional_function_type QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN function_name COLON
@@ -536,12 +536,12 @@ Expecting an expression.
 
 parse: FN IDENT LBRACE IDENT SEMI TYPE
 ##
-## Ends in an error in state: 541.
+## Ends in an error in state: 542.
 ##
-## func -> FN function_name option(function_type) LBRACE delimited_instruction_list . RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name optional_function_type LBRACE delimited_instruction_list . RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name option(function_type) LBRACE delimited_instruction_list
+## FN function_name optional_function_type LBRACE delimited_instruction_list
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
@@ -589,8 +589,8 @@ parse: TAG IDENT RBRACE
 ##
 ## Ends in an error in state: 500.
 ##
-## tag -> TAG tag_name . option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## tag -> TAG tag_name . COLON type_name option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## tag -> TAG tag_name . optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## tag -> TAG tag_name . COLON type_name optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TAG tag_name
@@ -4077,8 +4077,8 @@ parse: TAG UNREACHABLE
 ##
 ## Ends in an error in state: 499.
 ##
-## tag -> TAG . tag_name option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## tag -> TAG . tag_name COLON type_name option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## tag -> TAG . tag_name optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## tag -> TAG . tag_name COLON type_name optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TAG
@@ -4090,7 +4090,7 @@ parse: TAG IDENT COLON UNREACHABLE
 ##
 ## Ends in an error in state: 501.
 ##
-## tag -> TAG tag_name COLON . type_name option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## tag -> TAG tag_name COLON . type_name optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TAG tag_name COLON
@@ -4102,7 +4102,7 @@ parse: TAG IDENT COLON IDENT UNREACHABLE
 ##
 ## Ends in an error in state: 502.
 ##
-## tag -> TAG tag_name COLON type_name . option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## tag -> TAG tag_name COLON type_name . optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## TAG tag_name COLON type_name
@@ -4114,43 +4114,45 @@ parse: TAG IDENT COLON IDENT LPAREN RPAREN QUOTE
 ##
 ## Ends in an error in state: 503.
 ##
-## tag -> TAG tag_name COLON type_name option(function_type) . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## tag -> TAG tag_name COLON type_name optional_function_type . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## TAG tag_name COLON type_name option(function_type)
+## TAG tag_name COLON type_name optional_function_type
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 49, spurious reduction of production function_type -> LPAREN parameter_list RPAREN
-## In state 505, spurious reduction of production option(function_type) -> function_type
+## In state 506, spurious reduction of production option(function_type) -> function_type
+## In state 505, spurious reduction of production optional_function_type -> option(function_type)
 ##
 
 Expecting ';'.
 
 parse: TAG IDENT LPAREN RPAREN QUOTE
 ##
-## Ends in an error in state: 506.
+## Ends in an error in state: 507.
 ##
-## tag -> TAG tag_name option(function_type) . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## tag -> TAG tag_name optional_function_type . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## TAG tag_name option(function_type)
+## TAG tag_name optional_function_type
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 49, spurious reduction of production function_type -> LPAREN parameter_list RPAREN
-## In state 505, spurious reduction of production option(function_type) -> function_type
+## In state 506, spurious reduction of production option(function_type) -> function_type
+## In state 505, spurious reduction of production optional_function_type -> option(function_type)
 ##
 
 Expecting ';'.
 
 parse: LBRACE UNREACHABLE
 ##
-## Ends in an error in state: 509.
+## Ends in an error in state: 510.
 ##
 ## module_field -> list(attribute) LBRACE . list(module_field) RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
@@ -4163,7 +4165,7 @@ Expecting '}', or a module field.
 
 parse: LBRACE LBRACE RBRACE UNREACHABLE
 ##
-## Ends in an error in state: 510.
+## Ends in an error in state: 511.
 ##
 ## list(module_field) -> module_field . list(module_field) [ RBRACE ]
 ##
@@ -4175,14 +4177,14 @@ Expecting '}', or a module field.
 
 parse: FN IDENT UNREACHABLE
 ##
-## Ends in an error in state: 518.
+## Ends in an error in state: 519.
 ##
-## declaration -> FN function_name . option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## declaration -> FN function_name . COLON type_name option(function_type) SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name . option(function_type) LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name . option(function_type) QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name . COLON type_name option(function_type) LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name . COLON type_name option(function_type) QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## declaration -> FN function_name . optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## declaration -> FN function_name . COLON type_name optional_function_type SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name . optional_function_type LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name . optional_function_type QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name . COLON type_name optional_function_type LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name . COLON type_name optional_function_type QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
 ## FN function_name
@@ -4192,68 +4194,68 @@ Expecting ''', ':', ';', '{', or a function type.
 
 parse: FN IDENT COLON IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 ##
-## Ends in an error in state: 521.
+## Ends in an error in state: 522.
 ##
-## declaration -> FN function_name COLON type_name option(function_type) . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name COLON type_name option(function_type) . LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name COLON type_name option(function_type) . QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## declaration -> FN function_name COLON type_name optional_function_type . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON type_name optional_function_type . LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON type_name optional_function_type . QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name COLON type_name option(function_type)
+## FN function_name COLON type_name optional_function_type
 ##
 
 Expecting ''', ';', or '{'.
 
 parse: FN IDENT COLON IDENT QUOTE UNDERSCORE
 ##
-## Ends in an error in state: 523.
+## Ends in an error in state: 524.
 ##
-## func -> FN function_name COLON type_name option(function_type) QUOTE . label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON type_name optional_function_type QUOTE . label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name COLON type_name option(function_type) QUOTE
+## FN function_name COLON type_name optional_function_type QUOTE
 ##
 
 Expecting a label name.
 
 parse: FN IDENT COLON IDENT QUOTE AS UNREACHABLE
 ##
-## Ends in an error in state: 524.
+## Ends in an error in state: 525.
 ##
-## func -> FN function_name COLON type_name option(function_type) QUOTE label_name . COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON type_name optional_function_type QUOTE label_name . COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name COLON type_name option(function_type) QUOTE label_name
+## FN function_name COLON type_name optional_function_type QUOTE label_name
 ##
 
 Expecting ':'.
 
 parse: FN IDENT COLON IDENT QUOTE AS COLON UNREACHABLE
 ##
-## Ends in an error in state: 525.
+## Ends in an error in state: 526.
 ##
-## func -> FN function_name COLON type_name option(function_type) QUOTE label_name COLON . LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON type_name optional_function_type QUOTE label_name COLON . LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name COLON type_name option(function_type) QUOTE label_name COLON
+## FN function_name COLON type_name optional_function_type QUOTE label_name COLON
 ##
 
 Expecting '{'.
 
 parse: FN IDENT COLON IDENT QUOTE AS COLON LBRACE STAR
 ##
-## Ends in an error in state: 527.
+## Ends in an error in state: 528.
 ##
-## func -> FN function_name COLON type_name option(function_type) QUOTE label_name COLON LBRACE delimited_instruction_list . RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON type_name optional_function_type QUOTE label_name COLON LBRACE delimited_instruction_list . RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name COLON type_name option(function_type) QUOTE label_name COLON LBRACE delimited_instruction_list
+## FN function_name COLON type_name optional_function_type QUOTE label_name COLON LBRACE delimited_instruction_list
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 526, spurious reduction of production delimited_instruction_list ->
+## In state 527, spurious reduction of production delimited_instruction_list ->
 ##
 
 Expecting '}'.
@@ -4261,18 +4263,18 @@ Expecting '}'.
 
 parse: FN IDENT COLON IDENT LBRACE STAR
 ##
-## Ends in an error in state: 530.
+## Ends in an error in state: 531.
 ##
-## func -> FN function_name COLON type_name option(function_type) LBRACE delimited_instruction_list . RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name COLON type_name optional_function_type LBRACE delimited_instruction_list . RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name COLON type_name option(function_type) LBRACE delimited_instruction_list
+## FN function_name COLON type_name optional_function_type LBRACE delimited_instruction_list
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 529, spurious reduction of production delimited_instruction_list ->
+## In state 530, spurious reduction of production delimited_instruction_list ->
 ##
 
 Expecting '}'.
@@ -4280,56 +4282,56 @@ Expecting '}'.
 
 parse: FN IDENT LPAREN RPAREN ARROW IDENT UNREACHABLE
 ##
-## Ends in an error in state: 532.
+## Ends in an error in state: 533.
 ##
-## declaration -> FN function_name option(function_type) . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name option(function_type) . LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
-## func -> FN function_name option(function_type) . QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## declaration -> FN function_name optional_function_type . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name optional_function_type . LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name optional_function_type . QUOTE label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name option(function_type)
+## FN function_name optional_function_type
 ##
 
 Expecting ''', ';', or '{'.
 
 parse: FN IDENT QUOTE UNDERSCORE
 ##
-## Ends in an error in state: 534.
+## Ends in an error in state: 535.
 ##
-## func -> FN function_name option(function_type) QUOTE . label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name optional_function_type QUOTE . label_name COLON LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name option(function_type) QUOTE
+## FN function_name optional_function_type QUOTE
 ##
 
 Expecting a label name.
 
 parse: FN IDENT QUOTE AS COLON UNREACHABLE
 ##
-## Ends in an error in state: 536.
+## Ends in an error in state: 537.
 ##
-## func -> FN function_name option(function_type) QUOTE label_name COLON . LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name optional_function_type QUOTE label_name COLON . LBRACE delimited_instruction_list RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name option(function_type) QUOTE label_name COLON
+## FN function_name optional_function_type QUOTE label_name COLON
 ##
 
 Expecting '{'.
 
 parse: FN IDENT QUOTE AS COLON LBRACE STAR
 ##
-## Ends in an error in state: 538.
+## Ends in an error in state: 539.
 ##
-## func -> FN function_name option(function_type) QUOTE label_name COLON LBRACE delimited_instruction_list . RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
+## func -> FN function_name optional_function_type QUOTE label_name COLON LBRACE delimited_instruction_list . RBRACE [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
 ## The known suffix of the stack is as follows:
-## FN function_name option(function_type) QUOTE label_name COLON LBRACE delimited_instruction_list
+## FN function_name optional_function_type QUOTE label_name COLON LBRACE delimited_instruction_list
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 537, spurious reduction of production delimited_instruction_list ->
+## In state 538, spurious reduction of production delimited_instruction_list ->
 ##
 
 Expecting '}'.
@@ -4337,7 +4339,7 @@ Expecting '}'.
 
 parse: CONST UNREACHABLE
 ##
-## Ends in an error in state: 545.
+## Ends in an error in state: 546.
 ##
 ## global -> globalmut . IDENT EQUAL constant_expression SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ## global -> globalmut . IDENT COLON value_type EQUAL constant_expression SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
@@ -4351,7 +4353,7 @@ Expecting an identifier.
 
 parse: CONST IDENT EQUAL UNREACHABLE
 ##
-## Ends in an error in state: 547.
+## Ends in an error in state: 548.
 ##
 ## global -> globalmut IDENT EQUAL . constant_expression SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
@@ -4363,7 +4365,7 @@ Expecting a constant expression.
 
 parse: CONST IDENT EQUAL CHAR UNREACHABLE
 ##
-## Ends in an error in state: 549.
+## Ends in an error in state: 550.
 ##
 ## global -> globalmut IDENT EQUAL constant_expression . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
@@ -4374,14 +4376,14 @@ parse: CONST IDENT EQUAL CHAR UNREACHABLE
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 548, spurious reduction of production constant_expression -> expression
+## In state 549, spurious reduction of production constant_expression -> expression
 ##
 
 Expecting ';'.
 
 parse: CONST IDENT COLON IDENT EQUAL UNREACHABLE
 ##
-## Ends in an error in state: 554.
+## Ends in an error in state: 555.
 ##
 ## global -> globalmut IDENT COLON value_type EQUAL . constant_expression SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
@@ -4393,7 +4395,7 @@ Expecting a constant expression.
 
 parse: CONST IDENT COLON IDENT EQUAL CHAR UNREACHABLE
 ##
-## Ends in an error in state: 555.
+## Ends in an error in state: 556.
 ##
 ## global -> globalmut IDENT COLON value_type EQUAL constant_expression . SEMI [ TYPE TAG SHARP REC RBRACE LET LBRACE FN EOF CONST ]
 ##
@@ -4404,7 +4406,7 @@ parse: CONST IDENT COLON IDENT EQUAL CHAR UNREACHABLE
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 548, spurious reduction of production constant_expression -> expression
+## In state 549, spurious reduction of production constant_expression -> expression
 ##
 
 Expecting ';'.
