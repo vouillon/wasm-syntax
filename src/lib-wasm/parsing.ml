@@ -116,7 +116,9 @@ struct
         else message
       in
       let message = E.expand (get text checkpoint) message in
+      (*
       let message = Printf.sprintf "%s (%d)" message s in
+*)
       report_syntax_error ~color text location message
 
     let parse_from_string ?color ~filename text =

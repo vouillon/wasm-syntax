@@ -452,6 +452,7 @@ let main () =
   let input_file = ref "" in
   let generate_messages = ref false in
   let list_transitions = ref false in
+  let terminals_file = ref "wax.mly" in
 
   let spec =
     [
@@ -461,6 +462,10 @@ let main () =
       ( "-list-transitions",
         Arg.Set list_transitions,
         "List all possible continuations for states" );
+      ( "-terminals",
+        Arg.Set_string terminals_file,
+        "Path to the .mly file containing terminal definitions (default: \
+         wax.mly)" );
     ]
   in
 
@@ -476,7 +481,7 @@ let main () =
   Printf.eprintf "Parsed %d entries from %s\n" (List.length entries) !input_file;
 
   if !generate_messages then (
-    let terminals = load_terminals "wax.mly" in
+    let terminals = load_terminals !terminals_file in
     let grammar = build_grammar entries in
     Printf.eprintf "Generating messages...\n";
     List.iter (generate_message grammar terminals) entries)
