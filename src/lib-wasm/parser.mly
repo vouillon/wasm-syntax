@@ -193,7 +193,7 @@ ZZZ
 %token INPUT
 %token OUTPUT
 
-%on_error_reduce plaininstr list(STRING) list(valtype) list(fieldtype) list(field) limits list(foldedinstr) list(typedef) list(idx) list(elemexpr) list(modulefield) nonempty_list(f64) list(const) nonempty_list(float_or_nan) nonempty_list(result_pat) list(result_pat) list(cmd) nonempty_list(modulefield)
+%on_error_reduce plaininstr list(STRING) list(valtype) list(fieldtype) list(field) limits list(foldedinstr) list(typedef) list(idx) list(elemexpr) list(modulefield) nonempty_list(f64) list(const) nonempty_list(float_or_nan) nonempty_list(result_pat) list(result_pat) list(cmd) nonempty_list(modulefield) nonempty_list(idx)
 
 %parameter <Context : sig type t = Utils.Trivia.context val context : t end>
 
@@ -535,7 +535,7 @@ plaininstr:
 | MEMORY_SIZE i = memidx { with_loc $sloc (MemorySize i) }
 | MEMORY_GROW i = memidx { with_loc $sloc (MemoryGrow i) }
 | MEMORY_FILL i = memidx { with_loc $sloc (MemoryFill i) }
-| MEMORY_COPY p = option(i1 = idx i2 = idx { (i1, i2) })
+| MEMORY_COPY p = ioption(i1 = idx i2 = idx { (i1, i2) })
   { let zero = with_loc $loc(p) (Num Uint32.zero) in
     let (i, i') = Option.value ~default:(zero, zero) p in
     with_loc $sloc (MemoryCopy (i, i')) }
@@ -546,7 +546,7 @@ plaininstr:
 | TABLE_SIZE i = tableidx { with_loc $sloc (TableSize i) }
 | TABLE_GROW i = tableidx { with_loc $sloc (TableGrow i) }
 | TABLE_FILL i = tableidx { with_loc $sloc (TableFill i) }
-| TABLE_COPY p = option(i1 = idx i2 = idx { (i1, i2) })
+| TABLE_COPY p = ioption(i1 = idx i2 = idx { (i1, i2) })
   { let zero = with_loc $loc(p) (Num Uint32.zero) in
     let (i, i') = Option.value ~default:(zero, zero) p in
     with_loc $sloc (TableCopy (i, i')) }
