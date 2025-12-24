@@ -532,7 +532,7 @@ parse: FN IDENT LBRACE IDENT PLUS UNREACHABLE
 ## expression PLUS
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: FN IDENT LBRACE IDENT SEMI TYPE
 ##
@@ -564,7 +564,7 @@ parse: FN IDENT LBRACE IDENT EQUAL UNREACHABLE
 ## simple_pattern EQUAL
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: FN IDENT LBRACE LPAREN CHAR SEMI
 ##
@@ -582,7 +582,7 @@ parse: FN IDENT LBRACE LPAREN CHAR SEMI
 ## In state 399, spurious reduction of production parenthesized_expression -> expression
 ##
 
-Syntax error
+Expecting ')'.
 <2>This '(' might be unmatched.
 
 parse: TAG IDENT RBRACE
@@ -725,7 +725,7 @@ parse: SHARP LBRACKET IDENT EQUAL UNREACHABLE
 ## SHARP LBRACKET IDENT EQUAL
 ##
 
-Expecting an instruction.
+Expecting an attribute expression.
 
 parse: CONST IDENT EQUAL TRY UNREACHABLE
 ##
@@ -810,7 +810,7 @@ parse: FN IDENT LBRACE THROW_REF UNREACHABLE
 ## THROW_REF
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL QUOTE UNDERSCORE
 ##
@@ -879,7 +879,7 @@ parse: CONST IDENT EQUAL PLUS UNREACHABLE
 ## PLUS
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL MINUS UNREACHABLE
 ##
@@ -891,7 +891,7 @@ parse: CONST IDENT EQUAL MINUS UNREACHABLE
 ## MINUS
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL LPAREN UNREACHABLE
 ##
@@ -904,7 +904,7 @@ parse: CONST IDENT EQUAL LPAREN UNREACHABLE
 ## LPAREN
 ##
 
-Expecting an instruction.
+Expecting a parenthesized expression, or an expression.
 
 parse: CONST IDENT EQUAL LOOP IDENT UNREACHABLE
 ##
@@ -933,7 +933,7 @@ parse: CONST IDENT EQUAL LBRACKET UNREACHABLE
 ## LBRACKET
 ##
 
-Expecting '..', ']', an identifier, or an instruction.
+Expecting '..', ']', an expression, or an identifier.
 <1>This '[' might be unmatched.
 
 parse: FN IDENT LBRACE LET UNREACHABLE
@@ -1011,7 +1011,7 @@ parse: FN IDENT LBRACE LET LPAREN RPAREN EQUAL UNREACHABLE
 ## LET LPAREN loption(separated_nonempty_list(COMMA,let_pattern)) RPAREN EQUAL
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL IF UNREACHABLE
 ##
@@ -1024,7 +1024,7 @@ parse: CONST IDENT EQUAL IF UNREACHABLE
 ## IF
 ##
 
-Expecting an instruction.
+Expecting a condition expression.
 
 parse: CONST IDENT EQUAL IDENT SHARP UNREACHABLE
 ##
@@ -1048,7 +1048,7 @@ parse: CONST IDENT EQUAL IDENT COLONEQUAL UNREACHABLE
 ## IDENT COLONEQUAL
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL DO UNREACHABLE
 ##
@@ -1084,7 +1084,7 @@ parse: CONST IDENT EQUAL DISPATCH UNREACHABLE
 ## DISPATCH
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL BR_ON_NULL UNREACHABLE
 ##
@@ -1120,7 +1120,7 @@ parse: CONST IDENT EQUAL BR_ON_NULL QUOTE AS UNREACHABLE
 ## BR_ON_NULL QUOTE label_name
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL BR_ON_NON_NULL UNREACHABLE
 ##
@@ -1156,7 +1156,7 @@ parse: CONST IDENT EQUAL BR_ON_NON_NULL QUOTE AS UNREACHABLE
 ## BR_ON_NON_NULL QUOTE label_name
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL BR_ON_CAST_FAIL UNREACHABLE
 ##
@@ -1204,7 +1204,7 @@ parse: CONST IDENT EQUAL BR_ON_CAST_FAIL QUOTE AS AMPERSAND IDENT UNREACHABLE
 ## BR_ON_CAST_FAIL QUOTE label_name reference_type
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL BR_ON_CAST UNREACHABLE
 ##
@@ -1252,7 +1252,7 @@ parse: CONST IDENT EQUAL BR_ON_CAST QUOTE AS AMPERSAND IDENT UNREACHABLE
 ## BR_ON_CAST QUOTE label_name reference_type
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL BR_IF UNREACHABLE
 ##
@@ -1288,7 +1288,7 @@ parse: CONST IDENT EQUAL BR_IF QUOTE AS UNREACHABLE
 ## BR_IF QUOTE label_name
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL BANG UNREACHABLE
 ##
@@ -1300,7 +1300,7 @@ parse: CONST IDENT EQUAL BANG UNREACHABLE
 ## BANG
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR LPAREN UNREACHABLE
 ##
@@ -1312,7 +1312,7 @@ parse: CONST IDENT EQUAL CHAR LPAREN UNREACHABLE
 ## expression LPAREN
 ##
 
-Expecting ')', or an instruction.
+Expecting ')', or an expression.
 <1>This '(' might be unmatched.
 
 parse: CONST IDENT EQUAL CHAR LPAREN CHAR UNREACHABLE
@@ -1345,7 +1345,7 @@ parse: CONST IDENT EQUAL CHAR STAR UNREACHABLE
 ## expression STAR
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR LBRACKET UNREACHABLE
 ##
@@ -1357,7 +1357,7 @@ parse: CONST IDENT EQUAL CHAR LBRACKET UNREACHABLE
 ## expression LBRACKET
 ##
 
-Expecting an instruction.
+Expecting an index expression.
 
 parse: CONST IDENT EQUAL CHAR LBRACKET CHAR UNREACHABLE
 ##
@@ -1375,7 +1375,7 @@ parse: CONST IDENT EQUAL CHAR LBRACKET CHAR UNREACHABLE
 ## In state 198, spurious reduction of production index_expression -> expression
 ##
 
-Syntax error
+Expecting ']'.
 <2>This '[' might be unmatched.
 
 parse: CONST IDENT EQUAL CHAR SLASHU UNREACHABLE
@@ -1388,7 +1388,7 @@ parse: CONST IDENT EQUAL CHAR SLASHU UNREACHABLE
 ## expression SLASHU
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR IS UNREACHABLE
 ##
@@ -1425,7 +1425,7 @@ parse: CONST IDENT EQUAL CHAR DOT IDENT EQUAL UNREACHABLE
 ## expression DOT IDENT EQUAL
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR SLASHS UNREACHABLE
 ##
@@ -1437,7 +1437,7 @@ parse: CONST IDENT EQUAL CHAR SLASHS UNREACHABLE
 ## expression SLASHS
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR SLASH UNREACHABLE
 ##
@@ -1449,7 +1449,7 @@ parse: CONST IDENT EQUAL CHAR SLASH UNREACHABLE
 ## expression SLASH
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR SHRU UNREACHABLE
 ##
@@ -1461,7 +1461,7 @@ parse: CONST IDENT EQUAL CHAR SHRU UNREACHABLE
 ## expression SHRU
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR PERCENTU UNREACHABLE
 ##
@@ -1473,7 +1473,7 @@ parse: CONST IDENT EQUAL CHAR PERCENTU UNREACHABLE
 ## expression PERCENTU
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR PERCENTS UNREACHABLE
 ##
@@ -1485,7 +1485,7 @@ parse: CONST IDENT EQUAL CHAR PERCENTS UNREACHABLE
 ## expression PERCENTS
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR MINUS UNREACHABLE
 ##
@@ -1497,7 +1497,7 @@ parse: CONST IDENT EQUAL CHAR MINUS UNREACHABLE
 ## expression MINUS
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR SHRS UNREACHABLE
 ##
@@ -1509,7 +1509,7 @@ parse: CONST IDENT EQUAL CHAR SHRS UNREACHABLE
 ## expression SHRS
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR SHL UNREACHABLE
 ##
@@ -1521,7 +1521,7 @@ parse: CONST IDENT EQUAL CHAR SHL UNREACHABLE
 ## expression SHL
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR QUESTIONMARK UNREACHABLE
 ##
@@ -1533,7 +1533,7 @@ parse: CONST IDENT EQUAL CHAR QUESTIONMARK UNREACHABLE
 ## expression QUESTIONMARK
 ##
 
-Expecting an instruction.
+Expecting a then branch.
 
 parse: CONST IDENT EQUAL CHAR QUESTIONMARK CHAR UNREACHABLE
 ##
@@ -1551,7 +1551,7 @@ parse: CONST IDENT EQUAL CHAR QUESTIONMARK CHAR UNREACHABLE
 ## In state 269, spurious reduction of production then_branch -> expression
 ##
 
-Syntax error
+Expecting ':'.
 
 parse: CONST IDENT EQUAL CHAR PIPE UNREACHABLE
 ##
@@ -1563,7 +1563,7 @@ parse: CONST IDENT EQUAL CHAR PIPE UNREACHABLE
 ## expression PIPE
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR CARET UNREACHABLE
 ##
@@ -1575,7 +1575,7 @@ parse: CONST IDENT EQUAL CHAR CARET UNREACHABLE
 ## expression CARET
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR AMPERSAND UNREACHABLE
 ##
@@ -1587,7 +1587,7 @@ parse: CONST IDENT EQUAL CHAR AMPERSAND UNREACHABLE
 ## expression AMPERSAND
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR LTU UNREACHABLE
 ##
@@ -1599,7 +1599,7 @@ parse: CONST IDENT EQUAL CHAR LTU UNREACHABLE
 ## expression LTU
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR LTU CHAR UNREACHABLE
 ##
@@ -1659,7 +1659,7 @@ parse: CONST IDENT EQUAL CHAR LTS UNREACHABLE
 ## expression LTS
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR LTS CHAR UNREACHABLE
 ##
@@ -1719,7 +1719,7 @@ parse: CONST IDENT EQUAL CHAR LT UNREACHABLE
 ## expression LT
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR LT CHAR UNREACHABLE
 ##
@@ -1779,7 +1779,7 @@ parse: CONST IDENT EQUAL CHAR LEU UNREACHABLE
 ## expression LEU
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR LEU CHAR UNREACHABLE
 ##
@@ -1839,7 +1839,7 @@ parse: CONST IDENT EQUAL CHAR LES UNREACHABLE
 ## expression LES
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR LES CHAR UNREACHABLE
 ##
@@ -1899,7 +1899,7 @@ parse: CONST IDENT EQUAL CHAR LE UNREACHABLE
 ## expression LE
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR LE CHAR UNREACHABLE
 ##
@@ -1959,7 +1959,7 @@ parse: CONST IDENT EQUAL CHAR GTU UNREACHABLE
 ## expression GTU
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR GTU CHAR UNREACHABLE
 ##
@@ -2019,7 +2019,7 @@ parse: CONST IDENT EQUAL CHAR GTS UNREACHABLE
 ## expression GTS
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR GTS CHAR UNREACHABLE
 ##
@@ -2079,7 +2079,7 @@ parse: CONST IDENT EQUAL CHAR GT UNREACHABLE
 ## expression GT
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR GT CHAR UNREACHABLE
 ##
@@ -2139,7 +2139,7 @@ parse: CONST IDENT EQUAL CHAR GEU UNREACHABLE
 ## expression GEU
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR GEU CHAR UNREACHABLE
 ##
@@ -2199,7 +2199,7 @@ parse: CONST IDENT EQUAL CHAR GES UNREACHABLE
 ## expression GES
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR GES CHAR UNREACHABLE
 ##
@@ -2259,7 +2259,7 @@ parse: CONST IDENT EQUAL CHAR GE UNREACHABLE
 ## expression GE
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR GE CHAR UNREACHABLE
 ##
@@ -2319,7 +2319,7 @@ parse: CONST IDENT EQUAL CHAR EQUALEQUAL UNREACHABLE
 ## expression EQUALEQUAL
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR EQUALEQUAL CHAR UNREACHABLE
 ##
@@ -2379,7 +2379,7 @@ parse: CONST IDENT EQUAL CHAR QUESTIONMARK CHAR COLON UNREACHABLE
 ## expression QUESTIONMARK then_branch COLON
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR BANGEQUAL UNREACHABLE
 ##
@@ -2391,7 +2391,7 @@ parse: CONST IDENT EQUAL CHAR BANGEQUAL UNREACHABLE
 ## expression BANGEQUAL
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL CHAR BANGEQUAL CHAR UNREACHABLE
 ##
@@ -2451,7 +2451,7 @@ parse: CONST IDENT EQUAL CHAR LPAREN CHAR COMMA UNREACHABLE
 ## expression COMMA
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL DISPATCH CHAR UNREACHABLE
 ##
@@ -2609,7 +2609,7 @@ parse: CONST IDENT EQUAL DISPATCH CHAR LBRACKET ELSE QUOTE AS RBRACKET LBRACE UN
 ## DISPATCH expression LBRACKET list(label) ELSE QUOTE label_name RBRACKET LBRACE
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL DISPATCH CHAR LBRACKET ELSE QUOTE AS RBRACKET LBRACE CHAR UNREACHABLE
 ##
@@ -2737,7 +2737,7 @@ parse: FN IDENT LBRACE BR_TABLE LBRACKET ELSE QUOTE AS RBRACKET UNREACHABLE
 ## BR_TABLE LBRACKET list(label) ELSE QUOTE label_name RBRACKET
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: FN IDENT LBRACE BR UNREACHABLE
 ##
@@ -2775,7 +2775,7 @@ parse: FN IDENT LBRACE BECOME UNREACHABLE
 ## BECOME
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: FN IDENT LBRACE BECOME CHAR UNREACHABLE
 ##
@@ -2836,7 +2836,7 @@ parse: FN IDENT LBRACE BECOME CHAR LPAREN UNREACHABLE
 ## BECOME expression LPAREN
 ##
 
-Expecting ')', or an instruction.
+Expecting ')', or an expression.
 <1>This '(' might be unmatched.
 
 parse: FN IDENT LBRACE CHAR LBRACKET UNREACHABLE
@@ -2850,7 +2850,7 @@ parse: FN IDENT LBRACE CHAR LBRACKET UNREACHABLE
 ## expression LBRACKET
 ##
 
-Expecting an instruction.
+Expecting an index expression.
 
 parse: FN IDENT LBRACE CHAR LBRACKET CHAR UNREACHABLE
 ##
@@ -2869,7 +2869,7 @@ parse: FN IDENT LBRACE CHAR LBRACKET CHAR UNREACHABLE
 ## In state 198, spurious reduction of production index_expression -> expression
 ##
 
-Syntax error
+Expecting ']'.
 <2>This '[' might be unmatched.
 
 parse: FN IDENT LBRACE CHAR LBRACKET CHAR RBRACKET EQUAL UNREACHABLE
@@ -2882,7 +2882,7 @@ parse: FN IDENT LBRACE CHAR LBRACKET CHAR RBRACKET EQUAL UNREACHABLE
 ## expression LBRACKET index_expression RBRACKET EQUAL
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL DO LBRACE STAR
 ##
@@ -2920,7 +2920,7 @@ parse: CONST IDENT EQUAL IF CHAR UNREACHABLE
 ## In state 329, spurious reduction of production condition_expression -> expression
 ##
 
-Syntax error
+Expecting '=>', or '{'.
 
 parse: CONST IDENT EQUAL IF CHAR FATARROW UNREACHABLE
 ##
@@ -3020,7 +3020,7 @@ parse: FN IDENT LBRACE LET IDENT EQUAL UNREACHABLE
 ## LET simple_pattern EQUAL
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: FN IDENT LBRACE LET IDENT COLON UNREACHABLE
 ##
@@ -3045,7 +3045,7 @@ parse: FN IDENT LBRACE LET IDENT COLON IDENT EQUAL UNREACHABLE
 ## LET simple_pattern COLON value_type EQUAL
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL LBRACE IDENT PIPE UNREACHABLE
 ##
@@ -3084,7 +3084,7 @@ parse: CONST IDENT EQUAL LBRACE IDENT PIPE IDENT COLON UNREACHABLE
 ## field_name COLON
 ##
 
-Expecting an instruction.
+Expecting an expression.
 
 parse: CONST IDENT EQUAL LBRACE IDENT PIPE IDENT COLON CHAR UNREACHABLE
 ##
@@ -3171,7 +3171,7 @@ parse: CONST IDENT EQUAL LBRACKET IDENT PIPE UNREACHABLE
 ## LBRACKET IDENT PIPE
 ##
 
-Expecting '..', ']', or an instruction.
+Expecting '..', ']', or an expression.
 <3>This '[' might be unmatched.
 
 parse: CONST IDENT EQUAL LBRACKET IDENT PIPE DOTDOT UNREACHABLE
@@ -3196,7 +3196,7 @@ parse: CONST IDENT EQUAL LBRACKET IDENT PIPE DOTDOT SEMI UNREACHABLE
 ## LBRACKET IDENT PIPE DOTDOT SEMI
 ##
 
-Expecting an instruction.
+Expecting a length expression.
 
 parse: CONST IDENT EQUAL LBRACKET IDENT PIPE DOTDOT SEMI CHAR UNREACHABLE
 ##
@@ -3214,7 +3214,7 @@ parse: CONST IDENT EQUAL LBRACKET IDENT PIPE DOTDOT SEMI CHAR UNREACHABLE
 ## In state 377, spurious reduction of production length_expression -> expression
 ##
 
-Syntax error
+Expecting ']'.
 <6>This '[' might be unmatched.
 
 parse: CONST IDENT EQUAL LBRACKET IDENT PIPE CHAR UNREACHABLE
@@ -3247,7 +3247,7 @@ parse: CONST IDENT EQUAL LBRACKET IDENT PIPE CHAR SEMI UNREACHABLE
 ## LBRACKET IDENT PIPE expression SEMI
 ##
 
-Expecting an instruction.
+Expecting a length expression.
 
 parse: CONST IDENT EQUAL LBRACKET IDENT PIPE CHAR SEMI CHAR UNREACHABLE
 ##
@@ -3265,7 +3265,7 @@ parse: CONST IDENT EQUAL LBRACKET IDENT PIPE CHAR SEMI CHAR UNREACHABLE
 ## In state 377, spurious reduction of production length_expression -> expression
 ##
 
-Syntax error
+Expecting ']'.
 <6>This '[' might be unmatched.
 
 parse: CONST IDENT EQUAL LBRACKET DOTDOT UNREACHABLE
@@ -3290,7 +3290,7 @@ parse: CONST IDENT EQUAL LBRACKET DOTDOT SEMI UNREACHABLE
 ## LBRACKET DOTDOT SEMI
 ##
 
-Expecting an instruction.
+Expecting a length expression.
 
 parse: CONST IDENT EQUAL LBRACKET DOTDOT SEMI CHAR UNREACHABLE
 ##
@@ -3308,7 +3308,7 @@ parse: CONST IDENT EQUAL LBRACKET DOTDOT SEMI CHAR UNREACHABLE
 ## In state 377, spurious reduction of production length_expression -> expression
 ##
 
-Syntax error
+Expecting ']'.
 <4>This '[' might be unmatched.
 
 parse: CONST IDENT EQUAL LBRACKET IDENT UNREACHABLE
@@ -3343,7 +3343,7 @@ parse: CONST IDENT EQUAL LBRACKET IDENT SEMI UNREACHABLE
 ## LBRACKET expression SEMI
 ##
 
-Expecting an instruction.
+Expecting a length expression.
 
 parse: CONST IDENT EQUAL LBRACKET IDENT SEMI CHAR UNREACHABLE
 ##
@@ -3361,7 +3361,7 @@ parse: CONST IDENT EQUAL LBRACKET IDENT SEMI CHAR UNREACHABLE
 ## In state 377, spurious reduction of production length_expression -> expression
 ##
 
-Syntax error
+Expecting ']'.
 <4>This '[' might be unmatched.
 
 parse: CONST IDENT EQUAL LOOP LBRACE STAR
@@ -3393,7 +3393,7 @@ parse: CONST IDENT EQUAL LPAREN CHAR COMMA UNREACHABLE
 ## LPAREN expression COMMA
 ##
 
-Expecting ')', or an instruction.
+Expecting ')', or an expression.
 <3>This '(' might be unmatched.
 
 parse: CONST IDENT EQUAL QUOTE AS COLON TRY LBRACE STAR
@@ -3798,7 +3798,7 @@ parse: CONST IDENT EQUAL QUOTE AS COLON IF UNREACHABLE
 ## QUOTE label_name COLON IF
 ##
 
-Expecting an instruction.
+Expecting a condition expression.
 
 parse: CONST IDENT EQUAL QUOTE AS COLON IF CHAR UNREACHABLE
 ##
@@ -3817,7 +3817,7 @@ parse: CONST IDENT EQUAL QUOTE AS COLON IF CHAR UNREACHABLE
 ## In state 329, spurious reduction of production condition_expression -> expression
 ##
 
-Syntax error
+Expecting '=>', or '{'.
 
 parse: CONST IDENT EQUAL QUOTE AS COLON IF CHAR FATARROW IDENT UNREACHABLE
 ##
@@ -4039,7 +4039,7 @@ parse: SHARP LBRACKET IDENT EQUAL CHAR UNREACHABLE
 ## In state 483, spurious reduction of production attribute_expression -> expression
 ##
 
-Syntax error
+Expecting ']'.
 <4>This '[' might be unmatched.
 
 parse: REC UNREACHABLE
@@ -4359,7 +4359,7 @@ parse: CONST IDENT EQUAL UNREACHABLE
 ## globalmut IDENT EQUAL
 ##
 
-Expecting an instruction.
+Expecting a constant expression.
 
 parse: CONST IDENT EQUAL CHAR UNREACHABLE
 ##
@@ -4377,7 +4377,7 @@ parse: CONST IDENT EQUAL CHAR UNREACHABLE
 ## In state 548, spurious reduction of production constant_expression -> expression
 ##
 
-Syntax error
+Expecting ';'.
 
 parse: CONST IDENT COLON IDENT EQUAL UNREACHABLE
 ##
@@ -4389,7 +4389,7 @@ parse: CONST IDENT COLON IDENT EQUAL UNREACHABLE
 ## globalmut IDENT COLON value_type EQUAL
 ##
 
-Expecting an instruction.
+Expecting a constant expression.
 
 parse: CONST IDENT COLON IDENT EQUAL CHAR UNREACHABLE
 ##
@@ -4407,7 +4407,7 @@ parse: CONST IDENT COLON IDENT EQUAL CHAR UNREACHABLE
 ## In state 548, spurious reduction of production constant_expression -> expression
 ##
 
-Syntax error
+Expecting ';'.
 
 parse: FN IDENT LBRACE BECOME CHAR LPAREN CHAR UNREACHABLE
 ##
