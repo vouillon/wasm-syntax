@@ -276,17 +276,17 @@ let rec token_rec ctx lexbuf =
   | "nullexternref" -> NULLEXTERNREF
   | "ref" -> REF
   | "null" -> NULL
-  | "param" -> PARAM
-  | "result" -> RESULT
+  | "param" -> LPAREN_PARAM
+  | "result" -> LPAREN_RESULT
   | "mut" -> MUT
   | "field" -> FIELD
   | "rec" -> REC
-  | "type" -> TYPE
+  | "type" -> LPAREN_TYPE
   | "sub" -> SUB
   | "final" -> FINAL
-  | "import" -> IMPORT
-  | "export" -> EXPORT
-  | "local" -> LOCAL
+  | "import" -> LPAREN_IMPORT
+  | "export" -> LPAREN_EXPORT
+  | "local" -> LPAREN_LOCAL
   | "global" -> GLOBAL
   | "start" -> START
   | "elem" -> ELEM
@@ -300,7 +300,7 @@ let rec token_rec ctx lexbuf =
   | "block" -> BLOCK
   | "loop" -> LOOP
   | "if" -> IF
-  | "then" -> THEN
+  | "then" -> LPAREN_THEN
   | "else" -> ELSE
   | "end" -> END
   | "unreachable" -> INSTR Unreachable
@@ -851,9 +851,9 @@ let rec token_rec ctx lexbuf =
   | "try_table" -> TRY_TABLE
   | "do" -> DO
   | "catch" -> CATCH
-  | "catch_ref" -> CATCH_REF
+  | "catch_ref" -> LPAREN_CATCH_REF
   | "catch_all" -> CATCH_ALL
-  | "catch_all_ref" -> CATCH_ALL_REF
+  | "catch_all_ref" -> LPAREN_CATCH_ALL_REF
   | "throw" -> THROW
   | "throw_ref" -> THROW_REF
   | "align=", uN ->
@@ -907,11 +907,48 @@ let rec token_rec ctx lexbuf =
            ( Sedlexing.lexing_bytes_positions lexbuf,
              Printf.sprintf "Syntax error.\n" ))
 
-let token ctx lexbuf =
-  let t = token_rec ctx lexbuf in
-  let end_ = Sedlexing.lexing_bytes_position_curr lexbuf in
-  Utils.Trivia.report_token ctx end_.pos_cnum;
-  t
+let token ctx =
+  let prev_token = ref None in
+  fun lexbuf ->
+    let rec loop () =
+      let t = token_rec ctx lexbuf in
+      let end_ = Sedlexing.lexing_bytes_position_curr lexbuf in
+      Utils.Trivia.report_token ctx end_.pos_cnum;
+      match (!prev_token, t) with
+      | ( None,
+          ( LPAREN_CATCH_ALL_REF | LPAREN_CATCH_REF | LPAREN_EXPORT
+          | LPAREN_IMPORT | LPAREN_LOCAL | LPAREN_PARAM | LPAREN_RESULT
+          | LPAREN_THEN | LPAREN_TYPE ) ) ->
+          raise
+            (Parsing.Syntax_error
+               ( Sedlexing.lexing_bytes_positions lexbuf,
+                 Printf.sprintf "Unexpected keyword '%s'.\n"
+                   (Sedlexing.Utf8.lexeme lexbuf) ))
+      | None, LPAREN ->
+          prev_token := Some t;
+          loop ()
+      | None, _ -> t
+      | Some LPAREN, CATCH ->
+          prev_token := None;
+          LPAREN_CATCH
+      | Some LPAREN, CATCH_ALL ->
+          prev_token := None;
+          LPAREN_CATCH_ALL
+      | ( Some LPAREN,
+          ( LPAREN_CATCH_ALL_REF | LPAREN_CATCH_REF | LPAREN_EXPORT
+          | LPAREN_IMPORT | LPAREN_LOCAL | LPAREN_PARAM | LPAREN_RESULT
+          | LPAREN_THEN | LPAREN_TYPE ) ) ->
+          prev_token := None;
+          t
+      | Some t', _ ->
+          prev_token := Some t;
+          t'
+    in
+    match !prev_token with
+    | Some t when t <> LPAREN ->
+        prev_token := None;
+        t
+    | _ -> loop ()
 
 let is_valid_identifier s =
   let buf = Sedlexing.Utf8.from_string s in

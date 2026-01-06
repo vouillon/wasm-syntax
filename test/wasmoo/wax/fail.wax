@@ -1,12 +1,12 @@
 #[import = ("stdlib", "caml_global_data")]
-let caml_global_data: &block
+let caml_global_data: &block;
 #[import = ("bindings", "jstag")]
 #[export = "javascript_exception"]
-tag javascript_exception(&?extern)
-type block = [mut &eq]
-type string = [mut i8]
+tag javascript_exception(&?extern);
+type block = [mut &eq];
+type string = [mut i8];
 #[export = "ocaml_exception"]
-tag ocaml_exception(&eq)
+tag ocaml_exception(&eq);
 #[export = "caml_raise_constant"]
 fn caml_raise_constant(x: &eq) { throw ocaml_exception x; }
 #[export = "caml_raise_with_arg"]

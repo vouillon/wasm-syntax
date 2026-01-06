@@ -1,76 +1,76 @@
 #[import = ("fail", "caml_raise_end_of_file")]
-fn caml_raise_end_of_file()
+fn caml_raise_end_of_file();
 #[import = ("jslib", "wrap")]
-fn wrap(&?any) -> &eq
+fn wrap(&?any) -> &eq;
 #[import = ("jslib", "unwrap")]
-fn unwrap(&eq) -> &?any
+fn unwrap(&eq) -> &?any;
 #[import = ("jslib", "caml_jsstring_of_string")]
-fn caml_jsstring_of_string(&eq) -> &eq
+fn caml_jsstring_of_string(&eq) -> &eq;
 #[import = ("jslib", "caml_list_of_js_array")]
-fn caml_list_of_js_array(&eq) -> &eq
+fn caml_list_of_js_array(&eq) -> &eq;
 #[import = ("bindings", "open")]
-fn open_2(&?any, i32, i32) -> i32
+fn open_2(&?any, i32, i32) -> i32;
 #[import = ("bindings", "close")]
-fn close(i32)
+fn close(i32);
 #[import = ("bindings", "write")]
-fn write(i32, &extern, i32, i32, i64) -> i32
+fn write(i32, &extern, i32, i32, i64) -> i32;
 #[import = ("bindings", "write")]
-fn write'(i32, &extern, i32, i32, &?noextern) -> i32
+fn write'(i32, &extern, i32, i32, &?noextern) -> i32;
 #[import = ("bindings", "read")]
-fn read(i32, &extern, i32, i32, i64) -> i32
+fn read(i32, &extern, i32, i32, i64) -> i32;
 #[import = ("bindings", "read")]
-fn read'(i32, &extern, i32, i32, &?noextern) -> i32
+fn read'(i32, &extern, i32, i32, &?noextern) -> i32;
 #[import = ("bindings", "file_size")]
-fn file_size(i32) -> i64
+fn file_size(i32) -> i64;
 #[import = ("bindings", "register_channel")]
-fn register_channel(&eq)
+fn register_channel(&eq);
 #[import = ("bindings", "unregister_channel")]
-fn unregister_channel(&eq)
+fn unregister_channel(&eq);
 #[import = ("bindings", "channel_list")]
-fn channel_list() -> &?any
+fn channel_list() -> &?any;
 #[import = ("bindings", "ta_new")]
-fn ta_new(i32) -> &extern
+fn ta_new(i32) -> &extern;
 #[import = ("bindings", "ta_copy")]
-fn ta_copy(&extern, i32, i32, i32)
+fn ta_copy(&extern, i32, i32, i32);
 #[import = ("bindings", "ta_set_ui8")]
-fn ta_set_ui8(&extern, i32, i32)
+fn ta_set_ui8(&extern, i32, i32);
 #[import = ("bindings", "ta_get_ui8")]
-fn ta_get_ui8(&extern, i32) -> i32
+fn ta_get_ui8(&extern, i32) -> i32;
 #[import = ("bindings", "ta_blit_from_string")]
-fn ta_blit_from_string(&string, i32, &extern, i32, i32)
+fn ta_blit_from_string(&string, i32, &extern, i32, i32);
 #[import = ("bindings", "ta_blit_to_string")]
-fn ta_blit_to_string(&extern, i32, &string, i32, i32)
+fn ta_blit_to_string(&extern, i32, &string, i32, i32);
 #[import = ("custom", "custom_compare_id")]
-fn custom_compare_id(&eq, &eq, i32) -> i32
+fn custom_compare_id(&eq, &eq, i32) -> i32;
 #[import = ("custom", "custom_hash_id")]
-fn custom_hash_id(&eq) -> i32
+fn custom_hash_id(&eq) -> i32;
 #[import = ("custom", "custom_next_id")]
-fn custom_next_id() -> i64
+fn custom_next_id() -> i64;
 #[import = ("int64", "caml_copy_int64")]
-fn caml_copy_int64(i64) -> &eq
+fn caml_copy_int64(i64) -> &eq;
 #[import = ("int64", "Int64_val")]
-fn Int64_val(&eq) -> i64
+fn Int64_val(&eq) -> i64;
 #[import = ("fail", "javascript_exception")]
-tag javascript_exception(&?extern)
+tag javascript_exception(&?extern);
 #[import = ("sys", "caml_handle_sys_error")]
-fn caml_handle_sys_error(&?extern)
+fn caml_handle_sys_error(&?extern);
 #[import = ("bindings", "map_new")]
-fn map_new() -> &extern
+fn map_new() -> &extern;
 #[import = ("bindings", "map_get")]
-fn map_get(&extern, i32) -> &fd_offset
+fn map_get(&extern, i32) -> &fd_offset;
 #[import = ("bindings", "map_set")]
-fn map_set(&extern, i32, &fd_offset)
+fn map_set(&extern, i32, &fd_offset);
 #[import = ("bindings", "map_delete")]
-fn map_delete(&extern, i32)
-type block = [mut &eq]
-type string = [mut i8]
-type offset_array = [mut i64]
-type compare = fn(&eq, &eq, i32) -> i32
-type hash = fn(&eq) -> i32
-type fixed_length = { bsize_32: i32, bsize_64: i32 }
-type serialize = fn(&eq, &eq) -> (i32, i32)
-type deserialize = fn(&eq) -> (&eq, i32)
-type dup = fn(&eq) -> &eq
+fn map_delete(&extern, i32);
+type block = [mut &eq];
+type string = [mut i8];
+type offset_array = [mut i64];
+type compare = fn(&eq, &eq, i32) -> i32;
+type hash = fn(&eq) -> i32;
+type fixed_length = { bsize_32: i32, bsize_64: i32 };
+type serialize = fn(&eq, &eq) -> (i32, i32);
+type deserialize = fn(&eq) -> (&eq, i32);
+type dup = fn(&eq) -> &eq;
 type custom_operations = {
     id: &string,
     compare: &?compare,
@@ -80,9 +80,9 @@ type custom_operations = {
     serialize: &?serialize,
     deserialize: &?deserialize,
     dup: &?dup
-}
-type custom = open { f: &custom_operations }
-type custom_with_id: custom = open { f: &custom_operations, id: i64 }
+};
+type custom = open { f: &custom_operations };
+type custom_with_id: custom = open { f: &custom_operations, id: i64 };
 const channel_ops: &custom_operations =
     {custom_operations|
         id: string#"_chan",
@@ -103,8 +103,8 @@ type channel: custom_with_id = {
     max: mut i32,
     size: mut i32,
     unbuffered: mut i32
-}
-type fd_offset = { offset: mut i64, seeked: mut i32 }
+};
+type fd_offset = { offset: mut i64, seeked: mut i32 };
 let fd_offsets: &?extern = null;
 fn get_fd_offsets() -> &extern {
     let m: &extern;
@@ -123,7 +123,7 @@ fn initialize_fd_offset(fd: i32, offset: i64) {
 fn release_fd_offset(fd: i32) { map_delete(get_fd_offsets(), fd); }
 fn get_fd_offset(fd: i32) -> &fd_offset { map_get(get_fd_offsets(), fd); }
 const IO_BUFFER_SIZE: i32 = 65536;
-type open_flags = [i8]
+type open_flags = [i8];
 const sys_open_flags: &open_flags =
     [open_flags|1, 2, 6, 8, 16, 32, 0, 0, 64];
 fn convert_flag_list(vflags: &eq) -> i32 {

@@ -1,5 +1,5 @@
-type float = { f: f64 }
-type block = [mut &eq]
+type float = { f: f64 };
+type block = [mut &eq];
 #[export = "caml_gc_minor"]
 fn caml_gc_minor(x: &eq) -> &eq { 0 as &i31; }
 #[export = "caml_gc_major"]

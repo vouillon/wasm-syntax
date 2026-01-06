@@ -1,11 +1,11 @@
 #[import = ("fail", "caml_invalid_argument")]
-fn caml_invalid_argument(&eq)
+fn caml_invalid_argument(&eq);
 #[import = ("fail", "caml_failwith")]
-fn caml_failwith(&eq)
-type string = [mut i8]
-type block = [mut &eq]
-type char_table = [i8]
-type int_array = [mut i32]
+fn caml_failwith(&eq);
+type string = [mut i8];
+type block = [mut &eq];
+type char_table = [i8];
+type int_array = [mut i32];
 const re_word_letters: &char_table =
     [char_table|
         0x00,
@@ -40,14 +40,14 @@ const re_word_letters: &char_table =
         0xFF,
         0x7F,
         0xFF];
-type stack = open { f: &?stack }
-type pos: stack = { pos_previous: &?stack, pc: i32, pos: i32 }
+type stack = open { f: &?stack };
+type pos: stack = { pos_previous: &?stack, pc: i32, pos: i32 };
 type undo: stack = {
     undo_previous: &?stack,
     tbl: &int_array,
     idx: i32,
     val: i32
-}
+};
 fn is_word_letter(c: i32) -> i32 {
     1 & re_word_letters[c >>u 3] as i32_u >>u (c & 7);
 }

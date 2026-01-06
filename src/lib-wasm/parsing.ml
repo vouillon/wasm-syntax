@@ -46,10 +46,12 @@ struct
     E.extract text positions |> E.sanitize |> E.compress
     |> E.shorten 20 (* max width 43 *)
 
-  let report_syntax_error ~color source (loc_start, loc_end) msg =
+  let report_syntax_error ?(related = []) ~color source (loc_start, loc_end) msg
+      =
     let theme = Utils.Diagnostic.get_theme ?color () in
     Utils.Diagnostic.output_error_with_source ~theme ~source ~severity:Error
-      ~location:{ loc_start; loc_end } (fun f () -> Format.fprintf f "%s" msg);
+      ~location:{ loc_start; loc_end } ~related (fun f () ->
+        Format.fprintf f "%s" msg);
     exit 123
 
   let read filename = In_channel.with_open_bin filename In_channel.input_all
@@ -59,8 +61,8 @@ struct
     Sedlexing.set_filename lexbuf filename;
     lexbuf
 
-  let lexer_lexbuf_to_supplier lexer ctx (lexbuf : Sedlexing.lexbuf) () =
-    let token = lexer ctx lexbuf in
+  let lexer_lexbuf_to_supplier lexer (lexbuf : Sedlexing.lexbuf) () =
+    let token = lexer lexbuf in
     let startp, endp = Sedlexing.lexing_bytes_positions lexbuf in
     (token, startp, endp)
 
@@ -81,6 +83,13 @@ struct
           | None -> 0)
       | _ -> assert false
 
+    let rec positions_in_stack env i =
+      match P.MenhirInterpreter.get i env with
+      | Some (Element (_, _, pos1, pos2)) ->
+          if false then Format.eprintf "%d--%d@." pos1.pos_cnum pos2.pos_cnum;
+          positions_in_stack env (i + 1)
+      | None -> ()
+
     let get text checkpoint i =
       match checkpoint with
       | P.MenhirInterpreter.HandlingError env -> (
@@ -90,6 +99,13 @@ struct
       | _ -> assert false
 
     let fail ~color text buffer checkpoint =
+      let env =
+        match checkpoint with
+        | P.MenhirInterpreter.HandlingError env -> env
+        | _ -> assert false
+      in
+      positions_in_stack env 0;
+
       let location = E.last buffer in
       let s = state checkpoint in
       let message =
@@ -102,14 +118,46 @@ struct
         else message
       in
       let message = E.expand (get text checkpoint) message in
-      let message = Printf.sprintf "%s (%d)" message s in
-      report_syntax_error ~color text location message
+      let lines = String.split_on_char '\n' message in
+      let related = ref [] in
+      let main_message = ref [] in
+      List.iter
+        (fun line ->
+          let len = String.length line in
+          if len > 2 && line.[0] = '<' then
+            try
+              let i = String.index line '>' in
+              let depth = int_of_string (String.sub line 1 (i - 1)) in
+              let msg = String.trim (String.sub line (i + 1) (len - i - 1)) in
+              match P.MenhirInterpreter.get (depth - 1) env with
+              | Some (Element (_, _, pos1, pos2)) ->
+                  let loc = { Utils.Ast.loc_start = pos1; loc_end = pos2 } in
+                  related :=
+                    {
+                      Utils.Diagnostic.location = loc;
+                      message = (fun f () -> Format.fprintf f "%s" msg);
+                    }
+                    :: !related
+              | None -> main_message := line :: !main_message
+            with _ -> main_message := line :: !main_message
+          else main_message := line :: !main_message)
+        lines;
+      let main_message = List.rev !main_message in
+      let related_labels = List.rev !related in
+      (* Remove trailing empty line if it was caused by a trailing newline and we have related labels *)
+      let main_message =
+        match List.rev main_message with
+        | "" :: rest when related_labels <> [] -> List.rev rest
+        | _ -> main_message
+      in
+      let message = String.concat "\n" main_message in
+      report_syntax_error ~related:related_labels ~color text location message
 
     let parse_from_string ?color ~filename text =
       let lexbuf = initialize_lexing filename text in
       try
         let supplier =
-          lexer_lexbuf_to_supplier Lexer.token Context.context lexbuf
+          lexer_lexbuf_to_supplier (Lexer.token Context.context) lexbuf
         in
         let revised_parser =
           MenhirLib.Convert.Simplified.traditional2revised F.parse
@@ -119,7 +167,7 @@ struct
       | F.Error ->
           let lexbuf = initialize_lexing filename text in
           let supplier =
-            lexer_lexbuf_to_supplier Lexer.token Context.context lexbuf
+            lexer_lexbuf_to_supplier (Lexer.token Context.context) lexbuf
           in
           let buffer, supplier = E.wrap_supplier supplier in
           let checkpoint =

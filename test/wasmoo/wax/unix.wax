@@ -1,13 +1,13 @@
 #[import = ("bindings", "gettimeofday")]
-fn gettimeofday() -> f64
+fn gettimeofday() -> f64;
 #[import = ("bindings", "gmtime")]
-fn gmtime(f64) -> &eq
+fn gmtime(f64) -> &eq;
 #[import = ("bindings", "localtime")]
-fn localtime(f64) -> &eq
+fn localtime(f64) -> &eq;
 #[import = ("bindings", "mktime")]
-fn mktime(i32, i32, i32, i32, i32, i32) -> f64
-type block = [mut &eq]
-type float = { f: f64 }
+fn mktime(i32, i32, i32, i32, i32, i32) -> f64;
+type block = [mut &eq];
+type float = { f: f64 };
 #[export = "unix_gettimeofday"]
 #[export = "caml_unix_gettimeofday"]
 fn unix_gettimeofday(x: &eq) -> &eq { {float| f: gettimeofday() }; }

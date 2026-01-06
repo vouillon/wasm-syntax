@@ -49,6 +49,6 @@ Select condition is considered after the two branches
   Error: This expression occurs before a hole '_'.
    ──➤  bad5.wax:2:8
   1 │ fn k (x: i32) -> i32 {
-  2 │   x; _?1:2
+  2 │   x; _?1:2;
              ^
   [128]

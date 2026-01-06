@@ -1,38 +1,38 @@
 #[import = ("jslib", "log_str")]
-fn log_str(&string)
+fn log_str(&string);
 #[import = ("bindings", "getcwd")]
-fn getcwd() -> &?any
+fn getcwd() -> &?any;
 #[import = ("bindings", "chdir")]
-fn chdir(&?any)
+fn chdir(&?any);
 #[import = ("bindings", "mkdir")]
-fn mkdir(&?any, i32)
+fn mkdir(&?any, i32);
 #[import = ("bindings", "unlink")]
-fn unlink(&?any)
+fn unlink(&?any);
 #[import = ("bindings", "readdir")]
-fn readdir(&?any) -> &extern
+fn readdir(&?any) -> &extern;
 #[import = ("bindings", "file_exists")]
-fn file_exists(&?any) -> &eq
+fn file_exists(&?any) -> &eq;
 #[import = ("bindings", "is_directory")]
-fn is_directory(&?any) -> &eq
+fn is_directory(&?any) -> &eq;
 #[import = ("bindings", "rename")]
-fn rename(&?any, &?any)
+fn rename(&?any, &?any);
 #[import = ("jslib", "wrap")]
-fn wrap(&?any) -> &eq
+fn wrap(&?any) -> &eq;
 #[import = ("jslib", "unwrap")]
-fn unwrap(&eq) -> &?any
+fn unwrap(&eq) -> &?any;
 #[import = ("jslib", "caml_string_of_jsstring")]
-fn caml_string_of_jsstring(&eq) -> &eq
+fn caml_string_of_jsstring(&eq) -> &eq;
 #[import = ("jslib", "caml_jsstring_of_string")]
-fn caml_jsstring_of_string(&eq) -> &eq
+fn caml_jsstring_of_string(&eq) -> &eq;
 #[import = ("jslib", "caml_js_to_string_array")]
-fn caml_js_to_string_array(a: &extern) -> &eq
+fn caml_js_to_string_array(a: &extern) -> &eq;
 #[import = ("fail", "caml_raise_sys_error")]
-fn caml_raise_sys_error(&eq)
+fn caml_raise_sys_error(&eq);
 #[import = ("fail", "javascript_exception")]
-tag javascript_exception(&?extern)
+tag javascript_exception(&?extern);
 #[import = ("sys", "caml_handle_sys_error")]
-fn caml_handle_sys_error(&?extern)
-type string = [mut i8]
+fn caml_handle_sys_error(&?extern);
+type string = [mut i8];
 #[export = "caml_sys_getcwd"]
 fn caml_sys_getcwd(x: &eq) -> &eq {
     become caml_string_of_jsstring(wrap(getcwd()));

@@ -1,18 +1,18 @@
 #[import = ("fail", "caml_failwith")]
-fn caml_failwith(&eq)
+fn caml_failwith(&eq);
 #[import = ("custom", "custom_compare_id")]
-fn custom_compare_id(&eq, &eq, i32) -> i32
+fn custom_compare_id(&eq, &eq, i32) -> i32;
 #[import = ("custom", "custom_hash_id")]
-fn custom_hash_id(&eq) -> i32
+fn custom_hash_id(&eq) -> i32;
 #[import = ("custom", "custom_next_id")]
-fn custom_next_id() -> i64
-type string = [mut i8]
-type compare = fn(&eq, &eq, i32) -> i32
-type hash = fn(&eq) -> i32
-type fixed_length = { bsize_32: i32, bsize_64: i32 }
-type serialize = fn(&eq, &eq) -> (i32, i32)
-type deserialize = fn(&eq) -> (&eq, i32)
-type dup = fn(&eq) -> &eq
+fn custom_next_id() -> i64;
+type string = [mut i8];
+type compare = fn(&eq, &eq, i32) -> i32;
+type hash = fn(&eq) -> i32;
+type fixed_length = { bsize_32: i32, bsize_64: i32 };
+type serialize = fn(&eq, &eq) -> (i32, i32);
+type deserialize = fn(&eq) -> (&eq, i32);
+type dup = fn(&eq) -> &eq;
 type custom_operations = {
     id: &string,
     compare: &?compare,
@@ -22,9 +22,9 @@ type custom_operations = {
     serialize: &?serialize,
     deserialize: &?deserialize,
     dup: &?dup
-}
-type custom = open { f: &custom_operations }
-type custom_with_id: custom = open { f: &custom_operations, id: i64 }
+};
+type custom = open { f: &custom_operations };
+type custom_with_id: custom = open { f: &custom_operations, id: i64 };
 const mutex_ops: &custom_operations =
     {custom_operations|
         id: string#"_mutex",
@@ -40,7 +40,7 @@ type mutex: custom_with_id = {
     f: &custom_operations,
     f_2: i64,
     state: mut i32
-}
+};
 #[export = "caml_ml_mutex_new"]
 fn caml_ml_mutex_new(x: &eq) -> &eq {
     {mutex| f: mutex_ops, f_2: custom_next_id(), state: 0 };

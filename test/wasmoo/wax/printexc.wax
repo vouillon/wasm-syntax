@@ -1,14 +1,14 @@
 #[import = ("jslib", "unwrap")]
-fn unwrap(&eq) -> &?any
+fn unwrap(&eq) -> &?any;
 #[import = ("jslib", "caml_jsstring_of_string")]
-fn caml_jsstring_of_string(&eq) -> &eq
+fn caml_jsstring_of_string(&eq) -> &eq;
 #[import = ("fail", "caml_is_special_exception")]
-fn caml_is_special_exception(&eq) -> i32
+fn caml_is_special_exception(&eq) -> i32;
 #[import = ("ints", "caml_format_int")]
-fn caml_format_int(&eq, &eq) -> &eq
-type block = [mut &eq]
-type string = [mut i8]
-type buffer = { f: mut i32, f_2: &string }
+fn caml_format_int(&eq, &eq) -> &eq;
+type block = [mut &eq];
+type string = [mut i8];
+type buffer = { f: mut i32, f_2: &string };
 fn add_char(buf: &buffer, c: i32) {
     let pos: i32;
     let data: &string;

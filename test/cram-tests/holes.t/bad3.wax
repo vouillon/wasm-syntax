@@ -1,4 +1,4 @@
-type t = {x: i32, y: i32}
+type t = {x: i32, y: i32};
 
 fn i () -> &t {
   1; {t| y:_, x: 1};

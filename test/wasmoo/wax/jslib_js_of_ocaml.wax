@@ -1,23 +1,23 @@
 #[import = ("jslib", "wrap")]
-fn wrap(&?any) -> &eq
+fn wrap(&?any) -> &eq;
 #[import = ("jslib", "unwrap")]
-fn unwrap(&eq) -> &?any
+fn unwrap(&eq) -> &?any;
 #[import = ("jslib", "caml_js_global")]
-fn caml_js_global(&eq) -> &eq
+fn caml_js_global(&eq) -> &eq;
 #[import = ("jslib", "caml_js_get")]
-fn caml_js_get(&eq, &eq) -> &eq
+fn caml_js_get(&eq, &eq) -> &eq;
 #[import = ("jslib", "caml_js_new")]
-fn caml_js_new(&eq, &eq) -> &eq
+fn caml_js_new(&eq, &eq) -> &eq;
 #[import = ("jslib", "caml_js_from_array")]
-fn caml_js_from_array(&eq) -> &eq
+fn caml_js_from_array(&eq) -> &eq;
 #[import = ("js", "caml_js_on_ie")]
-fn caml_js_on_ie() -> i32
+fn caml_js_on_ie() -> i32;
 #[import = ("js", "caml_js_html_escape")]
-fn caml_js_html_escape(&?any) -> &?any
+fn caml_js_html_escape(&?any) -> &?any;
 #[import = ("js", "caml_js_html_entities")]
-fn caml_js_html_entities(&?any) -> &?any
-type block = [mut &eq]
-type string = [mut i8]
+fn caml_js_html_entities(&?any) -> &?any;
+type block = [mut &eq];
+type string = [mut i8];
 #[export = "caml_js_on_ie"]
 fn caml_js_on_ie_2(x: &eq) -> &eq { caml_js_on_ie() as &i31; }
 #[export = "caml_js_html_escape"]
