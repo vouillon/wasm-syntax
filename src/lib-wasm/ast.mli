@@ -4,13 +4,16 @@ type ('desc, 'info) annotated = ('desc, 'info) Utils.Ast.annotated = {
   desc : 'desc;
   info : 'info;
 }
+(** An annotated tree node. *)
 
 type location = Utils.Ast.location = {
   loc_start : Lexing.position;
   loc_end : Lexing.position;
 }
+(** A source code location. *)
 
 val no_loc : 'desc -> ('desc, location) annotated
+(** [no_loc d] creates an annotated node with a dummy location. *)
 
 module Uint32 = Utils.Uint32
 module Uint64 = Utils.Uint64
@@ -551,7 +554,11 @@ end) : sig
   and 'info instr = ('info instr_desc, 'info) annotated
 
   type 'info expr = 'info instr list
+  (** A sequence of instructions. *)
 end
+
+(** Functor to create instructions for a given implementation of indices and
+    types. *)
 
 (* Modules *)
 
@@ -657,7 +664,10 @@ module Text : sig
 
   type 'info module_ =
     name option * ('info modulefield, location) annotated list
+  (** A Wasm module in text format. *)
 end
+
+(** Wasm Text format specific AST. *)
 
 module Binary : sig
   type idx = int
@@ -756,4 +766,7 @@ module Binary : sig
     data : 'info data list;
     names : names;
   }
+  (** A Wasm module in binary format. *)
 end
+
+(** Wasm Binary format specific AST. *)

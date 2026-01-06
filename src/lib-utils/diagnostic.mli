@@ -14,6 +14,8 @@ val run :
   ?output:Format.formatter ->
   (context -> 'a) ->
   'a
+(** [run ?color ~source ?related ?exit ?output f] runs the diagnostic context
+    [f]. [source] is the source code for the diagnostics (if available). *)
 
 val report :
   context ->
@@ -24,8 +26,11 @@ val report :
   message:(Format.formatter -> unit -> unit) ->
   unit ->
   unit
+(** [report context ~location ~severity ?hint ?related ~message ()] reports a
+    diagnostic. *)
 
 type theme
+(** A theme for diagnostic output. *)
 
 val output_error_with_source :
   ?output:Format.formatter ->
@@ -37,5 +42,8 @@ val output_error_with_source :
   ?related:label list ->
   (Format.formatter -> unit -> unit) ->
   unit
+(** [output_error_with_source ?output ~theme ~source ~location ~severity ?hint
+     ?related message] prints an error message with a source code snippet. *)
 
 val get_theme : ?color:Colors.flag -> unit -> theme
+(** [get_theme ?color ()] returns the diagnostic theme. *)

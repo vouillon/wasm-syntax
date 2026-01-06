@@ -50,5 +50,4 @@ val vbox : t -> ?skip_space:bool -> ?indent:int -> (unit -> unit) -> unit
     before the box. *)
 
 val run : Format.formatter -> (t -> unit) -> unit
-(** [run ?comments fmt f] creates a new printer, runs [f] with it, and flushes
-    the printer. *)
+(** [run fmt f] creates a new printer on the given formatter and runs [f]. *)

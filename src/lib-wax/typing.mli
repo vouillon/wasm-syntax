@@ -12,9 +12,13 @@ val f :
 
 val erase_types :
   typed_module_annotation Ast.module_ -> Ast.location Ast.module_
+(** [erase_types modul] removes type annotations from the module, returning it
+    to its original location-only annotation state. *)
 
 val get_type_definition :
   Utils.Diagnostic.context ->
   types ->
   (string, Ast.location) Ast.annotated ->
   Ast.subtype option
+(** [get_type_definition context types id] returns the subtype definition for
+    the given identifier, if it exists. *)

@@ -13,6 +13,7 @@ type location = Utils.Ast.location = {
 val no_loc : 'desc -> ('desc, location) annotated
 
 type ident = (string, location) annotated
+(** An identifier with its source location. *)
 
 include module type of Wasm.Ast.Make_types (struct
   type idx = ident
@@ -20,9 +21,13 @@ include module type of Wasm.Ast.Make_types (struct
   type 'a opt_annotated_array = (ident option * 'a) array
 end)
 
+(** Signage for integer operations. *)
 type signage = Wasm.Ast.signage = Signed | Unsigned
+
+(** Unary operators. *)
 type unop = Neg | Pos | Not
 
+(** Binary operators. *)
 type binop =
   | Add
   | Sub

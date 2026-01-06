@@ -10,4 +10,5 @@ val f : Utils.Diagnostic.context -> Ast.location Ast.Text.module_ -> unit
 
 val check_syntax :
   Utils.Diagnostic.context -> Ast.location Ast.Text.module_ -> unit
-(** Additional syntactic checks *)
+(** [check_syntax context modul] performs additional syntactic checks on the
+    module. *)
