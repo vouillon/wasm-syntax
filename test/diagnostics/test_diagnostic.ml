@@ -1,0 +1,141 @@
+open Utils
+
+let loc start_line start_col end_line end_col =
+  let pos_start =
+    {
+      Lexing.pos_fname = "test.wax";
+      pos_lnum = start_line;
+      pos_bol = 0;
+      pos_cnum = start_col;
+    }
+  in
+  let pos_end =
+    {
+      Lexing.pos_fname = "test.wax";
+      pos_lnum = end_line;
+      pos_bol = 0;
+      pos_cnum = end_col;
+    }
+  in
+  { Ast.loc_start = pos_start; loc_end = pos_end }
+
+let output = Format.std_formatter
+
+let test_case1 () =
+  let source =
+    "line 1\n\
+     line 2\n\
+     line 3\n\
+     line 4\n\
+     line 5 error here\n\
+     line 6\n\
+     line 7\n\
+     line 8\n\
+     line 9\n\
+     line 10\n\
+     line 11\n\
+     line 12 related here\n\
+     line 13\n\
+     line 14\n"
+  in
+  Format.fprintf output "--- Case 1: Simple secondary label ---@.";
+  Diagnostic.run ~output ~exit:false ~color:Never ~source:(Some source)
+    (fun d ->
+      let related =
+        [
+          {
+            Diagnostic.location = loc 12 7 12 14;
+            message = (fun f () -> Format.fprintf f "defined here");
+          };
+        ]
+      in
+      Diagnostic.report d ~location:(loc 5 7 5 12) ~severity:Error ~related
+        ~message:(fun f () -> Format.fprintf f "main error message")
+        ())
+
+let test_case2 () =
+  let source =
+    "line 1\nline 2 start here\nline 3 middle\nline 4 end here\nline 5\n"
+  in
+  Format.fprintf output "@.--- Case 2: Multi-line primary error ---@.";
+  Diagnostic.run ~output ~exit:false ~color:Never ~source:(Some source)
+    (fun d ->
+      Diagnostic.report d ~location:(loc 2 7 4 15) ~severity:Error
+        ~message:(fun f () -> Format.fprintf f "multi-line error")
+        ())
+
+let test_case3 () =
+  let source =
+    "line 1\n\
+     line 2\n\
+     line 3 secondary start\n\
+     line 4 secondary middle\n\
+     line 5 secondary end\n\
+     line 6\n\
+     line 7 main error\n\
+     line 8\n"
+  in
+  Format.fprintf output "@.--- Case 3: Multi-line secondary label ---@.";
+  Diagnostic.run ~output ~exit:false ~color:Never ~source:(Some source)
+    (fun d ->
+      let related =
+        [
+          {
+            Diagnostic.location = loc 3 7 5 13;
+            message = (fun f () -> Format.fprintf f "multi-line secondary");
+          };
+        ]
+      in
+      Diagnostic.report d ~location:(loc 7 7 7 12) ~severity:Error ~related
+        ~message:(fun f () ->
+          Format.fprintf f "error with multi-line secondary")
+        ())
+
+let test_case4 () =
+  let source =
+    let rec gen i acc =
+      if i > 100 then acc
+      else gen (i + 1) (acc ^ "line " ^ string_of_int i ^ "\n")
+    in
+    gen 1 ""
+  in
+  Format.fprintf output "@.--- Case 4: Long multi-line span ---@.";
+  Diagnostic.run ~output ~exit:false ~color:Never ~source:(Some source)
+    (fun d ->
+      Diagnostic.report d ~location:(loc 10 7 90 12) ~severity:Error
+        ~message:(fun f () -> Format.fprintf f "long span error")
+        ())
+
+let test_case5 () =
+  let source = "fn x {\nlet x = 10;\n" in
+  Format.fprintf output "@.--- Case 5: Error at end of file (EOF) ---@.";
+  Diagnostic.run ~output ~exit:false ~color:Never ~source:(Some source)
+    (fun d ->
+      let related =
+        [
+          {
+            Diagnostic.location = loc 1 5 1 6;
+            message =
+              (fun f () -> Format.fprintf f "This '{' might be unmatched.");
+          };
+        ]
+      in
+      Diagnostic.report d ~location:(loc 3 0 3 0) ~severity:Error ~related
+        ~message:(fun f () -> Format.fprintf f "Expecting '}'.")
+        ())
+
+let () =
+  try
+    test_case1 ();
+    test_case2 ();
+    test_case3 ();
+    test_case4 ();
+    test_case5 ();
+    Format.pp_print_flush output ()
+  with
+  | Unix.Unix_error (Unix.EPIPE, _, _) -> ()
+  | e ->
+      let s = Printexc.to_string e in
+      if s <> "Exit" then (
+        prerr_endline s;
+        exit 1)
