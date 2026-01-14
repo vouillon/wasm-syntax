@@ -1,6 +1,6 @@
 # Wax Compiler Toolchain
 
-Wax is a compiler toolchain for a Rust-like syntax targeting WebAssembly.
+Wax offers a Rust-like syntax for WebAssembly, complete with tools to type-check, reformat, and convert code between Wax, Wasm binary, and Wasm text formats.
 
 ## Installation
 
