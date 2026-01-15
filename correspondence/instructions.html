@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-71e544c5.js";
+            window.path_to_searchindex_js = "../searchindex-de095ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-679074a5.js"></script>
+        <script src="../toc-ea4b6164.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -386,14 +386,14 @@ if cond =&gt; (i32) -&gt; i32 { ... } else { ... }
 </tbody>
 </table>
 </div>
-<p><em>(Note: <code>try</code> corresponds to the older instruction, <code>try_table</code> to the newer one. Wax supports both syntaxes (in AST/Output).)</em></p>
+<p>The <code>try { ... } catch [ ... ]</code> syntax compiles to WebAssembly’s <code>try_table</code> instruction (the current standard). The <code>try { ... } catch { tag =&gt; { ... } }</code> syntax compiles to the older <code>try</code>/<code>catch</code> instructions (deprecated but still supported for compatibility).</p>
 <h2 id="unsupported-features"><a class="header" href="#unsupported-features">Unsupported Features</a></h2>
-<p>The following Wasm features are currently not supported in Wax or map to <code>unreachable</code>:</p>
+<p>The following WebAssembly features do not have dedicated Wax syntax. When converting from WAT/WASM to Wax, these instructions are preserved as-is or may be dropped:</p>
 <ul>
-<li><strong>Linear Memory</strong>: <code>memory.size</code>, <code>memory.grow</code>, <code>load</code>, <code>store</code> (all variants).</li>
-<li><strong>Tables</strong>: <code>table.get</code>, <code>table.set</code>, <code>call_indirect</code> (and related instructions).</li>
-<li><strong>SIMD</strong>: All vector instructions.</li>
-<li><strong>Tuples</strong>: <code>return_call_indirect</code>, etc.</li>
+<li><strong>Linear Memory</strong>: <code>memory.size</code>, <code>memory.grow</code>, <code>load</code>, <code>store</code> (all variants). Wax focuses on GC-based memory management using structs and arrays.</li>
+<li><strong>Tables</strong>: <code>table.get</code>, <code>table.set</code>, <code>call_indirect</code> (and related instructions). Use typed function references instead.</li>
+<li><strong>SIMD</strong>: All <code>v128</code> vector instructions. The <code>v128</code> type exists but operations are not exposed.</li>
+<li><strong>Indirect Calls via Tables</strong>: <code>return_call_indirect</code>, <code>call_indirect</code>. Use <code>call_ref</code> with function references instead.</li>
 </ul>
 
                     </main>

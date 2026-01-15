@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Page not found - Wax Documentation</title>
-        <base href="/">
+        <title>Language Guide - Wax Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -178,14 +177,321 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="document-not-found-404"><a class="header" href="#document-not-found-404">Document not found (404)</a></h1>
-<p>This URL is invalid, sorry. Please use the navigation bar or search to continue.</p>
+                        <h1 id="language-guide"><a class="header" href="#language-guide">Language Guide</a></h1>
+<p>This guide covers Wax syntax and semantics. For the detailed mapping to WebAssembly instructions, see <a href="./correspondence/intro.html">Correspondence</a>.</p>
+<h2 id="comments"><a class="header" href="#comments">Comments</a></h2>
+<p>Wax supports C-style comments:</p>
+<pre><code class="language-wax">// Single-line comment
+
+/* Multi-line
+   comment */
+</code></pre>
+<h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
+<h3 id="integers"><a class="header" href="#integers">Integers</a></h3>
+<pre><code class="language-wax">42          // Decimal
+0x2A        // Hexadecimal
+0o52        // Octal
+0b101010    // Binary
+</code></pre>
+<p>Integer literals are typed based on context. Suffix with <code>_i64</code> for 64-bit:</p>
+<pre><code class="language-wax">let x: i64 = 42;        // Inferred from type annotation
+let y: i64 = 42_i64;    // Explicit suffix
+</code></pre>
+<h3 id="floating-point"><a class="header" href="#floating-point">Floating Point</a></h3>
+<pre><code class="language-wax">3.14        // Decimal
+1.0e10      // Scientific notation
+0x1.5p10    // Hexadecimal float
+inf         // Infinity
+nan         // Not a number
+</code></pre>
+<h2 id="variables"><a class="header" href="#variables">Variables</a></h2>
+<h3 id="local-variables"><a class="header" href="#local-variables">Local Variables</a></h3>
+<p>Declare local variables with <code>let</code>. Variables must be typed:</p>
+<pre><code class="language-wax">fn example() -&gt; i32 {
+    let x: i32;
+    let y: i32;
+    x = 10;
+    y = 20;
+    x + y
+}
+</code></pre>
+<p>You can declare multiple variables:</p>
+<pre><code class="language-wax">let x: i32, y: i32, z: f64;
+</code></pre>
+<h3 id="assignment"><a class="header" href="#assignment">Assignment</a></h3>
+<p>Use <code>=</code> for assignment (like <code>local.set</code>):</p>
+<pre><code class="language-wax">x = 42;
+</code></pre>
+<p>Use <code>:=</code> for assignment that also returns the value (like <code>local.tee</code>):</p>
+<pre><code class="language-wax">y = (x := 42) + 1;  // x is set to 42, y is set to 43
+</code></pre>
+<h3 id="global-variables"><a class="header" href="#global-variables">Global Variables</a></h3>
+<p>Globals are declared at module level:</p>
+<pre><code class="language-wax">const PI: f64 = 3.14159;        // Immutable global
+let mut counter: i32 = 0;       // Mutable global
+</code></pre>
+<h2 id="expressions"><a class="header" href="#expressions">Expressions</a></h2>
+<p>Wax is expression-oriented. Most constructs produce values.</p>
+<h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>
+<pre><code class="language-wax">x + y       // Add
+x - y       // Subtract
+x * y       // Multiply
+x / y       // Divide (float)
+x /s y      // Divide signed (integer)
+x /u y      // Divide unsigned (integer)
+x %s y      // Remainder signed
+x %u y      // Remainder unsigned
+</code></pre>
+<h3 id="bitwise"><a class="header" href="#bitwise">Bitwise</a></h3>
+<pre><code class="language-wax">x &amp; y       // And
+x | y       // Or
+x ^ y       // Xor
+x &lt;&lt; y      // Shift left
+x &gt;&gt;s y     // Shift right signed
+x &gt;&gt;u y     // Shift right unsigned
+</code></pre>
+<h3 id="comparison"><a class="header" href="#comparison">Comparison</a></h3>
+<pre><code class="language-wax">x == y      // Equal
+x != y      // Not equal
+x &lt; y       // Less than (float)
+x &lt;s y      // Less than signed (integer)
+x &lt;u y      // Less than unsigned (integer)
+x &lt;= y      // Less or equal (float)
+x &lt;=s y     // Less or equal signed
+x &lt;=u y     // Less or equal unsigned
+// Similarly: &gt;, &gt;=, &gt;s, &gt;u, &gt;=s, &gt;=u
+</code></pre>
+<h3 id="unary-operations"><a class="header" href="#unary-operations">Unary Operations</a></h3>
+<pre><code class="language-wax">-x          // Negate
++x          // Positive (no-op for integers)
+!x          // Logical not / is_null for references
+</code></pre>
+<h3 id="method-style-operations"><a class="header" href="#method-style-operations">Method-Style Operations</a></h3>
+<p>Some operations use method syntax:</p>
+<pre><code class="language-wax">x.abs       // Absolute value
+x.neg       // Negate
+x.sqrt      // Square root
+x.floor     // Floor
+x.ceil      // Ceiling
+x.trunc     // Truncate
+x.nearest   // Round to nearest
+x.clz       // Count leading zeros
+x.ctz       // Count trailing zeros
+x.popcnt    // Population count
+</code></pre>
+<p>Two-argument operations:</p>
+<pre><code class="language-wax">min(x, y)
+max(x, y)
+copysign(x, y)
+rotl(x, y)      // Rotate left
+rotr(x, y)      // Rotate right
+</code></pre>
+<h3 id="type-conversions"><a class="header" href="#type-conversions">Type Conversions</a></h3>
+<p>Use <code>as</code> for type conversions:</p>
+<pre><code class="language-wax">x as i32        // Wrap i64 to i32
+x as i64_s      // Sign-extend i32 to i64
+x as i64_u      // Zero-extend i32 to i64
+x as f32        // Demote f64 to f32
+x as f64        // Promote f32 to f64
+x as i32_s      // Truncate float to signed int
+x as f32_s      // Convert signed int to float
+x.to_bits       // Reinterpret float as int
+x.from_bits     // Reinterpret int as float
+</code></pre>
+<h3 id="conditional-expression"><a class="header" href="#conditional-expression">Conditional Expression</a></h3>
+<pre><code class="language-wax">cond ? val_true : val_false
+</code></pre>
+<p>This maps directly to Wasm’s <code>select</code> instruction.</p>
+<h2 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h2>
+<h3 id="blocks"><a class="header" href="#blocks">Blocks</a></h3>
+<p>A block is a sequence of expressions. The last expression is the block’s value:</p>
+<pre><code class="language-wax">{
+    let x: i32;
+    x = compute();
+    x + 1
+}
+</code></pre>
+<p>Use <code>do</code> with a type annotation when the block returns a value:</p>
+<pre><code class="language-wax">do i32 {
+    42
+}
+</code></pre>
+<h3 id="if-expressions"><a class="header" href="#if-expressions">If Expressions</a></h3>
+<pre><code class="language-wax">if condition {
+    then_branch
+} else {
+    else_branch
+}
+</code></pre>
+<p>With a result type:</p>
+<pre><code class="language-wax">if condition =&gt; i32 {
+    1
+} else {
+    0
+}
+</code></pre>
+<h3 id="loops"><a class="header" href="#loops">Loops</a></h3>
+<p>Loops repeat until explicitly broken out of:</p>
+<pre><code class="language-wax">loop {
+    // body
+    br 'loop;   // Continue looping
+}
+</code></pre>
+<p>With a label:</p>
+<pre><code class="language-wax">'outer: loop {
+    'inner: loop {
+        br 'outer;  // Break to outer
+    }
+}
+</code></pre>
+<h3 id="labels-and-branches"><a class="header" href="#labels-and-branches">Labels and Branches</a></h3>
+<p>Labels start with <code>'</code> and are used with branch instructions:</p>
+<pre><code class="language-wax">'my_block: do {
+    if condition {
+        br 'my_block;   // Exit the block
+    }
+    // ...
+}
+</code></pre>
+<p>Branch instructions:</p>
+<pre><code class="language-wax">br 'label;              // Unconditional branch
+br_if 'label cond;      // Branch if condition is true
+br_table ['a, 'b else 'default] index;  // Branch table
+</code></pre>
+<h3 id="return"><a class="header" href="#return">Return</a></h3>
+<pre><code class="language-wax">return value;
+</code></pre>
+<h3 id="tail-calls"><a class="header" href="#tail-calls">Tail Calls</a></h3>
+<p>Use <code>become</code> for tail calls (guaranteed not to grow the stack):</p>
+<pre><code class="language-wax">fn factorial_helper(n: i32, acc: i32) -&gt; i32 {
+    if n &lt;= 1 {
+        acc
+    } else {
+        become factorial_helper(n - 1, n * acc)
+    }
+}
+</code></pre>
+<h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
+<h3 id="definition"><a class="header" href="#definition">Definition</a></h3>
+<pre><code class="language-wax">fn name(param1: type1, param2: type2) -&gt; return_type {
+    body
+}
+</code></pre>
+<p>Functions without a return type return nothing:</p>
+<pre><code class="language-wax">fn log_value(x: i32) {
+    // side effects only
+}
+</code></pre>
+<h3 id="function-types"><a class="header" href="#function-types">Function Types</a></h3>
+<p>Function types use <code>fn</code>:</p>
+<pre><code class="language-wax">type binary_op = fn(i32, i32) -&gt; i32;
+</code></pre>
+<p>Anonymous parameters use <code>_</code>:</p>
+<pre><code class="language-wax">type callback = fn(_: i32) -&gt; i32;
+</code></pre>
+<h3 id="calls"><a class="header" href="#calls">Calls</a></h3>
+<pre><code class="language-wax">result = my_function(arg1, arg2);
+</code></pre>
+<h3 id="indirect-calls"><a class="header" href="#indirect-calls">Indirect Calls</a></h3>
+<p>Call through a function reference:</p>
+<pre><code class="language-wax">(func_ref as &amp;?callback)(arg)
+</code></pre>
+<h2 id="references"><a class="header" href="#references">References</a></h2>
+<h3 id="reference-types"><a class="header" href="#reference-types">Reference Types</a></h3>
+<pre><code class="language-wax">&amp;type           // Non-nullable reference
+&amp;?type          // Nullable reference
+</code></pre>
+<h3 id="null"><a class="header" href="#null">Null</a></h3>
+<pre><code class="language-wax">null            // Null reference (requires type context)
+</code></pre>
+<h3 id="null-check"><a class="header" href="#null-check">Null Check</a></h3>
+<pre><code class="language-wax">!ref            // True if ref is null
+ref!            // Assert non-null (trap if null)
+</code></pre>
+<h3 id="type-testing-and-casting"><a class="header" href="#type-testing-and-casting">Type Testing and Casting</a></h3>
+<pre><code class="language-wax">val is &amp;type    // Test if val is of type (returns i32)
+val as &amp;type    // Cast val to type (trap on failure)
+</code></pre>
+<h2 id="structs"><a class="header" href="#structs">Structs</a></h2>
+<h3 id="definition-1"><a class="header" href="#definition-1">Definition</a></h3>
+<pre><code class="language-wax">type point = { x: i32, y: i32 };
+type mutable_point = { mut x: i32, mut y: i32 };
+</code></pre>
+<h3 id="creation"><a class="header" href="#creation">Creation</a></h3>
+<pre><code class="language-wax">{point| x: 10, y: 20}       // New struct with explicit type
+{point| ..}                 // New struct with default values
+</code></pre>
+<h3 id="field-access"><a class="header" href="#field-access">Field Access</a></h3>
+<pre><code class="language-wax">p.x                         // Get field
+p.x = 42;                   // Set field (if mutable)
+</code></pre>
+<h2 id="arrays"><a class="header" href="#arrays">Arrays</a></h2>
+<h3 id="definition-2"><a class="header" href="#definition-2">Definition</a></h3>
+<pre><code class="language-wax">type bytes = [i8];
+type mutable_ints = [mut i32];
+</code></pre>
+<h3 id="creation-1"><a class="header" href="#creation-1">Creation</a></h3>
+<pre><code class="language-wax">[bytes| 0; 100]             // New array: 100 elements, all 0
+[bytes| ..; 100]            // New array: 100 elements, default value
+[bytes| 1, 2, 3, 4]         // New array with specific values
+</code></pre>
+<h3 id="element-access"><a class="header" href="#element-access">Element Access</a></h3>
+<pre><code class="language-wax">arr[i]                      // Get element
+arr[i] = val;               // Set element (if mutable)
+arr.length                  // Array length
+</code></pre>
+<h2 id="exceptions"><a class="header" href="#exceptions">Exceptions</a></h2>
+<h3 id="tags"><a class="header" href="#tags">Tags</a></h3>
+<p>Define exception tags:</p>
+<pre><code class="language-wax">tag my_error(code: i32);
+</code></pre>
+<h3 id="throw"><a class="header" href="#throw">Throw</a></h3>
+<pre><code class="language-wax">throw my_error(42);
+</code></pre>
+<h3 id="trycatch-try_table-style"><a class="header" href="#trycatch-try_table-style">Try/Catch (try_table style)</a></h3>
+<pre><code class="language-wax">'handler: do {
+    try {
+        might_throw();
+    } catch [my_error -&gt; 'handler]
+}
+</code></pre>
+<p>With reference to exception:</p>
+<pre><code class="language-wax">try {
+    might_throw();
+} catch [my_error &amp; -&gt; 'handler]    // &amp; captures the exnref
+</code></pre>
+<p>Catch all:</p>
+<pre><code class="language-wax">try {
+    might_throw();
+} catch [_ -&gt; 'handler]             // Catch any exception
+</code></pre>
+<h3 id="trycatch-legacy-style"><a class="header" href="#trycatch-legacy-style">Try/Catch (legacy style)</a></h3>
+<pre><code class="language-wax">try {
+    might_throw();
+} catch {
+    my_error =&gt; { handle_error(); }
+    _ =&gt; { handle_any(); }
+}
+</code></pre>
+<h2 id="holes"><a class="header" href="#holes">Holes</a></h2>
+<p>Wax supports holes (<code>_</code>) as placeholders for values that can be inferred from earlier expressions in a sequence:</p>
+<pre><code class="language-wax">fn example() -&gt; i32 {
+    1; 2; _ + _;    // Equivalent to: let a = 1; let b = 2; a + b
+}
+</code></pre>
+<p>This is useful for writing concise code where intermediate values flow naturally.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="introduction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
 
+                            <a rel="next prefetch" href="examples.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -193,7 +499,13 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="introduction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
 
+                    <a rel="next prefetch" href="examples.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
             </nav>
 
         </div>

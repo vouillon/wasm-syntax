@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-71e544c5.js";
+            window.path_to_searchindex_js = "../searchindex-de095ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-679074a5.js"></script>
+        <script src="../toc-ea4b6164.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -178,45 +178,159 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="module-fields"><a class="header" href="#module-fields">Module Fields</a></h1>
-<p>Wax modules are defined by a list of fields.</p>
+<p>Wax modules are defined by a sequence of top-level fields: types, functions, globals, and tags.</p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<p>Types are defined using <code>type</code> for single definitions or <code>rec { ... }</code> for mutually recursive types.</p>
+<h3 id="simple-types"><a class="header" href="#simple-types">Simple Types</a></h3>
+<pre><code class="language-wax">type point = { x: i32, y: i32 };
+type bytes = [i8];
+type callback = fn(_: i32) -&gt; i32;
+</code></pre>
+<h3 id="recursive-types"><a class="header" href="#recursive-types">Recursive Types</a></h3>
+<p>Use <code>rec</code> when types reference each other:</p>
+<pre><code class="language-wax">rec {
+    type node = { value: i32, next: &amp;?list };
+    type list = node;
+}
+</code></pre>
+<h3 id="supertypes-and-finality"><a class="header" href="#supertypes-and-finality">Supertypes and Finality</a></h3>
+<p>Types are final (non-extensible) by default. Use <code>open</code> to allow subtypes:</p>
+<pre><code class="language-wax">type open shape = { x: i32, y: i32 };
+type circle : shape = { radius: i32 };
+</code></pre>
+<p>Maps to:</p>
+<pre><code class="language-wat">(type $shape (sub (struct (field $x i32) (field $y i32))))
+(type $circle (sub $shape (struct (field $x i32) (field $y i32) (field $radius i32))))
+</code></pre>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
-<p>Functions are defined using the <code>fn</code> keyword.</p>
-<pre><code class="language-wax">fn add(x: i32, y: i32) -&gt; i32 {
-    return x + y
+<h3 id="definition"><a class="header" href="#definition">Definition</a></h3>
+<pre><code class="language-wax">fn name(param: type, ...) -&gt; return_type {
+    body
+}
+</code></pre>
+<p>Functions without a return type:</p>
+<pre><code class="language-wax">fn log_value(x: i32) {
+    // no return
+}
+</code></pre>
+<h3 id="function-signatures-declarations"><a class="header" href="#function-signatures-declarations">Function Signatures (Declarations)</a></h3>
+<p>Declare a function signature without a body (used with imports):</p>
+<pre><code class="language-wax">fn external_function(x: i32) -&gt; i32;
+</code></pre>
+<h3 id="block-type-annotation"><a class="header" href="#block-type-annotation">Block Type Annotation</a></h3>
+<p>Functions can have a block type on the body:</p>
+<pre><code class="language-wax">fn example() -&gt; i32 'label: {
+    // body can use 'label
 }
 </code></pre>
 <h2 id="globals"><a class="header" href="#globals">Globals</a></h2>
-<p>Globals are defined using <code>const</code> (immutable) or <code>let</code> (mutable).</p>
-<pre><code class="language-wax">const g: i32 = 42
-let mut_g: i32 = 0
+<h3 id="immutable-globals"><a class="header" href="#immutable-globals">Immutable Globals</a></h3>
+<pre><code class="language-wax">const PI: f64 = 3.14159;
+const MAX_SIZE: i32 = 1024;
 </code></pre>
-<h2 id="types"><a class="header" href="#types">Types</a></h2>
-<p>Types are defined at the top level using <code>type</code> or <code>rec { ... }</code>.</p>
-<pre><code class="language-wax">type ops = { a: i32 }
+<h3 id="mutable-globals"><a class="header" href="#mutable-globals">Mutable Globals</a></h3>
+<pre><code class="language-wax">let mut counter: i32 = 0;
+let mut state: &amp;?any = null;
+</code></pre>
+<h3 id="imported-globals"><a class="header" href="#imported-globals">Imported Globals</a></h3>
+<pre><code class="language-wax">#[import = ("env", "base")]
+const base: i32;
+
+#[import = ("env", "counter")]
+let mut counter: i32;
 </code></pre>
 <h2 id="tags"><a class="header" href="#tags">Tags</a></h2>
-<p>Tags for exceptions are defined using <code>tag</code>.</p>
-<pre><code class="language-wax">tag my_exception(num: i32)
+<p>Tags define exception types for structured exception handling.</p>
+<h3 id="definition-1"><a class="header" href="#definition-1">Definition</a></h3>
+<pre><code class="language-wax">tag my_error(code: i32);
+tag empty_error();
+tag multi_arg(a: i32, b: &amp;string);
 </code></pre>
-<h2 id="tables-and-memories"><a class="header" href="#tables-and-memories">Tables and Memories</a></h2>
-<p><strong>Note</strong>: Wax currently does not define explicit syntax for <code>table</code> or <code>memory</code> definitions within the language itself. They are typically handled during conversion or implicit in the environment. The conversion logic drops them or handles them implicitly.</p>
-<h2 id="attributes-importsexports"><a class="header" href="#attributes-importsexports">Attributes (Imports/Exports)</a></h2>
-<p>Imports and exports are handled via attributes on module fields. Attributes use the syntax <code>#[name = value]</code>.</p>
-<h3 id="exports"><a class="header" href="#exports">Exports</a></h3>
+<p>Maps to:</p>
+<pre><code class="language-wat">(tag $my_error (param i32))
+(tag $empty_error)
+(tag $multi_arg (param i32) (param (ref $string)))
+</code></pre>
+<h3 id="imported-tags"><a class="header" href="#imported-tags">Imported Tags</a></h3>
+<pre><code class="language-wax">#[import = ("env", "js_error")]
+tag js_error(&amp;?extern);
+</code></pre>
+<h2 id="attributes"><a class="header" href="#attributes">Attributes</a></h2>
+<p>Attributes modify module fields. They use the syntax <code>#[name = value]</code> and appear before the field they modify.</p>
+<h3 id="export-attribute"><a class="header" href="#export-attribute">Export Attribute</a></h3>
+<p>Export a field with a given name:</p>
 <pre><code class="language-wax">#[export = "add"]
-fn add(...) { ... }
-</code></pre>
-<h3 id="imports"><a class="header" href="#imports">Imports</a></h3>
-<p>Imports can be applied to functions, globals, and tags. They typically take a tuple of strings <code>("module", "name")</code>.</p>
-<pre><code class="language-wax">#[import = ("env", "log")]
-fn log(msg: &amp;string)
+fn add(x: i32, y: i32) -&gt; i32 { x + y }
 
-#[import = ("env", "g")] 
-const g: i32
+#[export = "PI"]
+const PI: f64 = 3.14159;
+
+#[export = "my_error"]
+tag my_error(code: i32);
+</code></pre>
+<p>Multiple exports can share the same function:</p>
+<pre><code class="language-wax">#[export = "add"]
+#[export = "plus"]
+fn add(x: i32, y: i32) -&gt; i32 { x + y }
+</code></pre>
+<h3 id="import-attribute"><a class="header" href="#import-attribute">Import Attribute</a></h3>
+<p>Import a field from a module. Takes a tuple of <code>("module", "name")</code>:</p>
+<pre><code class="language-wax">#[import = ("env", "log")]
+fn log(msg: i32);
+
+#[import = ("env", "memory_base")]
+const memory_base: i32;
 
 #[import = ("env", "error")]
-tag error(code: i32)
+tag error(code: i32);
 </code></pre>
+<h3 id="combined-import-and-export"><a class="header" href="#combined-import-and-export">Combined Import and Export</a></h3>
+<p>A field can be both imported and re-exported:</p>
+<pre><code class="language-wax">#[import = ("env", "value")]
+#[export = "value"]
+const value: i32;
+</code></pre>
+<h2 id="tables-and-memories"><a class="header" href="#tables-and-memories">Tables and Memories</a></h2>
+<p>Wax focuses on GC-based memory management and does not provide dedicated syntax for linear memory or tables. When converting from WAT/WASM:</p>
+<ul>
+<li>Memory definitions are dropped (Wax uses GC structs and arrays)</li>
+<li>Table definitions are dropped (Wax uses typed function references)</li>
+</ul>
+<p>If you need linear memory or tables, write that portion in WAT and link it with your Wax code.</p>
+<h2 id="module-structure"><a class="header" href="#module-structure">Module Structure</a></h2>
+<p>A typical Wax module follows this structure:</p>
+<pre><code class="language-wax">// 1. Type definitions
+type point = { x: i32, y: i32 };
+type callback = fn(_: i32) -&gt; i32;
+
+// 2. Imported globals and functions
+#[import = ("env", "log")]
+fn log(value: i32);
+
+#[import = ("env", "base")]
+const base: i32;
+
+// 3. Tags
+tag my_error(code: i32);
+
+// 4. Module globals
+const FACTOR: i32 = 100;
+let mut counter: i32 = 0;
+
+// 5. Internal functions
+fn helper(x: i32) -&gt; i32 {
+    x * FACTOR
+}
+
+// 6. Exported functions
+#[export = "compute"]
+fn compute(x: i32) -&gt; i32 {
+    counter = counter + 1;
+    log(counter);
+    helper(x + base)
+}
+</code></pre>
+<p>This order is conventional but not required; Wax allows fields in any order.</p>
 
                     </main>
 

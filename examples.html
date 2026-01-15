@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Page not found - Wax Documentation</title>
-        <base href="/">
+        <title>Examples - Wax Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -178,14 +177,294 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="document-not-found-404"><a class="header" href="#document-not-found-404">Document not found (404)</a></h1>
-<p>This URL is invalid, sorry. Please use the navigation bar or search to continue.</p>
+                        <h1 id="examples"><a class="header" href="#examples">Examples</a></h1>
+<p>Complete examples demonstrating Wax features and their WebAssembly equivalents.</p>
+<h2 id="arithmetic-functions"><a class="header" href="#arithmetic-functions">Arithmetic Functions</a></h2>
+<h3 id="wax"><a class="header" href="#wax">Wax</a></h3>
+<pre><code class="language-wax">#[export = "add"]
+fn add(x: i32, y: i32) -&gt; i32 {
+    x + y
+}
+
+#[export = "multiply"]
+fn multiply(x: i32, y: i32) -&gt; i32 {
+    x * y
+}
+</code></pre>
+<h3 id="equivalent-wat"><a class="header" href="#equivalent-wat">Equivalent WAT</a></h3>
+<pre><code class="language-wat">(func $add (export "add") (param $x i32) (param $y i32) (result i32)
+  local.get $x
+  local.get $y
+  i32.add)
+
+(func $multiply (export "multiply") (param $x i32) (param $y i32) (result i32)
+  local.get $x
+  local.get $y
+  i32.mul)
+</code></pre>
+<h2 id="factorial-with-recursion"><a class="header" href="#factorial-with-recursion">Factorial with Recursion</a></h2>
+<h3 id="wax-1"><a class="header" href="#wax-1">Wax</a></h3>
+<pre><code class="language-wax">#[export = "factorial"]
+fn factorial(n: i32) -&gt; i32 {
+    if n &lt;= 1 {
+        1
+    } else {
+        n * factorial(n - 1)
+    }
+}
+</code></pre>
+<h3 id="equivalent-wat-1"><a class="header" href="#equivalent-wat-1">Equivalent WAT</a></h3>
+<pre><code class="language-wat">(func $factorial (export "factorial") (param $n i32) (result i32)
+  local.get $n
+  i32.const 1
+  i32.le_s
+  if (result i32)
+    i32.const 1
+  else
+    local.get $n
+    local.get $n
+    i32.const 1
+    i32.sub
+    call $factorial
+    i32.mul
+  end)
+</code></pre>
+<h2 id="factorial-with-tail-call"><a class="header" href="#factorial-with-tail-call">Factorial with Tail Call</a></h2>
+<h3 id="wax-2"><a class="header" href="#wax-2">Wax</a></h3>
+<pre><code class="language-wax">#[export = "factorial"]
+fn factorial(n: i32) -&gt; i32 {
+    become factorial_helper(n, 1)
+}
+
+fn factorial_helper(n: i32, acc: i32) -&gt; i32 {
+    if n &lt;= 1 {
+        acc
+    } else {
+        become factorial_helper(n - 1, n * acc)
+    }
+}
+</code></pre>
+<h2 id="loop-with-early-exit"><a class="header" href="#loop-with-early-exit">Loop with Early Exit</a></h2>
+<h3 id="wax-3"><a class="header" href="#wax-3">Wax</a></h3>
+<pre><code class="language-wax">#[export = "find_first_zero"]
+fn find_first_zero(arr: &amp;[i32]) -&gt; i32 {
+    let i: i32;
+    let len: i32;
+    len = arr.length;
+    i = 0;
+    'search: loop {
+        if i &gt;= len {
+            return -1
+        }
+        if arr[i] == 0 {
+            return i
+        }
+        i = i + 1;
+        br 'search;
+    }
+}
+</code></pre>
+<h3 id="equivalent-wat-2"><a class="header" href="#equivalent-wat-2">Equivalent WAT</a></h3>
+<pre><code class="language-wat">(func $find_first_zero (export "find_first_zero")
+      (param $arr (ref $array_i32)) (result i32)
+  (local $i i32)
+  (local $len i32)
+  local.get $arr
+  array.len
+  local.set $len
+  i32.const 0
+  local.set $i
+  (loop $search
+    local.get $i
+    local.get $len
+    i32.ge_s
+    if
+      i32.const -1
+      return
+    end
+    local.get $arr
+    local.get $i
+    array.get $array_i32
+    i32.eqz
+    if
+      local.get $i
+      return
+    end
+    local.get $i
+    i32.const 1
+    i32.add
+    local.set $i
+    br $search))
+</code></pre>
+<h2 id="structs-and-methods"><a class="header" href="#structs-and-methods">Structs and Methods</a></h2>
+<h3 id="wax-4"><a class="header" href="#wax-4">Wax</a></h3>
+<pre><code class="language-wax">type point = { x: i32, y: i32 };
+
+#[export = "make_point"]
+fn make_point(x: i32, y: i32) -&gt; &amp;point {
+    {point| x: x, y: y}
+}
+
+#[export = "distance_squared"]
+fn distance_squared(p1: &amp;point, p2: &amp;point) -&gt; i32 {
+    let dx: i32;
+    let dy: i32;
+    dx = p1.x - p2.x;
+    dy = p1.y - p2.y;
+    dx * dx + dy * dy
+}
+</code></pre>
+<h2 id="mutable-structs"><a class="header" href="#mutable-structs">Mutable Structs</a></h2>
+<h3 id="wax-5"><a class="header" href="#wax-5">Wax</a></h3>
+<pre><code class="language-wax">type counter = { mut value: i32 };
+
+#[export = "new_counter"]
+fn new_counter() -&gt; &amp;counter {
+    {counter| value: 0}
+}
+
+#[export = "increment"]
+fn increment(c: &amp;counter) {
+    c.value = c.value + 1;
+}
+
+#[export = "get_value"]
+fn get_value(c: &amp;counter) -&gt; i32 {
+    c.value
+}
+</code></pre>
+<h2 id="arrays"><a class="header" href="#arrays">Arrays</a></h2>
+<h3 id="wax-6"><a class="header" href="#wax-6">Wax</a></h3>
+<pre><code class="language-wax">type bytes = [mut i8];
+
+#[export = "sum_bytes"]
+fn sum_bytes(arr: &amp;bytes) -&gt; i32 {
+    let sum: i32;
+    let i: i32;
+    let len: i32;
+    sum = 0;
+    i = 0;
+    len = arr.length;
+    loop {
+        if i &gt;= len {
+            return sum
+        }
+        sum = sum + arr[i] as i32_u;
+        i = i + 1;
+        br 'loop;
+    }
+}
+
+#[export = "fill_bytes"]
+fn fill_bytes(arr: &amp;bytes, val: i32) {
+    let i: i32;
+    let len: i32;
+    i = 0;
+    len = arr.length;
+    loop {
+        if i &gt;= len {
+            return
+        }
+        arr[i] = val as i8;
+        i = i + 1;
+        br 'loop;
+    }
+}
+</code></pre>
+<h2 id="exception-handling"><a class="header" href="#exception-handling">Exception Handling</a></h2>
+<h3 id="wax-7"><a class="header" href="#wax-7">Wax</a></h3>
+<pre><code class="language-wax">tag divide_by_zero();
+tag overflow();
+
+#[export = "safe_divide"]
+fn safe_divide(a: i32, b: i32) -&gt; i32 {
+    if b == 0 {
+        throw divide_by_zero();
+    }
+    a /s b
+}
+
+#[export = "try_divide"]
+fn try_divide(a: i32, b: i32) -&gt; i32 {
+    'handler: do i32 {
+        try {
+            become safe_divide(a, b)
+        } catch [divide_by_zero -&gt; 'handler]
+        unreachable
+    }
+    0   // Return 0 on division by zero
+}
+</code></pre>
+<h2 id="recursive-types-linked-list"><a class="header" href="#recursive-types-linked-list">Recursive Types (Linked List)</a></h2>
+<h3 id="wax-8"><a class="header" href="#wax-8">Wax</a></h3>
+<pre><code class="language-wax">rec {
+    type node = { value: i32, next: &amp;?list };
+    type list = node;
+}
+
+#[export = "make_node"]
+fn make_node(value: i32, next: &amp;?list) -&gt; &amp;node {
+    {node| value: value, next: next}
+}
+
+#[export = "sum_list"]
+fn sum_list(head: &amp;?list) -&gt; i32 {
+    if !head {
+        return 0
+    }
+    let n: &amp;node;
+    n = head!;
+    n.value + sum_list(n.next)
+}
+</code></pre>
+<h2 id="imports-and-exports"><a class="header" href="#imports-and-exports">Imports and Exports</a></h2>
+<h3 id="wax-9"><a class="header" href="#wax-9">Wax</a></h3>
+<pre><code class="language-wax">// Import a function from the host environment
+#[import = ("env", "log")]
+fn log(value: i32);
+
+// Import a global
+#[import = ("env", "base_value")]
+const base_value: i32;
+
+// Export a function that uses the imports
+#[export = "compute_and_log"]
+fn compute_and_log(x: i32) -&gt; i32 {
+    let result: i32;
+    result = x + base_value;
+    log(result);
+    result
+}
+</code></pre>
+<h2 id="hash-function"><a class="header" href="#hash-function">Hash Function</a></h2>
+<p>A more complex example showing bitwise operations:</p>
+<h3 id="wax-10"><a class="header" href="#wax-10">Wax</a></h3>
+<pre><code class="language-wax">#[export = "hash_mix_int"]
+fn hash_mix_int(h: i32, d: i32) -&gt; i32 {
+    rotl(rotl(d * 0xcc9e2d51, 15) * 0x1b873593 ^ h, 13) * 5 + 0xe6546b64
+}
+
+#[export = "hash_finalize"]
+fn hash_finalize(h: i32) -&gt; i32 {
+    h = h ^ h &gt;&gt;u 16;
+    h = h * 0x85ebca6b;
+    h = h ^ h &gt;&gt;u 13;
+    h = h * 0xc2b2ae35;
+    h ^ h &gt;&gt;u 16
+}
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="language.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
 
+                            <a rel="next prefetch" href="correspondence/intro.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -193,7 +472,13 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="language.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
 
+                    <a rel="next prefetch" href="correspondence/intro.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
             </nav>
 
         </div>
