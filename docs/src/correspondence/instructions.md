@@ -171,12 +171,13 @@ if cond => (i32) -> i32 { ... } else { ... }
 | `try ... catch $tag ...` | `try { ... } catch { tag => { ... } ... }` |
 | `try ... catch_all ...` | `try { ... } catch { _ => { ... } }` |
 
-*(Note: `try` corresponds to the older instruction, `try_table` to the newer one. Wax supports both syntaxes (in AST/Output).)*
+The `try { ... } catch [ ... ]` syntax compiles to WebAssembly's `try_table` instruction (the current standard). The `try { ... } catch { tag => { ... } }` syntax compiles to the older `try`/`catch` instructions (deprecated but still supported for compatibility).
 
 ## Unsupported Features
 
-The following Wasm features are currently not supported in Wax or map to `unreachable`:
-*   **Linear Memory**: `memory.size`, `memory.grow`, `load`, `store` (all variants).
-*   **Tables**: `table.get`, `table.set`, `call_indirect` (and related instructions).
-*   **SIMD**: All vector instructions.
-*   **Tuples**: `return_call_indirect`, etc.
+The following WebAssembly features do not have dedicated Wax syntax. When converting from WAT/WASM to Wax, these instructions are preserved as-is or may be dropped:
+
+*   **Linear Memory**: `memory.size`, `memory.grow`, `load`, `store` (all variants). Wax focuses on GC-based memory management using structs and arrays.
+*   **Tables**: `table.get`, `table.set`, `call_indirect` (and related instructions). Use typed function references instead.
+*   **SIMD**: All `v128` vector instructions. The `v128` type exists but operations are not exposed.
+*   **Indirect Calls via Tables**: `return_call_indirect`, `call_indirect`. Use `call_ref` with function references instead.
